@@ -5,6 +5,7 @@ import type {
   CalculationReferenceFixture,
   CalculationReferenceGate
 } from './calculationReferenceTypes.ts';
+import { Nakshatra, Pada, Sign } from '../../types.ts';
 
 /**
  * RG-09 calculation reference fixtures.
@@ -39,6 +40,19 @@ export interface BoundaryCoverageRecord {
   readonly boundaryId?: string;
   readonly boundaryPosition?: string;
   readonly boundaryLongitude?: number;
+  readonly boundaryDefinition?: {
+    readonly name?: string;
+    readonly longitude?: number;
+    readonly convention?: {
+      readonly coordinateFrame?: string;
+      readonly ayanamsa?: string | null;
+    };
+  };
+  readonly conventions?: {
+    readonly coordinateFrame?: string;
+    readonly ayanamsa?: string | null;
+  };
+  readonly provenance?: object;
   readonly expectedSign?: string;
   readonly expectedNakshatra?: string;
   readonly expectedPada?: number;
@@ -61,6 +75,20 @@ export function inspectBoundaryCoverage(
   );
   const normalizedKind = (fixture: BoundaryCoverageRecord): string =>
     fixture.kind === 'SIGN_BOUNDARY' ? 'SIGN' : fixture.boundaryKind ?? '';
+  const normalizeLongitude = (longitude: number): number =>
+    ((longitude % 360) + 360) % 360;
+  const enumValues = (value: object): string[] =>
+    [...new Set(Object.values(value).filter(
+      (item): item is string | number => typeof item === 'string' || typeof item === 'number'
+    ).map(String))];
+  const signs = enumValues(Sign);
+  const nakshatras = enumValues(Nakshatra);
+  const padas = ['1', '2', '3', '4'];
+  const grids: Readonly<Record<string, number>> = {
+    SIGN: 30,
+    NAKSHATRA: 360 / 27,
+    PADA: 360 / 108
+  };
   const longitudeFor = (fixture: BoundaryCoverageRecord | undefined): number | undefined => {
     if (!fixture || !fixture.input || typeof fixture.input !== 'object'
       || !('longitude' in fixture.input)) return undefined;
@@ -79,6 +107,39 @@ export function inspectBoundaryCoverage(
     tupleKeys.add(tuple);
     const groupKey = `${kind}:${id}`;
     groups.set(groupKey, [...(groups.get(groupKey) ?? []), fixture]);
+    const definition = fixture.boundaryDefinition;
+    const convention = definition?.convention;
+    const provenance = fixture.provenance as
+      { readonly expectedValuesProducedIndependently?: unknown } | undefined;
+    if (provenance?.expectedValuesProducedIndependently !== true) {
+      issues.push(`BOUNDARY_PROVENANCE:${groupKey}:expectedValuesProducedIndependently must be true`);
+    }
+    if (!definition
+      || typeof definition.name !== 'string'
+      || definition.name.trim().length === 0
+      || definition.name !== id
+      || typeof definition.longitude !== 'number'
+      || definition.longitude !== fixture.boundaryLongitude
+      || !convention
+      || !['SIDEREAL', 'TROPICAL'].includes(convention.coordinateFrame ?? '')
+      || (convention.coordinateFrame === 'SIDEREAL'
+        ? !convention.ayanamsa || convention.ayanamsa === 'TROPICAL'
+        : convention.ayanamsa !== null)
+      || (fixture.conventions?.coordinateFrame !== undefined
+        && fixture.conventions.coordinateFrame !== convention?.coordinateFrame)
+      || (fixture.conventions?.ayanamsa !== undefined
+        && fixture.conventions.ayanamsa !== convention?.ayanamsa)) {
+      issues.push(`BOUNDARY_IDENTITY:${groupKey}:definition must match the declared longitude and coordinate convention`);
+    } else {
+      const longitude = definition.longitude;
+      const grid = grids[kind];
+      const normalized = normalizeLongitude(longitude);
+      if (!Number.isFinite(longitude) || longitude < 0 || longitude >= 360
+        || grid === undefined
+        || Math.abs(normalized / grid - Math.round(normalized / grid)) > 1e-9) {
+        issues.push(`BOUNDARY_IDENTITY:${groupKey}:longitude is not on the ${kind} boundary grid`);
+      }
+    }
   }
 
   for (const kind of policy.requiredBoundaryKinds) {
@@ -122,14 +183,54 @@ export function inspectBoundaryCoverage(
         && (!before?.expectedSign || !after?.expectedSign
           || before.expectedSign === after.expectedSign)) {
         issues.push(`BOUNDARY_TRANSITION:${groupKey}:expectedSign must differ before and after`);
+      } else if (kind === 'SIGN') {
+        const index = Math.round(normalizeLongitude(boundary ?? 0) / grids.SIGN) % signs.length;
+        if (![before?.expectedSign, exact?.expectedSign, after?.expectedSign]
+          .every(value => signs.includes(value ?? ''))
+          || before?.expectedSign !== signs[(index + signs.length - 1) % signs.length]
+          || exact?.expectedSign !== signs[index]
+          || after?.expectedSign !== signs[index]) {
+          issues.push(`BOUNDARY_DIRECTION:${groupKey}:sign values must transition in increasing-longitude order`);
+        }
       } else if (kind === 'NAKSHATRA'
         && (!before?.expectedNakshatra || !after?.expectedNakshatra
           || before.expectedNakshatra === after.expectedNakshatra)) {
         issues.push(`BOUNDARY_TRANSITION:${groupKey}:expectedNakshatra must differ before and after`);
+      } else if (kind === 'NAKSHATRA') {
+        const interval = grids.NAKSHATRA;
+        const index = Math.round(normalizeLongitude(boundary ?? 0) / interval) % nakshatras.length;
+        if (![before?.expectedNakshatra, exact?.expectedNakshatra, after?.expectedNakshatra]
+          .every(value => nakshatras.includes(value ?? ''))
+          || before?.expectedNakshatra !== nakshatras[(index + nakshatras.length - 1) % nakshatras.length]
+          || exact?.expectedNakshatra !== nakshatras[index]
+          || after?.expectedNakshatra !== nakshatras[index]) {
+          issues.push(`BOUNDARY_DIRECTION:${groupKey}:nakshatra values must transition in increasing-longitude order`);
+        }
       } else if (kind === 'PADA'
         && (before?.expectedPada === undefined || after?.expectedPada === undefined
           || before.expectedPada === after.expectedPada)) {
         issues.push(`BOUNDARY_TRANSITION:${groupKey}:expectedPada must differ before and after`);
+      } else if (kind === 'PADA') {
+        const index = Math.round(normalizeLongitude(boundary ?? 0) / grids.PADA) % 4;
+        const beforePada = ((index + 3) % 4) + 1;
+        const afterPada = index + 1;
+        const nakshatraIndex = Math.floor(
+          Math.round(normalizeLongitude(boundary ?? 0) / grids.PADA) / 4
+        ) % nakshatras.length;
+        const beforeNakshatraIndex = (
+          Math.floor((Math.round(normalizeLongitude(boundary ?? 0) / grids.PADA) - 1) / 4)
+          + nakshatras.length
+        ) % nakshatras.length;
+        if (![before?.expectedPada, exact?.expectedPada, after?.expectedPada]
+          .every(value => padas.includes(String(value)))
+          || before?.expectedPada !== beforePada
+          || exact?.expectedPada !== afterPada
+          || after?.expectedPada !== afterPada
+          || before?.expectedNakshatra !== nakshatras[beforeNakshatraIndex]
+          || exact?.expectedNakshatra !== nakshatras[nakshatraIndex]
+          || after?.expectedNakshatra !== nakshatras[nakshatraIndex]) {
+          issues.push(`BOUNDARY_DIRECTION:${groupKey}:pada values must transition in increasing-longitude order`);
+        }
       }
     }
   }

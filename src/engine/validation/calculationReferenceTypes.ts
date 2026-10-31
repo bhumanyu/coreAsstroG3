@@ -131,6 +131,14 @@ export interface RahuKetuOppositionReference extends CalculationReferenceBase<
 
 export type BoundaryPosition = 'EPSILON_BEFORE' | 'EXACT' | 'EPSILON_AFTER';
 export type BoundaryKind = 'SIGN' | 'NAKSHATRA' | 'PADA';
+export interface BoundaryDefinition {
+  readonly name: string;
+  readonly longitude: number;
+  readonly convention: {
+    readonly coordinateFrame: 'SIDEREAL' | 'TROPICAL';
+    readonly ayanamsa: AyanamsaType | null;
+  };
+}
 
 export const REQUIRED_CALCULATION_COVERAGE = Object.freeze({
   requiredKinds: [
@@ -155,6 +163,8 @@ export interface SignBoundaryReference extends CalculationReferenceBase<
   'calculateSign',
   { readonly longitude: number }
 > {
+  readonly provenance: ReferenceSource & { readonly expectedValuesProducedIndependently: true };
+  readonly boundaryDefinition: BoundaryDefinition;
   /** Approved independent reference value; never derive this from an engine calculation. */
   readonly boundaryLongitude: number;
   readonly boundaryId: string;
@@ -168,6 +178,8 @@ export interface NakshatraBoundaryReference extends CalculationReferenceBase<
   'calculateNakshatra',
   { readonly longitude: number }
 > {
+  readonly provenance: ReferenceSource & { readonly expectedValuesProducedIndependently: true };
+  readonly boundaryDefinition: BoundaryDefinition;
   /** Boundary identity and expected fields must come from the approved fixture source, not engine output. */
   readonly boundaryKind: 'NAKSHATRA' | 'PADA';
   readonly boundaryLongitude: number;

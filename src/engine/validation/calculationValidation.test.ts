@@ -33,6 +33,9 @@ afterAll(() => {
   const invocationId = process.env.PR9_FIXTURE_INVOCATION_ID;
   if (!invocationId) throw new Error('PR9_FIXTURE_INVOCATION_ID must be set by the release runner.');
   const commandStartedAt = Number(process.env.PR9_FIXTURE_COMMAND_STARTED_AT);
+  if (!Number.isFinite(commandStartedAt)) {
+    throw new Error('PR9_FIXTURE_COMMAND_STARTED_AT must be set by the release runner.');
+  }
   const candidateSha = process.env.PR9_EXPECTED_SHA ?? null;
   const fixtureInventoryHash = createHash('sha256')
     .update(JSON.stringify(CALCULATION_REFERENCE_FIXTURES))
@@ -40,14 +43,17 @@ afterAll(() => {
   const completedFixtureCount = fixtureResults.filter(result => result.compared).length;
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify({
+    schemaVersion: 1,
     invocationId,
     candidateSha,
     fixtureInventoryHash,
     expectedFixtureCount: CALCULATION_REFERENCE_FIXTURES.length,
     completedFixtureCount,
     suiteCompleted: true,
-    ...(Number.isFinite(commandStartedAt) ? { commandStartedAt } : {}),
-    commandFinishedAt: Date.now(),
+    command: {
+      startedAt: commandStartedAt,
+      finishedAt: Date.now()
+    },
     results: fixtureResults
   }, null, 2)}\n`, 'utf8');
 });

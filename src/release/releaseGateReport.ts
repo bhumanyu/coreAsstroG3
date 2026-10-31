@@ -142,21 +142,11 @@ function canonicalValue(value: unknown): unknown {
 export function canonicalizeRunnerEvidenceManifest(
   manifest: RunnerEvidenceManifest
 ): string {
-  const compareStable = (left: string, right: string): number =>
-    left < right ? -1 : left > right ? 1 : 0;
-  const recordKey = (value: object): string => JSON.stringify(canonicalValue(value));
-  const canonicalManifest = {
-    commands: [...manifest.commands]
-      .sort((left, right) => compareStable(recordKey(left), recordKey(right))),
-    files: [...manifest.files]
-      .sort((left, right) => compareStable(recordKey(left), recordKey(right))),
-    fixtureComparisons: [...manifest.fixtureComparisons]
-      .map(item => ({ ...item, fixtureIds: [...item.fixtureIds].sort() }))
-      .sort((left, right) => compareStable(recordKey(left), recordKey(right))),
-    policyDocuments: [...manifest.policyDocuments]
-      .sort((left, right) => compareStable(recordKey(left), recordKey(right)))
-  };
-  return JSON.stringify(canonicalValue(canonicalManifest));
+  return canonicalJson(manifest);
+}
+
+export function canonicalJson(value: unknown): string {
+  return JSON.stringify(canonicalValue(value));
 }
 
 export function digestRunnerEvidenceManifest(
@@ -180,10 +170,24 @@ export function verifyRunnerEvidenceManifestDigest(
 }
 
 export function verifyReleaseReportEvidenceManifest(
-  report: Pick<ReleaseReport, 'evidenceManifestIntegrity'>,
+  report: Pick<ReleaseReport, 'evidenceManifestSchemaVersion' | 'evidenceManifestSha256'>,
   manifest: RunnerEvidenceManifest
 ): boolean {
-  return verifyRunnerEvidenceManifestDigest(manifest, report.evidenceManifestIntegrity);
+  return verifyEvidenceManifestDigest(report, manifest);
+}
+
+export interface EvidenceManifestDigestReport {
+  readonly evidenceManifestSchemaVersion: 1;
+  readonly evidenceManifestSha256: string;
+}
+
+export function verifyEvidenceManifestDigest(
+  report: EvidenceManifestDigestReport,
+  manifest: RunnerEvidenceManifest
+): boolean {
+  return report.evidenceManifestSchemaVersion === EVIDENCE_MANIFEST_SCHEMA_VERSION
+    && /^[0-9a-f]{64}$/i.test(report.evidenceManifestSha256)
+    && digestRunnerEvidenceManifest(manifest).digest === report.evidenceManifestSha256;
 }
 
 export interface VitestJsonReport {
@@ -274,14 +278,17 @@ export interface CalculationFixtureResult {
 }
 
 export interface CalculationFixtureResultsEnvelope {
+  readonly schemaVersion: 1;
   readonly invocationId: string;
   readonly candidateSha: string | null;
   readonly fixtureInventoryHash: string;
   readonly expectedFixtureCount: number;
   readonly completedFixtureCount: number;
   readonly suiteCompleted: boolean;
-  readonly commandStartedAt?: number;
-  readonly commandFinishedAt?: number;
+  readonly command: {
+    readonly startedAt: number;
+    readonly finishedAt: number;
+  };
   readonly results: readonly CalculationFixtureResult[];
 }
 
@@ -322,13 +329,30 @@ export function calculationFixtureGateStatus(
   if (new Set(fixtures.map(fixture => fixture.id)).size !== fixtures.length) return 'FAIL';
   if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) return 'BLOCKED';
   const report = envelope as Record<string, unknown>;
+  if (Array.isArray(report.results)) {
+    const rawResultIds = new Set<string>();
+    for (const result of report.results) {
+      if (!result || typeof result !== 'object') continue;
+      const fixtureId = (result as Record<string, unknown>).fixtureId;
+      if (typeof fixtureId === 'string' && rawResultIds.has(fixtureId)) return 'FAIL';
+      if (typeof fixtureId === 'string') rawResultIds.add(fixtureId);
+    }
+  }
   if (report.invocationId !== expectedInvocationId
     || report.candidateSha !== expectedCandidateSha
+    || report.schemaVersion !== 1
     || report.fixtureInventoryHash !== calculationFixtureInventoryHash(fixtures)
     || report.expectedFixtureCount !== fixtures.length
     || report.completedFixtureCount !== fixtures.length
     || report.suiteCompleted !== true
-    || !Array.isArray(report.results)) return 'BLOCKED';
+    || !Array.isArray(report.results)
+    || report.results.length !== report.completedFixtureCount
+    || !report.command || typeof report.command !== 'object'
+    || Array.isArray(report.command)
+    || !Number.isFinite((report.command as Record<string, unknown>).startedAt)
+    || !Number.isFinite((report.command as Record<string, unknown>).finishedAt)
+    || (report.command as Record<string, number>).finishedAt
+      < (report.command as Record<string, number>).startedAt) return 'BLOCKED';
 
   const expectedIds = new Set(fixtures.map(fixture => fixture.id));
   const observedIds = new Set<string>();
@@ -394,16 +418,22 @@ export function fixtureResultsCorrelateToCommand(
 ): boolean {
   if (!commandPassed || !report || typeof report !== 'object' || Array.isArray(report)) return false;
   const value = report as Record<string, unknown>;
+  const command = value.command;
+  if (!command || typeof command !== 'object' || Array.isArray(command)) return false;
+  const commandTimes = command as Record<string, unknown>;
   return value.invocationId === expectedInvocationId
+    && value.schemaVersion === 1
     && value.candidateSha === expectedCandidateSha
     && value.fixtureInventoryHash === calculationFixtureInventoryHash(fixtures)
     && value.expectedFixtureCount === fixtures.length
     && value.completedFixtureCount === fixtures.length
     && value.suiteCompleted === true
-    && value.commandStartedAt === startedAt
-    && typeof value.commandFinishedAt === 'number'
-    && value.commandFinishedAt >= startedAt
-    && value.commandFinishedAt <= finishedAt
+    && Array.isArray(value.results)
+    && value.results.length === value.completedFixtureCount
+    && commandTimes.startedAt === startedAt
+    && typeof commandTimes.finishedAt === 'number'
+    && commandTimes.finishedAt >= startedAt
+    && commandTimes.finishedAt <= finishedAt
     && Array.isArray(value.results)
     && Number.isFinite(modifiedAt)
     && Number.isFinite(startedAt)
@@ -455,6 +485,35 @@ export function harnessDependencyInventoryIssues(
     }
   }
   return issues;
+}
+
+export interface HarnessImportGraph {
+  readonly dependencies: readonly string[];
+  readonly edges: readonly string[];
+}
+
+export function harnessDependencyGraphDifferences(
+  accepted: HarnessImportGraph,
+  candidate: HarnessImportGraph
+): readonly string[] {
+  const acceptedDependencies = new Set(accepted.dependencies);
+  const candidateDependencies = new Set(candidate.dependencies);
+  const acceptedEdges = new Set(accepted.edges);
+  const candidateEdges = new Set(candidate.edges);
+  return [
+    ...[...acceptedDependencies]
+      .filter(path => !candidateDependencies.has(path))
+      .map(path => `REMOVED_DEPENDENCY:${path}`),
+    ...[...candidateDependencies]
+      .filter(path => !acceptedDependencies.has(path))
+      .map(path => `ADDED_DEPENDENCY:${path}`),
+    ...[...acceptedEdges]
+      .filter(edge => !candidateEdges.has(edge))
+      .map(edge => `REMOVED_EDGE:${edge}`),
+    ...[...candidateEdges]
+      .filter(edge => !acceptedEdges.has(edge))
+      .map(edge => `ADDED_EDGE:${edge}`)
+  ].sort();
 }
 
 export function releasePolicyIsValid(
@@ -759,6 +818,8 @@ export function finalizeReleaseReport(input: ValidatedRunnerResult): ReleaseRepo
     canRelease,
     allowedSkippedTests: ALLOWED_SKIPPED_TESTS,
     pr8AcceptanceStatuses,
+    evidenceManifestSchemaVersion: input.evidenceManifestIntegrity.manifestSchemaVersion,
+    evidenceManifestSha256: input.evidenceManifestIntegrity.digest,
     evidenceManifestIntegrity: Object.freeze({ ...input.evidenceManifestIntegrity }),
     ...(input.metadata === undefined ? {} : { metadata: Object.freeze({ ...input.metadata }) })
   });

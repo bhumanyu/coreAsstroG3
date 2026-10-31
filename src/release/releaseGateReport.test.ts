@@ -9,6 +9,7 @@ import {
   aggregateReleaseStatus,
   calculationFixtureGateStatus,
   calculationFixtureInventoryHash,
+  canonicalJson,
   canonicalizeRunnerEvidenceManifest,
   createValidatedRunnerResult,
   digestRunnerEvidenceManifest,
@@ -17,8 +18,10 @@ import {
   pr8WasEvaluatedOnCandidate,
   releasePolicyIsValid,
   verifyReleaseReportEvidenceManifest,
+  verifyEvidenceManifestDigest,
   fixtureResultsCorrelateToCommand,
   harnessDependencyInventoryIssues,
+  harnessDependencyGraphDifferences,
   type CalculationFixtureInventoryItem,
   skippedTestsGateStatus
 } from './releaseGateReport';
@@ -96,14 +99,14 @@ const fixtureEnvelope = (
   results: readonly Record<string, unknown>[],
   overrides: Record<string, unknown> = {}
 ) => ({
+  schemaVersion: 1,
   invocationId: 'invocation-1',
   candidateSha: null,
   fixtureInventoryHash: calculationFixtureInventoryHash(fixtures),
   expectedFixtureCount: fixtures.length,
   completedFixtureCount: fixtures.length,
   suiteCompleted: true,
-  commandStartedAt: 100,
-  commandFinishedAt: 190,
+  command: { startedAt: 100, finishedAt: 190 },
   results,
   ...overrides
 });
@@ -188,21 +191,43 @@ describe('release gate report', () => {
   it('records a digest of the evidence manifest in the finalized report', () => {
     const report = finalize({ gates: allPassingGates() });
     const reorderedManifest: RunnerEvidenceManifest = {
-      policyDocuments: [...testEvidenceManifest.policyDocuments].reverse(),
+      policyDocuments: testEvidenceManifest.policyDocuments.map(item => ({
+        sha256: item.sha256,
+        path: item.path
+      })),
       fixtureComparisons: testEvidenceManifest.fixtureComparisons.map(item => ({
-        ...item,
-        fixtureIds: [...item.fixtureIds].reverse()
-      })).reverse(),
-      files: [...testEvidenceManifest.files].reverse(),
-      commands: [...testEvidenceManifest.commands].reverse()
+        commandPassed: item.commandPassed,
+        fixtureIds: item.fixtureIds,
+        invocationId: item.invocationId,
+        sha256: item.sha256,
+        path: item.path
+      })),
+      files: testEvidenceManifest.files.map(item => ({
+        sha256: item.sha256,
+        path: item.path
+      })),
+      commands: testEvidenceManifest.commands.map(item => ({
+        exitCode: item.exitCode,
+        logPath: item.logPath,
+        name: item.name
+      }))
     };
     const digest = digestRunnerEvidenceManifest(testEvidenceManifest);
     expect(digest).toEqual(digestRunnerEvidenceManifest(reorderedManifest));
     expect(canonicalizeRunnerEvidenceManifest(testEvidenceManifest))
       .toBe(canonicalizeRunnerEvidenceManifest(reorderedManifest));
     expect(report.evidenceManifestIntegrity).toEqual(digest);
+    expect(report.evidenceManifestSchemaVersion).toBe(1);
+    expect(report.evidenceManifestSha256).toBe(digest.digest);
+    expect(canonicalJson({ b: 2, a: { y: 1, x: 0 } }))
+      .toBe(canonicalJson({ a: { x: 0, y: 1 }, b: 2 }));
     expect(verifyReleaseReportEvidenceManifest(report, reorderedManifest)).toBe(true);
+    expect(verifyEvidenceManifestDigest(report, reorderedManifest)).toBe(true);
     expect(verifyReleaseReportEvidenceManifest(report, {
+      ...reorderedManifest,
+      files: [{ ...reorderedManifest.files[0], sha256: '0'.repeat(64) }]
+    })).toBe(false);
+    expect(verifyEvidenceManifestDigest(report, {
       ...reorderedManifest,
       files: [{ ...reorderedManifest.files[0], sha256: '0'.repeat(64) }]
     })).toBe(false);
@@ -307,6 +332,22 @@ describe('release gate report', () => {
     expect(calculationFixtureGateStatus(
       [fixture],
       fixtureEnvelope([fixture], [result], { suiteCompleted: undefined }),
+      [],
+      true,
+      'invocation-1',
+      null
+    )).toBe('BLOCKED');
+    expect(calculationFixtureGateStatus(
+      [fixture],
+      fixtureEnvelope([fixture], [result], { completedFixtureCount: 0 }),
+      [],
+      true,
+      'invocation-1',
+      null
+    )).toBe('BLOCKED');
+    expect(calculationFixtureGateStatus(
+      [fixture],
+      fixtureEnvelope([fixture], [result], { invocationId: 'stale-envelope-invocation' }),
       [],
       true,
       'invocation-1',
@@ -419,6 +460,36 @@ describe('release gate report', () => {
       .toBe(false);
     expect(fixtureResultsCorrelateToCommand(report, fixtures, 'invocation-1', null, true, 150, 100, 200))
       .toBe(true);
+    expect(fixtureResultsCorrelateToCommand(
+      { ...report, suiteCompleted: undefined },
+      fixtures,
+      'invocation-1',
+      null,
+      true,
+      150,
+      100,
+      200
+    )).toBe(false);
+    expect(fixtureResultsCorrelateToCommand(
+      { ...report, completedFixtureCount: 1 },
+      fixtures,
+      'invocation-1',
+      null,
+      true,
+      150,
+      100,
+      200
+    )).toBe(false);
+    expect(fixtureResultsCorrelateToCommand(
+      { ...report, invocationId: 'stale-invocation' },
+      fixtures,
+      'invocation-1',
+      null,
+      true,
+      150,
+      100,
+      200
+    )).toBe(false);
   });
 
   it('rejects missing or uncovered declared harness dependency paths', () => {
@@ -473,6 +544,23 @@ describe('release gate report', () => {
         ['src/acceptance/'],
         ['src/aliased/dependency.ts']
       )).toContain('UNDECLARED_HARNESS_DEPENDENCY:src/aliased/dependency.ts');
+      expect(harnessDependencyGraphDifferences(
+        { dependencies: ['src/acceptance/entry.ts'], edges: [] },
+        { dependencies: ['src/acceptance/entry.ts', 'src/aliased/dependency.ts'], edges: [] }
+      )).toEqual(['ADDED_DEPENDENCY:src/aliased/dependency.ts']);
+      expect(harnessDependencyGraphDifferences(
+        {
+          dependencies: ['src/acceptance/entry.ts', 'src/aliased/dependency.ts'],
+          edges: ['src/acceptance/entry.ts -> src/aliased/dependency.ts (type)']
+        },
+        {
+          dependencies: ['src/acceptance/entry.ts'],
+          edges: []
+        }
+      )).toEqual([
+        'REMOVED_DEPENDENCY:src/aliased/dependency.ts',
+        'REMOVED_EDGE:src/acceptance/entry.ts -> src/aliased/dependency.ts (type)'
+      ]);
     } finally {
       rmSync(repository, { recursive: true, force: true });
     }
@@ -536,6 +624,7 @@ describe('release gate report', () => {
       kind: string,
       boundaryKind: string | undefined,
       boundaryId: string,
+      boundaryLongitude: number,
       expectedBefore: Record<string, string | number>,
       expectedAfter: Record<string, string | number>
     ) => {
@@ -543,18 +632,62 @@ describe('release gate report', () => {
         kind,
         ...(boundaryKind === undefined ? {} : { boundaryKind }),
         boundaryId,
-        boundaryLongitude: 10
+        boundaryLongitude,
+        boundaryDefinition: {
+          name: boundaryId,
+          longitude: boundaryLongitude,
+          convention: { coordinateFrame: 'SIDEREAL', ayanamsa: 'LAHIRI' }
+        },
+        conventions: { coordinateFrame: 'SIDEREAL', ayanamsa: 'LAHIRI' },
+        provenance: { expectedValuesProducedIndependently: true }
       };
+      const epsilon = 0.00001;
       return [
-        { ...base, ...expectedBefore, boundaryPosition: 'EPSILON_BEFORE', input: { longitude: 9.99999 } },
-        { ...base, ...expectedAfter, boundaryPosition: 'EXACT', input: { longitude: 10 } },
-        { ...base, ...expectedAfter, boundaryPosition: 'EPSILON_AFTER', input: { longitude: 10.00001 } }
+        {
+          ...base,
+          ...expectedBefore,
+          boundaryPosition: 'EPSILON_BEFORE',
+          input: { longitude: boundaryLongitude - epsilon }
+        },
+        {
+          ...base,
+          ...expectedAfter,
+          boundaryPosition: 'EXACT',
+          input: { longitude: boundaryLongitude }
+        },
+        {
+          ...base,
+          ...expectedAfter,
+          boundaryPosition: 'EPSILON_AFTER',
+          input: { longitude: boundaryLongitude + epsilon }
+        }
       ];
     };
     const fixtures = [
-      ...makeTriplet('SIGN_BOUNDARY', undefined, 'S-10', { expectedSign: 'ARIES' }, { expectedSign: 'TAURUS' }),
-      ...makeTriplet('NAKSHATRA_BOUNDARY', 'NAKSHATRA', 'N-10', { expectedNakshatra: 'A' }, { expectedNakshatra: 'B' }),
-      ...makeTriplet('NAKSHATRA_BOUNDARY', 'PADA', 'P-10', { expectedPada: 1 }, { expectedPada: 2 })
+      ...makeTriplet(
+        'SIGN_BOUNDARY',
+        undefined,
+        'SIGN-30',
+        30,
+        { expectedSign: 'ARIES' },
+        { expectedSign: 'TAURUS' }
+      ),
+      ...makeTriplet(
+        'NAKSHATRA_BOUNDARY',
+        'NAKSHATRA',
+        'NAKSHATRA-13.3333333333',
+        360 / 27,
+        { expectedNakshatra: 'ASHWINI' },
+        { expectedNakshatra: 'BHARANI' }
+      ),
+      ...makeTriplet(
+        'NAKSHATRA_BOUNDARY',
+        'PADA',
+        'PADA-3.3333333333',
+        360 / 108,
+        { expectedPada: 1, expectedNakshatra: 'ASHWINI' },
+        { expectedPada: 2, expectedNakshatra: 'ASHWINI' }
+      )
     ];
     expect(inspectBoundaryCoverage(fixtures, CALCULATION_COVERAGE_POLICY)).toEqual([]);
     expect(inspectBoundaryCoverage([
@@ -566,7 +699,41 @@ describe('release gate report', () => {
       ),
       ...fixtures.slice(6)
     ], CALCULATION_COVERAGE_POLICY)).toContain(
-      'BOUNDARY_TRANSITION:NAKSHATRA:N-10:expectedNakshatra must differ before and after'
+      'BOUNDARY_DIRECTION:NAKSHATRA:NAKSHATRA-13.3333333333:nakshatra values must transition in increasing-longitude order'
+    );
+    expect(inspectBoundaryCoverage(fixtures.map(item =>
+      item.kind === 'SIGN_BOUNDARY'
+        ? {
+          ...item,
+          expectedSign: item.boundaryPosition === 'EPSILON_BEFORE' ? 'TAURUS' : 'ARIES'
+        }
+        : item
+    ), CALCULATION_COVERAGE_POLICY)).toContain(
+      'BOUNDARY_DIRECTION:SIGN:SIGN-30:sign values must transition in increasing-longitude order'
+    );
+    expect(inspectBoundaryCoverage(fixtures.map(item =>
+      item.kind === 'SIGN_BOUNDARY'
+        ? {
+          ...item,
+          provenance: { expectedValuesProducedIndependently: false }
+        }
+        : item
+    ), CALCULATION_COVERAGE_POLICY)).toContain(
+      'BOUNDARY_PROVENANCE:SIGN:SIGN-30:expectedValuesProducedIndependently must be true'
+    );
+    expect(inspectBoundaryCoverage(fixtures.map(item =>
+      item.kind === 'SIGN_BOUNDARY'
+        ? { ...item, boundaryDefinition: { ...item.boundaryDefinition, longitude: 60 } }
+        : item
+    ), CALCULATION_COVERAGE_POLICY)).toContain(
+      'BOUNDARY_IDENTITY:SIGN:SIGN-30:definition must match the declared longitude and coordinate convention'
+    );
+    expect(inspectBoundaryCoverage(fixtures.map(item =>
+      item.kind === 'SIGN_BOUNDARY'
+        ? { ...item, expectedSign: 'ARIES' }
+        : item
+    ), CALCULATION_COVERAGE_POLICY)).toContain(
+      'BOUNDARY_TRANSITION:SIGN:SIGN-30:expectedSign must differ before and after'
     );
   });
 

@@ -88,6 +88,13 @@ function computeHarnessImportGraph(revision, entryPoint) {
     return sourceCache.get(relativePath);
   };
 
+  const revisionConfigHost = {
+    ...ts.sys,
+    fileExists: (fileName) => isRepositoryPath(fileName)
+      ? treeFiles.has(repositoryPath(fileName))
+      : ts.sys.fileExists(fileName),
+    readFile: (fileName) => readRevisionFile(fileName) ?? ts.sys.readFile(fileName)
+  };
   const tsconfigText = runGit(['show', `${revision}:tsconfig.json`]);
   const parsedJson = ts.parseConfigFileTextToJson(
     `${absoluteRoot}/tsconfig.json`,
@@ -96,7 +103,7 @@ function computeHarnessImportGraph(revision, entryPoint) {
   if (parsedJson.error) {
     throw new Error(ts.flattenDiagnosticMessageText(parsedJson.error.messageText, '\n'));
   }
-  const parsedConfig = ts.parseJsonConfigFileContent(parsedJson.config, ts.sys, absoluteRoot);
+  const parsedConfig = ts.parseJsonConfigFileContent(parsedJson.config, revisionConfigHost, absoluteRoot);
   const options = parsedConfig.options;
   const host = ts.createCompilerHost(options);
   const nativeFileExists = host.fileExists.bind(host);
@@ -160,6 +167,11 @@ function computeHarnessImportGraph(revision, entryPoint) {
         && node.moduleSpecifier
         && ts.isStringLiteralLike(node.moduleSpecifier)) {
         recordSpecifier(node.moduleSpecifier.text, 'static');
+      } else if (ts.isImportEqualsDeclaration(node)
+        && ts.isExternalModuleReference(node.moduleReference)
+        && node.moduleReference.expression
+        && ts.isStringLiteralLike(node.moduleReference.expression)) {
+        recordSpecifier(node.moduleReference.expression.text, 'import-equals');
       } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)
         && ts.isStringLiteralLike(node.argument.literal)) {
         recordSpecifier(node.argument.literal.text, 'type');
@@ -585,17 +597,6 @@ if (typeof policy?.pr8?.harnessEntryPoint === 'string') {
       policy.pr8.harnessEntryPoint
     );
     harnessDependencyPaths = candidateHarnessGraph.dependencies;
-    const acceptedEdges = new Set(acceptedHarnessGraph.edges);
-    const candidateEdges = new Set(candidateHarnessGraph.edges);
-    harnessGraphRevisionDifferences = [
-      ...[...acceptedEdges].filter(edge => !candidateEdges.has(edge)).map(edge => `REMOVED:${edge}`),
-      ...[...candidateEdges].filter(edge => !acceptedEdges.has(edge)).map(edge => `ADDED:${edge}`)
-    ].sort();
-    if (harnessGraphRevisionDifferences.length > 0) {
-      preflightErrors.push(
-        `PR-8 harness dependency graph differs between accepted and candidate revisions: ${harnessGraphRevisionDifferences.join('; ')}`
-      );
-    }
   } catch (error) {
     preflightErrors.push(`PR-8 harness import graph could not be computed: ${error.message}`);
   }
@@ -760,7 +761,16 @@ try {
 } catch (error) {
   preflightErrors.push(`Release report validation could not be loaded: ${error.message}`);
 }
-if (releaseReportModule && harnessDependencyPaths.length > 0) {
+if (releaseReportModule && acceptedHarnessGraph && candidateHarnessGraph) {
+  harnessGraphRevisionDifferences = releaseReportModule.harnessDependencyGraphDifferences(
+    acceptedHarnessGraph,
+    candidateHarnessGraph
+  );
+  if (harnessGraphRevisionDifferences.length > 0) {
+    preflightErrors.push(
+      `PR-8 harness dependency graph differs between accepted and candidate revisions: ${harnessGraphRevisionDifferences.join('; ')}`
+    );
+  }
   harnessDependencyIssues = releaseReportModule.harnessDependencyInventoryIssues(
     root,
     declaredPr8RevisionComparisonPaths,
@@ -1041,6 +1051,9 @@ try {
     }
   }, evidenceManifest);
   releaseReport = releaseReportModule.finalizeReleaseReport(validatedRunnerResult);
+  if (!releaseReportModule.verifyEvidenceManifestDigest(releaseReport, evidenceManifest)) {
+    throw new Error('Evidence manifest digest verification failed during final report assembly.');
+  }
 } catch (error) {
   releaseReportError = error.message;
   preflightErrors.push(`Release report aggregation failed: ${error.message}`);
@@ -1101,6 +1114,8 @@ const manifest = {
   },
   commands,
   evidenceManifest,
+  evidenceManifestSchemaVersion: releaseReport?.evidenceManifestSchemaVersion ?? 1,
+  evidenceManifestSha256: releaseReport?.evidenceManifestSha256 ?? null,
   evidenceManifestIntegrity: releaseReport?.evidenceManifestIntegrity ?? null,
   ...(pr8AcceptanceReport === undefined ? {} : { pr8AcceptanceReport }),
   limitations,

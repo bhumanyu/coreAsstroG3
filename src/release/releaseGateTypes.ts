@@ -190,6 +190,8 @@ export interface ReleaseReport {
   readonly canRelease: boolean;
   readonly allowedSkippedTests: readonly string[];
   readonly pr8AcceptanceStatuses: readonly Pr8AcceptanceStatus[];
+  readonly evidenceManifestSchemaVersion: 1;
+  readonly evidenceManifestSha256: string;
   readonly evidenceManifestIntegrity: EvidenceManifestIntegrity;
   readonly metadata?: ReleaseMetadata;
 }

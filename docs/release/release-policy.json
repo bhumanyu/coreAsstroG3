@@ -10,12 +10,6 @@
         "description": "Non-literal require() and dynamic import() targets cannot be resolved from static source; each discovered target requires a path-specific approved waiver."
       }
     ],
-    "dependencyAnalysisLimitations": [
-      {
-        "id": "nonliteral-runtime-loads",
-        "description": "Non-literal require() and dynamic import() targets cannot be resolved from static source; each discovered target requires a path-specific approved waiver."
-      }
-    ],
     "revisionComparisonPaths": [
       "src/acceptance/",
       "src/ai/",
