@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { REQUIRED_CALCULATION_COVERAGE } from '../engine/validation/calculationReferenceTypes.ts';
 import {
   EXCLUDED_RELEASE_CAPABILITIES,
   RELEASE_POLICY_VERSION,
@@ -70,6 +71,7 @@ function evidenceExistsInManifest(
 }
 
 export type ValidatedRunnerResult = ReleaseReportInput & {
+  readonly evidenceManifestSha256: string;
   readonly [VALIDATED_RUNNER_RESULT]: true;
 };
 
@@ -90,16 +92,39 @@ export function createValidatedRunnerResult(
         if (!evidence || typeof evidence !== 'object' || !('kind' in evidence)) {
           throw new Error(`PASS gate ${gate.id} contains malformed evidence.`);
         }
-        if (evidence.kind !== RELEASE_GATE_EVIDENCE_KIND[gate.id]) {
-          throw new Error(`PASS gate ${gate.id} requires ${RELEASE_GATE_EVIDENCE_KIND[gate.id]} evidence.`);
+        const requirement = RELEASE_GATE_EVIDENCE_KIND[gate.id];
+        if (evidence.kind !== requirement.kind) {
+          throw new Error(`PASS gate ${gate.id} requires ${requirement.kind} evidence.`);
+        }
+        if (evidence.kind === 'COMMAND_LOG'
+          && !requirement.commandNames?.includes(evidence.commandName)) {
+          throw new Error(`PASS gate ${gate.id} does not accept command ${evidence.commandName}.`);
         }
         if (!evidenceExistsInManifest(evidence, evidenceManifest)) {
           throw new Error(`PASS gate ${gate.id} references evidence missing from the runner manifest.`);
         }
       }
+      const commandNames = RELEASE_GATE_EVIDENCE_KIND[gate.id].commandNames;
+      if (commandNames) {
+        const suppliedNames = gate.evidence
+          .filter((evidence): evidence is Extract<ReleaseGateEvidence, { kind: 'COMMAND_LOG' }> =>
+            evidence.kind === 'COMMAND_LOG')
+          .map(evidence => evidence.commandName)
+          .sort();
+        if (JSON.stringify(suppliedNames) !== JSON.stringify([...commandNames].sort())) {
+          throw new Error(`PASS gate ${gate.id} must reference exactly its designated command records.`);
+        }
+      }
     }
   }
-  return Object.freeze({ ...input, [VALIDATED_RUNNER_RESULT]: true as const });
+  const evidenceManifestSha256 = createHash('sha256')
+    .update(JSON.stringify(evidenceManifest))
+    .digest('hex');
+  return Object.freeze({
+    ...input,
+    evidenceManifestSha256,
+    [VALIDATED_RUNNER_RESULT]: true as const
+  });
 }
 
 export interface VitestJsonReport {
@@ -183,6 +208,7 @@ export function skippedTestsGateStatus(
 export interface CalculationFixtureResult {
   readonly fixtureId: string;
   readonly kind: string;
+  readonly invocationId: string;
   readonly operationId: string;
   readonly compared: boolean;
   readonly passed: boolean;
@@ -191,6 +217,7 @@ export interface CalculationFixtureResult {
 export interface CalculationFixtureInventoryItem {
   readonly id: string;
   readonly kind: string;
+  readonly entryPoint: string;
   readonly provenance: {
     readonly sourceType?: string;
     readonly sourceName?: string;
@@ -215,7 +242,8 @@ export function calculationFixtureGateStatus(
   fixtures: readonly CalculationFixtureInventoryItem[],
   results: unknown,
   missingCoverage: readonly string[],
-  commandPassed: boolean
+  commandPassed: boolean,
+  expectedInvocationId: string
 ): ReleaseGateStatus {
   if (!commandPassed) return 'BLOCKED';
   if (fixtures.length === 0 || missingCoverage.length > 0) return 'BLOCKED';
@@ -224,6 +252,7 @@ export function calculationFixtureGateStatus(
 
   const expectedIds = new Set(fixtures.map(fixture => fixture.id));
   const observedIds = new Set<string>();
+  const operationIds = new Set<string>();
   for (const result of results) {
     if (!result || typeof result !== 'object') return 'FAIL';
     const item = result as Record<string, unknown>;
@@ -232,8 +261,13 @@ export function calculationFixtureGateStatus(
     observedIds.add(item.fixtureId);
     if (typeof item.kind !== 'string'
       || item.kind !== fixtures.find(fixture => fixture.id === item.fixtureId)?.kind) return 'FAIL';
+    if (item.invocationId !== expectedInvocationId) return 'FAIL';
     if (typeof item.operationId !== 'string' || item.operationId.trim().length === 0
       || typeof item.compared !== 'boolean' || typeof item.passed !== 'boolean') return 'FAIL';
+    const fixture = fixtures.find(candidate => candidate.id === item.fixtureId);
+    if (!fixture || item.operationId !== `${fixture.entryPoint}:${fixture.kind}:${fixture.id}`
+      || operationIds.has(item.operationId)) return 'FAIL';
+    operationIds.add(item.operationId);
     if (item.passed === false) return 'FAIL';
     if (item.compared === false) return 'BLOCKED';
   }
@@ -264,6 +298,68 @@ export function calculationFixtureGateStatus(
   return commandPassed ? 'PASS' : 'FAIL';
 }
 
+export function fixtureResultsCorrelateToCommand(
+  report: unknown,
+  expectedInvocationId: string,
+  commandPassed: boolean,
+  modifiedAt: number,
+  startedAt: number,
+  finishedAt: number
+): boolean {
+  if (!commandPassed || !report || typeof report !== 'object' || Array.isArray(report)) return false;
+  const value = report as Record<string, unknown>;
+  return value.invocationId === expectedInvocationId
+    && Array.isArray(value.results)
+    && Number.isFinite(modifiedAt)
+    && Number.isFinite(startedAt)
+    && Number.isFinite(finishedAt)
+    && finishedAt >= startedAt
+    && modifiedAt >= startedAt
+    && modifiedAt <= finishedAt;
+}
+
+export function harnessDependencyInventoryIssues(
+  repositoryRoot: string,
+  declaredPaths: readonly string[],
+  computedDependencies: readonly string[],
+  waivedDependencies: readonly string[] = []
+): readonly string[] {
+  const root = resolve(repositoryRoot);
+  const normalize = (value: string): string => value.replace(/\\/g, '/').replace(/^\.\//, '');
+  const issues: string[] = [];
+  for (const declared of declaredPaths) {
+    const normalized = normalize(declared);
+    const absolutePath = resolve(root, normalized);
+    const relativePath = relative(root, absolutePath);
+    if (isAbsolute(relativePath) || relativePath === '..' || relativePath.startsWith(`..${sep}`)) {
+      issues.push(`UNREADABLE_DECLARED_PATH:${declared}`);
+      continue;
+    }
+    try {
+      const stat = statSync(absolutePath);
+      if (stat.isFile()) readFileSync(absolutePath);
+      else if (stat.isDirectory()) readdirSync(absolutePath);
+      else issues.push(`UNREADABLE_DECLARED_PATH:${declared}`);
+    } catch {
+      issues.push(`UNREADABLE_DECLARED_PATH:${declared}`);
+    }
+  }
+  const waived = new Set(waivedDependencies.map(normalize));
+  for (const dependency of computedDependencies) {
+    const normalized = normalize(dependency);
+    const covered = declaredPaths.some(declared => {
+      const entry = normalize(declared);
+      return entry.endsWith('/')
+        ? normalized.startsWith(entry)
+        : normalized === entry;
+    });
+    if (!covered && !waived.has(normalized)) {
+      issues.push(`UNDECLARED_HARNESS_DEPENDENCY:${normalized}`);
+    }
+  }
+  return issues;
+}
+
 export function releasePolicyIsValid(
   policy: unknown,
   requiredGateIds: readonly string[]
@@ -279,34 +375,50 @@ export function releasePolicyIsValid(
     Array.isArray(candidate)
     && candidate.every(item => typeof item === 'string' && item.length > 0)
     && new Set(candidate).size === candidate.length;
+  const matchesContract = (candidate: unknown, required: readonly string[]): boolean =>
+    isStringArray(candidate)
+    && candidate.length === required.length
+    && required.every((item, index) => candidate[index] === item);
   const requiredPr8Paths = [
     'src/acceptance/',
     'src/ai/',
     'src/core/analysis/',
+    'src/core/validation/',
+    'src/data/',
     'src/domain/',
     'src/product/',
     'src/features/chart-export/',
+    'src/engine/',
     'src/engine/astroEngine.ts',
+    'src/types.ts',
     'src/test/fixtures/canonicalChart.ts',
     'src/test/fixtures/careerGoldenBaseline.ts',
     'src/test/fixtures/wealthGoldenBaseline.ts',
     'src/test/fixtures/selectedPeriodGoldenFixtures.ts'
   ];
   const pr8Paths = (pr8 as Record<string, unknown> | undefined)?.revisionComparisonPaths;
+  const dependencyWaivers = (pr8 as Record<string, unknown> | undefined)?.harnessDependencyWaivers;
+  const coverage = calculationCoverage as Record<string, unknown> | undefined;
+  const epsilon = coverage?.boundaryEpsilonDegrees as Record<string, unknown> | undefined;
   return value.policyVersion === RELEASE_POLICY_VERSION
     && Boolean(pr8)
     && typeof pr8 === 'object'
     && /^[0-9a-f]{40}$/i.test((pr8 as Record<string, unknown>).acceptedImplementationRevision as string)
+    && (pr8 as Record<string, unknown>).harnessEntryPoint
+      === 'src/acceptance/goldenAcceptanceProductionHarness.ts'
+    && isStringArray(dependencyWaivers)
     && isStringArray(pr8Paths)
     && requiredPr8Paths.every(path => pr8Paths.includes(path))
     && Boolean(calculationCoverage)
     && typeof calculationCoverage === 'object'
-    && isStringArray((calculationCoverage as Record<string, unknown>).requiredKinds)
-    && isStringArray((calculationCoverage as Record<string, unknown>).requiredPlanets)
-    && isStringArray((calculationCoverage as Record<string, unknown>).requiredMotionScenarios)
-    && isStringArray((calculationCoverage as Record<string, unknown>).requiredBoundaryKinds)
-    && isStringArray((calculationCoverage as Record<string, unknown>).requiredBoundaryPositions)
-    && isStringArray((calculationCoverage as Record<string, unknown>).requiredVargaTypes)
+    && matchesContract(coverage?.requiredKinds, REQUIRED_CALCULATION_COVERAGE.requiredKinds)
+    && matchesContract(coverage?.requiredPlanets, REQUIRED_CALCULATION_COVERAGE.requiredPlanets)
+    && matchesContract(coverage?.requiredMotionScenarios, REQUIRED_CALCULATION_COVERAGE.requiredMotionScenarios)
+    && matchesContract(coverage?.requiredBoundaryKinds, REQUIRED_CALCULATION_COVERAGE.requiredBoundaryKinds)
+    && matchesContract(coverage?.requiredBoundaryPositions, REQUIRED_CALCULATION_COVERAGE.requiredBoundaryPositions)
+    && matchesContract(coverage?.requiredVargaTypes, REQUIRED_CALCULATION_COVERAGE.requiredVargaTypes)
+    && epsilon?.min === REQUIRED_CALCULATION_COVERAGE.boundaryEpsilonDegrees.min
+    && epsilon.max === REQUIRED_CALCULATION_COVERAGE.boundaryEpsilonDegrees.max
     && Array.isArray(requiredGates)
     && requiredGateIds.length === REQUIRED_RELEASE_GATES.length
     && requiredGates.length === REQUIRED_RELEASE_GATES.length
@@ -495,6 +607,9 @@ export function finalizeReleaseReport(input: ValidatedRunnerResult): ReleaseRepo
   if (input[VALIDATED_RUNNER_RESULT] !== true) {
     throw new Error('Release report finalization requires a validated runner result.');
   }
+  if (!/^[0-9a-f]{64}$/i.test(input.evidenceManifestSha256)) {
+    throw new Error('Validated runner result is missing its evidence-manifest digest.');
+  }
 
   const gates = normalizeRequiredGates(input);
   const status = aggregateReleaseStatus(gates);
@@ -509,6 +624,7 @@ export function finalizeReleaseReport(input: ValidatedRunnerResult): ReleaseRepo
     canRelease,
     allowedSkippedTests: ALLOWED_SKIPPED_TESTS,
     pr8AcceptanceStatuses,
+    evidenceManifestSha256: input.evidenceManifestSha256,
     ...(input.metadata === undefined ? {} : { metadata: Object.freeze({ ...input.metadata }) })
   });
 }

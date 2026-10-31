@@ -20,6 +20,7 @@ import { Planet } from '../../types';
 const fixtureResults: Array<{
   fixtureId: string;
   kind: string;
+  invocationId: string;
   operationId: string;
   compared: boolean;
   passed: boolean;
@@ -66,9 +67,12 @@ describe('RG-09 calculation reference validation', () => {
 
   for (const fixture of CALCULATION_REFERENCE_FIXTURES) {
     it(`validates approved reference ${fixture.id} through ${fixture.entryPoint}`, () => {
+      const invocationId = process.env.PR9_FIXTURE_INVOCATION_ID;
+      if (!invocationId) throw new Error('PR9_FIXTURE_INVOCATION_ID must be set by the release runner.');
       const fixtureResult = {
         fixtureId: fixture.id,
         kind: fixture.kind,
+        invocationId,
         operationId: `${fixture.entryPoint}:${fixture.kind}:${fixture.id}`,
         compared: false,
         passed: false

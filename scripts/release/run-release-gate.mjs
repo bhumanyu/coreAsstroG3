@@ -8,7 +8,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'node:fs';
-import { dirname, resolve, relative } from 'node:path';
+import { dirname, resolve, relative, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -34,6 +34,41 @@ function runGit(args, encoding = 'utf8') {
     encoding: encoding === 'buffer' ? null : encoding,
     maxBuffer: 512 * 1024 * 1024
   });
+}
+
+function computeHarnessImportGraph(entryPoint) {
+  const visited = new Set();
+  const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.json', '.css'];
+  const resolveLocalImport = (fromFile, specifier) => {
+    const base = resolve(root, dirname(fromFile), specifier);
+    const candidates = extname(base)
+      ? [base]
+      : [
+        ...extensions.map(extension => `${base}${extension}`),
+        ...extensions.map(extension => resolve(base, `index${extension}`))
+      ];
+    const match = candidates.find(candidate => {
+      try {
+        return statSync(candidate).isFile();
+      } catch {
+        return false;
+      }
+    });
+    if (!match) throw new Error(`Cannot resolve local import ${specifier} from ${fromFile}.`);
+    return relative(root, match).replace(/\\/g, '/');
+  };
+  const visit = (relativePath) => {
+    const normalized = relativePath.replace(/\\/g, '/');
+    if (visited.has(normalized)) return;
+    visited.add(normalized);
+    const source = readFileSync(resolve(root, normalized), 'utf8');
+    const importPattern = /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?)(['"])(\.[^'"]+)\1/g;
+    for (const match of source.matchAll(importPattern)) {
+      visit(resolveLocalImport(normalized, match[2]));
+    }
+  };
+  visit(entryPoint);
+  return [...visited].sort();
 }
 
 function sha256(value) {
@@ -214,6 +249,7 @@ function recomputeMissingCalculationCoverage(fixtures, coveragePolicy) {
       const exact = byPosition.get('EXACT');
       const after = byPosition.get('EPSILON_AFTER');
       const boundary = exact?.boundaryLongitude;
+      const epsilon = coveragePolicy.boundaryEpsilonDegrees;
       if (!Number.isFinite(boundary)
         || before?.input?.longitude === undefined
         || exact?.input?.longitude !== boundary
@@ -222,6 +258,28 @@ function recomputeMissingCalculationCoverage(fixtures, coveragePolicy) {
           && exact.input.longitude < after.input.longitude)
         || items.some(item => item.boundaryLongitude !== boundary)) {
         missing.push(`BOUNDARY_ORDER:${key}:input longitudes must be strictly ordered around boundaryLongitude`);
+      } else if (!Number.isFinite(epsilon?.min)
+        || !Number.isFinite(epsilon?.max)
+        || epsilon.min <= 0
+        || epsilon.max < epsilon.min
+        || Math.abs(boundary - before.input.longitude) < epsilon.min
+        || Math.abs(boundary - before.input.longitude) > epsilon.max
+        || Math.abs(after.input.longitude - boundary) < epsilon.min
+        || Math.abs(after.input.longitude - boundary) > epsilon.max) {
+        missing.push(`BOUNDARY_EPSILON:${key}:input longitudes are outside the approved epsilon range`);
+      }
+      if (boundaryKind === 'SIGN'
+        && (!before?.expectedSign || !after?.expectedSign
+          || before.expectedSign === after.expectedSign)) {
+        missing.push(`BOUNDARY_TRANSITION:${key}:expectedSign must differ before and after`);
+      } else if (boundaryKind === 'NAKSHATRA'
+        && (!before?.expectedNakshatra || !after?.expectedNakshatra
+          || before.expectedNakshatra === after.expectedNakshatra)) {
+        missing.push(`BOUNDARY_TRANSITION:${key}:expectedNakshatra must differ before and after`);
+      } else if (boundaryKind === 'PADA'
+        && (before?.expectedPada === undefined || after?.expectedPada === undefined
+          || before.expectedPada === after.expectedPada)) {
+        missing.push(`BOUNDARY_TRANSITION:${key}:expectedPada must differ before and after`);
       }
     }
   }
@@ -327,7 +385,10 @@ let pr8ReportSha256 = null;
 let acceptanceFilesChangedSince = [];
 let pr8EvaluatedOnCandidate = false;
 let pr8ImplementationSha = null;
+let declaredPr8RevisionComparisonPaths = [];
 let pr8RevisionComparisonPaths = [];
+let harnessDependencyPaths = [];
+let harnessDependencyIssues = [];
 let fixtureInvocationId = null;
 let toolchainNodeExpected = '';
 let toolchainNpmExpected = '';
@@ -366,9 +427,25 @@ if (typeof policy?.pr8?.acceptedImplementationRevision === 'string') {
 if (Array.isArray(policy?.pr8?.revisionComparisonPaths)
   && policy.pr8.revisionComparisonPaths.length > 0
   && policy.pr8.revisionComparisonPaths.every(path => typeof path === 'string')) {
-  pr8RevisionComparisonPaths = policy.pr8.revisionComparisonPaths;
+  declaredPr8RevisionComparisonPaths = policy.pr8.revisionComparisonPaths;
+  pr8RevisionComparisonPaths = declaredPr8RevisionComparisonPaths;
 } else {
   preflightErrors.push('Release policy must declare PR-8 revisionComparisonPaths.');
+}
+if (typeof policy?.pr8?.harnessEntryPoint === 'string') {
+  try {
+    harnessDependencyPaths = computeHarnessImportGraph(policy.pr8.harnessEntryPoint);
+  } catch (error) {
+    preflightErrors.push(`PR-8 harness import graph could not be computed: ${error.message}`);
+  }
+} else {
+  preflightErrors.push('Release policy must declare pr8.harnessEntryPoint.');
+}
+if (harnessDependencyPaths.length > 0) {
+  pr8RevisionComparisonPaths = [...new Set([
+    ...declaredPr8RevisionComparisonPaths,
+    ...harnessDependencyPaths
+  ])].sort();
 }
 
 testedSha = readGitValue(['rev-parse', 'HEAD']);
@@ -528,6 +605,19 @@ try {
 } catch (error) {
   preflightErrors.push(`Release report validation could not be loaded: ${error.message}`);
 }
+if (releaseReportModule && harnessDependencyPaths.length > 0) {
+  harnessDependencyIssues = releaseReportModule.harnessDependencyInventoryIssues(
+    root,
+    declaredPr8RevisionComparisonPaths,
+    harnessDependencyPaths,
+    policy?.pr8?.harnessDependencyWaivers ?? []
+  );
+  if (harnessDependencyIssues.length > 0) {
+    preflightErrors.push(
+      `PR-8 revision-comparison inventory does not cover harness dependencies: ${harnessDependencyIssues.join(', ')}`
+    );
+  }
+}
 
 const cleanPreflight = preflightErrors.length === 0;
 let typecheckCommand;
@@ -606,10 +696,14 @@ if (cleanPreflight) {
   if (calculationCommand.passed && existsSync(fixtureResultsPath)) {
     const resultFileStat = statSync(fixtureResultsPath);
     const fixtureReport = readJson(fixtureResultsPath, 'Calculation fixture results');
-    calculationFixtureResultsAvailable = fixtureReport?.invocationId === fixtureInvocationId
-      && Array.isArray(fixtureReport.results)
-      && resultFileStat.mtimeMs >= calculationCommand.startedAt
-      && resultFileStat.mtimeMs <= calculationCommand.finishedAt;
+    calculationFixtureResultsAvailable = releaseReportModule?.fixtureResultsCorrelateToCommand(
+      fixtureReport,
+      fixtureInvocationId,
+      calculationCommand.passed,
+      resultFileStat.mtimeMs,
+      calculationCommand.startedAt,
+      calculationCommand.finishedAt
+    ) === true;
     if (calculationFixtureResultsAvailable) {
       calculationFixtureResults = fixtureReport.results;
     } else {
@@ -705,7 +799,8 @@ const calculationGateStatus = !Array.isArray(calculationFixtures)
       calculationFixtures,
       calculationFixtureResultsAvailable ? calculationFixtureResults : undefined,
       missingCalculationCoverage,
-      calculationCommand?.passed === true
+      calculationCommand?.passed === true,
+      fixtureInvocationId ?? ''
     ) ?? 'FAIL';
 addGate(gates, 'RG-09', calculationGateStatus,
   `Approved calculation reference fixtures: ${fixtureCount ?? 'unknown'}; independently recomputed missing coverage: ${missingCalculationCoverage.length}.`,
@@ -803,12 +898,17 @@ const manifest = {
   pr8: {
     implementationSha: pr8ImplementationSha,
     revisionComparisonPaths: pr8RevisionComparisonPaths,
+    declaredRevisionComparisonPaths: declaredPr8RevisionComparisonPaths,
+    harnessEntryPoint: policy?.pr8?.harnessEntryPoint ?? null,
+    harnessDependencyPaths,
+    harnessDependencyIssues,
     reportSha256: pr8ReportSha256,
     evaluatedOnCandidate: pr8EvaluatedOnCandidate,
     ...(acceptanceFilesChangedSince.length > 0 ? { acceptanceFilesChangedSince } : {})
   },
   commands,
   evidenceManifest,
+  evidenceManifestSha256: releaseReport?.evidenceManifestSha256 ?? null,
   ...(pr8AcceptanceReport === undefined ? {} : { pr8AcceptanceReport }),
   limitations,
   skippedTests,

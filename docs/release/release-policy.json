@@ -1,15 +1,21 @@
 {
-  "policyVersion": 1,
+  "policyVersion": 2,
   "pr8": {
     "acceptedImplementationRevision": "c1202ac9fca28ea36eb459c6045969cc02aa7df7",
+    "harnessEntryPoint": "src/acceptance/goldenAcceptanceProductionHarness.ts",
+    "harnessDependencyWaivers": [],
     "revisionComparisonPaths": [
       "src/acceptance/",
       "src/ai/",
       "src/core/analysis/",
+      "src/core/validation/",
+      "src/data/",
       "src/domain/",
       "src/product/",
       "src/features/chart-export/",
+      "src/engine/",
       "src/engine/astroEngine.ts",
+      "src/types.ts",
       "src/test/fixtures/canonicalChart.ts",
       "src/test/fixtures/careerGoldenBaseline.ts",
       "src/test/fixtures/wealthGoldenBaseline.ts",
@@ -31,7 +37,11 @@
     "requiredMotionScenarios": ["PROGRADE", "RETROGRADE", "NEAR_STATIONARY"],
     "requiredBoundaryKinds": ["SIGN", "NAKSHATRA", "PADA"],
     "requiredBoundaryPositions": ["EPSILON_BEFORE", "EXACT", "EPSILON_AFTER"],
-    "requiredVargaTypes": ["D9", "D10"]
+    "requiredVargaTypes": ["D9", "D10"],
+    "boundaryEpsilonDegrees": {
+      "min": 0.000001,
+      "max": 0.0001
+    }
   },
   "releaseStatus": {
     "values": ["PASS", "FAIL", "BLOCKED", "NOT_RUN"],

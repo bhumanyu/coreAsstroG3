@@ -51,6 +51,10 @@ export interface CalculationCoveragePolicy {
   readonly requiredBoundaryKinds: readonly BoundaryKind[];
   readonly requiredBoundaryPositions: readonly BoundaryPosition[];
   readonly requiredVargaTypes: readonly string[];
+  readonly boundaryEpsilonDegrees: {
+    readonly min: number;
+    readonly max: number;
+  };
 }
 
 export interface CalculationConventions<
@@ -128,6 +132,24 @@ export interface RahuKetuOppositionReference extends CalculationReferenceBase<
 export type BoundaryPosition = 'EPSILON_BEFORE' | 'EXACT' | 'EPSILON_AFTER';
 export type BoundaryKind = 'SIGN' | 'NAKSHATRA' | 'PADA';
 
+export const REQUIRED_CALCULATION_COVERAGE = Object.freeze({
+  requiredKinds: [
+    'PLANETARY_LONGITUDE',
+    'PLANETARY_MOTION',
+    'RAHU_KETU_OPPOSITION',
+    'SIGN_BOUNDARY',
+    'NAKSHATRA_BOUNDARY',
+    'HOUSE_POSITION',
+    'VARGA_LONGITUDE',
+    'VIMSHOTTARI_DASHA'
+  ],
+  requiredPlanets: ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU'],
+  requiredMotionScenarios: ['PROGRADE', 'RETROGRADE', 'NEAR_STATIONARY'],
+  requiredBoundaryKinds: ['SIGN', 'NAKSHATRA', 'PADA'],
+  requiredBoundaryPositions: ['EPSILON_BEFORE', 'EXACT', 'EPSILON_AFTER'],
+  requiredVargaTypes: ['D9', 'D10'],
+  boundaryEpsilonDegrees: { min: 0.000001, max: 0.0001 }
+} as const satisfies CalculationCoveragePolicy);
 export interface SignBoundaryReference extends CalculationReferenceBase<
   'SIGN_BOUNDARY',
   'calculateSign',

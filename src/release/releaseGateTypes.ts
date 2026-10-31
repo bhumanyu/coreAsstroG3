@@ -34,7 +34,7 @@ export const REQUIRED_RELEASE_GATES = Object.freeze([
   { id: REQUIRED_RELEASE_GATE_IDS[13], name: 'Limitations and excluded capabilities' }
 ] as const);
 
-export const RELEASE_POLICY_VERSION = 1;
+export const RELEASE_POLICY_VERSION = 2;
 
 export const RETAINED_RELEASE_BLOCKERS = Object.freeze([
   { id: 'external-reference-parity', status: 'BLOCKED' },
@@ -88,22 +88,27 @@ export type ReleaseGateEvidence =
   | FixtureComparisonEvidence
   | PolicyDocumentEvidence;
 
-export const RELEASE_GATE_EVIDENCE_KIND = Object.freeze({
-  'RG-01': 'POLICY_DOCUMENT',
-  'RG-02': 'FILE_SHA256',
-  'RG-03': 'COMMAND_LOG',
-  'RG-04': 'COMMAND_LOG',
-  'RG-05': 'COMMAND_LOG',
-  'RG-06': 'FILE_SHA256',
-  'RG-07': 'FILE_SHA256',
-  'RG-08': 'COMMAND_LOG',
-  'RG-09': 'FIXTURE_COMPARISON',
-  'RG-10': 'COMMAND_LOG',
-  'RG-11': 'COMMAND_LOG',
-  'RG-12': 'COMMAND_LOG',
-  'RG-13': 'FILE_SHA256',
-  'RG-14': 'POLICY_DOCUMENT'
-} as const satisfies Readonly<Record<ReleaseGateId, ReleaseGateEvidence['kind']>>);
+export interface ReleaseGateEvidenceRequirement {
+  readonly kind: ReleaseGateEvidence['kind'];
+  readonly commandNames?: readonly string[];
+}
+
+export const RELEASE_GATE_EVIDENCE_KIND: Readonly<Record<ReleaseGateId, ReleaseGateEvidenceRequirement>> = Object.freeze({
+  'RG-01': { kind: 'POLICY_DOCUMENT' },
+  'RG-02': { kind: 'FILE_SHA256' },
+  'RG-03': { kind: 'COMMAND_LOG', commandNames: ['production-build', 'bundle-tests'] },
+  'RG-04': { kind: 'COMMAND_LOG', commandNames: ['typecheck'] },
+  'RG-05': { kind: 'COMMAND_LOG', commandNames: ['unit-tests'] },
+  'RG-06': { kind: 'FILE_SHA256' },
+  'RG-07': { kind: 'FILE_SHA256' },
+  'RG-08': { kind: 'COMMAND_LOG', commandNames: ['temporal-validation'] },
+  'RG-09': { kind: 'FIXTURE_COMPARISON' },
+  'RG-10': { kind: 'POLICY_DOCUMENT' },
+  'RG-11': { kind: 'POLICY_DOCUMENT' },
+  'RG-12': { kind: 'COMMAND_LOG', commandNames: ['dasha-determinism'] },
+  'RG-13': { kind: 'FILE_SHA256' },
+  'RG-14': { kind: 'POLICY_DOCUMENT' }
+});
 
 export interface ReleaseGateResult {
   readonly id: ReleaseGateId;
@@ -158,6 +163,7 @@ export interface ReleaseReportInput {
   readonly fixtureCount?: number;
   readonly pr8AcceptanceStatuses?: readonly Pr8AcceptanceStatus[];
   readonly metadata?: ReleaseMetadata;
+  readonly evidenceManifestSha256?: string;
 }
 
 export interface ReleaseReport {
@@ -168,5 +174,6 @@ export interface ReleaseReport {
   readonly canRelease: boolean;
   readonly allowedSkippedTests: readonly string[];
   readonly pr8AcceptanceStatuses: readonly Pr8AcceptanceStatus[];
+  readonly evidenceManifestSha256: string;
   readonly metadata?: ReleaseMetadata;
 }

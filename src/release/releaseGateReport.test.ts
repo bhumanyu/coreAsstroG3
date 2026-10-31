@@ -12,6 +12,8 @@ import {
   isVitestJsonReport,
   pr8WasEvaluatedOnCandidate,
   releasePolicyIsValid,
+  fixtureResultsCorrelateToCommand,
+  harnessDependencyInventoryIssues,
   skippedTestsGateStatus
 } from './releaseGateReport';
 import {
@@ -20,6 +22,7 @@ import {
   RETAINED_RELEASE_BLOCKERS,
   REQUIRED_RELEASE_GATES,
   REQUIRED_RELEASE_GATE_IDS,
+  RELEASE_GATE_EVIDENCE_KIND,
   type ReleaseGateEvidence,
   type RunnerEvidenceManifest,
   type CoverageStatus,
@@ -35,25 +38,10 @@ const evidencePath = 'src/release/releaseGateReport.test.ts';
 const evidenceSha = createHash('sha256')
   .update(readFileSync(resolve(process.cwd(), evidencePath)))
   .digest('hex');
-const expectedKinds: Record<string, ReleaseGateEvidence['kind']> = {
-  'RG-01': 'POLICY_DOCUMENT',
-  'RG-02': 'FILE_SHA256',
-  'RG-03': 'COMMAND_LOG',
-  'RG-04': 'COMMAND_LOG',
-  'RG-05': 'COMMAND_LOG',
-  'RG-06': 'FILE_SHA256',
-  'RG-07': 'FILE_SHA256',
-  'RG-08': 'COMMAND_LOG',
-  'RG-09': 'FIXTURE_COMPARISON',
-  'RG-10': 'COMMAND_LOG',
-  'RG-11': 'COMMAND_LOG',
-  'RG-12': 'COMMAND_LOG',
-  'RG-13': 'FILE_SHA256',
-  'RG-14': 'POLICY_DOCUMENT'
-};
 const testEvidenceManifest: RunnerEvidenceManifest = {
-  commands: REQUIRED_RELEASE_GATE_IDS.map(id => ({
-    name: id,
+  commands: [...new Set(Object.values(RELEASE_GATE_EVIDENCE_KIND)
+    .flatMap(requirement => requirement.commandNames ?? []))].map(name => ({
+    name,
     logPath: evidencePath,
     exitCode: 0
   })),
@@ -67,28 +55,33 @@ const testEvidenceManifest: RunnerEvidenceManifest = {
   }],
   policyDocuments: [{ path: evidencePath, sha256: evidenceSha }]
 };
-const evidenceFor = (id: string): ReleaseGateEvidence => {
-  switch (expectedKinds[id]) {
+const evidenceFor = (id: keyof typeof RELEASE_GATE_EVIDENCE_KIND): ReleaseGateEvidence[] => {
+  const requirement = RELEASE_GATE_EVIDENCE_KIND[id];
+  switch (requirement.kind) {
     case 'COMMAND_LOG':
-      return { kind: 'COMMAND_LOG', commandName: id, logPath: evidencePath };
+      return (requirement.commandNames ?? []).map(commandName => ({
+        kind: 'COMMAND_LOG',
+        commandName,
+        logPath: evidencePath
+      }));
     case 'FILE_SHA256':
-      return { kind: 'FILE_SHA256', path: evidencePath, sha256: evidenceSha };
+      return [{ kind: 'FILE_SHA256', path: evidencePath, sha256: evidenceSha }];
     case 'FIXTURE_COMPARISON':
-      return {
+      return [{
         kind: 'FIXTURE_COMPARISON',
         path: evidencePath,
         sha256: evidenceSha,
         invocationId: 'invocation-1',
         fixtureIds: ['fixture-1']
-      };
+      }];
     case 'POLICY_DOCUMENT':
-      return { kind: 'POLICY_DOCUMENT', path: evidencePath, sha256: evidenceSha };
+      return [{ kind: 'POLICY_DOCUMENT', path: evidencePath, sha256: evidenceSha }];
     default:
       throw new Error(`Unknown release gate ${id}.`);
   }
 };
 const allPassingGates = (): ReleaseGateResult[] =>
-  REQUIRED_RELEASE_GATE_IDS.map(id => ({ id, status: 'PASS', evidence: [evidenceFor(id)] }));
+  REQUIRED_RELEASE_GATE_IDS.map(id => ({ id, status: 'PASS', evidence: evidenceFor(id) }));
 const finalize = (input: Parameters<typeof createValidatedRunnerResult>[0]) =>
   finalizeReleaseReport(createValidatedRunnerResult(input, testEvidenceManifest));
 
@@ -125,6 +118,33 @@ describe('release gate report', () => {
       .toThrow('PASS gate RG-09 requires FIXTURE_COMPARISON evidence.');
   });
 
+  it('rejects COMMAND_LOG evidence assigned to a different gate command', () => {
+    const gates = allPassingGates().map(gate =>
+      gate.id === 'RG-04'
+        ? {
+          ...gate,
+          evidence: [{
+            kind: 'COMMAND_LOG',
+            commandName: 'bundle-tests',
+            logPath: evidencePath
+          }]
+        }
+        : gate
+    );
+    expect(() => createValidatedRunnerResult({ gates } as never, testEvidenceManifest))
+      .toThrow('PASS gate RG-04 does not accept command bundle-tests.');
+  });
+
+  it('rejects a designated command missing from the evidence manifest', () => {
+    const gates = allPassingGates();
+    const manifest = {
+      ...testEvidenceManifest,
+      commands: testEvidenceManifest.commands.filter(command => command.name !== 'typecheck')
+    };
+    expect(() => createValidatedRunnerResult({ gates } as never, manifest))
+      .toThrow('PASS gate RG-04 references evidence missing from the runner manifest.');
+  });
+
   it('rejects a typed evidence reference with an artifact hash mismatch', () => {
     const gates = allPassingGates().map(gate =>
       gate.id === 'RG-01'
@@ -140,6 +160,14 @@ describe('release gate report', () => {
     );
     expect(() => createValidatedRunnerResult({ gates } as never, testEvidenceManifest))
       .toThrow('PASS gate RG-01 references evidence missing from the runner manifest.');
+  });
+
+  it('records a digest of the evidence manifest in the finalized report', () => {
+    const report = finalize({ gates: allPassingGates() });
+    const expectedDigest = createHash('sha256')
+      .update(JSON.stringify(testEvidenceManifest))
+      .digest('hex');
+    expect(report.evidenceManifestSha256).toBe(expectedDigest);
   });
 
   it('rejects malformed or stale-shaped Vitest reports for RG-06', () => {
@@ -183,6 +211,7 @@ describe('release gate report', () => {
     const fixture = {
       id: 'independent-1',
       kind: 'PLANETARY_LONGITUDE',
+      entryPoint: 'generatePlanetaryPositions',
       provenance: {
         sourceType: 'EXTERNAL_EPHEMERIS',
         independentlyProduced: true,
@@ -202,21 +231,23 @@ describe('release gate report', () => {
         approvedAt: '2026-01-02'
       }
     };
-    expect(calculationFixtureGateStatus([fixture], [], [], true)).toBe('BLOCKED');
+    expect(calculationFixtureGateStatus([fixture], [], [], true, 'invocation-1')).toBe('BLOCKED');
     expect(calculationFixtureGateStatus([fixture], [{
       fixtureId: fixture.id,
       kind: fixture.kind,
+      invocationId: 'invocation-1',
       operationId: 'generatePlanetaryPositions:PLANETARY_LONGITUDE:independent-1',
       compared: true,
       passed: true
-    }], [], true)).toBe('PASS');
+    }], [], true, 'invocation-1')).toBe('PASS');
     expect(calculationFixtureGateStatus([fixture], [{
       fixtureId: fixture.id,
       kind: fixture.kind,
+      invocationId: 'invocation-1',
       operationId: 'generatePlanetaryPositions:PLANETARY_LONGITUDE:independent-1',
       compared: true,
       passed: true
-    }], [], false)).toBe('BLOCKED');
+    }], [], false, 'invocation-1')).toBe('BLOCKED');
     expect(calculationFixtureGateStatus([{
       ...fixture,
       provenance: {
@@ -226,33 +257,104 @@ describe('release gate report', () => {
     }], [{
       fixtureId: fixture.id,
       kind: fixture.kind,
+      invocationId: 'invocation-1',
       operationId: 'generatePlanetaryPositions:PLANETARY_LONGITUDE:independent-1',
       compared: true,
       passed: true
-    }], [], true)).toBe('FAIL');
+    }], [], true, 'invocation-1')).toBe('FAIL');
+    expect(calculationFixtureGateStatus([fixture], [{
+      fixtureId: fixture.id,
+      kind: fixture.kind,
+      invocationId: 'stale-invocation',
+      operationId: 'generatePlanetaryPositions:PLANETARY_LONGITUDE:independent-1',
+      compared: true,
+      passed: true
+    }], [], true, 'invocation-1')).toBe('FAIL');
+    expect(calculationFixtureGateStatus([fixture], [{
+      fixtureId: fixture.id,
+      kind: fixture.kind,
+      invocationId: 'invocation-1',
+      operationId: 'wrong-operation',
+      compared: true,
+      passed: true
+    }], [], true, 'invocation-1')).toBe('FAIL');
+    const staleResultsCorrelate = fixtureResultsCorrelateToCommand(
+      { invocationId: 'invocation-1', results: [] },
+      'invocation-1',
+      true,
+      250,
+      100,
+      200
+    );
+    expect(staleResultsCorrelate).toBe(false);
+    expect(calculationFixtureGateStatus(
+      [fixture],
+      staleResultsCorrelate ? [] : undefined,
+      [],
+      true,
+      'invocation-1'
+    )).toBe('BLOCKED');
   });
 
-  it('flags duplicate boundary-position tuples and unordered boundary triplets', () => {
+  it('blocks stale or failed fixture-result files outside the command window', () => {
+    const report = { invocationId: 'invocation-1', results: [] };
+    expect(fixtureResultsCorrelateToCommand(report, 'invocation-1', true, 250, 100, 200))
+      .toBe(false);
+    expect(fixtureResultsCorrelateToCommand(report, 'invocation-1', false, 150, 100, 200))
+      .toBe(false);
+    expect(fixtureResultsCorrelateToCommand(report, 'invocation-1', true, 150, 100, 200))
+      .toBe(true);
+  });
+
+  it('rejects missing or uncovered declared harness dependency paths', () => {
+    const repository = mkdtempSync(join(tmpdir(), 'harness-dependencies-'));
+    try {
+      mkdirSync(join(repository, 'src', 'acceptance'), { recursive: true });
+      writeFileSync(join(repository, 'src', 'acceptance', 'entry.ts'), 'export {};\n');
+      expect(harnessDependencyInventoryIssues(
+        repository,
+        ['src/acceptance/'],
+        ['src/acceptance/entry.ts']
+      )).toEqual([]);
+      expect(harnessDependencyInventoryIssues(
+        repository,
+        ['src/missing.ts'],
+        ['src/acceptance/entry.ts']
+      )).toContain('UNREADABLE_DECLARED_PATH:src/missing.ts');
+      expect(harnessDependencyInventoryIssues(
+        repository,
+        ['src/acceptance/'],
+        ['src/unlisted/dependency.ts']
+      )).toContain('UNDECLARED_HARNESS_DEPENDENCY:src/unlisted/dependency.ts');
+    } finally {
+      rmSync(repository, { recursive: true, force: true });
+    }
+  });
+
+  it('flags duplicate positions, out-of-range epsilon, and missing transitions', () => {
     const records = [
       {
         kind: 'SIGN_BOUNDARY',
         boundaryId: 'SIGN-10',
         boundaryPosition: 'EPSILON_BEFORE',
         boundaryLongitude: 10,
-        input: { longitude: 9.9 }
+        expectedSign: 'ARIES',
+        input: { longitude: 9.99999 }
       },
       {
         kind: 'SIGN_BOUNDARY',
         boundaryId: 'SIGN-10',
         boundaryPosition: 'EPSILON_BEFORE',
         boundaryLongitude: 10,
-        input: { longitude: 9.95 }
+        expectedSign: 'ARIES',
+        input: { longitude: 9.99998 }
       },
       {
         kind: 'SIGN_BOUNDARY',
         boundaryId: 'SIGN-10',
         boundaryPosition: 'EXACT',
         boundaryLongitude: 10,
+        expectedSign: 'TAURUS',
         input: { longitude: 10 }
       },
       {
@@ -260,16 +362,64 @@ describe('release gate report', () => {
         boundaryId: 'SIGN-10',
         boundaryPosition: 'EPSILON_AFTER',
         boundaryLongitude: 10,
-        input: { longitude: 10.1 }
+        expectedSign: 'TAURUS',
+        input: { longitude: 10.00001 }
       }
     ];
     const issues = inspectBoundaryCoverage(records, CALCULATION_COVERAGE_POLICY);
     expect(issues).toContain('DUPLICATE_BOUNDARY_POSITION:SIGN:SIGN-10:EPSILON_BEFORE');
     expect(inspectBoundaryCoverage([
-      ...records.filter(item => item.boundaryPosition !== 'EPSILON_BEFORE'),
-      { ...records[0], input: { longitude: 10.01 } }
+      records[0],
+      records[2],
+      { ...records[3], input: { longitude: 10.001 } }
     ], CALCULATION_COVERAGE_POLICY)).toContain(
-      'BOUNDARY_ORDER:SIGN:SIGN-10:input longitudes must be strictly ordered around boundaryLongitude'
+      'BOUNDARY_EPSILON:SIGN:SIGN-10:before/after distances must be within 0.000001-0.0001 degrees'
+    );
+    expect(inspectBoundaryCoverage([
+      records[0],
+      records[2],
+      { ...records[3], expectedSign: 'ARIES' }
+    ], CALCULATION_COVERAGE_POLICY)).toContain(
+      'BOUNDARY_TRANSITION:SIGN:SIGN-10:expectedSign must differ before and after'
+    );
+  });
+
+  it('validates sign, nakshatra, and pada transition fields by boundary convention', () => {
+    const makeTriplet = (
+      kind: string,
+      boundaryKind: string | undefined,
+      boundaryId: string,
+      expectedBefore: Record<string, string | number>,
+      expectedAfter: Record<string, string | number>
+    ) => {
+      const base = {
+        kind,
+        ...(boundaryKind === undefined ? {} : { boundaryKind }),
+        boundaryId,
+        boundaryLongitude: 10
+      };
+      return [
+        { ...base, ...expectedBefore, boundaryPosition: 'EPSILON_BEFORE', input: { longitude: 9.99999 } },
+        { ...base, ...expectedAfter, boundaryPosition: 'EXACT', input: { longitude: 10 } },
+        { ...base, ...expectedAfter, boundaryPosition: 'EPSILON_AFTER', input: { longitude: 10.00001 } }
+      ];
+    };
+    const fixtures = [
+      ...makeTriplet('SIGN_BOUNDARY', undefined, 'S-10', { expectedSign: 'ARIES' }, { expectedSign: 'TAURUS' }),
+      ...makeTriplet('NAKSHATRA_BOUNDARY', 'NAKSHATRA', 'N-10', { expectedNakshatra: 'A' }, { expectedNakshatra: 'B' }),
+      ...makeTriplet('NAKSHATRA_BOUNDARY', 'PADA', 'P-10', { expectedPada: 1 }, { expectedPada: 2 })
+    ];
+    expect(inspectBoundaryCoverage(fixtures, CALCULATION_COVERAGE_POLICY)).toEqual([]);
+    expect(inspectBoundaryCoverage([
+      ...fixtures.slice(0, 3),
+      ...fixtures.slice(3, 6).map(item =>
+        item.boundaryPosition === 'EPSILON_AFTER'
+          ? { ...item, expectedNakshatra: 'A' }
+          : item
+      ),
+      ...fixtures.slice(6)
+    ], CALCULATION_COVERAGE_POLICY)).toContain(
+      'BOUNDARY_TRANSITION:NAKSHATRA:N-10:expectedNakshatra must differ before and after'
     );
   });
 
@@ -359,6 +509,13 @@ describe('release gate report', () => {
     expect(releasePolicyIsValid({
       ...policy,
       policyVersion: RELEASE_POLICY_VERSION + 1
+    }, REQUIRED_RELEASE_GATE_IDS)).toBe(false);
+    expect(releasePolicyIsValid({
+      ...policy,
+      calculationCoverage: {
+        ...policy.calculationCoverage,
+        requiredMotionScenarios: ['PROGRADE', 'NEAR_STATIONARY']
+      }
     }, REQUIRED_RELEASE_GATE_IDS)).toBe(false);
     expect(releasePolicyIsValid({
       ...policy,

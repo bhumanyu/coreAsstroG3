@@ -39,6 +39,9 @@ export interface BoundaryCoverageRecord {
   readonly boundaryId?: string;
   readonly boundaryPosition?: string;
   readonly boundaryLongitude?: number;
+  readonly expectedSign?: string;
+  readonly expectedNakshatra?: string;
+  readonly expectedPada?: number;
   readonly input?: unknown;
 }
 
@@ -47,6 +50,12 @@ export function inspectBoundaryCoverage(
   policy: CalculationCoveragePolicy
 ): readonly string[] {
   const issues: string[] = [];
+  const epsilon = policy.boundaryEpsilonDegrees;
+  const validEpsilon = Number.isFinite(epsilon?.min)
+    && Number.isFinite(epsilon?.max)
+    && epsilon.min > 0
+    && epsilon.max >= epsilon.min;
+  if (!validEpsilon) issues.push('BOUNDARY_EPSILON_POLICY:invalid minimum/maximum degree range');
   const relevant = fixtures.filter(fixture =>
     fixture.kind === 'SIGN_BOUNDARY' || fixture.kind === 'NAKSHATRA_BOUNDARY'
   );
@@ -101,6 +110,26 @@ export function inspectBoundaryCoverage(
           && exactLongitude < afterLongitude)
         || [before, exact, after].some(item => item?.boundaryLongitude !== boundary)) {
         issues.push(`BOUNDARY_ORDER:${groupKey}:input longitudes must be strictly ordered around boundaryLongitude`);
+      } else if (validEpsilon
+        && (Math.abs(boundary - beforeLongitude) < epsilon.min
+          || Math.abs(boundary - beforeLongitude) > epsilon.max
+          || Math.abs(afterLongitude - boundary) < epsilon.min
+          || Math.abs(afterLongitude - boundary) > epsilon.max)) {
+        issues.push(`BOUNDARY_EPSILON:${groupKey}:before/after distances must be within ${epsilon.min}-${epsilon.max} degrees`);
+      }
+
+      if (kind === 'SIGN'
+        && (!before?.expectedSign || !after?.expectedSign
+          || before.expectedSign === after.expectedSign)) {
+        issues.push(`BOUNDARY_TRANSITION:${groupKey}:expectedSign must differ before and after`);
+      } else if (kind === 'NAKSHATRA'
+        && (!before?.expectedNakshatra || !after?.expectedNakshatra
+          || before.expectedNakshatra === after.expectedNakshatra)) {
+        issues.push(`BOUNDARY_TRANSITION:${groupKey}:expectedNakshatra must differ before and after`);
+      } else if (kind === 'PADA'
+        && (before?.expectedPada === undefined || after?.expectedPada === undefined
+          || before.expectedPada === after.expectedPada)) {
+        issues.push(`BOUNDARY_TRANSITION:${groupKey}:expectedPada must differ before and after`);
       }
     }
   }
