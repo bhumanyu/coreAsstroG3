@@ -20,6 +20,7 @@ import { Planet } from '../../types';
 const fixtureResults: Array<{
   fixtureId: string;
   kind: string;
+  operationId: string;
   compared: boolean;
   passed: boolean;
 }> = [];
@@ -27,8 +28,10 @@ const fixtureResults: Array<{
 afterAll(() => {
   const outputPath = process.env.PR9_FIXTURE_RESULTS_PATH;
   if (!outputPath) return;
+  const invocationId = process.env.PR9_FIXTURE_INVOCATION_ID;
+  if (!invocationId) throw new Error('PR9_FIXTURE_INVOCATION_ID must be set by the release runner.');
   mkdirSync(dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, `${JSON.stringify(fixtureResults, null, 2)}\n`, 'utf8');
+  writeFileSync(outputPath, `${JSON.stringify({ invocationId, results: fixtureResults }, null, 2)}\n`, 'utf8');
 });
 
 describe('RG-09 calculation reference validation', () => {
@@ -66,7 +69,8 @@ describe('RG-09 calculation reference validation', () => {
       const fixtureResult = {
         fixtureId: fixture.id,
         kind: fixture.kind,
-        compared: true,
+        operationId: `${fixture.entryPoint}:${fixture.kind}:${fixture.id}`,
+        compared: false,
         passed: false
       };
       fixtureResults.push(fixtureResult);
@@ -76,6 +80,13 @@ describe('RG-09 calculation reference validation', () => {
       expect(fixture.provenance.citation.trim()).not.toBe('');
       expect(fixture.provenance.sourceVersion.trim()).not.toBe('');
       expect(fixture.provenance.methodology.trim()).not.toBe('');
+      expect(fixture.provenance.coordinateConvention.trim()).not.toBe('');
+      expect(fixture.provenance.timeStandard.trim()).not.toBe('');
+      expect(fixture.provenance.ayanamsa.trim()).not.toBe('');
+      expect(fixture.provenance.nodeConvention.trim()).not.toBe('');
+      expect(fixture.provenance.tolerance.trim()).not.toBe('');
+      expect(fixture.provenance.toleranceRationale.trim()).not.toBe('');
+      expect(fixture.provenance.independenceStatement.trim()).not.toBe('');
       expect(fixture.provenance.retrievedAt.trim()).not.toBe('');
       expect(fixture.provenance.approvedBy.trim()).not.toBe('');
       expect(fixture.provenance.approvedAt.trim()).not.toBe('');
@@ -184,6 +195,7 @@ describe('RG-09 calculation reference validation', () => {
         }
       }
 
+      fixtureResult.compared = true;
       fixtureResult.passed = true;
     });
   }

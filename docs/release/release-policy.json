@@ -1,5 +1,38 @@
 {
   "policyVersion": 1,
+  "pr8": {
+    "acceptedImplementationRevision": "c1202ac9fca28ea36eb459c6045969cc02aa7df7",
+    "revisionComparisonPaths": [
+      "src/acceptance/",
+      "src/ai/",
+      "src/core/analysis/",
+      "src/domain/",
+      "src/product/",
+      "src/features/chart-export/",
+      "src/engine/astroEngine.ts",
+      "src/test/fixtures/canonicalChart.ts",
+      "src/test/fixtures/careerGoldenBaseline.ts",
+      "src/test/fixtures/wealthGoldenBaseline.ts",
+      "src/test/fixtures/selectedPeriodGoldenFixtures.ts"
+    ]
+  },
+  "calculationCoverage": {
+    "requiredKinds": [
+      "PLANETARY_LONGITUDE",
+      "PLANETARY_MOTION",
+      "RAHU_KETU_OPPOSITION",
+      "SIGN_BOUNDARY",
+      "NAKSHATRA_BOUNDARY",
+      "HOUSE_POSITION",
+      "VARGA_LONGITUDE",
+      "VIMSHOTTARI_DASHA"
+    ],
+    "requiredPlanets": ["SUN", "MOON", "MARS", "MERCURY", "JUPITER", "VENUS", "SATURN", "RAHU", "KETU"],
+    "requiredMotionScenarios": ["PROGRADE", "RETROGRADE", "NEAR_STATIONARY"],
+    "requiredBoundaryKinds": ["SIGN", "NAKSHATRA", "PADA"],
+    "requiredBoundaryPositions": ["EPSILON_BEFORE", "EXACT", "EPSILON_AFTER"],
+    "requiredVargaTypes": ["D9", "D10"]
+  },
   "releaseStatus": {
     "values": ["PASS", "FAIL", "BLOCKED", "NOT_RUN"],
     "aggregate": "aggregateReleaseStatus evaluates only the 14 required gates RG-01 through RG-14.",

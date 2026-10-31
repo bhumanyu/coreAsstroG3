@@ -11,11 +11,11 @@ The runner resolves no alternate revision or toolchain; it records each command 
 
 On pull requests, the exact tested candidate is the PR head commit; the merge SHA is recorded separately for information. `workflow_dispatch` intentionally permits an operator to select any full commit SHA. The runner still requires that candidate to match the checked-out revision and enforces the pinned tree/toolchain without fallback.
 
-RG-13 carries an explicit PR-8 linkage to accepted implementation revision `c1202ac9fca28ea36eb459c6045969cc02aa7df7` and hashes the generated acceptance report. A changed `src/acceptance/` file since that revision, or missing/mismatched report linkage, sets `pr8.evaluatedOnCandidate` false and leaves RG-13 `BLOCKED` until the accepted implementation linkage is refreshed.
+RG-13 carries its accepted PR-8 revision and acceptance-relevant Git paths in the versioned `pr8` section of `release-policy.json`. The runner verifies the accepted commit exists, compares tracked and untracked harness/consumer files against that revision, executes the production acceptance probe itself, and hashes its output. Any source difference or missing execution/report evidence sets `pr8.evaluatedOnCandidate` false and leaves RG-13 `BLOCKED` until the baseline implementation is explicitly refreshed.
 
 RG-06 removes any previous `test-report.json` before the test command. It accepts only the expected Vitest JSON structure and records its `startTime`; missing or malformed output fails the gate rather than reusing a stale report.
 
-RG-09 does not trust the fixture module's `READY` or `coverageComplete` flags. The test emits one result per fixture to `calculation-fixture-results.json`; the runner independently verifies exact inventory/result correspondence, comparison outcomes, provenance, and required coverage.
+RG-09 does not trust the fixture module's `READY` or `coverageComplete` flags. The test emits one result per fixture to `calculation-fixture-results.json`, including an operation identifier and a runner-provided invocation nonce. The runner trusts the artifact only after a successful command and matching nonce/time window, then independently verifies exact inventory/result correspondence, comparison outcomes, structured provenance, and the versioned coverage contract. PASS results throughout the release report use gate-specific typed evidence references checked against the manifest and on-disk artifact hashes.
 
 ## Retained blockers
 

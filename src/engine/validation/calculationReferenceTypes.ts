@@ -29,6 +29,13 @@ export interface ReferenceSource {
   readonly citation: string;
   readonly sourceVersion: string;
   readonly methodology: string;
+  readonly coordinateConvention: string;
+  readonly timeStandard: string;
+  readonly ayanamsa: string;
+  readonly nodeConvention: string;
+  readonly tolerance: string;
+  readonly toleranceRationale: string;
+  readonly independenceStatement: string;
   readonly independentlyProduced: true;
   readonly retrievedAt: string;
   readonly approvedBy: string;
@@ -36,6 +43,15 @@ export interface ReferenceSource {
 }
 
 export type CalculationReferenceProvenance = ReferenceSource;
+
+export interface CalculationCoveragePolicy {
+  readonly requiredKinds: readonly string[];
+  readonly requiredPlanets: readonly string[];
+  readonly requiredMotionScenarios: readonly string[];
+  readonly requiredBoundaryKinds: readonly BoundaryKind[];
+  readonly requiredBoundaryPositions: readonly BoundaryPosition[];
+  readonly requiredVargaTypes: readonly string[];
+}
 
 export interface CalculationConventions<
   Frame extends 'TROPICAL' | 'SIDEREAL' = 'TROPICAL' | 'SIDEREAL'
@@ -117,6 +133,7 @@ export interface SignBoundaryReference extends CalculationReferenceBase<
   'calculateSign',
   { readonly longitude: number }
 > {
+  readonly boundaryLongitude: number;
   readonly boundaryId: string;
   readonly boundaryPosition: BoundaryPosition;
   readonly expectedSign: Sign;
@@ -128,6 +145,7 @@ export interface NakshatraBoundaryReference extends CalculationReferenceBase<
   { readonly longitude: number }
 > {
   readonly boundaryKind: 'NAKSHATRA' | 'PADA';
+  readonly boundaryLongitude: number;
   readonly boundaryId: string;
   readonly boundaryPosition: BoundaryPosition;
   readonly expectedNakshatra: Nakshatra;

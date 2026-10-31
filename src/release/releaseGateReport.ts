@@ -1,16 +1,22 @@
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   EXCLUDED_RELEASE_CAPABILITIES,
   RELEASE_POLICY_VERSION,
   RETAINED_RELEASE_BLOCKERS,
   REQUIRED_RELEASE_GATES,
+  RELEASE_GATE_EVIDENCE_KIND,
   type Pr8AcceptanceStatus,
   type ReleaseCoverageStatus,
   type ReleaseGate,
+  type ReleaseGateEvidence,
   type ReleaseGateId,
   type ReleaseGateResult,
   type ReleaseGateStatus,
   type ReleaseReport,
-  type ReleaseReportInput
+  type ReleaseReportInput,
+  type RunnerEvidenceManifest
 } from './releaseGateTypes.ts';
 
 export const ALLOWED_SKIPPED_TESTS: readonly string[] = Object.freeze([]);
@@ -20,22 +26,77 @@ const RETAINED_PR8_BLOCKERS = Object.freeze([
   'AppController async-state'
 ] as const);
 const VALIDATED_RUNNER_RESULT = Symbol('ValidatedRunnerResult');
+function fileMatchesReference(path: string, expectedSha256: string): boolean {
+  const absolutePath = resolve(process.cwd(), path);
+  if (!existsSync(absolutePath)) return false;
+  const actual = createHash('sha256').update(readFileSync(absolutePath)).digest('hex');
+  return actual === expectedSha256;
+}
+
+function evidenceExistsInManifest(
+  evidence: ReleaseGateEvidence,
+  manifest: RunnerEvidenceManifest
+): boolean {
+  if (evidence.kind === 'COMMAND_LOG') {
+    const command = manifest.commands.find(item =>
+      item.name === evidence.commandName && item.logPath === evidence.logPath
+    );
+    return Boolean(command && command.exitCode === 0 && existsSync(resolve(process.cwd(), command.logPath)));
+  }
+  if (evidence.kind === 'FILE_SHA256') {
+    return manifest.files.some(item =>
+      item.path === evidence.path
+      && item.sha256 === evidence.sha256
+      && fileMatchesReference(item.path, item.sha256)
+    );
+  }
+  if (evidence.kind === 'POLICY_DOCUMENT') {
+    return manifest.policyDocuments.some(item =>
+      item.path === evidence.path
+      && item.sha256 === evidence.sha256
+      && fileMatchesReference(item.path, item.sha256)
+    );
+  }
+  const fixtureRun = manifest.fixtureComparisons.find(item =>
+    item.path === evidence.path
+    && item.sha256 === evidence.sha256
+    && item.invocationId === evidence.invocationId
+    && item.commandPassed
+    && fileMatchesReference(item.path, item.sha256)
+  );
+  return Boolean(fixtureRun
+    && evidence.fixtureIds.length === fixtureRun.fixtureIds.length
+    && evidence.fixtureIds.every(id => fixtureRun.fixtureIds.includes(id)));
+}
 
 export type ValidatedRunnerResult = ReleaseReportInput & {
   readonly [VALIDATED_RUNNER_RESULT]: true;
 };
 
 export function createValidatedRunnerResult(
-  input: ReleaseReportInput
+  input: ReleaseReportInput,
+  evidenceManifest: RunnerEvidenceManifest
 ): ValidatedRunnerResult {
   const allowedStatuses = new Set<ReleaseGateStatus>(['PASS', 'FAIL', 'BLOCKED', 'NOT_RUN']);
   for (const gate of input.gates) {
     if (!allowedStatuses.has(gate.status)) {
       throw new Error(`Gate ${gate.id} has an invalid release status.`);
     }
-    if (gate.status === 'PASS' && (!Array.isArray(gate.evidence) || gate.evidence.length === 0
-      || gate.evidence.some(item => typeof item !== 'string' || item.trim().length === 0))) {
-      throw new Error(`PASS gate ${gate.id} must include non-empty evidence.`);
+    if (gate.status === 'PASS') {
+      if (!Array.isArray(gate.evidence) || gate.evidence.length === 0) {
+        throw new Error(`PASS gate ${gate.id} must include typed evidence.`);
+      }
+      for (const evidence of gate.evidence) {
+        if (!evidence || typeof evidence !== 'object' || !('kind' in evidence)) {
+          throw new Error(`PASS gate ${gate.id} contains malformed evidence.`);
+        }
+        if (evidence.kind !== RELEASE_GATE_EVIDENCE_KIND[gate.id]) {
+          throw new Error(`PASS gate ${gate.id} requires ${RELEASE_GATE_EVIDENCE_KIND[gate.id]} evidence.`);
+        }
+        if (!evidenceExistsInManifest(evidence, evidenceManifest)) {
+          throw new Error(`PASS gate ${gate.id} references evidence missing from the runner manifest.`);
+        }
+      }
     }
   }
   return Object.freeze({ ...input, [VALIDATED_RUNNER_RESULT]: true as const });
@@ -44,35 +105,77 @@ export function createValidatedRunnerResult(
 export interface VitestJsonReport {
   readonly numTotalTests: number;
   readonly numPassedTests: number;
-  readonly testResults: readonly { readonly assertionResults: readonly unknown[] }[];
+  readonly numFailedTests: number;
+  readonly testResults: readonly {
+    readonly name: string;
+    readonly assertionResults: readonly {
+      readonly fullName: string;
+      readonly status: string;
+    }[];
+  }[];
   readonly startTime: number;
 }
 
-export function isVitestJsonReport(value: unknown): value is VitestJsonReport {
+export interface CommandExecutionWindow {
+  readonly startedAt: number;
+  readonly finishedAt: number;
+}
+
+export function isVitestJsonReport(
+  value: unknown,
+  commandWindow?: CommandExecutionWindow
+): value is VitestJsonReport {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const report = value as Record<string, unknown>;
-  return Number.isInteger(report.numTotalTests)
+  if (!(Number.isInteger(report.numTotalTests)
     && Number.isInteger(report.numPassedTests)
+    && Number.isInteger(report.numFailedTests)
     && (report.numPassedTests as number) >= 0
-    && (report.numTotalTests as number) >= (report.numPassedTests as number)
+    && (report.numFailedTests as number) >= 0
     && Number.isFinite(report.startTime)
     && Array.isArray(report.testResults)
-    && report.testResults.every((result) =>
-      Boolean(result)
+    && report.testResults.every((result) => Boolean(result)
       && typeof result === 'object'
       && !Array.isArray(result)
-      && Array.isArray((result as Record<string, unknown>).assertionResults)
+      && typeof (result as Record<string, unknown>).name === 'string'
+      && ((result as Record<string, unknown>).name as string).trim().length > 0
+      && Array.isArray((result as Record<string, unknown>).assertionResults)))) return false;
+
+  const assertions = (report.testResults as Array<Record<string, unknown>>)
+    .flatMap((result): Array<Record<string, unknown>> =>
+      (result.assertionResults as Array<Record<string, unknown>>)
+        .map(assertion => ({ ...assertion, testFile: result.name as string }))
     );
+  if (assertions.some(assertion =>
+    typeof assertion.fullName !== 'string'
+    || assertion.fullName.trim().length === 0
+    || !['passed', 'failed', 'skipped', 'pending', 'todo'].includes(String(assertion.status))
+  )) return false;
+  const names = assertions.map(assertion => `${assertion.testFile}::${assertion.fullName as string}`);
+  if (new Set(names).size !== names.length) return false;
+  const passed = assertions.filter(assertion => assertion.status === 'passed').length;
+  const failed = assertions.filter(assertion => assertion.status === 'failed').length;
+  const reportStartTime = report.startTime as number;
+  if (report.numTotalTests !== assertions.length
+    || report.numPassedTests !== passed
+    || report.numFailedTests !== failed) return false;
+  if (commandWindow && (
+    reportStartTime < commandWindow.startedAt
+    || reportStartTime > commandWindow.finishedAt
+    || commandWindow.finishedAt < commandWindow.startedAt
+  )) return false;
+  return true;
 }
 
 export function skippedTestsGateStatus(
   commandRan: boolean,
   report: unknown,
   skippedTests: readonly string[],
-  allowedSkippedTests: readonly string[]
+  allowedSkippedTests: readonly string[],
+  commandWindow?: CommandExecutionWindow
 ): ReleaseGateStatus {
   if (!commandRan) return 'NOT_RUN';
-  if (!isVitestJsonReport(report)) return 'FAIL';
+  if (!isVitestJsonReport(report, commandWindow)) return 'FAIL';
   const allowed = new Set(allowedSkippedTests);
   return skippedTests.every(name => allowed.has(name)) ? 'PASS' : 'FAIL';
 }
@@ -80,6 +183,7 @@ export function skippedTestsGateStatus(
 export interface CalculationFixtureResult {
   readonly fixtureId: string;
   readonly kind: string;
+  readonly operationId: string;
   readonly compared: boolean;
   readonly passed: boolean;
 }
@@ -93,6 +197,13 @@ export interface CalculationFixtureInventoryItem {
     readonly citation?: string;
     readonly sourceVersion?: string;
     readonly methodology?: string;
+    readonly coordinateConvention?: string;
+    readonly timeStandard?: string;
+    readonly ayanamsa?: string;
+    readonly nodeConvention?: string;
+    readonly tolerance?: string;
+    readonly toleranceRationale?: string;
+    readonly independenceStatement?: string;
     readonly independentlyProduced?: boolean;
     readonly retrievedAt?: string;
     readonly approvedBy?: string;
@@ -106,6 +217,7 @@ export function calculationFixtureGateStatus(
   missingCoverage: readonly string[],
   commandPassed: boolean
 ): ReleaseGateStatus {
+  if (!commandPassed) return 'BLOCKED';
   if (fixtures.length === 0 || missingCoverage.length > 0) return 'BLOCKED';
   if (new Set(fixtures.map(fixture => fixture.id)).size !== fixtures.length) return 'FAIL';
   if (!Array.isArray(results)) return 'BLOCKED';
@@ -120,7 +232,8 @@ export function calculationFixtureGateStatus(
     observedIds.add(item.fixtureId);
     if (typeof item.kind !== 'string'
       || item.kind !== fixtures.find(fixture => fixture.id === item.fixtureId)?.kind) return 'FAIL';
-    if (typeof item.compared !== 'boolean' || typeof item.passed !== 'boolean') return 'FAIL';
+    if (typeof item.operationId !== 'string' || item.operationId.trim().length === 0
+      || typeof item.compared !== 'boolean' || typeof item.passed !== 'boolean') return 'FAIL';
     if (item.passed === false) return 'FAIL';
     if (item.compared === false) return 'BLOCKED';
   }
@@ -134,10 +247,18 @@ export function calculationFixtureGateStatus(
       provenance.citation,
       provenance.sourceVersion,
       provenance.methodology,
+      provenance.coordinateConvention,
+      provenance.timeStandard,
+      provenance.ayanamsa,
+      provenance.nodeConvention,
+      provenance.tolerance,
+      provenance.toleranceRationale,
+      provenance.independenceStatement,
       provenance.retrievedAt,
       provenance.approvedBy,
       provenance.approvedAt
     ].every(value => typeof value === 'string' && value.trim().length > 0)
+    && provenance.independenceStatement?.toLowerCase().includes('not derived from engine output')
   );
   if (!provenanceIsPresent) return 'FAIL';
   return commandPassed ? 'PASS' : 'FAIL';
@@ -152,7 +273,40 @@ export function releasePolicyIsValid(
   const requiredGates = value.requiredGates;
   const retainedBlockers = value.retainedBlockers;
   const excludedCapabilities = value.excludedCapabilities;
+  const pr8 = value.pr8;
+  const calculationCoverage = value.calculationCoverage;
+  const isStringArray = (candidate: unknown): candidate is string[] =>
+    Array.isArray(candidate)
+    && candidate.every(item => typeof item === 'string' && item.length > 0)
+    && new Set(candidate).size === candidate.length;
+  const requiredPr8Paths = [
+    'src/acceptance/',
+    'src/ai/',
+    'src/core/analysis/',
+    'src/domain/',
+    'src/product/',
+    'src/features/chart-export/',
+    'src/engine/astroEngine.ts',
+    'src/test/fixtures/canonicalChart.ts',
+    'src/test/fixtures/careerGoldenBaseline.ts',
+    'src/test/fixtures/wealthGoldenBaseline.ts',
+    'src/test/fixtures/selectedPeriodGoldenFixtures.ts'
+  ];
+  const pr8Paths = (pr8 as Record<string, unknown> | undefined)?.revisionComparisonPaths;
   return value.policyVersion === RELEASE_POLICY_VERSION
+    && Boolean(pr8)
+    && typeof pr8 === 'object'
+    && /^[0-9a-f]{40}$/i.test((pr8 as Record<string, unknown>).acceptedImplementationRevision as string)
+    && isStringArray(pr8Paths)
+    && requiredPr8Paths.every(path => pr8Paths.includes(path))
+    && Boolean(calculationCoverage)
+    && typeof calculationCoverage === 'object'
+    && isStringArray((calculationCoverage as Record<string, unknown>).requiredKinds)
+    && isStringArray((calculationCoverage as Record<string, unknown>).requiredPlanets)
+    && isStringArray((calculationCoverage as Record<string, unknown>).requiredMotionScenarios)
+    && isStringArray((calculationCoverage as Record<string, unknown>).requiredBoundaryKinds)
+    && isStringArray((calculationCoverage as Record<string, unknown>).requiredBoundaryPositions)
+    && isStringArray((calculationCoverage as Record<string, unknown>).requiredVargaTypes)
     && Array.isArray(requiredGates)
     && requiredGateIds.length === REQUIRED_RELEASE_GATES.length
     && requiredGates.length === REQUIRED_RELEASE_GATES.length
@@ -183,17 +337,21 @@ export function releasePolicyIsValid(
 export function pr8WasEvaluatedOnCandidate(
   acceptedImplementationSha: string | null,
   candidateSha: string | null,
-  reportImplementationSha: unknown,
-  reportEvaluatedOnSha: unknown,
-  acceptanceFilesChangedSince: readonly string[]
+  testedSha: string | null,
+  acceptanceFilesChangedSince: readonly string[],
+  acceptanceRunPassed: boolean,
+  reportSha256: string | null
 ): boolean {
   const isSha = (value: unknown): value is string =>
     typeof value === 'string' && /^[0-9a-f]{40}$/i.test(value);
   return isSha(acceptedImplementationSha)
     && isSha(candidateSha)
-    && reportImplementationSha === acceptedImplementationSha
-    && reportEvaluatedOnSha === candidateSha
-    && acceptanceFilesChangedSince.length === 0;
+    && isSha(testedSha)
+    && testedSha.toLowerCase() === candidateSha.toLowerCase()
+    && acceptanceFilesChangedSince.length === 0
+    && acceptanceRunPassed
+    && typeof reportSha256 === 'string'
+    && /^[0-9a-f]{64}$/i.test(reportSha256);
 }
 
 /** Aggregates only the fixed required gate inventory; optional/unknown gates cannot change it. */
@@ -336,12 +494,6 @@ function normalizeRequiredGates(input: ReleaseReportInput): readonly ReleaseGate
 export function finalizeReleaseReport(input: ValidatedRunnerResult): ReleaseReport {
   if (input[VALIDATED_RUNNER_RESULT] !== true) {
     throw new Error('Release report finalization requires a validated runner result.');
-  }
-  for (const gate of input.gates) {
-    if (gate.status === 'PASS' && (!Array.isArray(gate.evidence) || gate.evidence.length === 0
-      || gate.evidence.some(item => typeof item !== 'string' || item.trim().length === 0))) {
-      throw new Error(`PASS gate ${gate.id} must include non-empty evidence.`);
-    }
   }
 
   const gates = normalizeRequiredGates(input);

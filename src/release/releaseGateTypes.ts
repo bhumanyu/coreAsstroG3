@@ -56,12 +56,84 @@ export type ReleaseGateStatus = 'PASS' | 'FAIL' | 'BLOCKED' | 'NOT_RUN';
 export type CoverageStatus = 'PASSED' | 'BLOCKED' | 'NOT_TESTED' | 'SCOPE_EXCLUDED';
 export type ReleaseCoverageStatus = CoverageStatus;
 
+export interface CommandLogEvidence {
+  readonly kind: 'COMMAND_LOG';
+  readonly commandName: string;
+  readonly logPath: string;
+}
+
+export interface FileSha256Evidence {
+  readonly kind: 'FILE_SHA256';
+  readonly path: string;
+  readonly sha256: string;
+}
+
+export interface FixtureComparisonEvidence {
+  readonly kind: 'FIXTURE_COMPARISON';
+  readonly path: string;
+  readonly sha256: string;
+  readonly invocationId: string;
+  readonly fixtureIds: readonly string[];
+}
+
+export interface PolicyDocumentEvidence {
+  readonly kind: 'POLICY_DOCUMENT';
+  readonly path: string;
+  readonly sha256: string;
+}
+
+export type ReleaseGateEvidence =
+  | CommandLogEvidence
+  | FileSha256Evidence
+  | FixtureComparisonEvidence
+  | PolicyDocumentEvidence;
+
+export const RELEASE_GATE_EVIDENCE_KIND = Object.freeze({
+  'RG-01': 'POLICY_DOCUMENT',
+  'RG-02': 'FILE_SHA256',
+  'RG-03': 'COMMAND_LOG',
+  'RG-04': 'COMMAND_LOG',
+  'RG-05': 'COMMAND_LOG',
+  'RG-06': 'FILE_SHA256',
+  'RG-07': 'FILE_SHA256',
+  'RG-08': 'COMMAND_LOG',
+  'RG-09': 'FIXTURE_COMPARISON',
+  'RG-10': 'COMMAND_LOG',
+  'RG-11': 'COMMAND_LOG',
+  'RG-12': 'COMMAND_LOG',
+  'RG-13': 'FILE_SHA256',
+  'RG-14': 'POLICY_DOCUMENT'
+} as const satisfies Readonly<Record<ReleaseGateId, ReleaseGateEvidence['kind']>>);
+
 export interface ReleaseGateResult {
   readonly id: ReleaseGateId;
   readonly status: ReleaseGateStatus;
   readonly coverageStatus?: ReleaseCoverageStatus;
   readonly summary?: string;
-  readonly evidence?: readonly string[];
+  readonly evidence?: readonly ReleaseGateEvidence[];
+}
+
+export interface RunnerEvidenceManifest {
+  readonly commands: readonly {
+    readonly name: string;
+    readonly logPath: string;
+    readonly exitCode: number | null;
+  }[];
+  readonly files: readonly {
+    readonly path: string;
+    readonly sha256: string;
+  }[];
+  readonly fixtureComparisons: readonly {
+    readonly path: string;
+    readonly sha256: string;
+    readonly invocationId: string;
+    readonly fixtureIds: readonly string[];
+    readonly commandPassed: boolean;
+  }[];
+  readonly policyDocuments: readonly {
+    readonly path: string;
+    readonly sha256: string;
+  }[];
 }
 
 export interface ReleaseMetadata {
