@@ -30,10 +30,8 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
     if (identity(conclusion) !== identity(expected)) {
       differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: '$.subject', expected: identity(expected), actual: identity(conclusion), reason: 'Conclusion identity differs from the canonical fixture.' });
     }
-    if (conclusion.status !== expected.status) {
-      differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: '$.status', expected: expected.status, actual: conclusion.status, reason: 'Native conclusion status differs.' });
-    }
-    if (conclusion.conclusionKind !== expected.conclusionKind) {
+    if (conclusion.conclusionKind !== undefined && conclusion.conclusionKind !== 'SYNTHESIS_FINAL') continue;
+    if (surface.compareConclusionKind !== false && conclusion.conclusionKind !== expected.conclusionKind) {
       differences.push({
         surface: surface.name,
         kind: 'VALUE_MISMATCH',
@@ -43,10 +41,16 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
         reason: 'Conclusion kinds differ; only SYNTHESIS_FINAL surfaces are comparable to the canonical synthesis.'
       });
     }
+    if (surface.compareStatus !== false && conclusion.status !== expected.status) {
+      differences.push({ surface: surface.name, kind: 'STATUS_MISMATCH', path: '$.status', expected: expected.status, actual: conclusion.status, reason: 'Native conclusion status differs.' });
+    }
 
-    // Report unresolved IDs and external-namespace evidence explicitly.
+    const expectedEvidenceById = new Map(expected.evidence.map(item => [item.id, item]));
+    // A reference already dangling in the canonical expectation is not a surface mismatch if reproduced exactly.
     for (const evidence of conclusion.evidence) {
       if (evidence.resolution === 'DANGLING') {
+        const expectedEvidence = expectedEvidenceById.get(evidence.id);
+        if (expectedEvidence?.resolution === 'DANGLING') continue;
         differences.push({
           surface: surface.name,
           kind: 'DANGLING_REFERENCE',
@@ -71,7 +75,7 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
           expected: conclusion.domain,
           reason: `Evidence ID ${evidence.id} owner ${evidence.owner ?? 'unavailable'} does not match expected domain ${conclusion.domain}.`
         });
-      } else if (evidence.resolution === 'EXTERNAL' && !surface.allowExternalEvidence) {
+      } else if (evidence.resolution === 'EXTERNAL') {
         differences.push({
           surface: surface.name,
           kind: 'EXTERNAL_EVIDENCE',
@@ -82,10 +86,39 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
       }
     }
 
-    for (const key of ['evidence', 'provenance', 'temporalScope'] as const) {
-      if (!deepEqualAcceptance(expected[key], conclusion[key])) {
-        differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: `$.${key}`, expected: expected[key], actual: conclusion[key], reason: `${key} differs after normalization.` });
-      }
+    if (!deepEqualAcceptance(expected.evidence, conclusion.evidence)) {
+      differences.push({
+        surface: surface.name,
+        kind: 'EVIDENCE_MISMATCH',
+        path: '$.evidence',
+        expected: expected.evidence,
+        actual: conclusion.evidence,
+        reason: 'Evidence IDs, owners, or resolution metadata differ after normalization.'
+      });
+    }
+
+    const expectedEvidenceIds = new Set(expected.evidence.map(item => item.id));
+    const sharedExpectedProvenance = expected.provenance.filter(item => expectedEvidenceIds.has(item.evidenceId));
+    const sharedActualProvenance = conclusion.provenance.filter(item => expectedEvidenceIds.has(item.evidenceId));
+    if (!deepEqualAcceptance(sharedExpectedProvenance, sharedActualProvenance)) {
+      differences.push({
+        surface: surface.name,
+        kind: 'PROVENANCE_MISMATCH',
+        path: '$.provenance',
+        expected: sharedExpectedProvenance,
+        actual: sharedActualProvenance,
+        reason: 'Provenance differs for evidence shared with the canonical conclusion.'
+      });
+    }
+    if (!deepEqualAcceptance(expected.temporalScope, conclusion.temporalScope)) {
+      differences.push({
+        surface: surface.name,
+        kind: 'TEMPORAL_MISMATCH',
+        path: '$.temporalScope',
+        expected: expected.temporalScope,
+        actual: conclusion.temporalScope,
+        reason: 'Temporal scope differs after normalization.'
+      });
     }
   }
   return Object.freeze(differences);

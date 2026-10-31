@@ -79,12 +79,14 @@ export interface NormalizedAcceptanceConclusion {
 export interface AcceptanceSurface {
   readonly name: string;
   readonly conclusion: NormalizedAcceptanceConclusion | typeof ACCEPTANCE_MISSING;
-  readonly allowExternalEvidence?: boolean;
+  readonly allowedDifferenceKinds?: readonly ParityDifference['kind'][];
+  readonly compareStatus?: boolean;
+  readonly compareConclusionKind?: boolean;
 }
 
 export interface ParityDifference {
   readonly surface: string;
-  readonly kind: 'VALUE_MISMATCH' | 'MISSING' | 'EXTRA' | 'DUPLICATE_CONCLUSION' | 'CONFLICT' | 'DANGLING_REFERENCE' | 'AMBIGUOUS_EVIDENCE' | 'OWNER_MISMATCH' | 'EXTERNAL_EVIDENCE';
+  readonly kind: 'VALUE_MISMATCH' | 'MISSING' | 'EXTRA' | 'DUPLICATE_CONCLUSION' | 'CONFLICT' | 'DANGLING_REFERENCE' | 'AMBIGUOUS_EVIDENCE' | 'OWNER_MISMATCH' | 'EXTERNAL_EVIDENCE' | 'EVIDENCE_MISMATCH' | 'PROVENANCE_MISMATCH' | 'STATUS_MISMATCH' | 'TEMPORAL_MISMATCH';
   readonly path: string;
   readonly expected?: unknown;
   readonly actual?: unknown;

@@ -4,7 +4,8 @@ import {
   type AcceptanceEvidence,
   type AcceptanceProvenance,
   type NormalizedAcceptanceConclusion,
-  type AcceptanceConflictError
+  type AcceptanceConflictError,
+  type ParityDifference
 } from './goldenAcceptanceTypes';
 import type { DomainEvidence } from '../domain/interpretation/DomainEvidence';
 import type { CareerFinalEvidenceTrace } from '../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
@@ -78,11 +79,19 @@ export function projectDomainEvidenceToAcceptanceProvenance(
 export function normalizeAcceptanceSurface(
   name: string,
   conclusion: AcceptanceConclusion | undefined,
-  allowExternalEvidence = false
-): { readonly name: string; readonly conclusion: NormalizedAcceptanceConclusion | typeof ACCEPTANCE_MISSING; readonly allowExternalEvidence: boolean } {
+  allowedDifferenceKinds: readonly ParityDifference['kind'][] = [],
+  comparison: { readonly compareStatus?: boolean; readonly compareConclusionKind?: boolean } = {}
+): {
+  readonly name: string;
+  readonly conclusion: NormalizedAcceptanceConclusion | typeof ACCEPTANCE_MISSING;
+  readonly allowedDifferenceKinds: readonly ParityDifference['kind'][];
+  readonly compareStatus?: boolean;
+  readonly compareConclusionKind?: boolean;
+} {
   return Object.freeze({
     name,
     conclusion: conclusion === undefined ? ACCEPTANCE_MISSING : normalizeAcceptanceConclusion(conclusion),
-    allowExternalEvidence
+    allowedDifferenceKinds: Object.freeze([...allowedDifferenceKinds]),
+    ...comparison
   });
 }

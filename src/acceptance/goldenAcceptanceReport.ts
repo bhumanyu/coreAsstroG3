@@ -24,10 +24,14 @@ export function aggregateGateStatus(gates: readonly AcceptanceGate[]): GateStatu
 
 export function buildGoldenAcceptanceReport(
   gates: readonly AcceptanceGate[],
-  differences: readonly ParityDifference[] = []
+  differences: readonly ParityDifference[] = [],
+  differencesClassifiedByGate = false
 ): GoldenAcceptanceReport {
   const gateStatus = aggregateGateStatus(gates);
-  const status: GateStatus = differences.length > 0
+  const hasUnblockedDifferences = differencesClassifiedByGate
+    ? differences.some(difference => gates.find(gate => gate.name === difference.surface)?.status !== 'BLOCKED')
+    : differences.length > 0;
+  const status: GateStatus = hasUnblockedDifferences
     ? 'FAIL'
     : gateStatus;
   return Object.freeze({

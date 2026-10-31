@@ -27,25 +27,27 @@ import type { Horoscope } from '../types';
 import {
   GOLDEN_TEST_METHODOLOGY
 } from '../domain/career/__tests__/golden/goldenCareerFixtures';
-import type {
-  AcceptanceConclusion,
-  AcceptanceProvenance,
-  AcceptanceSurface,
-  NormalizedAcceptanceConclusion,
-  ParityDifference,
-  EvidenceResolution,
-  UnresolvedEvidence,
-  SelectedPeriodAcceptanceProjection
+import {
+  ACCEPTANCE_MISSING,
+  type AcceptanceConclusion,
+  type AcceptanceProvenance,
+  type AcceptanceSurface,
+  type NormalizedAcceptanceConclusion,
+  type ParityDifference,
+  type EvidenceResolution,
+  type UnresolvedEvidence,
+  type SelectedPeriodAcceptanceProjection
 } from './goldenAcceptanceTypes';
 import {
   normalizeAcceptanceConclusion,
   normalizeAcceptanceSurface
 } from './goldenAcceptanceNormalizer';
 import type { GoldenAcceptancePipeline } from './goldenAcceptanceRunner';
-import { assertConclusionInventory, assertParity } from './goldenAcceptanceAssertions';
-import { buildGoldenAcceptanceReport, type AcceptanceGate, type GoldenAcceptanceReport } from './goldenAcceptanceReport';
+import { assertConclusionInventory, assertParity, deepEqualAcceptance } from './goldenAcceptanceAssertions';
+import { buildGoldenAcceptanceReport, type AcceptanceGate, type GoldenAcceptanceReport, type GateStatus } from './goldenAcceptanceReport';
 import { GOLDEN_C11_BASELINE } from '../test/fixtures/careerGoldenBaseline';
 import { GOLDEN_WEALTH_BASELINE, GOLDEN_WEALTH_MANIFESTATION_BASELINE } from '../test/fixtures/wealthGoldenBaseline';
+import { SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE, SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE } from '../test/fixtures/selectedPeriodGoldenFixtures';
 import { calculateHoroscope } from '../engine/astroEngine';
 import type { ReasoningNode } from '../domain/careerWealth/reasoningTrace/reasoningNode';
 
@@ -74,12 +76,6 @@ export interface GoldenAcceptanceProductionResult {
   readonly chartExport: ReturnType<typeof buildChartExport>;
 }
 
-export type GoldenAcceptanceProjections = {
-  readonly [key: string]: AcceptanceConclusion | SelectedPeriodAcceptanceProjection | readonly AcceptanceConclusion[] | undefined;
-  readonly canonical: AcceptanceConclusion;
-  readonly 'selected-period-ui': SelectedPeriodAcceptanceProjection;
-};
-
 export interface EvidenceResolverRecord {
   readonly id: string;
   readonly domain?: string;
@@ -98,12 +94,112 @@ export interface EvidenceNamespaces {
   readonly externalNamespaces?: readonly (readonly EvidenceResolverRecord[])[];
 }
 
-export const REQUIRED_SURFACES: Readonly<Record<GoldenAcceptanceDomain, readonly string[]>> = Object.freeze({
-  CAREER: Object.freeze(['career-ui', 'ai-context', 'product-ai-context', 'reasoning-trace', 'json-export', 'selected-period-ui']),
-  WEALTH: Object.freeze(['wealth-ui', 'ai-context', 'product-ai-context', 'reasoning-trace', 'json-export', 'selected-period-ui'])
+export const REQUIRED_SURFACES = Object.freeze({
+  CAREER: Object.freeze(['career-ui', 'ai-context', 'product-ai-context', 'reasoning-trace', 'json-export', 'selected-period-ui'] as const),
+  WEALTH: Object.freeze(['wealth-ui', 'ai-context', 'product-ai-context', 'reasoning-trace', 'json-export', 'selected-period-ui'] as const)
 });
 
-const BLOCKED_SURFACES: readonly string[] = Object.freeze(['reasoning-trace', 'json-export']);
+type RequiredSurfaceName<D extends GoldenAcceptanceDomain> = typeof REQUIRED_SURFACES[D][number];
+type SurfaceProjection<Name extends string> =
+  Name extends 'selected-period-ui'
+    ? SelectedPeriodAcceptanceProjection | typeof ACCEPTANCE_MISSING
+    : AcceptanceConclusion | readonly AcceptanceConclusion[] | typeof ACCEPTANCE_MISSING;
+export type GoldenAcceptanceProjections<D extends GoldenAcceptanceDomain = GoldenAcceptanceDomain> =
+  D extends GoldenAcceptanceDomain
+    ? Readonly<{ [Name in RequiredSurfaceName<D>]: SurfaceProjection<Name> }> & {
+      readonly canonical: AcceptanceConclusion;
+    } & { readonly [name: string]: AcceptanceConclusion | SelectedPeriodAcceptanceProjection | readonly AcceptanceConclusion[] | typeof ACCEPTANCE_MISSING | undefined }
+    : never;
+
+export const SURFACE_ALLOWED_DIFFERENCE_KINDS: Readonly<Record<string, readonly ParityDifference['kind'][]>> = Object.freeze({
+  'ai-context': Object.freeze(['EXTERNAL_EVIDENCE'] as const),
+  'product-ai-context': Object.freeze(['EXTERNAL_EVIDENCE'] as const)
+});
+
+export function buildRequiredSurfaceGates(
+  requiredSurfaces: readonly string[],
+  projections: Readonly<Record<string, unknown>>,
+  differences: readonly ParityDifference[],
+  expectedEvidenceIds: readonly string[]
+): readonly AcceptanceGate[] {
+  return requiredSurfaces.map(name => {
+    const projection = projections[name];
+    const missing = !Object.prototype.hasOwnProperty.call(projections, name)
+      || projection === undefined
+      || projection === ACCEPTANCE_MISSING;
+    const surfaceDifferences = differences.filter(difference => difference.surface === name);
+    return {
+      name,
+      status: classifySurfaceGateStatus(
+        name,
+        surfaceDifferences,
+        missing,
+        expectedEvidenceIds,
+        SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? []
+      ),
+      ...(surfaceDifferences.length === 0 ? {} : { details: `${surfaceDifferences.length} difference(s)` })
+    };
+  });
+}
+
+export function classifySurfaceGateStatus(
+  surface: string,
+  differences: readonly ParityDifference[],
+  missing = false,
+  expectedEvidenceIds: readonly string[] = [],
+  allowedDifferenceKinds: readonly ParityDifference['kind'][] = SURFACE_ALLOWED_DIFFERENCE_KINDS[surface] ?? []
+): GateStatus {
+  if (missing) return 'FAIL';
+  if (differences.length === 0) return 'PASS';
+
+  const allAllowed = differences.every(difference => {
+    if (allowedDifferenceKinds.includes(difference.kind)) return true;
+    if (surface === 'reasoning-trace') {
+      if (difference.kind !== 'EVIDENCE_MISMATCH' || difference.path !== '$.evidence'
+        || !Array.isArray(difference.expected) || !Array.isArray(difference.actual)) return false;
+      const expectedIds = new Set(difference.expected.map(item => (item as { readonly id?: unknown }).id));
+      const actualEntries = difference.actual as readonly { readonly id?: unknown; readonly resolution?: unknown }[];
+      const actualIds = new Set(actualEntries.map(item => item.id));
+      const extras = actualEntries.filter(item => !expectedIds.has(item.id));
+      return extras.length > 0
+        && [...expectedEvidenceIds].every(id => actualIds.has(id))
+        && extras.every(item => typeof item.id === 'string' && !expectedIds.has(item.id) && item.resolution === 'RESOLVED');
+    }
+
+    if (surface === 'json-export' && difference.kind === 'EVIDENCE_MISMATCH'
+      && difference.path === '$.evidence' && Array.isArray(difference.expected) && Array.isArray(difference.actual)) {
+      const expectedItems = difference.expected as readonly { readonly id?: unknown; readonly owner?: unknown; readonly resolution?: unknown }[];
+      const actualItems = difference.actual as readonly { readonly id?: unknown; readonly owner?: unknown; readonly resolution?: unknown }[];
+      if (expectedItems.length !== actualItems.length) return false;
+      const actualById = new Map(actualItems.map(item => [item.id, item]));
+      return expectedItems.every(expected => {
+        const actual = actualById.get(expected.id);
+        if (!actual) return false;
+        const expectedWithoutResolution = { id: expected.id, owner: expected.owner };
+        const actualWithoutResolution = { id: actual.id, owner: actual.owner };
+        return deepEqualAcceptance(expectedWithoutResolution, actualWithoutResolution)
+          && expected.resolution !== undefined
+          && actual.resolution === undefined;
+      });
+    }
+    if (surface === 'json-export' && difference.kind === 'PROVENANCE_MISMATCH'
+      && difference.path === '$.provenance' && Array.isArray(difference.expected) && Array.isArray(difference.actual)) {
+      const expectedItems = difference.expected as readonly { readonly evidenceId?: unknown; readonly owner?: unknown; readonly [key: string]: unknown }[];
+      const actualItems = difference.actual as readonly { readonly evidenceId?: unknown; readonly owner?: unknown; readonly [key: string]: unknown }[];
+      if (expectedItems.length !== actualItems.length) return false;
+      const actualById = new Map(actualItems.map(item => [item.evidenceId, item]));
+      return expectedItems.every(expected => {
+        const actual = actualById.get(expected.evidenceId);
+        if (!actual || expected.owner === undefined || actual.owner !== undefined) return false;
+        const { owner: _owner, ...expectedRest } = expected;
+        const { owner: _actualOwner, ...actualRest } = actual;
+        return deepEqualAcceptance(expectedRest, actualRest);
+      });
+    }
+    return false;
+  });
+  return allAllowed ? 'BLOCKED' : 'FAIL';
+}
 
 /**
  * Discriminated evidence resolver: resolves evidence IDs against a universe of records.
@@ -362,14 +458,15 @@ function aiConclusionFromContext(
   if (!aiContext) return undefined;
 
   const finalSynthesis = aiContext.finalSynthesis;
-  if (!finalSynthesis) return undefined;
+  const careerC11 = domain === 'CAREER' ? result.aiContext.career?.canonicalC11 : undefined;
+  if (!finalSynthesis && !careerC11) return undefined;
 
-  const status = finalSynthesis.finalStatus;
+  const status = careerC11?.finalStatus ?? finalSynthesis?.finalStatus;
   if (!status) return undefined;
 
   // Resolve evidence against the AI context's evidence universe
   const aiEvidenceUniverse = result.aiContext.evidence || [];
-  const evidenceIds = finalSynthesis.evidenceIds || [];
+  const evidenceIds = careerC11?.canonicalEvidenceIds ?? finalSynthesis?.evidenceIds ?? [];
   const resolutionMap = resolveEvidenceIds(evidenceIds, {
     domainUniverse: interpretation.evidence,
     externalNamespaces: [aiEvidenceUniverse]
@@ -402,14 +499,15 @@ function productAiConclusionFromContext(
   if (!productAiContext) return undefined;
 
   const finalSynthesis = productAiContext.finalSynthesis;
-  if (!finalSynthesis) return undefined;
+  const careerC11 = domain === 'CAREER' ? result.productAiContext.career?.canonicalC11 : undefined;
+  if (!finalSynthesis && !careerC11) return undefined;
 
-  const status = finalSynthesis.finalStatus;
+  const status = careerC11?.finalStatus ?? finalSynthesis?.finalStatus;
   if (!status) return undefined;
 
   // Resolve evidence against the product AI context's evidence universe
   const productAiEvidenceUniverse = result.productAiContext.evidence || [];
-  const evidenceIds = finalSynthesis.evidenceIds || [];
+  const evidenceIds = careerC11?.canonicalEvidenceIds ?? finalSynthesis?.evidenceIds ?? [];
   const resolutionMap = resolveEvidenceIds(evidenceIds, {
     domainUniverse: interpretation.evidence,
     externalNamespaces: [productAiEvidenceUniverse]
@@ -675,6 +773,18 @@ function projectSelectedPeriod(
 }
 
 export function createGoldenAcceptanceProductionPipeline(
+  domain: 'CAREER',
+  fixtureKind?: GoldenAcceptanceFixtureKind
+): GoldenAcceptancePipeline<'CAREER'>;
+export function createGoldenAcceptanceProductionPipeline(
+  domain: 'WEALTH',
+  fixtureKind?: GoldenAcceptanceFixtureKind
+): GoldenAcceptancePipeline<'WEALTH'>;
+export function createGoldenAcceptanceProductionPipeline(
+  domain: GoldenAcceptanceDomain,
+  fixtureKind?: GoldenAcceptanceFixtureKind
+): GoldenAcceptancePipeline;
+export function createGoldenAcceptanceProductionPipeline(
   domain: GoldenAcceptanceDomain,
   fixtureKind: GoldenAcceptanceFixtureKind = 'STANDARD'
 ): GoldenAcceptancePipeline {
@@ -699,16 +809,18 @@ export function createGoldenAcceptanceProductionPipeline(
           : domainExport?.value
             ? conclusionFromValues(domain, domainExport.value.status, domainExport.value.evidence, interpretation)
             : undefined;
-      const projections: GoldenAcceptanceProjections = {
-        [`${domain.toLowerCase()}-ui`]: uiConclusion,
-        'ai-context': aiConclusion,
-        'product-ai-context': productAiConclusion,
-        'reasoning-trace': trace,
-        'json-export': jsonConclusion,
+      const common = {
+        'ai-context': aiConclusion ?? ACCEPTANCE_MISSING,
+        'product-ai-context': productAiConclusion ?? ACCEPTANCE_MISSING,
+        'reasoning-trace': trace ?? ACCEPTANCE_MISSING,
+        'json-export': jsonConclusion ?? ACCEPTANCE_MISSING,
         'selected-period-ui': projectSelectedPeriod(domain, result),
         canonical
       };
-      return projections;
+      const projections = domain === 'CAREER'
+        ? { ...common, 'career-ui': uiConclusion ?? ACCEPTANCE_MISSING }
+        : { ...common, 'wealth-ui': uiConclusion ?? ACCEPTANCE_MISSING };
+      return projections as GoldenAcceptanceProjections;
     }
   };
 }
@@ -727,6 +839,70 @@ function baselineDifference(
     actual,
     reason: 'Canonical production output differs from the approved golden baseline.'
   };
+}
+
+function selectedPeriodDifferences(
+  domain: GoldenAcceptanceDomain,
+  projection: SelectedPeriodAcceptanceProjection | typeof ACCEPTANCE_MISSING
+): readonly ParityDifference[] {
+  if (projection === ACCEPTANCE_MISSING) {
+    return [{
+      surface: 'selected-period-ui',
+      kind: 'MISSING',
+      path: '$',
+      reason: 'Required selected-period projection was not produced.'
+    }];
+  }
+  const expected = domain === 'CAREER'
+    ? SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE
+    : SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE;
+  const differences: ParityDifference[] = [];
+  for (const key of ['domain', 'scope', 'subjectId'] as const) {
+    if (projection[key] !== expected[key]) {
+      differences.push({
+        surface: 'selected-period-ui',
+        kind: 'VALUE_MISMATCH',
+        path: `$.${key}`,
+        expected: expected[key],
+        actual: projection[key],
+        reason: `Selected-period ${key} differs from the approved fixture.`
+      });
+    }
+  }
+  if (projection.resultState !== expected.resultState) {
+    differences.push({
+      surface: 'selected-period-ui',
+      kind: 'STATUS_MISMATCH',
+      path: '$.resultState',
+      expected: expected.resultState,
+      actual: projection.resultState,
+      reason: 'Selected-period result state differs from the approved fixture.'
+    });
+  }
+  for (const key of ['careerQualificationStatus', 'wealthDimensions'] as const) {
+    if (!deepEqualAcceptance(projection[key], expected[key])) {
+      differences.push({
+        surface: 'selected-period-ui',
+        kind: 'VALUE_MISMATCH',
+        path: `$.${key}`,
+        expected: expected[key],
+        actual: projection[key],
+        reason: `Selected-period ${key} differs from the approved fixture.`
+      });
+    }
+  }
+  if (!deepEqualAcceptance(projection.interval, expected.interval)
+    || projection.temporalRelation !== expected.temporalRelation) {
+    differences.push({
+      surface: 'selected-period-ui',
+      kind: 'TEMPORAL_MISMATCH',
+      path: '$.temporal',
+      expected: { interval: expected.interval, temporalRelation: expected.temporalRelation },
+      actual: { interval: projection.interval, temporalRelation: projection.temporalRelation },
+      reason: 'Selected-period interval or temporal relation differs from the approved fixture.'
+    });
+  }
+  return differences;
 }
 
 function assertCanonicalBaseline(
@@ -800,6 +976,15 @@ export interface GoldenAcceptanceProductionGateResult {
   readonly selectedPeriod?: SelectedPeriodAcceptanceProjection;
 }
 
+function projectionForSurface(
+  projections: GoldenAcceptanceProjections,
+  name: string
+): AcceptanceConclusion | SelectedPeriodAcceptanceProjection | readonly AcceptanceConclusion[] | typeof ACCEPTANCE_MISSING | undefined {
+  return Object.prototype.hasOwnProperty.call(projections, name)
+    ? (projections as Record<string, AcceptanceConclusion | SelectedPeriodAcceptanceProjection | readonly AcceptanceConclusion[] | typeof ACCEPTANCE_MISSING>)[name]
+    : undefined;
+}
+
 /** Runs canonical baseline and surface gates against one real interpreter run. */
 export function runGoldenAcceptanceProductionGate(
   domain: GoldenAcceptanceDomain,
@@ -816,58 +1001,59 @@ export function runGoldenAcceptanceProductionGate(
   const expected = normalizeAcceptanceConclusion(canonical);
   const surfaces: AcceptanceSurface[] = [];
   const surfaceDifferences: ParityDifference[] = [];
+  const expectedEvidenceIds = expected.evidence.map(item => item.id);
   for (const name of REQUIRED_SURFACES[domain]) {
-    const projection = projections[name];
+    const projection = projectionForSurface(projections, name);
     if (name === 'selected-period-ui') {
-      if (projection === undefined) {
-        surfaceDifferences.push(...assertParity(expected, [normalizeAcceptanceSurface(name, undefined)]));
-      }
+      const selectedProjection = projection === undefined || projection === ACCEPTANCE_MISSING
+        ? ACCEPTANCE_MISSING
+        : projection as SelectedPeriodAcceptanceProjection;
+      surfaceDifferences.push(...selectedPeriodDifferences(domain, selectedProjection));
       continue;
     }
-    const allowExternalEvidence = name === 'ai-context' || name === 'product-ai-context';
-    const conclusion = projection as AcceptanceConclusion;
-    const surface = normalizeAcceptanceSurface(
-      name,
-      projection === undefined ? undefined : conclusion,
-      allowExternalEvidence
-    );
-    if (surface.conclusion !== 'MISSING') {
-      surfaceDifferences.push(...assertConclusionInventory([surface.conclusion]));
+    const conclusions = projection === undefined || projection === ACCEPTANCE_MISSING
+      ? [undefined]
+      : Array.isArray(projection)
+        ? projection
+        : [projection as AcceptanceConclusion];
+    const allowedDifferenceKinds = SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? [];
+    for (const [index, conclusion] of conclusions.entries()) {
+      const surfaceName = conclusions.length > 1 ? `${name}[${index}]` : name;
+      const surface = normalizeAcceptanceSurface(surfaceName, conclusion, allowedDifferenceKinds, {
+        compareStatus: name !== 'reasoning-trace',
+        compareConclusionKind: name !== 'reasoning-trace' && name !== 'json-export'
+      });
+      if (surface.conclusion !== ACCEPTANCE_MISSING) {
+        surfaceDifferences.push(...assertConclusionInventory([surface.conclusion]));
+      }
+      surfaces.push(surface);
     }
-    surfaces.push(surface);
   }
-  const selectedPeriod = projections['selected-period-ui'];
+  const selectedPeriodValue = projectionForSurface(projections, 'selected-period-ui');
+  const selectedPeriod = selectedPeriodValue === undefined || selectedPeriodValue === ACCEPTANCE_MISSING
+    ? undefined
+    : selectedPeriodValue as SelectedPeriodAcceptanceProjection;
   surfaceDifferences.push(...assertParity(expected, surfaces));
   const baselineDifferences = assertCanonicalBaseline(domain, result);
-  const actualSurfaceGates = REQUIRED_SURFACES[domain].map(name => {
-    const differences = surfaceDifferences.filter(difference => difference.surface === name);
-    const missing = projections[name] === undefined;
-    let status: AcceptanceGate['status'];
-    if (missing) {
-      status = 'FAIL';
-    } else if (differences.length > 0 && BLOCKED_SURFACES.includes(name)) {
-      status = 'BLOCKED';
-    } else {
-      status = differences.length > 0 ? 'FAIL' : 'PASS';
-    }
-    return {
-      name,
-      status,
-      ...(differences.length === 0 ? {} : { details: `${differences.length} parity difference(s)` })
-    };
-  });
+  const actualSurfaceGates = buildRequiredSurfaceGates(
+    REQUIRED_SURFACES[domain],
+    projections,
+    surfaceDifferences,
+    expectedEvidenceIds
+  );
   const reportGates: readonly AcceptanceGate[] = [
     {
-      name: 'canonical-baseline',
+      name: 'canonical',
       status: baselineDifferences.length > 0 ? 'FAIL' : 'PASS',
       ...(baselineDifferences.length === 0 ? {} : { details: `${baselineDifferences.length} baseline difference(s)` })
     },
     ...actualSurfaceGates
   ];
-  const reportDifferences = surfaceDifferences.filter(difference =>
-    actualSurfaceGates.find(gate => gate.name === difference.surface)?.status !== 'BLOCKED'
+  const report = buildGoldenAcceptanceReport(
+    reportGates,
+    [...baselineDifferences, ...surfaceDifferences],
+    true
   );
-  const report = buildGoldenAcceptanceReport(reportGates, [...baselineDifferences, ...reportDifferences]);
   return {
     expected,
     baselineDifferences: Object.freeze([...baselineDifferences]),
