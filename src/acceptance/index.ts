@@ -3,3 +3,4 @@ export * from './goldenAcceptanceNormalizer';
 export * from './goldenAcceptanceAssertions';
 export * from './goldenAcceptanceRunner';
 export * from './goldenAcceptanceReport';
+export * from './goldenAcceptanceProductionHarness';

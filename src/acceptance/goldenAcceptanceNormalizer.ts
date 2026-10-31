@@ -60,17 +60,14 @@ export function normalizeAcceptanceConclusion(conclusion: AcceptanceConclusion):
 export function projectDomainEvidenceToAcceptanceProvenance(
   evidence: DomainEvidence,
   owner: string,
-  trace?: CareerFinalEvidenceTrace
+  _trace?: CareerFinalEvidenceTrace
 ): AcceptanceProvenance {
-  const evidenceIndex = trace?.evidenceIds.indexOf(evidence.id) ?? -1;
-  const tracedSource = evidenceIndex >= 0 ? trace?.sourceIds[evidenceIndex] : undefined;
-  const tracedRuleId = evidenceIndex >= 0 ? trace?.ruleIds[evidenceIndex] : undefined;
-
+  // C11 sourceIds are occurrence-level and ruleIds are independently deduplicated; they are not index-paired to evidenceIds.
   return Object.freeze({
     evidenceId: evidence.id,
     owner,
-    source: tracedSource ?? evidence.provenance?.source ?? evidence.source,
-    ruleId: tracedRuleId ?? evidence.provenance?.ruleId ?? evidence.ruleId,
+    source: evidence.provenance?.source || evidence.source || undefined,
+    ruleId: evidence.provenance?.ruleId || evidence.ruleId || undefined,
     occurrence: evidence.id,
     stage: evidence.provenance?.axis,
     type: evidence.role

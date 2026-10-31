@@ -5,6 +5,12 @@ import { aggregateGateStatus, buildGoldenAcceptanceReport } from './goldenAccept
 import type { AcceptanceConclusion } from './goldenAcceptanceTypes';
 import type { DomainEvidence } from '../domain/interpretation/DomainEvidence';
 import type { CareerFinalEvidenceTrace } from '../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
+import {
+  createGoldenAcceptanceProductionPipeline,
+  runGoldenAcceptanceProductionGate
+} from './goldenAcceptanceProductionHarness';
+import { runGoldenAcceptanceParity } from './goldenAcceptanceRunner';
+import { GOLDEN_C11_BASELINE } from '../test/fixtures/careerGoldenBaseline';
 
 const supported: AcceptanceConclusion = {
   domain: 'CAREER', scope: 'LIFETIME', subjectId: 'candidate:C1', status: 'SUPPORTED',
@@ -54,6 +60,21 @@ describe('PR-8 golden acceptance contract', () => {
     ])).toEqual([expect.objectContaining({ kind: 'DUPLICATE_CONCLUSION' })]);
   });
 
+  it('checks duplicate and conflicting conclusion inventory within each production surface', () => {
+    const expected = normalizeAcceptanceConclusion(supported);
+    const differences = runGoldenAcceptanceParity({
+      run: () => ({}),
+      collect: () => ({
+        surface: [
+          supported,
+          { ...supported, status: 'UNSUPPORTED' }
+        ]
+      })
+    }, expected, ['surface']);
+    expect(differences.map(item => item.kind)).toContain('CONFLICT');
+    expect(differences.map(item => item.kind)).toContain('VALUE_MISMATCH');
+  });
+
   it('keeps lifetime and selected-period scopes temporally distinct', () => {
     const lifetime = normalizeAcceptanceConclusion({ ...supported, scope: 'LIFETIME', temporalScope: { kind: 'LIFETIME' } });
     const selected = normalizeAcceptanceConclusion({ ...supported, scope: 'SELECTED_PERIOD', temporalScope: { start: '2026-01-01', end: '2026-02-01' } });
@@ -72,12 +93,6 @@ describe('PR-8 golden acceptance contract', () => {
     expect(normalized.status).toBe('INSUFFICIENT_DATA');
     expect(normalized.evidence).toEqual([]);
     expect(normalized.provenance).toEqual([]);
-  });
-
-  it.skip('BLOCKED: real pipeline missing-evidence integration awaits the PR-8B production harness', () => {
-    // PR-8B will feed a real C11/Career or Wealth result with native
-    // INSUFFICIENT_DATA/UNAVAILABLE into this assertion. The acceptance normalizer
-    // deliberately does not manufacture or substitute that status.
   });
 
   it.each(scenarios)('normalizes the $name scenario', ({ input, expectedStatus }) => {
@@ -122,7 +137,7 @@ describe('PR-8 golden acceptance contract', () => {
     expect(normalized.provenance).toHaveLength(2);
   });
 
-  it('preserves complete DomainEvidence and evidenceTrace provenance identity', () => {
+  it('projects synthetic DomainEvidence provenance as a unit contract', () => {
     const evidence = {
       id: 'EV-1', sourceType: 'CANONICAL', domain: 'CAREER', role: 'PRIMARY', phase: 'NATAL',
       source: 'C4_STRUCTURAL_REASONING', statement: 'test', polarity: 'SUPPORTING', strength: 'STRONG',
@@ -137,9 +152,188 @@ describe('PR-8 golden acceptance contract', () => {
     };
 
     expect(projectDomainEvidenceToAcceptanceProvenance(evidence, 'C1', trace)).toEqual({
-      evidenceId: 'EV-1', owner: 'C1', source: 'TRACE-SOURCE', ruleId: 'TRACE-RULE',
+      evidenceId: 'EV-1', owner: 'C1', source: 'D10', ruleId: 'RULE-PROVENANCE',
       occurrence: 'EV-1', stage: 'NATAL', type: 'PRIMARY'
     });
+  });
+
+  it('does not positionally associate C11 trace arrays with evidence IDs', () => {
+      const makeEvidence = (id: string, source?: string, ruleId?: string): DomainEvidence => ({
+        id,
+        sourceType: 'CANONICAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL',
+        source: source ?? '',
+        statement: 'evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        ...(ruleId === undefined ? {} : { ruleId }),
+        relatedEvidenceIds: []
+      } as unknown as DomainEvidence);
+      const scenarios: readonly {
+        readonly name: string;
+        readonly evidence: DomainEvidence;
+        readonly trace: CareerFinalEvidenceTrace;
+        readonly expectedSource?: string;
+        readonly expectedRuleId?: string;
+      }[] = [
+        {
+          name: 'missing trace source and rule',
+          evidence: makeEvidence('EV-A', 'EVIDENCE-SOURCE', 'EVIDENCE-RULE'),
+          trace: { evidenceIds: ['EV-A'], sourceIds: [], ruleIds: [] },
+          expectedSource: 'EVIDENCE-SOURCE',
+          expectedRuleId: 'EVIDENCE-RULE'
+        },
+        {
+          name: 'reordered trace IDs',
+          evidence: makeEvidence('EV-A', 'EVIDENCE-SOURCE', 'EVIDENCE-RULE'),
+          trace: { evidenceIds: ['EV-B', 'EV-A'], sourceIds: ['WRONG-B', 'WRONG-A'], ruleIds: ['RULE-B', 'RULE-A'] },
+          expectedSource: 'EVIDENCE-SOURCE',
+          expectedRuleId: 'EVIDENCE-RULE'
+        },
+        {
+          name: 'mismatched trace array lengths',
+          evidence: makeEvidence('EV-A', 'EVIDENCE-SOURCE', 'EVIDENCE-RULE'),
+          trace: { evidenceIds: ['EV-A'], sourceIds: ['WRONG-A', 'EXTRA'], ruleIds: [] },
+          expectedSource: 'EVIDENCE-SOURCE',
+          expectedRuleId: 'EVIDENCE-RULE'
+        },
+        {
+          name: 'duplicate trace IDs',
+          evidence: makeEvidence('EV-A', 'EVIDENCE-SOURCE', 'EVIDENCE-RULE'),
+          trace: { evidenceIds: ['EV-A', 'EV-A'], sourceIds: ['WRONG-1', 'WRONG-2'], ruleIds: ['RULE-1', 'RULE-2'] },
+          expectedSource: 'EVIDENCE-SOURCE',
+          expectedRuleId: 'EVIDENCE-RULE'
+        },
+        {
+          name: 'missing evidence source and rule remain unavailable',
+          evidence: makeEvidence('EV-A'),
+          trace: { evidenceIds: ['EV-A'], sourceIds: ['UNMAPPED-SOURCE'], ruleIds: ['UNMAPPED-RULE'] }
+        }
+      ];
+      for (const scenario of scenarios) {
+        const projection = projectDomainEvidenceToAcceptanceProvenance(scenario.evidence, 'C1', scenario.trace);
+        expect(projection.source, scenario.name).toBe(scenario.expectedSource);
+        expect(projection.ruleId, scenario.name).toBe(scenario.expectedRuleId);
+      }
+  });
+
+  it.each(['CAREER', 'WEALTH'] as const)('connects the real %s production result to every acceptance surface', domain => {
+    const pipeline = createGoldenAcceptanceProductionPipeline(domain);
+    const result = pipeline.run();
+    const projections = pipeline.collect(result);
+
+    expect(projections.canonical).toBeDefined();
+    expect(projections[`${domain.toLowerCase()}-ui`]).toBeDefined();
+    expect(projections['ai-context']).toBeDefined();
+    expect(projections['product-ai-context']).toBeDefined();
+    expect(projections['reasoning-trace']).toBeDefined();
+    expect(projections['json-export']).toBeDefined();
+    expect(projections['selected-period-ui']).toMatchObject({
+      domain,
+      scope: 'SELECTED_PERIOD',
+      status: 'READY'
+    });
+
+    const expected = normalizeAcceptanceConclusion(projections.canonical as AcceptanceConclusion);
+    const surfaces = Object.entries(projections)
+      .filter(([name, value]) => name !== 'canonical' && name !== 'selected-period-ui' && value !== undefined)
+      .map(([name, value]) => normalizeAcceptanceSurface(name, value as AcceptanceConclusion));
+    const differences = assertParity(expected, surfaces);
+    expect(differences).toEqual(expect.any(Array));
+  });
+
+  it('preserves real interpreter provenance and owner from evidence records', () => {
+    const result = createGoldenAcceptanceProductionPipeline('CAREER').run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const trace = result.career.conclusionData?.canonicalCareerFinalSynthesis?.evidenceTrace;
+    const evidence = result.career.evidence.find(item =>
+      item.provenance?.source !== undefined &&
+      item.provenance.ruleId !== undefined &&
+      item.provenance.axis !== undefined
+    );
+    expect(evidence).toBeDefined();
+    expect(trace).toBeDefined();
+    if (!evidence) throw new Error('Production fixture emitted no provenance-complete career evidence.');
+    if (!trace) throw new Error('Production C11 result emitted no evidence trace.');
+
+    expect(projectDomainEvidenceToAcceptanceProvenance(evidence, 'CAREER', trace)).toEqual({
+      evidenceId: evidence.id,
+      owner: 'CAREER',
+      source: evidence.provenance?.source ?? evidence.source,
+      ruleId: evidence.provenance?.ruleId ?? evidence.ruleId,
+      occurrence: evidence.id,
+      stage: evidence.provenance?.axis,
+      type: evidence.role
+    });
+  });
+
+  it('asserts real canonical results against the approved golden baselines', () => {
+    const career = createGoldenAcceptanceProductionPipeline('CAREER').run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const c11 = career.career.conclusionData?.canonicalCareerFinalSynthesis;
+    expect(c11).toBeDefined();
+    expect(c11).toMatchObject({
+      finalStatus: GOLDEN_C11_BASELINE.canonicalC11Synthesis.finalStatus,
+      finalDirection: GOLDEN_C11_BASELINE.canonicalC11Synthesis.finalDirection,
+      finalStrength: GOLDEN_C11_BASELINE.canonicalC11Synthesis.finalStrength,
+      confidence: GOLDEN_C11_BASELINE.canonicalC11Synthesis.confidence,
+      evidenceIds: GOLDEN_C11_BASELINE.canonicalC11Synthesis.evidenceIds
+    });
+
+    const wealth = createGoldenAcceptanceProductionPipeline('WEALTH').run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const wealthSynthesis = wealth.wealth.conclusionData?.wealthFinalSynthesis;
+    expect(wealthSynthesis).toBeDefined();
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA'])
+      .toContain(wealthSynthesis?.finalStatus);
+    expect(wealthSynthesis?.status).toBe(wealthSynthesis?.finalStatus);
+    expect(wealthSynthesis?.ruleIds).toContain('CW-05-WEALTH-SYNTHESIS');
+    expect(wealthSynthesis?.evidenceIds).toEqual(expect.arrayContaining(wealthSynthesis?.evidenceIds ?? []));
+    for (const dimension of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
+      expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA'])
+        .toContain(wealthSynthesis?.dimensions?.[dimension]?.finalStatus);
+    }
+  });
+
+  it('preserves native missing-evidence status across real production projections', () => {
+    const careerPipeline = createGoldenAcceptanceProductionPipeline('CAREER', 'MISSING_EVIDENCE');
+    const careerResult = careerPipeline.run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const careerC11 = careerResult.career.conclusionData?.canonicalCareerFinalSynthesis;
+    expect(careerC11?.finalStatus).toBe('INSUFFICIENT_DATA');
+    expect(careerC11?.evidenceIds).toEqual([]);
+
+    const wealthPipeline = createGoldenAcceptanceProductionPipeline('WEALTH', 'MISSING_EVIDENCE');
+    const wealthResult = wealthPipeline.run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const wealthSynthesis = wealthResult.wealth.conclusionData?.wealthFinalSynthesis;
+    expect(wealthSynthesis?.finalStatus).toBe('INSUFFICIENT_DATA');
+    expect(wealthSynthesis?.evidenceIds).toEqual([]);
+
+    for (const [domain, projections] of [
+      ['CAREER', careerPipeline.collect(careerResult)],
+      ['WEALTH', wealthPipeline.collect(wealthResult)]
+    ] as const) {
+      expect(projections['selected-period-ui']).toMatchObject({
+        domain,
+        scope: 'SELECTED_PERIOD',
+        status: 'READY'
+      });
+
+      for (const [surface, projection] of Object.entries(projections)) {
+        if (surface === 'canonical' || surface === 'selected-period-ui') continue;
+        expect(projection, `${domain} ${surface}`).toMatchObject({
+          domain,
+          status: surface === 'json-export' && domain === 'CAREER' ? 'UNAVAILABLE' : 'INSUFFICIENT_DATA'
+        });
+      }
+    }
+  });
+
+  it.each(['CAREER', 'WEALTH'] as const)('runs separate canonical-baseline and surface gates for %s in one interpreter run', domain => {
+    const gate = runGoldenAcceptanceProductionGate(domain);
+    expect(gate.expected.domain).toBe(domain);
+    expect(gate.baselineDifferences).toEqual([]);
+    expect(gate.surfaceDifferences.length).toBeGreaterThan(0);
+    expect(gate.selectedPeriod.scope).toBe('SELECTED_PERIOD');
   });
 
   it('makes any parity difference fail even when gates pass or block', () => {

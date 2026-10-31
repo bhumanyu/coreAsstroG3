@@ -22,3 +22,9 @@ External Swiss/JPL parity and owner-gated non-dusthana mechanism families are `B
 A report is parity-preserving only when it retains the canonical conclusion status, temporal scope, subject/candidate identity, cited evidence grounding, and evidence/provenance ownership. The report may vary presentation wording and omit non-cited presentation detail, but it must not strengthen an unavailable, unresolved, or challenged conclusion, substitute lifetime evidence for selected-period evidence, or cite evidence that is not grounded in the canonical result. Native status vocabularies remain authoritative; report wording is presentation only.
 
 The stale dispositor production audit header is reconciled: the production context is wired by `canonicalCareerFoundationBuilder` and invoked from `interpretCareerV2`; dispositor production reachability is no longer described as test-only.
+
+## Production acceptance adapter
+
+`goldenAcceptanceProductionHarness.ts` runs `interpretCareerV2` and `interpretWealthV2` once for a chart fixture, then passes those same domain results through the product selectors, selected-period builder, AI context builders, reasoning trace output, and JSON exporter. It derives parity expectations from the real C11 and CW-05 canonical results. The canonical-vs-approved-baseline check and canonical-vs-surface parity check are separate gates; the latter extracts each surface's emitted status, evidence IDs, and provenance.
+
+C11 `evidenceIds`, `sourceIds`, and `ruleIds` are not parallel arrays: source occurrences may repeat and the arrays can have different lengths. Acceptance provenance therefore joins by the evidence object's own provenance fields and leaves unavailable fields absent; it does not use positional trace lookup.

@@ -1,10 +1,13 @@
-import { assertParity } from './goldenAcceptanceAssertions';
+import { assertConclusionInventory, assertParity } from './goldenAcceptanceAssertions';
 import { normalizeAcceptanceSurface } from './goldenAcceptanceNormalizer';
 import type { AcceptanceConclusion, AcceptanceSurface, NormalizedAcceptanceConclusion, ParityDifference } from './goldenAcceptanceTypes';
 
 export interface GoldenAcceptancePipeline {
   readonly run: () => unknown;
-  readonly collect: (productionResult: unknown) => Readonly<Record<string, AcceptanceConclusion | undefined>>;
+  readonly collect: (productionResult: unknown) => Readonly<Record<
+    string,
+    AcceptanceConclusion | readonly AcceptanceConclusion[] | undefined
+  >>;
 }
 
 /** Runs production once and projects every independently rendered surface from that same run. */
@@ -16,13 +19,35 @@ export function runGoldenAcceptanceParity(
   if (requiredSurfaces.length === 0) throw new Error('runGoldenAcceptanceParity requires at least one required surface');
   const productionResult = pipeline.run();
   const projections = pipeline.collect(productionResult);
-  const surfaces: AcceptanceSurface[] = requiredSurfaces.map(name =>
-    normalizeAcceptanceSurface(name, projections[name])
-  );
-  for (const name of Object.keys(projections).filter(name => !requiredSurfaces.includes(name)).sort()) {
-    surfaces.push(normalizeAcceptanceSurface(name, projections[name]));
+  const surfaces: AcceptanceSurface[] = [];
+  const differences: ParityDifference[] = [];
+  const names = [
+    ...requiredSurfaces,
+    ...Object.keys(projections).filter(name => !requiredSurfaces.includes(name)).sort()
+  ];
+  for (const name of names) {
+    const projection = projections[name];
+    const conclusions: readonly (AcceptanceConclusion | undefined)[] = projection === undefined
+      ? [undefined]
+      : Array.isArray(projection)
+        ? projection
+        : [projection as AcceptanceConclusion];
+    const normalized = conclusions.map(conclusion =>
+      conclusion === undefined ? undefined : normalizeAcceptanceSurface(name, conclusion).conclusion
+    );
+    const inventory = normalized.filter(
+      (conclusion): conclusion is NormalizedAcceptanceConclusion =>
+        conclusion !== undefined && conclusion !== 'MISSING'
+    );
+    differences.push(...assertConclusionInventory(inventory));
+    normalized.forEach((conclusion, index) => {
+      const surfaceName = normalized.length > 1 ? `${name}[${index}]` : name;
+      surfaces.push(normalizeAcceptanceSurface(
+        surfaceName,
+        conclusion === 'MISSING' || conclusion === undefined ? undefined : conclusion
+      ));
+    });
   }
-  // Cross-surface identity is compared directly by assertParity. Inventory validation is
-  // intentionally intra-surface and belongs in a separate per-surface collection contract.
-  return [...assertParity(expected, surfaces)];
+  differences.push(...assertParity(expected, surfaces));
+  return Object.freeze(differences);
 }
