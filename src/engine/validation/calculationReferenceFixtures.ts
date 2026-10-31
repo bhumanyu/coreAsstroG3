@@ -59,6 +59,62 @@ export interface BoundaryCoverageRecord {
   readonly input?: unknown;
 }
 
+export const ZODIAC_SIGNS_ORDER = Object.freeze([
+  'ARIES',
+  'TAURUS',
+  'GEMINI',
+  'CANCER',
+  'LEO',
+  'VIRGO',
+  'LIBRA',
+  'SCORPIO',
+  'SAGITTARIUS',
+  'CAPRICORN',
+  'AQUARIUS',
+  'PISCES'
+] as const);
+
+export const NAKSHATRAS_ORDER = Object.freeze([
+  'ASHWINI',
+  'BHARANI',
+  'KRITTIKA',
+  'ROHINI',
+  'MRIGASHIRA',
+  'ARDRA',
+  'PUNARVASU',
+  'PUSHYA',
+  'ASHLESHA',
+  'MAGHA',
+  'PURVA_PHALGUNI',
+  'UTTARA_PHALGUNI',
+  'HASTA',
+  'CHITRA',
+  'SWATI',
+  'VISHAKHA',
+  'ANURADHA',
+  'JYESHTHA',
+  'MULA',
+  'PURVA_ASHADHA',
+  'UTTARA_ASHADHA',
+  'SHRAVANA',
+  'DHANISHTA',
+  'SHATABHISHA',
+  'PURVA_BHADRAPADA',
+  'UTTARA_BHADRAPADA',
+  'REVATI'
+] as const);
+
+function assertSameEnumSet(name: string, values: readonly string[], enumeration: object): void {
+  const enumValues = [...new Set(Object.values(enumeration)
+    .filter((value): value is string => typeof value === 'string'))].sort();
+  if (JSON.stringify([...values].sort()) !== JSON.stringify(enumValues)) {
+    throw new Error(`${name} must contain exactly the enum values.`);
+  }
+}
+
+assertSameEnumSet('ZODIAC_SIGNS_ORDER', ZODIAC_SIGNS_ORDER, Sign);
+assertSameEnumSet('NAKSHATRAS_ORDER', NAKSHATRAS_ORDER, Nakshatra);
+
 export function inspectBoundaryCoverage(
   fixtures: readonly BoundaryCoverageRecord[],
   policy: CalculationCoveragePolicy
@@ -77,12 +133,8 @@ export function inspectBoundaryCoverage(
     fixture.kind === 'SIGN_BOUNDARY' ? 'SIGN' : fixture.boundaryKind ?? '';
   const normalizeLongitude = (longitude: number): number =>
     ((longitude % 360) + 360) % 360;
-  const enumValues = (value: object): string[] =>
-    [...new Set(Object.values(value).filter(
-      (item): item is string | number => typeof item === 'string' || typeof item === 'number'
-    ).map(String))];
-  const signs = enumValues(Sign);
-  const nakshatras = enumValues(Nakshatra);
+  const signs: readonly string[] = ZODIAC_SIGNS_ORDER;
+  const nakshatras: readonly string[] = NAKSHATRAS_ORDER;
   const padas = ['1', '2', '3', '4'];
   const grids: Readonly<Record<string, number>> = {
     SIGN: 30,
@@ -161,21 +213,29 @@ export function inspectBoundaryCoverage(
       const beforeLongitude = longitudeFor(before);
       const exactLongitude = longitudeFor(exact);
       const afterLongitude = longitudeFor(after);
+      const beforeDistance = beforeLongitude === undefined || boundary === undefined
+        ? undefined
+        : normalizeLongitude(boundary - beforeLongitude);
+      const afterDistance = afterLongitude === undefined || boundary === undefined
+        ? undefined
+        : normalizeLongitude(afterLongitude - boundary);
       if (beforeLongitude === undefined
         || exactLongitude === undefined
         || afterLongitude === undefined
         || boundary === undefined
         || !Number.isFinite(boundary)
         || exactLongitude !== boundary
-        || !(beforeLongitude < exactLongitude
-          && exactLongitude < afterLongitude)
+        || beforeDistance === undefined
+        || afterDistance === undefined
+        || beforeDistance === 0
+        || afterDistance === 0
         || [before, exact, after].some(item => item?.boundaryLongitude !== boundary)) {
         issues.push(`BOUNDARY_ORDER:${groupKey}:input longitudes must be strictly ordered around boundaryLongitude`);
       } else if (validEpsilon
-        && (Math.abs(boundary - beforeLongitude) < epsilon.min
-          || Math.abs(boundary - beforeLongitude) > epsilon.max
-          || Math.abs(afterLongitude - boundary) < epsilon.min
-          || Math.abs(afterLongitude - boundary) > epsilon.max)) {
+        && (beforeDistance < epsilon.min
+          || beforeDistance > epsilon.max
+          || afterDistance < epsilon.min
+          || afterDistance > epsilon.max)) {
         issues.push(`BOUNDARY_EPSILON:${groupKey}:before/after distances must be within ${epsilon.min}-${epsilon.max} degrees`);
       }
 
@@ -203,7 +263,10 @@ export function inspectBoundaryCoverage(
           .every(value => nakshatras.includes(value ?? ''))
           || before?.expectedNakshatra !== nakshatras[(index + nakshatras.length - 1) % nakshatras.length]
           || exact?.expectedNakshatra !== nakshatras[index]
-          || after?.expectedNakshatra !== nakshatras[index]) {
+          || after?.expectedNakshatra !== nakshatras[index]
+          || before?.expectedPada !== 4
+          || exact?.expectedPada !== 1
+          || after?.expectedPada !== 1) {
           issues.push(`BOUNDARY_DIRECTION:${groupKey}:nakshatra values must transition in increasing-longitude order`);
         }
       } else if (kind === 'PADA'

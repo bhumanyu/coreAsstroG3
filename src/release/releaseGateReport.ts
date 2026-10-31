@@ -142,7 +142,21 @@ function canonicalValue(value: unknown): unknown {
 export function canonicalizeRunnerEvidenceManifest(
   manifest: RunnerEvidenceManifest
 ): string {
-  return canonicalJson(manifest);
+  const recordKey = (value: object): string => canonicalJson(value);
+  const compareRecords = (left: object, right: object): number => {
+    const leftKey = recordKey(left);
+    const rightKey = recordKey(right);
+    return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+  };
+  const canonicalManifest = {
+    commands: [...manifest.commands].sort(compareRecords),
+    files: [...manifest.files].sort(compareRecords),
+    fixtureComparisons: [...manifest.fixtureComparisons]
+      .map(item => ({ ...item, fixtureIds: [...item.fixtureIds].sort() }))
+      .sort(compareRecords),
+    policyDocuments: [...manifest.policyDocuments].sort(compareRecords)
+  };
+  return canonicalJson(canonicalManifest);
 }
 
 export function canonicalJson(value: unknown): string {

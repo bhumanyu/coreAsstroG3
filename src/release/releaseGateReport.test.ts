@@ -191,31 +191,66 @@ describe('release gate report', () => {
   it('records a digest of the evidence manifest in the finalized report', () => {
     const report = finalize({ gates: allPassingGates() });
     const reorderedManifest: RunnerEvidenceManifest = {
-      policyDocuments: testEvidenceManifest.policyDocuments.map(item => ({
-        sha256: item.sha256,
-        path: item.path
-      })),
       fixtureComparisons: testEvidenceManifest.fixtureComparisons.map(item => ({
         commandPassed: item.commandPassed,
-        fixtureIds: item.fixtureIds,
+        fixtureIds: [...item.fixtureIds].reverse(),
         invocationId: item.invocationId,
         sha256: item.sha256,
         path: item.path
-      })),
-      files: testEvidenceManifest.files.map(item => ({
+      })).reverse(),
+      files: [...testEvidenceManifest.files].reverse().map(item => ({
         sha256: item.sha256,
         path: item.path
       })),
-      commands: testEvidenceManifest.commands.map(item => ({
+      commands: [...testEvidenceManifest.commands].reverse().map(item => ({
         exitCode: item.exitCode,
         logPath: item.logPath,
         name: item.name
+      })),
+      policyDocuments: [...testEvidenceManifest.policyDocuments].reverse().map(item => ({
+        sha256: item.sha256,
+        path: item.path
       }))
     };
     const digest = digestRunnerEvidenceManifest(testEvidenceManifest);
     expect(digest).toEqual(digestRunnerEvidenceManifest(reorderedManifest));
     expect(canonicalizeRunnerEvidenceManifest(testEvidenceManifest))
       .toBe(canonicalizeRunnerEvidenceManifest(reorderedManifest));
+    const manifestWithMultipleFixtureIds: RunnerEvidenceManifest = {
+      ...testEvidenceManifest,
+      commands: [
+        ...testEvidenceManifest.commands,
+        { name: 'another-command', logPath: evidencePath, exitCode: 0 }
+      ],
+      files: [
+        ...testEvidenceManifest.files,
+        { path: 'package.json', sha256: evidenceSha }
+      ],
+      fixtureComparisons: testEvidenceManifest.fixtureComparisons.map(item => ({
+        ...item,
+        fixtureIds: ['fixture-2', 'fixture-1']
+      })).concat([{
+        path: 'another-fixture-results.json',
+        sha256: evidenceSha,
+        invocationId: 'invocation-2',
+        fixtureIds: ['fixture-4', 'fixture-3'],
+        commandPassed: true
+      }]),
+      policyDocuments: [
+        ...testEvidenceManifest.policyDocuments,
+        { path: 'docs/other-policy.json', sha256: evidenceSha }
+      ]
+    };
+    const reversedManifest: RunnerEvidenceManifest = {
+      commands: [...manifestWithMultipleFixtureIds.commands].reverse(),
+      files: [...manifestWithMultipleFixtureIds.files].reverse(),
+      fixtureComparisons: [...manifestWithMultipleFixtureIds.fixtureComparisons]
+        .reverse()
+        .map(item => ({ ...item, fixtureIds: [...item.fixtureIds].reverse() })),
+      policyDocuments: [...manifestWithMultipleFixtureIds.policyDocuments].reverse()
+    };
+    expect(digestRunnerEvidenceManifest(manifestWithMultipleFixtureIds))
+      .toEqual(digestRunnerEvidenceManifest(reversedManifest));
     expect(report.evidenceManifestIntegrity).toEqual(digest);
     expect(report.evidenceManifestSchemaVersion).toBe(1);
     expect(report.evidenceManifestSha256).toBe(digest.digest);
@@ -677,8 +712,8 @@ describe('release gate report', () => {
         'NAKSHATRA',
         'NAKSHATRA-13.3333333333',
         360 / 27,
-        { expectedNakshatra: 'ASHWINI' },
-        { expectedNakshatra: 'BHARANI' }
+        { expectedNakshatra: 'ASHWINI', expectedPada: 4 },
+        { expectedNakshatra: 'BHARANI', expectedPada: 1 }
       ),
       ...makeTriplet(
         'NAKSHATRA_BOUNDARY',
@@ -735,6 +770,92 @@ describe('release gate report', () => {
     ), CALCULATION_COVERAGE_POLICY)).toContain(
       'BOUNDARY_TRANSITION:SIGN:SIGN-30:expectedSign must differ before and after'
     );
+    const nakshatraFixtures = fixtures.filter(item =>
+      item.kind === 'NAKSHATRA_BOUNDARY' && item.boundaryKind === 'NAKSHATRA'
+    );
+    const expectNakshatraDirectionIssue = (items: readonly Record<string, unknown>[]) => {
+      expect(inspectBoundaryCoverage(items as never, CALCULATION_COVERAGE_POLICY))
+        .toContain(
+          'BOUNDARY_DIRECTION:NAKSHATRA:NAKSHATRA-13.3333333333:nakshatra values must transition in increasing-longitude order'
+        );
+    };
+    expectNakshatraDirectionIssue(nakshatraFixtures.map(item =>
+      item.boundaryPosition === 'EXACT' ? { ...item, expectedPada: 2 } : item
+    ));
+    expectNakshatraDirectionIssue(nakshatraFixtures.map(item =>
+      item.boundaryPosition === 'EXACT' ? { ...item, expectedPada: undefined } : item
+    ));
+    expectNakshatraDirectionIssue(nakshatraFixtures.map(item =>
+      item.boundaryPosition === 'EPSILON_BEFORE' ? { ...item, expectedPada: 3 } : item
+    ));
+  });
+
+  it('validates boundary classifications across the zero-degree wraparound', () => {
+    const makeWrapTriplet = (
+      kind: string,
+      boundaryKind: string | undefined,
+      boundaryId: string,
+      expectedBefore: Record<string, string | number>,
+      expectedAtAndAfter: Record<string, string | number>
+    ) => {
+      const base = {
+        kind,
+        ...(boundaryKind === undefined ? {} : { boundaryKind }),
+        boundaryId,
+        boundaryLongitude: 0,
+        boundaryDefinition: {
+          name: boundaryId,
+          longitude: 0,
+          convention: { coordinateFrame: 'SIDEREAL', ayanamsa: 'LAHIRI' }
+        },
+        conventions: { coordinateFrame: 'SIDEREAL', ayanamsa: 'LAHIRI' },
+        provenance: { expectedValuesProducedIndependently: true }
+      };
+      return [
+        {
+          ...base,
+          ...expectedBefore,
+          boundaryPosition: 'EPSILON_BEFORE',
+          input: { longitude: 359.99999 }
+        },
+        {
+          ...base,
+          ...expectedAtAndAfter,
+          boundaryPosition: 'EXACT',
+          input: { longitude: 0 }
+        },
+        {
+          ...base,
+          ...expectedAtAndAfter,
+          boundaryPosition: 'EPSILON_AFTER',
+          input: { longitude: 0.00001 }
+        }
+      ];
+    };
+    const wrapFixtures = [
+      ...makeWrapTriplet(
+        'SIGN_BOUNDARY',
+        undefined,
+        'SIGN-0',
+        { expectedSign: 'PISCES' },
+        { expectedSign: 'ARIES' }
+      ),
+      ...makeWrapTriplet(
+        'NAKSHATRA_BOUNDARY',
+        'NAKSHATRA',
+        'NAKSHATRA-0',
+        { expectedNakshatra: 'REVATI', expectedPada: 4 },
+        { expectedNakshatra: 'ASHWINI', expectedPada: 1 }
+      ),
+      ...makeWrapTriplet(
+        'NAKSHATRA_BOUNDARY',
+        'PADA',
+        'PADA-0',
+        { expectedNakshatra: 'REVATI', expectedPada: 4 },
+        { expectedNakshatra: 'ASHWINI', expectedPada: 1 }
+      )
+    ];
+    expect(inspectBoundaryCoverage(wrapFixtures, CALCULATION_COVERAGE_POLICY)).toEqual([]);
   });
 
   it('blocks PR-8 linkage when Git detects a modified acceptance file', () => {
