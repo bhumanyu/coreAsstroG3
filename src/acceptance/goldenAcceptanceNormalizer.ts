@@ -53,7 +53,8 @@ export function normalizeAcceptanceConclusion(conclusion: AcceptanceConclusion):
     status: conclusion.status,
     evidence: Object.freeze(evidence),
     provenance: Object.freeze(provenance),
-    ...(conclusion.temporalScope === undefined ? {} : { temporalScope: conclusion.temporalScope })
+    ...(conclusion.temporalScope === undefined ? {} : { temporalScope: conclusion.temporalScope }),
+    ...(conclusion.conclusionKind === undefined ? {} : { conclusionKind: conclusion.conclusionKind })
   });
 }
 

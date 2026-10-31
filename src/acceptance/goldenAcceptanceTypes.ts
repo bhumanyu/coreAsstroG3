@@ -5,7 +5,8 @@ export type EvidenceResolution =
   | 'RESOLVED'
   | 'DANGLING'
   | 'AMBIGUOUS'
-  | 'OWNER_MISMATCH';
+  | 'OWNER_MISMATCH'
+  | 'EXTERNAL';
 
 /** Native domain/product statuses are carried unchanged; no synthetic status authority is introduced. */
 export interface AcceptanceEvidence {
@@ -40,6 +41,7 @@ export interface AcceptanceConclusion {
   readonly evidence: readonly AcceptanceEvidence[];
   readonly provenance: readonly AcceptanceProvenance[];
   readonly temporalScope?: Readonly<Record<string, unknown>>;
+  readonly conclusionKind?: 'SYNTHESIS_FINAL' | 'PROFESSION_COMPLETENESS' | 'PRESENTATION';
 }
 
 /** Typed selected-period acceptance projection with structured state. */
@@ -80,7 +82,7 @@ export interface AcceptanceSurface {
 
 export interface ParityDifference {
   readonly surface: string;
-  readonly kind: 'VALUE_MISMATCH' | 'MISSING' | 'EXTRA' | 'DUPLICATE_CONCLUSION' | 'CONFLICT';
+  readonly kind: 'VALUE_MISMATCH' | 'MISSING' | 'EXTRA' | 'DUPLICATE_CONCLUSION' | 'CONFLICT' | 'DANGLING_REFERENCE' | 'AMBIGUOUS_EVIDENCE' | 'OWNER_MISMATCH';
   readonly path: string;
   readonly expected?: unknown;
   readonly actual?: unknown;

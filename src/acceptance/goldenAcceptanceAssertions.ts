@@ -33,6 +33,37 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
     if (conclusion.status !== expected.status) {
       differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: '$.status', expected: expected.status, actual: conclusion.status, reason: 'Native conclusion status differs.' });
     }
+
+    // Check for unresolved evidence states and emit appropriate differences
+    for (const evidence of conclusion.evidence) {
+      if (evidence.resolution === 'DANGLING') {
+        differences.push({
+          surface: surface.name,
+          kind: 'DANGLING_REFERENCE',
+          path: '$.evidence',
+          actual: evidence.id,
+          reason: `Evidence ID ${evidence.id} does not resolve to any record in the universe.`
+        });
+      } else if (evidence.resolution === 'AMBIGUOUS') {
+        differences.push({
+          surface: surface.name,
+          kind: 'AMBIGUOUS_EVIDENCE',
+          path: '$.evidence',
+          actual: evidence.id,
+          reason: `Evidence ID ${evidence.id} resolves to multiple records in the universe (duplicate IDs).`
+        });
+      } else if (evidence.resolution === 'OWNER_MISMATCH') {
+        differences.push({
+          surface: surface.name,
+          kind: 'OWNER_MISMATCH',
+          path: '$.evidence',
+          actual: evidence.id,
+          expected: conclusion.domain,
+          reason: `Evidence ID ${evidence.id} owner does not match expected domain ${conclusion.domain}.`
+        });
+      }
+    }
+
     for (const key of ['evidence', 'provenance', 'temporalScope'] as const) {
       if (!deepEqualAcceptance(expected[key], conclusion[key])) {
         differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: `$.${key}`, expected: expected[key], actual: conclusion[key], reason: `${key} differs after normalization.` });

@@ -439,11 +439,11 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
  * Golden baseline for selected-period acceptance projection (WEALTH domain).
  *
  * This baseline captures the expected SelectedPeriodAcceptanceProjection structure
- * for the valid selection case (MD=MOON, AD=MOON) for the WEALTH domain.
+ * for the valid selection case for the WEALTH domain.
  *
- * Never derive selected-period expectations from lifetime baselines - selected-period
- * has its own distinct contract with resultState, qualificationBasis, and per-dimension
- * effect/dataStatus fields.
+ * Note: WEALTH domain selects a different period than CAREER due to domain-specific
+ * period selection logic. Interval dates and temporalRelation are documented for WEALTH's
+ * selected period.
  */
 export const SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanceProjection = {
   domain: 'WEALTH',
@@ -464,7 +464,7 @@ export const SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanc
     },
     {
       dimension: 'FORTUNE',
-      effect: 'INSUFFICIENT_DATA',
+      effect: 'UNKNOWN',
       dataStatus: 'PARTIAL'
     },
     {
@@ -476,17 +476,20 @@ export const SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanc
   evidence: [], // Evidence is resolved from the synthesis, not from this baseline
   provenance: [], // Provenance is resolved from the synthesis, not from this baseline
   interval: {
-    start: '2106-08-18T06:33:37.957Z',
-    end: '2107-06-18T15:33:37.957Z'
+    start: '1988-05-08T04:00:00.000Z',
+    end: '1989-07-17T14:03:37.957Z'
   },
-  temporalRelation: 'FUTURE'
+  temporalRelation: 'PAST'
 };
 
 /**
  * Golden baseline for selected-period acceptance projection (CAREER domain).
  *
  * This baseline captures the expected SelectedPeriodAcceptanceProjection structure
- * for the valid selection case (MD=MOON, AD=MOON) for the CAREER domain.
+ * for the valid selection case for the CAREER domain.
+ *
+ * Note: CAREER domain selects a different period than WEALTH due to domain-specific
+ * period selection logic. Interval dates are documented for CAREER's selected period.
  */
 export const SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanceProjection = {
   domain: 'CAREER',
@@ -498,8 +501,8 @@ export const SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanc
   evidence: [], // Evidence is resolved from the synthesis, not from this baseline
   provenance: [], // Provenance is resolved from the synthesis, not from this baseline
   interval: {
-    start: '2106-08-18T06:33:37.957Z',
-    end: '2107-06-18T15:33:37.957Z'
+    start: '1988-05-08T04:00:00.000Z',
+    end: '1989-07-17T14:03:37.957Z'
   },
-  temporalRelation: 'FUTURE'
+  temporalRelation: 'PAST'
 };

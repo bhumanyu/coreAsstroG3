@@ -1,13 +1,11 @@
 import { assertConclusionInventory, assertParity } from './goldenAcceptanceAssertions';
 import { normalizeAcceptanceSurface } from './goldenAcceptanceNormalizer';
-import type { AcceptanceConclusion, AcceptanceSurface, NormalizedAcceptanceConclusion, ParityDifference } from './goldenAcceptanceTypes';
+import type { AcceptanceConclusion, AcceptanceSurface, NormalizedAcceptanceConclusion, ParityDifference, SelectedPeriodAcceptanceProjection } from './goldenAcceptanceTypes';
+import type { GoldenAcceptanceProjections } from './goldenAcceptanceProductionHarness';
 
 export interface GoldenAcceptancePipeline {
   readonly run: () => unknown;
-  readonly collect: (productionResult: unknown) => Readonly<Record<
-    string,
-    AcceptanceConclusion | readonly AcceptanceConclusion[] | undefined
-  >>;
+  readonly collect: (productionResult: unknown) => GoldenAcceptanceProjections;
 }
 
 /** Runs production once and projects every independently rendered surface from that same run. */
@@ -27,6 +25,8 @@ export function runGoldenAcceptanceParity(
   ];
   for (const name of names) {
     const projection = projections[name];
+    // Skip selected-period-ui as it's a SelectedPeriodAcceptanceProjection, not a conclusion
+    if (name === 'selected-period-ui') continue;
     const conclusions: readonly (AcceptanceConclusion | undefined)[] = projection === undefined
       ? [undefined]
       : Array.isArray(projection)
