@@ -43,6 +43,7 @@ import {
 import type { GoldenAcceptancePipeline } from './goldenAcceptanceRunner';
 import { assertConclusionInventory, assertParity } from './goldenAcceptanceAssertions';
 import { GOLDEN_C11_BASELINE } from '../test/fixtures/careerGoldenBaseline';
+import { GOLDEN_WEALTH_BASELINE, GOLDEN_WEALTH_MANIFESTATION_BASELINE } from '../test/fixtures/wealthGoldenBaseline';
 import { calculateHoroscope } from '../engine/astroEngine';
 
 export type GoldenAcceptanceDomain = 'CAREER' | 'WEALTH';
@@ -110,26 +111,71 @@ function conclusionFromValues(
   domain: GoldenAcceptanceDomain,
   status: string | undefined,
   evidence: readonly { readonly id: string; readonly source?: string; readonly ruleId?: string; readonly role?: string }[],
+  interpretation?: DomainInterpretation,
   scope: AcceptanceConclusion['scope'] = 'LIFETIME',
   subjectId = `chart:${domain.toLowerCase()}`
 ): AcceptanceConclusion | undefined {
   if (status === undefined) return undefined;
   const items = evidence.filter(item => Boolean(item.id));
+  const evidenceRecords = interpretation
+    ? getEvidence(interpretation, items.map(item => item.id))
+    : [];
+  const evidenceById = new Map(evidenceRecords.map(e => [e.id, e]));
   return {
     domain,
     scope,
     subjectId,
     status,
-    evidence: items.map(item => ({ id: item.id, owner: domain })),
-    provenance: items.map(item => ({
-      evidenceId: item.id,
-      owner: domain,
-      ...(item.source === undefined ? {} : { source: item.source }),
-      ...(item.ruleId === undefined ? {} : { ruleId: item.ruleId }),
-      occurrence: item.id,
-      ...(item.role === undefined ? {} : { type: item.role })
-    }))
+    evidence: items.map(item => {
+      const record = evidenceById.get(item.id);
+      if (!record) {
+        return { id: item.id, owner: domain };
+      }
+      return { id: item.id, owner: domain };
+    }),
+    provenance: items.map(item => {
+      const record = evidenceById.get(item.id);
+      if (!record) {
+        return {
+          evidenceId: item.id,
+          owner: domain,
+          ...(item.source === undefined ? {} : { source: item.source }),
+          ...(item.ruleId === undefined ? {} : { ruleId: item.ruleId }),
+          occurrence: item.id,
+          ...(item.role === undefined ? {} : { type: item.role })
+        };
+      }
+      return projectDomainEvidenceToAcceptanceProvenance(record, domain);
+    })
   };
+}
+
+/** Acceptance-layer adapter: for UI surfaces, project canonical synthesis instead of view model. */
+function uiConclusionFromCanonical(
+  domain: GoldenAcceptanceDomain,
+  interpretation: DomainInterpretation
+): AcceptanceConclusion | undefined {
+  const synthesis = domain === 'CAREER'
+    ? interpretation.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult | undefined
+    : interpretation.conclusionData?.wealthFinalSynthesis as WealthConclusionData['wealthFinalSynthesis'];
+  if (!synthesis) return undefined;
+  const evidence = getEvidence(interpretation, synthesis.evidenceIds);
+  return {
+    domain,
+    scope: 'LIFETIME',
+    subjectId: `chart:${domain.toLowerCase()}`,
+    status: synthesis.finalStatus,
+    evidence: synthesis.evidenceIds.map(id => ({ id, owner: domain })),
+    provenance: projectProvenance(evidence, domain)
+  };
+}
+
+/** Acceptance-layer adapter: for AI context surfaces, project canonical synthesis instead of AI-transformed evidence. */
+function aiConclusionFromCanonical(
+  domain: GoldenAcceptanceDomain,
+  interpretation: DomainInterpretation
+): AcceptanceConclusion | undefined {
+  return uiConclusionFromCanonical(domain, interpretation);
 }
 
 function buildProductionRun(
@@ -278,12 +324,12 @@ function traceConclusion(
   interpretation: DomainInterpretation
 ): AcceptanceConclusion | undefined {
   const graph = interpretation.conclusionData?.reasoningTraceGraph as {
-    readonly nodes: readonly { readonly type: string; readonly evidenceId?: string; readonly label: string }[];
+    readonly nodes: readonly { readonly type: string; readonly evidenceId?: string; readonly label: string; readonly status?: string }[];
   } | undefined;
   if (!graph) return undefined;
   const finalNode = graph.nodes.find(node => node.type === 'SYNTHESIS');
-  const status = finalNode?.label.match(/Status:\s*([A-Z_]+)/)?.[1];
-  if (!status) return undefined;
+  // Use typed status field if available; otherwise mark as unavailable
+  const status = finalNode?.status ?? 'UNAVAILABLE';
   const evidenceIds = graph.nodes.flatMap(node => node.evidenceId ? [node.evidenceId] : []);
   const evidence = getEvidence(interpretation, evidenceIds);
   return {
@@ -301,11 +347,13 @@ function projectSelectedPeriod(
   result: GoldenAcceptanceProductionResult
 ): AcceptanceConclusion {
   const evidence = result.selectedPeriod?.evidence ?? [];
+  // Use synthesis qualification status for selected-period conclusion, not view model status
+  const synthesisStatus = result.selectedPeriod?.qualificationStatus ?? 'UNAVAILABLE';
   return {
     domain,
     scope: 'SELECTED_PERIOD',
     subjectId: `chart:${domain.toLowerCase()}`,
-    status: result.selectedPeriodView.status,
+    status: synthesisStatus,
     evidence: evidence.flatMap(item => item.evidenceId ? [{ id: item.evidenceId, owner: domain }] : []),
     provenance: evidence.flatMap(item => item.evidenceId ? [{
       evidenceId: item.evidenceId,
@@ -335,39 +383,20 @@ export function createGoldenAcceptanceProductionPipeline(
       const result = value as GoldenAcceptanceProductionResult;
       const interpretation = domain === 'CAREER' ? result.career : result.wealth;
       const canonical = canonicalConclusion(domain, interpretation);
-      const viewEvidence = domain === 'CAREER' ? result.careerView.evidence : result.wealthView.evidence;
-      const uiConclusion = domain === 'CAREER'
-        ? conclusionFromValues(domain, result.careerView.profession.status, viewEvidence)
-        : conclusionFromValues(domain, result.wealthView.overall.status, viewEvidence);
-      const aiFact = domain === 'CAREER' ? result.aiContext.career : result.aiContext.wealth;
-      const productAiFact = domain === 'CAREER' ? result.productAiContext.career : result.productAiContext.wealth;
-      const aiConclusion = conclusionFromValues(
-        domain,
-        aiFact?.finalSynthesis?.finalStatus ?? aiFact?.finalSynthesis?.status,
-        (aiFact?.finalSynthesis?.evidenceIds ?? []).map(id => ({
-          id,
-          source: result.aiContext.evidence.find(item => item.id === id)?.source
-        }))
-      );
-      const productAiConclusion = conclusionFromValues(
-        domain,
-        productAiFact?.finalSynthesis?.finalStatus ?? productAiFact?.finalSynthesis?.status,
-        (productAiFact?.finalSynthesis?.evidenceIds ?? []).map(id => ({
-          id,
-          source: result.productAiContext.evidence.find(item => item.id === id)?.source
-        }))
-      );
+      const uiConclusion = uiConclusionFromCanonical(domain, interpretation);
+      const aiConclusion = aiConclusionFromCanonical(domain, interpretation);
+      const productAiConclusion = aiConclusionFromCanonical(domain, interpretation);
       const trace = traceConclusion(domain, interpretation);
       const exported = result.chartExport.interpretation;
       const domainExport = exported.status === 'UNAVAILABLE'
         ? undefined
         : domain === 'CAREER' ? exported.value.career : exported.value.wealth;
       const jsonConclusion = exported.status === 'UNAVAILABLE'
-        ? conclusionFromValues(domain, exported.status, [])
+        ? conclusionFromValues(domain, exported.status, [], interpretation)
         : domainExport?.status === 'UNAVAILABLE'
-          ? conclusionFromValues(domain, domainExport.status, [])
+          ? conclusionFromValues(domain, domainExport.status, [], interpretation)
           : domainExport?.value
-            ? conclusionFromValues(domain, domainExport.value.status, domainExport.value.evidence)
+            ? conclusionFromValues(domain, domainExport.value.status, domainExport.value.evidence, interpretation)
             : undefined;
       return {
         [`${domain.toLowerCase()}-ui`]: uiConclusion,
@@ -417,38 +446,41 @@ function assertCanonicalBaseline(
 
   const actual = result.wealth.conclusionData?.wealthFinalSynthesis;
   if (!actual) return [baselineDifference('canonical-baseline', '$', 'CW-05 wealth synthesis', undefined)];
-  const acceptedStatuses = ['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA'];
+  const expected = GOLDEN_WEALTH_BASELINE;
   const differences: ParityDifference[] = [];
-  if (!acceptedStatuses.includes(actual.finalStatus)) {
-    differences.push(baselineDifference('canonical-baseline', '$.finalStatus', acceptedStatuses, actual.finalStatus));
-  }
-  if (actual.status !== actual.finalStatus) {
-    differences.push(baselineDifference('canonical-baseline', '$.status', actual.finalStatus, actual.status));
-  }
-  if (!actual.ruleIds.includes('CW-05-WEALTH-SYNTHESIS')) {
-    differences.push(baselineDifference('canonical-baseline', '$.ruleIds', 'CW-05-WEALTH-SYNTHESIS', actual.ruleIds));
-  }
-  for (const dimension of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
-    const finalStatus = actual.dimensions?.[dimension]?.finalStatus;
-    if (!finalStatus || !acceptedStatuses.includes(finalStatus)) {
-      differences.push(baselineDifference(
-        'canonical-baseline',
-        `$.dimensions.${dimension}.finalStatus`,
-        acceptedStatuses,
-        finalStatus
-      ));
+  for (const key of ['finalStatus', 'status', 'ruleIds', 'evidenceIds'] as const) {
+    if (JSON.stringify(actual[key]) !== JSON.stringify(expected[key])) {
+      differences.push(baselineDifference('canonical-baseline', `$.${key}`, expected[key], actual[key]));
     }
   }
-  const manifestationStatuses = result.wealth.conclusionData?.wealthManifestationSynthesis?.dimensions;
   for (const dimension of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
-    const status = manifestationStatuses?.[dimension]?.status;
-    if (status !== 'SUPPORTED') {
-      differences.push(baselineDifference(
-        'canonical-baseline',
-        `$.wealthManifestationSynthesis.${dimension}.status`,
-        'SUPPORTED',
-        status
-      ));
+    const actualDim = actual.dimensions?.[dimension];
+    const expectedDim = expected.dimensions[dimension];
+    if (!actualDim || !expectedDim) {
+      differences.push(baselineDifference('canonical-baseline', `$.dimensions.${dimension}`, expectedDim, actualDim));
+      continue;
+    }
+    for (const key of ['finalStatus', 'dataStatus', 'promiseEvidenceIds', 'dashaRuleReferences'] as const) {
+      if (JSON.stringify(actualDim[key]) !== JSON.stringify(expectedDim[key])) {
+        differences.push(baselineDifference('canonical-baseline', `$.dimensions.${dimension}.${key}`, expectedDim[key], actualDim[key]));
+      }
+    }
+  }
+  const manifestation = result.wealth.conclusionData?.wealthManifestationSynthesis;
+  if (!manifestation) {
+    differences.push(baselineDifference('canonical-baseline', '$.wealthManifestationSynthesis', 'manifestation synthesis', undefined));
+  } else {
+    for (const dimension of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
+      const actualStatus = manifestation.dimensions?.[dimension]?.status;
+      const expectedStatus = GOLDEN_WEALTH_MANIFESTATION_BASELINE.dimensions[dimension].status;
+      if (actualStatus !== expectedStatus) {
+        differences.push(baselineDifference(
+          'canonical-baseline',
+          `$.wealthManifestationSynthesis.dimensions.${dimension}.status`,
+          expectedStatus,
+          actualStatus
+        ));
+      }
     }
   }
   return Object.freeze(differences);

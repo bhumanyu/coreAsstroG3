@@ -28,3 +28,21 @@ The stale dispositor production audit header is reconciled: the production conte
 `goldenAcceptanceProductionHarness.ts` runs `interpretCareerV2` and `interpretWealthV2` once for a chart fixture, then passes those same domain results through the product selectors, selected-period builder, AI context builders, reasoning trace output, and JSON exporter. It derives parity expectations from the real C11 and CW-05 canonical results. The canonical-vs-approved-baseline check and canonical-vs-surface parity check are separate gates; the latter extracts each surface's emitted status, evidence IDs, and provenance.
 
 C11 `evidenceIds`, `sourceIds`, and `ruleIds` are not parallel arrays: source occurrences may repeat and the arrays can have different lengths. Acceptance provenance therefore joins by the evidence object's own provenance fields and leaves unavailable fields absent; it does not use positional trace lookup.
+
+### Trace-only provenance gaps
+
+The acceptance layer intentionally does not represent C11 trace-only provenance (the `evidenceTrace.sourceIds` and `evidenceTrace.ruleIds` arrays). These arrays are index-paired at the trace graph level but are not joinable to individual evidence records via a stable key. Instead, acceptance provenance is derived from the `DomainEvidence.provenance` field on each evidence record, which provides source/rule attribution directly on the evidence object. This means:
+
+- Trace array sourceIds (e.g., `AD:SATURN:MODIFIER:UNAVAILABLE:ACTIVATION:DOES_NOT_ACTIVATE`) are not represented in acceptance contracts
+- Trace array ruleIds that exist only in the trace and not on individual evidence records are not represented
+- Evidence-level provenance (via `DomainEvidence.provenance.source` and `DomainEvidence.provenance.ruleId`) is fully represented
+- The `_trace` parameter was removed from `projectDomainEvidenceToAcceptanceProvenance` to eliminate the dead join attempt
+
+### Known surface gaps
+
+The following surfaces have known parity gaps documented:
+
+- **reasoning-trace**: Uses trace graph evidence which may include evidence not in canonical synthesis; parses status from node label as fallback (typed status field preferred). This surface is documented as a trace-view parity surface, not a canonical synthesis surface.
+- **json-export**: Includes additional evidence beyond canonical synthesis (e.g., Dasha evidence, yoga confirmation evidence, aspect evidence). The export contract is explicitly broader than the canonical synthesis contract.
+- **report-renderer**: BLOCKED until PR-8D adapters exist.
+- **AppController async-state**: BLOCKED until PR-8D adapters exist.

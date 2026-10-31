@@ -59,10 +59,10 @@ export function normalizeAcceptanceConclusion(conclusion: AcceptanceConclusion):
 
 export function projectDomainEvidenceToAcceptanceProvenance(
   evidence: DomainEvidence,
-  owner: string,
-  _trace?: CareerFinalEvidenceTrace
+  owner: string
 ): AcceptanceProvenance {
   // C11 sourceIds are occurrence-level and ruleIds are independently deduplicated; they are not index-paired to evidenceIds.
+  // Trace-only provenance (C11 trace arrays) is intentionally not represented in acceptance contracts.
   return Object.freeze({
     evidenceId: evidence.id,
     owner,
