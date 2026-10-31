@@ -77,10 +77,12 @@ export function projectDomainEvidenceToAcceptanceProvenance(
 
 export function normalizeAcceptanceSurface(
   name: string,
-  conclusion: AcceptanceConclusion | undefined
-): { readonly name: string; readonly conclusion: NormalizedAcceptanceConclusion | typeof ACCEPTANCE_MISSING } {
+  conclusion: AcceptanceConclusion | undefined,
+  allowExternalEvidence = false
+): { readonly name: string; readonly conclusion: NormalizedAcceptanceConclusion | typeof ACCEPTANCE_MISSING; readonly allowExternalEvidence: boolean } {
   return Object.freeze({
     name,
-    conclusion: conclusion === undefined ? ACCEPTANCE_MISSING : normalizeAcceptanceConclusion(conclusion)
+    conclusion: conclusion === undefined ? ACCEPTANCE_MISSING : normalizeAcceptanceConclusion(conclusion),
+    allowExternalEvidence
   });
 }

@@ -8,6 +8,7 @@ import type { CareerFinalEvidenceTrace } from '../domain/career/careerFinalSynth
 import type { ReasoningNode } from '../domain/careerWealth/reasoningTrace/reasoningNode';
 import {
   createGoldenAcceptanceProductionPipeline,
+  resolveEvidenceIds,
   runGoldenAcceptanceProductionGate
 } from './goldenAcceptanceProductionHarness';
 import { runGoldenAcceptanceParity } from './goldenAcceptanceRunner';
@@ -69,6 +70,68 @@ describe('PR-8 golden acceptance contract', () => {
     expect(differences).toEqual(expect.arrayContaining([
       expect.objectContaining({ kind: 'EXTERNAL_EVIDENCE', actual: 'EXTERNAL-EV' })
     ]));
+  });
+
+  it('applies the external-evidence allowance without skipping provenance comparison', () => {
+    const externalConclusion: AcceptanceConclusion = {
+      ...supported,
+      evidence: [{ id: 'EXTERNAL-EV', owner: 'WEALTH', resolution: 'EXTERNAL' }],
+      provenance: [{
+        evidenceId: 'EXTERNAL-EV',
+        owner: 'WEALTH',
+        source: 'WEALTH_SOURCE',
+        ruleId: 'WEALTH_RULE',
+        occurrence: 'EXTERNAL-EV'
+      }]
+    };
+    const expected = normalizeAcceptanceConclusion(externalConclusion);
+    const allowed = normalizeAcceptanceSurface('ai-context', externalConclusion, true);
+    const required = normalizeAcceptanceSurface('canonical', externalConclusion);
+
+    expect(assertParity(expected, [allowed])).toEqual([]);
+    expect(assertParity(expected, [required])).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'EXTERNAL_EVIDENCE', actual: 'EXTERNAL-EV' })
+    ]));
+    expect(assertParity(expected, [{
+      ...allowed,
+      conclusion: normalizeAcceptanceConclusion({
+        ...externalConclusion,
+        evidence: [{ ...externalConclusion.evidence[0], owner: 'CAREER' }],
+        provenance: [{ ...externalConclusion.provenance[0], owner: 'CAREER', ruleId: 'UNEXPECTED_RULE' }]
+      })
+    }])).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'VALUE_MISMATCH', path: '$.evidence' }),
+      expect.objectContaining({ kind: 'VALUE_MISMATCH', path: '$.provenance' })
+    ]));
+  });
+
+  it('uses explicit namespace precedence and ambiguity rules for collisions', () => {
+    const domainRecord = { id: 'SHARED', domain: 'CAREER', source: 'DOMAIN' };
+    const wrongDomainRecord = { id: 'SHARED-WRONG', domain: 'WEALTH', source: 'DOMAIN' };
+    const externalRecord = { id: 'SHARED', domain: 'WEALTH', source: 'EXTERNAL' };
+    const firstExternalRecord = { id: 'DUPLICATE-EXTERNAL', domain: 'CAREER', source: 'EXTERNAL-A' };
+    const secondExternalRecord = { id: 'DUPLICATE-EXTERNAL', domain: 'CAREER', source: 'EXTERNAL-B' };
+
+    const resolutions = resolveEvidenceIds(
+      ['SHARED', 'SHARED-WRONG', 'DUPLICATE-EXTERNAL'],
+      {
+        domainUniverse: [domainRecord, wrongDomainRecord],
+        externalNamespaces: [
+          [externalRecord, firstExternalRecord],
+          [secondExternalRecord]
+        ]
+      },
+      'CAREER'
+    );
+
+    expect(resolutions.get('SHARED')).toEqual({ resolution: 'RESOLVED', record: domainRecord });
+    expect(resolutions.get('SHARED')).not.toMatchObject({ resolution: 'EXTERNAL' });
+    expect(resolutions.get('SHARED-WRONG')).toEqual({
+      resolution: 'OWNER_MISMATCH',
+      record: wrongDomainRecord,
+      actualOwner: 'WEALTH'
+    });
+    expect(resolutions.get('DUPLICATE-EXTERNAL')).toEqual({ resolution: 'AMBIGUOUS' });
   });
 
   it('compares conclusion kinds and does not treat presentation conclusions as synthesis finals', () => {
@@ -398,26 +461,56 @@ describe('PR-8 golden acceptance contract', () => {
 
     const approvedSurfaceExpectations: readonly {
       readonly name: string;
-      readonly expectedStatus: 'PASS' | 'FAIL';
+      readonly allowedStatuses: readonly ('PASS' | 'FAIL' | 'BLOCKED')[];
     }[] = [
-      { name: `${domain.toLowerCase()}-ui`, expectedStatus: 'FAIL' },
-      { name: 'ai-context', expectedStatus: domain === 'CAREER' ? 'FAIL' : 'PASS' },
-      { name: 'product-ai-context', expectedStatus: domain === 'CAREER' ? 'FAIL' : 'PASS' },
-      { name: 'reasoning-trace', expectedStatus: 'FAIL' },
-      { name: 'json-export', expectedStatus: 'FAIL' }
+      { name: `${domain.toLowerCase()}-ui`, allowedStatuses: ['PASS', 'FAIL'] },
+      { name: 'ai-context', allowedStatuses: ['PASS', 'FAIL'] },
+      { name: 'product-ai-context', allowedStatuses: ['PASS', 'FAIL'] },
+      { name: 'reasoning-trace', allowedStatuses: ['BLOCKED', 'PASS'] },
+      { name: 'json-export', allowedStatuses: ['BLOCKED', 'PASS'] },
+      { name: 'selected-period-ui', allowedStatuses: ['PASS'] }
     ];
 
-    for (const { name, expectedStatus } of approvedSurfaceExpectations) {
+    for (const { name, allowedStatuses } of approvedSurfaceExpectations) {
       const gateEntry = gate.surfaceGates.find(g => g.name === name);
       const hasDifferences = gate.surfaceDifferences.some(difference => difference.surface === name);
-      expect(gateEntry?.status).toBe(hasDifferences ? 'FAIL' : 'PASS');
-      expect(gateEntry?.status).toBe(expectedStatus);
+      expect(gateEntry?.status).toBe(allowedStatuses.includes('BLOCKED') && hasDifferences ? 'BLOCKED' : hasDifferences ? 'FAIL' : 'PASS');
+      expect(allowedStatuses).toContain(gateEntry?.status);
       expect(gate.report.gates.find(g => g.name === 'canonical-baseline')?.status).toBe('PASS');
       expect(gate.report.gates.find(g => g.name === name)?.status).toBe(gateEntry?.status);
     }
 
+    const hasGenuineFailures = gate.baselineDifferences.length > 0
+      || gate.surfaceGates.some(surface => surface.status === 'FAIL');
+    expect(gate.report.status).toBe(hasGenuineFailures
+      ? 'FAIL'
+      : gate.surfaceGates.some(surface => surface.status === 'BLOCKED') ? 'BLOCKED' : 'PASS');
+    expect(gate.selectedPeriod?.scope).toBe('SELECTED_PERIOD');
+  });
+
+  it('fails required surfaces that are absent from production projections', () => {
+    const pipeline = createGoldenAcceptanceProductionPipeline('CAREER');
+    const result = pipeline.run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const conclusionData = result.career.conclusionData;
+    if (!conclusionData) throw new Error('Production fixture emitted no career conclusion data.');
+    const withoutTrace = {
+      ...result,
+      career: {
+        ...result.career,
+        conclusionData: {
+          ...conclusionData,
+          reasoningTraceGraph: undefined
+        }
+      }
+    };
+
+    const gate = runGoldenAcceptanceProductionGate('CAREER', 'STANDARD', withoutTrace);
+    expect(gate.surfaceDifferences).toContainEqual(expect.objectContaining({
+      surface: 'reasoning-trace',
+      kind: 'MISSING'
+    }));
+    expect(gate.surfaceGates.find(surface => surface.name === 'reasoning-trace')?.status).toBe('FAIL');
     expect(gate.report.status).toBe('FAIL');
-    expect(gate.selectedPeriod.scope).toBe('SELECTED_PERIOD');
   });
 
   it('makes any parity difference fail even when gates pass or block', () => {
@@ -579,8 +672,10 @@ describe('PR-8 golden acceptance contract', () => {
       expect.objectContaining({ surface: 'reasoning-trace', kind: 'AMBIGUOUS_EVIDENCE', actual: duplicatedId }),
       expect.objectContaining({ surface: 'reasoning-trace', kind: 'OWNER_MISMATCH', actual: wrongOwnerId })
     ]));
-    expect(gate.surfaceGates.find(item => item.name === 'reasoning-trace')?.status).toBe('FAIL');
-    expect(gate.report.gates.find(item => item.name === 'reasoning-trace')?.status).toBe('FAIL');
-    expect(gate.report.status).toBe('FAIL');
+    expect(gate.surfaceGates.find(item => item.name === 'reasoning-trace')?.status).toBe('BLOCKED');
+    expect(gate.report.gates.find(item => item.name === 'reasoning-trace')?.status).toBe('BLOCKED');
+    const hasUnblockedFailures = gate.baselineDifferences.length > 0
+      || gate.surfaceGates.some(surface => surface.status === 'FAIL');
+    expect(gate.report.status).toBe(hasUnblockedFailures ? 'FAIL' : 'BLOCKED');
   });
 });

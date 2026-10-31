@@ -71,7 +71,7 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
           expected: conclusion.domain,
           reason: `Evidence ID ${evidence.id} owner ${evidence.owner ?? 'unavailable'} does not match expected domain ${conclusion.domain}.`
         });
-      } else if (evidence.resolution === 'EXTERNAL') {
+      } else if (evidence.resolution === 'EXTERNAL' && !surface.allowExternalEvidence) {
         differences.push({
           surface: surface.name,
           kind: 'EXTERNAL_EVIDENCE',

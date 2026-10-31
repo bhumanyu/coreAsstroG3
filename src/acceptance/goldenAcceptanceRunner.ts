@@ -25,6 +25,7 @@ export function runGoldenAcceptanceParity(
   ];
   for (const name of names) {
     const projection = projections[name];
+    const allowExternalEvidence = name === 'ai-context' || name === 'product-ai-context';
     // Skip selected-period-ui as it's a SelectedPeriodAcceptanceProjection, not a conclusion
     if (name === 'selected-period-ui') continue;
     const conclusions: readonly (AcceptanceConclusion | undefined)[] = projection === undefined
@@ -33,7 +34,9 @@ export function runGoldenAcceptanceParity(
         ? projection
         : [projection as AcceptanceConclusion];
     const normalized = conclusions.map(conclusion =>
-      conclusion === undefined ? undefined : normalizeAcceptanceSurface(name, conclusion).conclusion
+      conclusion === undefined
+        ? undefined
+        : normalizeAcceptanceSurface(name, conclusion, allowExternalEvidence).conclusion
     );
     const inventory = normalized.filter(
       (conclusion): conclusion is NormalizedAcceptanceConclusion =>
@@ -44,7 +47,8 @@ export function runGoldenAcceptanceParity(
       const surfaceName = normalized.length > 1 ? `${name}[${index}]` : name;
       surfaces.push(normalizeAcceptanceSurface(
         surfaceName,
-        conclusion === 'MISSING' || conclusion === undefined ? undefined : conclusion
+        conclusion === 'MISSING' || conclusion === undefined ? undefined : conclusion,
+        allowExternalEvidence
       ));
     });
   }

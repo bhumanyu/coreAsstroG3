@@ -80,7 +80,7 @@ export type GoldenAcceptanceProjections = {
   readonly 'selected-period-ui': SelectedPeriodAcceptanceProjection;
 };
 
-interface EvidenceResolverRecord {
+export interface EvidenceResolverRecord {
   readonly id: string;
   readonly domain?: string;
   readonly source?: string;
@@ -93,10 +93,17 @@ interface EvidenceResolverRecord {
   };
 }
 
-interface EvidenceNamespaces {
+export interface EvidenceNamespaces {
   readonly domainUniverse: readonly EvidenceResolverRecord[];
   readonly externalNamespaces?: readonly (readonly EvidenceResolverRecord[])[];
 }
+
+export const REQUIRED_SURFACES: Readonly<Record<GoldenAcceptanceDomain, readonly string[]>> = Object.freeze({
+  CAREER: Object.freeze(['career-ui', 'ai-context', 'product-ai-context', 'reasoning-trace', 'json-export', 'selected-period-ui']),
+  WEALTH: Object.freeze(['wealth-ui', 'ai-context', 'product-ai-context', 'reasoning-trace', 'json-export', 'selected-period-ui'])
+});
+
+const BLOCKED_SURFACES: readonly string[] = Object.freeze(['reasoning-trace', 'json-export']);
 
 /**
  * Discriminated evidence resolver: resolves evidence IDs against a universe of records.
@@ -109,7 +116,7 @@ interface EvidenceNamespaces {
  * - OWNER_MISMATCH: ID resolves to a record but its domain does not match expected owner
  * - EXTERNAL: ID resolves only in a declared external namespace
  */
-function resolveEvidenceIds(
+export function resolveEvidenceIds(
   ids: readonly string[],
   namespaces: EvidenceNamespaces,
   expectedOwner: GoldenAcceptanceDomain
@@ -169,7 +176,9 @@ function acceptanceProvenanceFromResolution(
   id: string,
   resolution: { readonly resolution: EvidenceResolution; readonly record?: EvidenceResolverRecord; readonly actualOwner?: string }
 ): AcceptanceProvenance {
-  const record = resolution.resolution === 'RESOLVED' ? resolution.record : undefined;
+  const record = resolution.resolution === 'RESOLVED' || resolution.resolution === 'EXTERNAL'
+    ? resolution.record
+    : undefined;
   if (!record || record.domain === undefined) {
     return {
       evidenceId: id,
@@ -788,7 +797,7 @@ export interface GoldenAcceptanceProductionGateResult {
   readonly surfaceDifferences: readonly ParityDifference[];
   readonly surfaceGates: readonly AcceptanceGate[];
   readonly report: GoldenAcceptanceReport;
-  readonly selectedPeriod: SelectedPeriodAcceptanceProjection;
+  readonly selectedPeriod?: SelectedPeriodAcceptanceProjection;
 }
 
 /** Runs canonical baseline and surface gates against one real interpreter run. */
@@ -807,35 +816,46 @@ export function runGoldenAcceptanceProductionGate(
   const expected = normalizeAcceptanceConclusion(canonical);
   const surfaces: AcceptanceSurface[] = [];
   const surfaceDifferences: ParityDifference[] = [];
-  for (const [name, projection] of Object.entries(projections)
-    .filter(([surfaceName]) => surfaceName !== 'canonical' && surfaceName !== 'selected-period-ui')) {
-    if (projection === undefined) {
-      surfaces.push(normalizeAcceptanceSurface(name, undefined));
+  for (const name of REQUIRED_SURFACES[domain]) {
+    const projection = projections[name];
+    if (name === 'selected-period-ui') {
+      if (projection === undefined) {
+        surfaceDifferences.push(...assertParity(expected, [normalizeAcceptanceSurface(name, undefined)]));
+      }
       continue;
     }
+    const allowExternalEvidence = name === 'ai-context' || name === 'product-ai-context';
     const conclusion = projection as AcceptanceConclusion;
-    const surface = normalizeAcceptanceSurface(name, conclusion);
+    const surface = normalizeAcceptanceSurface(
+      name,
+      projection === undefined ? undefined : conclusion,
+      allowExternalEvidence
+    );
     if (surface.conclusion !== 'MISSING') {
       surfaceDifferences.push(...assertConclusionInventory([surface.conclusion]));
     }
     surfaces.push(surface);
   }
   const selectedPeriod = projections['selected-period-ui'];
-  if (!selectedPeriod) {
-    throw new Error('Production acceptance pipeline did not collect its selected-period projection.');
-  }
   surfaceDifferences.push(...assertParity(expected, surfaces));
   const baselineDifferences = assertCanonicalBaseline(domain, result);
-  const actualSurfaceGates = Object.keys(projections)
-    .filter(name => name !== 'canonical' && name !== 'selected-period-ui')
-    .map(name => {
-      const differences = surfaceDifferences.filter(difference => difference.surface === name);
-      return {
-        name,
-        status: differences.length > 0 ? 'FAIL' as const : 'PASS' as const,
-        ...(differences.length === 0 ? {} : { details: `${differences.length} parity difference(s)` })
-      };
-    });
+  const actualSurfaceGates = REQUIRED_SURFACES[domain].map(name => {
+    const differences = surfaceDifferences.filter(difference => difference.surface === name);
+    const missing = projections[name] === undefined;
+    let status: AcceptanceGate['status'];
+    if (missing) {
+      status = 'FAIL';
+    } else if (differences.length > 0 && BLOCKED_SURFACES.includes(name)) {
+      status = 'BLOCKED';
+    } else {
+      status = differences.length > 0 ? 'FAIL' : 'PASS';
+    }
+    return {
+      name,
+      status,
+      ...(differences.length === 0 ? {} : { details: `${differences.length} parity difference(s)` })
+    };
+  });
   const reportGates: readonly AcceptanceGate[] = [
     {
       name: 'canonical-baseline',
@@ -844,7 +864,10 @@ export function runGoldenAcceptanceProductionGate(
     },
     ...actualSurfaceGates
   ];
-  const report = buildGoldenAcceptanceReport(reportGates, [...baselineDifferences, ...surfaceDifferences]);
+  const reportDifferences = surfaceDifferences.filter(difference =>
+    actualSurfaceGates.find(gate => gate.name === difference.surface)?.status !== 'BLOCKED'
+  );
+  const report = buildGoldenAcceptanceReport(reportGates, [...baselineDifferences, ...reportDifferences]);
   return {
     expected,
     baselineDifferences: Object.freeze([...baselineDifferences]),

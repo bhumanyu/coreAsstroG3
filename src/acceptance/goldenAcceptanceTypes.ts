@@ -79,6 +79,7 @@ export interface NormalizedAcceptanceConclusion {
 export interface AcceptanceSurface {
   readonly name: string;
   readonly conclusion: NormalizedAcceptanceConclusion | typeof ACCEPTANCE_MISSING;
+  readonly allowExternalEvidence?: boolean;
 }
 
 export interface ParityDifference {
