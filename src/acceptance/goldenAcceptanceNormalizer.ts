@@ -21,10 +21,13 @@ function evidenceOwner(item: AcceptanceEvidence): string | undefined {
 
 export function normalizeAcceptanceConclusion(conclusion: AcceptanceConclusion): NormalizedAcceptanceConclusion {
   const evidenceById = new Map<string, string | undefined>();
+  const duplicateIds = new Set<string>();
   for (const item of conclusion.evidence) {
     const owner = evidenceOwner(item);
-    const existing = evidenceById.get(item.id);
-    if (evidenceById.has(item.id) && existing !== owner) throw acceptanceConflict('SAME_ID_DIFFERENT_OWNER', item.id);
+    if (evidenceById.has(item.id)) {
+      duplicateIds.add(item.id);
+      continue;
+    }
     evidenceById.set(item.id, owner);
   }
 
@@ -32,13 +35,14 @@ export function normalizeAcceptanceConclusion(conclusion: AcceptanceConclusion):
     if (!evidenceById.has(item.evidenceId)) {
       throw acceptanceConflict('DANGLING_PROVENANCE', item.evidenceId);
     }
-    if (evidenceById.get(item.evidenceId) !== item.owner) {
+    if (evidenceById.get(item.evidenceId) !== item.owner && !duplicateIds.has(item.evidenceId)) {
       throw acceptanceConflict('SAME_ID_DIFFERENT_OWNER', item.evidenceId);
     }
   }
 
-  const evidence = Array.from(new Map(conclusion.evidence.map(item => [item.id, item])).values())
-    .sort((a, b) => a.id.localeCompare(b.id));
+  const evidence = [...conclusion.evidence].sort((a, b) =>
+    a.id.localeCompare(b.id) || JSON.stringify(a).localeCompare(JSON.stringify(b))
+  );
   const provenanceIdentity = (item: AcceptanceProvenance): string => JSON.stringify([
     item.evidenceId, item.owner, item.source ?? null, item.ruleId ?? null,
     item.occurrence ?? null, item.stage ?? null, item.type ?? null
@@ -84,18 +88,22 @@ export function normalizeAcceptanceSurface(
     readonly compareStatus?: boolean;
     readonly compareConclusionKind?: boolean;
     readonly evidenceContract?: 'CANONICAL' | 'SURFACE_SPECIFIC';
+    readonly expectedConclusionKind?: AcceptanceConclusion['conclusionKind'];
   } = {}
 ): {
   readonly name: string;
   readonly conclusion: NormalizedAcceptanceConclusion | typeof ACCEPTANCE_MISSING;
   readonly allowedDifferenceKinds: readonly ParityDifference['kind'][];
+  readonly rawEvidence?: AcceptanceConclusion['evidence'];
   readonly compareStatus?: boolean;
   readonly compareConclusionKind?: boolean;
   readonly evidenceContract?: 'CANONICAL' | 'SURFACE_SPECIFIC';
+  readonly expectedConclusionKind?: AcceptanceConclusion['conclusionKind'];
 } {
   return Object.freeze({
     name,
     conclusion: conclusion === undefined ? ACCEPTANCE_MISSING : normalizeAcceptanceConclusion(conclusion),
+    ...(conclusion === undefined ? {} : { rawEvidence: conclusion.evidence }),
     allowedDifferenceKinds: Object.freeze([...allowedDifferenceKinds]),
     ...comparison
   });

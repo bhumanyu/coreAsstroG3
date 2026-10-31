@@ -43,7 +43,7 @@ import {
   normalizeAcceptanceSurface
 } from './goldenAcceptanceNormalizer';
 import type { GoldenAcceptancePipeline } from './goldenAcceptanceRunner';
-import { assertConclusionInventory, assertParity, deepEqualAcceptance } from './goldenAcceptanceAssertions';
+import { assertConclusionInventory, assertParity, deepEqualAcceptance, duplicateEvidenceDifferences } from './goldenAcceptanceAssertions';
 import { buildGoldenAcceptanceReport, type AcceptanceGate, type GoldenAcceptanceReport, type GateStatus } from './goldenAcceptanceReport';
 import { GOLDEN_C11_BASELINE } from '../test/fixtures/careerGoldenBaseline';
 import { GOLDEN_WEALTH_BASELINE, GOLDEN_WEALTH_MANIFESTATION_BASELINE } from '../test/fixtures/wealthGoldenBaseline';
@@ -125,6 +125,15 @@ export const SURFACE_ALLOWED_DIFFERENCE_KINDS: Readonly<Record<string, readonly 
   'product-ai-context': Object.freeze(['EXTERNAL_EVIDENCE'] as const)
 });
 
+const EXPECTED_SURFACE_CONCLUSION_KINDS: Readonly<Record<string, NonNullable<AcceptanceConclusion['conclusionKind']>>> = Object.freeze({
+  'career-ui': 'PROFESSION_COMPLETENESS',
+  'wealth-ui': 'PRESENTATION',
+  'ai-context': 'SYNTHESIS_FINAL',
+  'product-ai-context': 'SYNTHESIS_FINAL',
+  'reasoning-trace': 'SYNTHESIS_FINAL',
+  'json-export': 'SYNTHESIS_FINAL'
+});
+
 export function buildRequiredSurfaceGates(
   requiredSurfaces: readonly string[],
   projections: Readonly<Record<string, unknown>>,
@@ -204,6 +213,9 @@ export function classifySurfaceGateStatus(
   if (differences.length === 0) return 'PASS';
 
   const allAllowed = differences.every(difference => {
+    if (difference.kind === 'OWNER_MISMATCH'
+      || difference.kind === 'DANGLING_REFERENCE'
+      || difference.kind === 'AMBIGUOUS_EVIDENCE') return false;
     if (allowedDifferenceKinds.includes(difference.kind)) {
       return difference.kind !== 'EXTERNAL_EVIDENCE' || isValidatedExternalEvidenceDifference(difference);
     }
@@ -939,7 +951,7 @@ function baselineDifference(
   };
 }
 
-function selectedPeriodDifferences(
+export function selectedPeriodDifferences(
   domain: GoldenAcceptanceDomain,
   projection: SelectedPeriodAcceptanceProjection | typeof ACCEPTANCE_MISSING,
   domainUniverse: readonly EvidenceResolverRecord[],
@@ -964,6 +976,11 @@ function selectedPeriodDifferences(
     ? SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE
     : SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE;
   const differences: ParityDifference[] = [];
+  differences.push(...duplicateEvidenceDifferences(
+    'selected-period-ui',
+    projection.evidence,
+    projection.domain
+  ));
   for (const key of ['domain', 'scope', 'subjectId'] as const) {
     if (projection[key] !== expected[key]) {
       differences.push({
@@ -1126,6 +1143,19 @@ function selectedPeriodDifferences(
       });
     }
   }
+  for (const evidenceId of evidenceIds) {
+    const resolution = resolutions.get(evidenceId);
+    if ((resolution?.resolution === 'RESOLVED' || resolution?.resolution === 'EXTERNAL')
+      && (provenanceByEvidenceId.get(evidenceId)?.length ?? 0) === 0) {
+      differences.push({
+        surface: 'selected-period-ui',
+        kind: 'DANGLING_REFERENCE',
+        path: '$.provenance',
+        actual: evidenceId,
+        reason: `Resolved selected-period evidence ${evidenceId} has no provenance entry.`
+      });
+    }
+  }
   return differences;
 }
 
@@ -1250,12 +1280,12 @@ export function runGoldenAcceptanceProductionGate(
     const allowedDifferenceKinds = SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? [];
     for (const [index, conclusion] of conclusions.entries()) {
       const surfaceName = conclusions.length > 1 ? `${name}[${index}]` : name;
-      const surfaceSpecific = conclusion?.conclusionKind !== undefined
-        && conclusion.conclusionKind !== 'SYNTHESIS_FINAL';
+      const surfaceSpecific = name === 'career-ui' || name === 'wealth-ui';
       const surface = normalizeAcceptanceSurface(surfaceName, conclusion, allowedDifferenceKinds, {
         compareStatus: !surfaceSpecific && name !== 'reasoning-trace',
         compareConclusionKind: !surfaceSpecific && name !== 'reasoning-trace' && name !== 'json-export',
-        evidenceContract: surfaceSpecific ? 'SURFACE_SPECIFIC' : 'CANONICAL'
+        evidenceContract: surfaceSpecific ? 'SURFACE_SPECIFIC' : 'CANONICAL',
+        expectedConclusionKind: EXPECTED_SURFACE_CONCLUSION_KINDS[name]
       });
       if (surface.conclusion !== ACCEPTANCE_MISSING) {
         surfaceDifferences.push(...assertConclusionInventory([surface.conclusion]));

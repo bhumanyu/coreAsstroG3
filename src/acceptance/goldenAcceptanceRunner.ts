@@ -1,5 +1,5 @@
 import { assertConclusionInventory, assertParity } from './goldenAcceptanceAssertions';
-import { normalizeAcceptanceSurface } from './goldenAcceptanceNormalizer';
+import { normalizeAcceptanceConclusion, normalizeAcceptanceSurface } from './goldenAcceptanceNormalizer';
 import { ACCEPTANCE_MISSING } from './goldenAcceptanceTypes';
 import type { AcceptanceConclusion, AcceptanceSurface, NormalizedAcceptanceConclusion, ParityDifference, SelectedPeriodAcceptanceProjection } from './goldenAcceptanceTypes';
 import { SURFACE_ALLOWED_DIFFERENCE_KINDS } from './goldenAcceptanceProductionHarness';
@@ -40,21 +40,18 @@ export function runGoldenAcceptanceParity(
       : Array.isArray(projection)
         ? projection
         : [projection as AcceptanceConclusion];
-    const normalized = conclusions.map(conclusion =>
-      conclusion === undefined
-        ? undefined
-        : normalizeAcceptanceSurface(name, conclusion, allowedDifferenceKinds).conclusion
+    const normalizedConclusions = conclusions.map(conclusion =>
+      conclusion === undefined ? undefined : normalizeAcceptanceConclusion(conclusion)
     );
-    const inventory = normalized.filter(
-      (conclusion): conclusion is NormalizedAcceptanceConclusion =>
-        conclusion !== undefined && conclusion !== 'MISSING'
+    const inventory = normalizedConclusions.filter(
+      (conclusion): conclusion is NormalizedAcceptanceConclusion => conclusion !== undefined
     );
     differences.push(...assertConclusionInventory(inventory));
-    normalized.forEach((conclusion, index) => {
-      const surfaceName = normalized.length > 1 ? `${name}[${index}]` : name;
+    conclusions.forEach((conclusion, index) => {
+      const surfaceName = conclusions.length > 1 ? `${name}[${index}]` : name;
       surfaces.push(normalizeAcceptanceSurface(
         surfaceName,
-        conclusion === 'MISSING' || conclusion === undefined ? undefined : conclusion,
+        conclusion,
         allowedDifferenceKinds
       ));
     });

@@ -14,6 +14,7 @@ import {
   classifySurfaceGateStatus,
   REQUIRED_SURFACES,
   resolveEvidenceIds,
+  selectedPeriodDifferences,
   runGoldenAcceptanceProductionGate
 } from './goldenAcceptanceProductionHarness';
 import { runGoldenAcceptanceParity } from './goldenAcceptanceRunner';
@@ -63,15 +64,20 @@ const scenarios: readonly { readonly name: string; readonly input: AcceptanceCon
 describe('PR-8 golden acceptance contract', () => {
   it('normalizes evidence and provenance deterministically without fabricating identities', () => {
     const normalized = normalizeAcceptanceConclusion(supported);
-    expect(normalized.evidence.map(item => item.id)).toEqual(['EV-1', 'EV-2']);
+    expect(normalized.evidence.map(item => item.id)).toEqual(['EV-1', 'EV-1', 'EV-2']);
     expect(normalized.provenance).toEqual([{ evidenceId: 'EV-1', owner: 'C1', type: 'ESTABLISHING' }]);
   });
 
-  it('rejects duplicate IDs with different owners', () => {
-    expect(() => normalizeAcceptanceConclusion({
+  it('reports duplicate IDs with different owners', () => {
+    const expected = normalizeAcceptanceConclusion({ ...supported, evidence: [], provenance: [] });
+    const differences = assertParity(expected, [normalizeAcceptanceSurface('canonical', {
       ...supported,
       evidence: [{ id: 'EV-1', owner: 'C1' }, { id: 'EV-1', owner: 'C2' }]
-    })).toThrow(expect.objectContaining({ code: 'SAME_ID_DIFFERENT_OWNER', conflictingId: 'EV-1' }));
+    })]);
+    expect(differences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'DUPLICATE_EVIDENCE' }),
+      expect.objectContaining({ kind: 'OWNER_MISMATCH' })
+    ]));
   });
 
   it('reports missing surfaces as MISSING rather than empty parity', () => {
@@ -228,12 +234,17 @@ describe('PR-8 golden acceptance contract', () => {
     expect(resolutions.get('DUPLICATE-EXTERNAL')).toEqual({ resolution: 'AMBIGUOUS' });
   });
 
-  it('compares conclusion kinds and does not treat presentation conclusions as synthesis finals', () => {
+  it('compares conclusion kinds by surface contract and still checks presentation status', () => {
     const expected = normalizeAcceptanceConclusion({ ...supported, conclusionKind: 'SYNTHESIS_FINAL' });
     const surface = normalizeAcceptanceSurface('career-ui', {
       ...supported,
+      evidence: [{ id: 'EV-1', owner: 'C1' }, { id: 'EV-2', owner: 'C1' }],
       status: 'UNSUPPORTED',
       conclusionKind: 'PROFESSION_COMPLETENESS'
+    }, [], {
+      expectedConclusionKind: 'PROFESSION_COMPLETENESS',
+      evidenceContract: 'SURFACE_SPECIFIC',
+      compareStatus: true
     });
     expect(assertParity(expected, [surface])).toEqual([
       expect.objectContaining({
@@ -243,6 +254,58 @@ describe('PR-8 golden acceptance contract', () => {
         actual: 'UNSUPPORTED'
       })
     ]);
+    const invalidKindSurface = normalizeAcceptanceSurface('career-ui', {
+      ...supported,
+      evidence: [{ id: 'EV-1', owner: 'C1' }, { id: 'EV-2', owner: 'C1' }],
+      conclusionKind: 'PRESENTATION'
+    }, [], { expectedConclusionKind: 'PROFESSION_COMPLETENESS' });
+    expect(assertParity(expected, [invalidKindSurface])).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: 'VALUE_MISMATCH',
+        path: '$.conclusionKind',
+        expected: 'PROFESSION_COMPLETENESS',
+        actual: 'PRESENTATION'
+      })
+    ]));
+  });
+
+  it('reports raw evidence duplicates for canonical, UI, and AI surfaces', () => {
+    const expected = normalizeAcceptanceConclusion({ ...supported, evidence: [], provenance: [] });
+    const sameOwnerDuplicate: AcceptanceConclusion = {
+      ...supported,
+      evidence: [{ id: 'E1', owner: 'WEALTH' }, { id: 'E1', owner: 'WEALTH' }],
+      provenance: []
+    };
+    const sameOwnerDifferences = assertParity(expected, [
+      normalizeAcceptanceSurface('canonical', sameOwnerDuplicate)
+    ]);
+    expect(sameOwnerDifferences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'DUPLICATE_EVIDENCE', actual: expect.any(Array) })
+    ]));
+
+    const conflictingOwnerDuplicate: AcceptanceConclusion = {
+      ...supported,
+      evidence: [{ id: 'E1', owner: 'WEALTH' }, { id: 'E1', owner: 'CAREER' }],
+      provenance: []
+    };
+    const conflictingDifferences = assertParity(expected, [
+      normalizeAcceptanceSurface('canonical', conflictingOwnerDuplicate)
+    ]);
+    expect(conflictingDifferences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'DUPLICATE_EVIDENCE' }),
+      expect.objectContaining({ kind: 'OWNER_MISMATCH' })
+    ]));
+
+    for (const surfaceName of ['career-ui', 'ai-context']) {
+      const differences = assertParity(expected, [
+        normalizeAcceptanceSurface(surfaceName, sameOwnerDuplicate, ['EXTERNAL_EVIDENCE'], {
+          evidenceContract: surfaceName === 'career-ui' ? 'SURFACE_SPECIFIC' : 'CANONICAL'
+        })
+      ]);
+      expect(differences, surfaceName).toEqual(expect.arrayContaining([
+        expect.objectContaining({ kind: 'DUPLICATE_EVIDENCE', surface: surfaceName })
+      ]));
+    }
   });
 
   it('uses real deep equality and distinct conclusions inventory', () => {
@@ -312,12 +375,12 @@ describe('PR-8 golden acceptance contract', () => {
     }
   });
 
-  it('normalizes reordered evidence byte-identically and deduplicates exact duplicates', () => {
+  it('normalizes reordered evidence byte-identically while preserving duplicate entries', () => {
     const forward = normalizeAcceptanceConclusion({ ...supported, evidence: [{ id: 'EV-1', owner: 'C1' }, { id: 'EV-2', owner: 'C1' }] });
     const reverse = normalizeAcceptanceConclusion({ ...supported, evidence: [{ id: 'EV-2', owner: 'C1' }, { id: 'EV-1', owner: 'C1' }] });
     const duplicate = normalizeAcceptanceConclusion({ ...supported, evidence: [{ id: 'EV-1', owner: 'C1' }, { id: 'EV-1', owner: 'C1' }] });
     expect(JSON.stringify(forward)).toBe(JSON.stringify(reverse));
-    expect(duplicate.evidence.map(item => item.id)).toEqual(['EV-1']);
+    expect(duplicate.evidence.map(item => item.id)).toEqual(['EV-1', 'EV-1']);
   });
 
   it('rejects provenance owner mismatch and dangling evidence references', () => {
@@ -615,6 +678,13 @@ describe('PR-8 golden acceptance contract', () => {
 
     expect(classifySurfaceGateStatus('reasoning-trace', [difference('reasoning-trace', 'STATUS_MISMATCH')])).toBe('FAIL');
     expect(classifySurfaceGateStatus('ai-context', [difference('ai-context', 'DANGLING_REFERENCE')])).toBe('FAIL');
+    expect(classifySurfaceGateStatus(
+      'ai-context',
+      [difference('ai-context', 'OWNER_MISMATCH')],
+      false,
+      [],
+      ['OWNER_MISMATCH']
+    )).toBe('FAIL');
     expect(classifySurfaceGateStatus('json-export', [difference('json-export', 'STATUS_MISMATCH')])).toBe('FAIL');
     expect(classifySurfaceGateStatus('reasoning-trace', [{
       surface: 'reasoning-trace',
@@ -774,6 +844,47 @@ describe('PR-8 golden acceptance contract', () => {
       actual: 'DANGLING-PROMISE-EVIDENCE'
     }));
     expect(gate.surfaceGates.find(item => item.name === 'selected-period-ui')?.status).toBe('FAIL');
+  });
+
+  it('fails selected-period evidence that resolves but has no provenance entry', () => {
+    const record = { id: 'SELECTED-EVIDENCE-1', domain: 'WEALTH', source: 'WEALTH_SOURCE', ruleId: 'WEALTH_RULE' };
+    const projection: SelectedPeriodAcceptanceProjection = {
+      ...SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE,
+      evidence: [{ id: record.id, owner: 'WEALTH', resolution: 'RESOLVED' }],
+      provenance: []
+    };
+    const differences = selectedPeriodDifferences('WEALTH', projection, [record], [], []);
+    expect(differences).toContainEqual(expect.objectContaining({
+      surface: 'selected-period-ui',
+      kind: 'DANGLING_REFERENCE',
+      path: '$.provenance',
+      actual: record.id
+    }));
+    const gates = buildRequiredSurfaceGates(
+      ['selected-period-ui'],
+      { 'selected-period-ui': projection },
+      differences,
+      []
+    );
+    expect(gates[0].status).toBe('FAIL');
+  });
+
+  it('reports duplicate evidence in selected-period projections', () => {
+    const projection: SelectedPeriodAcceptanceProjection = {
+      ...SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE,
+      evidence: [
+        { id: 'E1', owner: 'WEALTH' },
+        { id: 'E1', owner: 'WEALTH' },
+        { id: 'E2', owner: 'WEALTH' },
+        { id: 'E2', owner: 'CAREER' }
+      ],
+      provenance: []
+    };
+    const differences = selectedPeriodDifferences('WEALTH', projection, [], [], []);
+    expect(differences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'DUPLICATE_EVIDENCE', actual: expect.any(Array) }),
+      expect.objectContaining({ kind: 'OWNER_MISMATCH', actual: expect.objectContaining({ id: 'E2' }) })
+    ]));
   });
 
   it('aggregates gates conservatively and blocks external/owner-gated gates', () => {

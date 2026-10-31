@@ -17,6 +17,42 @@ export function deepEqualAcceptance(expected: unknown, actual: unknown): boolean
   return false;
 }
 
+export function duplicateEvidenceDifferences(
+  surface: string,
+  evidence: readonly { readonly id: string; readonly owner?: string }[],
+  expectedOwner?: string
+): readonly ParityDifference[] {
+  const groups = new Map<string, { readonly id: string; readonly owner?: string }[]>();
+  for (const item of evidence) {
+    const entries = groups.get(item.id) ?? [];
+    entries.push(item);
+    groups.set(item.id, entries);
+  }
+  const differences: ParityDifference[] = [];
+  for (const [id, entries] of groups) {
+    if (entries.length < 2) continue;
+    differences.push({
+      surface,
+      kind: 'DUPLICATE_EVIDENCE',
+      path: '$.evidence',
+      actual: entries,
+      reason: `Evidence ID ${id} occurs ${entries.length} times in the raw conclusion.`
+    });
+    const owners = new Set(entries.map(item => item.owner));
+    if (owners.size > 1) {
+      differences.push({
+        surface,
+        kind: 'OWNER_MISMATCH',
+        path: '$.evidence',
+        expected: expectedOwner,
+        actual: { id, owners: [...owners] },
+        reason: `Duplicate evidence ID ${id} has conflicting owners.`
+      });
+    }
+  }
+  return differences;
+}
+
 export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces: readonly AcceptanceSurface[]): readonly ParityDifference[] {
   const differences: ParityDifference[] = [];
   const identity = (value: NormalizedAcceptanceConclusion): string => `${value.domain}:${value.scope}:${value.subjectId}`;
@@ -27,19 +63,25 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
       continue;
     }
     const conclusion = surface.conclusion;
+    differences.push(...duplicateEvidenceDifferences(surface.name, surface.rawEvidence ?? conclusion.evidence, conclusion.domain));
     if (identity(conclusion) !== identity(expected)) {
       differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: '$.subject', expected: identity(expected), actual: identity(conclusion), reason: 'Conclusion identity differs from the canonical fixture.' });
     }
-    if (surface.compareConclusionKind !== false
+    const invalidSurfaceConclusionKind = conclusion.conclusionKind !== undefined
+      && surface.expectedConclusionKind !== undefined
+      && conclusion.conclusionKind !== surface.expectedConclusionKind;
+    const invalidCanonicalConclusionKind = surface.expectedConclusionKind === undefined
+      && surface.compareConclusionKind !== false
       && conclusion.conclusionKind === 'SYNTHESIS_FINAL'
-      && conclusion.conclusionKind !== expected.conclusionKind) {
+      && conclusion.conclusionKind !== expected.conclusionKind;
+    if (invalidSurfaceConclusionKind || invalidCanonicalConclusionKind) {
       differences.push({
         surface: surface.name,
         kind: 'VALUE_MISMATCH',
         path: '$.conclusionKind',
-        expected: expected.conclusionKind,
+        expected: surface.expectedConclusionKind ?? expected.conclusionKind,
         actual: conclusion.conclusionKind,
-        reason: 'Conclusion kinds differ for a SYNTHESIS_FINAL surface.'
+        reason: 'Conclusion kind does not match the surface contract.'
       });
     }
     if (surface.compareStatus !== false && conclusion.status !== expected.status) {
