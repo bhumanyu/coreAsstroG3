@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  unlinkSync,
   writeFileSync
 } from 'node:fs';
 import { dirname, resolve, relative } from 'node:path';
@@ -15,7 +16,9 @@ const logsDirectory = resolve(outputDirectory, 'logs');
 const manifestPath = resolve(outputDirectory, 'manifest.json');
 const testReportPath = resolve(outputDirectory, 'test-report.json');
 const acceptanceReportPath = resolve(outputDirectory, 'pr8-acceptance.json');
+const fixtureResultsPath = resolve(outputDirectory, 'calculation-fixture-results.json');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const PR8_ACCEPTED_IMPLEMENTATION_SHA = 'c1202ac9fca28ea36eb459c6045969cc02aa7df7';
 const preflightErrors = [];
 const limitations = [
   'Independent Swiss Ephemeris / JPL Horizons reference parity is BLOCKED.',
@@ -141,6 +144,79 @@ function resolvePr8Statuses(value) {
   });
 }
 
+function isPr8AcceptanceReport(value) {
+  const allowedStatuses = new Set(['PASS', 'FAIL', 'BLOCKED', 'NOT_RUN']);
+  return Array.isArray(value)
+    && value.length === 2
+    && new Set(value.map(result => result?.domain)).size === 2
+    && value.some(result => result?.domain === 'CAREER')
+    && value.some(result => result?.domain === 'WEALTH')
+    && value.every(result =>
+      (result.domain === 'CAREER' || result.domain === 'WEALTH')
+      && (result.reportStatus === 'PASS' || result.reportStatus === 'FAIL')
+      && Array.isArray(result.gates)
+      && result.gates.every(gate =>
+        gate
+        && typeof gate === 'object'
+        && typeof gate.name === 'string'
+        && allowedStatuses.has(gate.status)
+      )
+    );
+}
+
+function recomputeMissingCalculationCoverage(fixtures) {
+  const requiredKinds = [
+    'PLANETARY_LONGITUDE',
+    'PLANETARY_MOTION',
+    'RAHU_KETU_OPPOSITION',
+    'SIGN_BOUNDARY',
+    'NAKSHATRA_BOUNDARY',
+    'HOUSE_POSITION',
+    'VARGA_LONGITUDE',
+    'VIMSHOTTARI_DASHA'
+  ];
+  const requiredPlanets = ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU'];
+  const missing = requiredKinds.filter(kind => !fixtures.some(fixture => fixture.kind === kind));
+  for (const planet of requiredPlanets) {
+    if (!fixtures.some(fixture =>
+      fixture.kind === 'PLANETARY_LONGITUDE' && String(fixture.input?.planet) === planet
+    )) missing.push(`PLANETARY_LONGITUDE:${planet}`);
+  }
+
+  for (const scenario of ['PROGRADE', 'RETROGRADE', 'NEAR_STATIONARY']) {
+    if (!fixtures.some(fixture =>
+      fixture.kind === 'PLANETARY_MOTION' && fixture.scenario === scenario
+    )) missing.push(`PLANETARY_MOTION:${scenario}`);
+  }
+
+  for (const boundaryKind of ['SIGN', 'NAKSHATRA', 'PADA']) {
+    const relevant = fixtures.filter(fixture =>
+      (fixture.kind === 'SIGN_BOUNDARY' && boundaryKind === 'SIGN')
+      || (fixture.kind === 'NAKSHATRA_BOUNDARY' && fixture.boundaryKind === boundaryKind)
+    );
+    const boundaryIds = [...new Set(relevant.map(fixture => fixture.boundaryId))];
+    if (boundaryIds.length === 0) {
+      missing.push(`BOUNDARY_TRIPLET:${boundaryKind}:EPSILON_BEFORE/EXACT/EPSILON_AFTER`);
+      continue;
+    }
+    for (const boundaryId of boundaryIds) {
+      const positions = new Set(relevant
+        .filter(fixture => fixture.boundaryId === boundaryId)
+        .map(fixture => fixture.boundaryPosition));
+      if (['EPSILON_BEFORE', 'EXACT', 'EPSILON_AFTER'].some(position => !positions.has(position))) {
+        missing.push(`BOUNDARY_TRIPLET:${boundaryKind}:${boundaryId}:EPSILON_BEFORE/EXACT/EPSILON_AFTER`);
+      }
+    }
+  }
+
+  for (const chartType of ['D9', 'D10']) {
+    if (!fixtures.some(fixture =>
+      fixture.kind === 'VARGA_LONGITUDE' && String(fixture.input?.chartType) === chartType
+    )) missing.push(`VARGA_LONGITUDE:${chartType}`);
+  }
+  return missing;
+}
+
 function addGate(gates, id, status, summary, evidence = []) {
   gates.push({
     id,
@@ -162,14 +238,27 @@ let workingTreeClean = false;
 let nodeVersionMatches = false;
 let npmVersionMatches = false;
 let fixtureCount;
-let calculationReferenceGateStatus;
-let calculationReferenceCoverageComplete;
+let calculationFixtures;
+let missingCalculationCoverage = [];
+let calculationFixtureResults;
+let calculationFixtureResultsAvailable = false;
 let policy;
 let requiredGateIds;
+let releaseReportModule;
+let releaseTypesModule;
+let testReportStartTime;
+let testReportValid = false;
+let pr8ReportSha256 = null;
+let acceptanceFilesChangedSince = [];
+let pr8EvaluatedOnCandidate = false;
+let pr8ImplementationSha = PR8_ACCEPTED_IMPLEMENTATION_SHA;
 let toolchainNodeExpected = '';
 let toolchainNpmExpected = '';
 
 mkdirSync(logsDirectory, { recursive: true });
+for (const stalePath of [testReportPath, acceptanceReportPath, fixtureResultsPath]) {
+  if (existsSync(stalePath)) unlinkSync(stalePath);
+}
 const packageJsonPath = resolve(root, 'package.json');
 const packageLockPath = resolve(root, 'package-lock.json');
 const nvmrcPath = resolve(root, '.nvmrc');
@@ -248,17 +337,33 @@ if (!npmVersionMatches) {
 }
 
 const prHeadSha = process.env.PR9_PR_HEAD_SHA ?? null;
-const mergeSha = process.env.PR9_MERGE_SHA ?? null;
-for (const [label, value] of [['PR head SHA', prHeadSha], ['PR merge SHA', mergeSha]]) {
+const prMergeSha = process.env.PR9_PR_MERGE_SHA ?? null;
+for (const [label, value] of [['PR head SHA', prHeadSha], ['PR merge SHA', prMergeSha]]) {
   if (value !== null && !/^[0-9a-f]{40}$/i.test(value)) {
     preflightErrors.push(`${label} must be a full 40-character commit SHA.`);
   }
 }
 if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
-  if (!prHeadSha || !mergeSha) {
+  if (!prHeadSha || !prMergeSha) {
     preflightErrors.push('Pull request runs require distinct PR head and merge SHA manifest fields.');
   } else if (!candidateSha || prHeadSha.toLowerCase() !== candidateSha) {
     preflightErrors.push('The PR head SHA does not match the candidate SHA.');
+  }
+}
+
+if (candidateSha) {
+  try {
+    runGit(['cat-file', '-e', `${PR8_ACCEPTED_IMPLEMENTATION_SHA}^{commit}`]);
+    acceptanceFilesChangedSince = runGit([
+      'diff',
+      '--name-only',
+      PR8_ACCEPTED_IMPLEMENTATION_SHA,
+      candidateSha,
+      '--',
+      'src/acceptance'
+    ]).split(/\r?\n/).filter(Boolean);
+  } catch (error) {
+    preflightErrors.push(`PR-8 accepted revision comparison failed: ${error.message}`);
   }
 }
 
@@ -283,34 +388,26 @@ if (tagName) {
 
 try {
   const fixtureModule = await import('../../src/engine/validation/calculationReferenceFixtures.ts');
-  const fixtures = fixtureModule.CALCULATION_REFERENCE_FIXTURES;
-  const calculationGate = fixtureModule.RG_09_CALCULATION_REFERENCE_GATE;
-  if (!Array.isArray(fixtures)) {
+  calculationFixtures = fixtureModule.CALCULATION_REFERENCE_FIXTURES;
+  if (!Array.isArray(calculationFixtures)) {
     preflightErrors.push('CALCULATION_REFERENCE_FIXTURES is not an array.');
   } else {
-    fixtureCount = fixtures.length;
-  }
-  if (!calculationGate || !['BLOCKED', 'READY'].includes(calculationGate.status)) {
-    preflightErrors.push('RG_09_CALCULATION_REFERENCE_GATE has an invalid or missing status.');
-  } else {
-    calculationReferenceGateStatus = calculationGate.status;
-    calculationReferenceCoverageComplete = calculationGate.coverageComplete === true;
-    if (fixtureCount !== calculationGate.fixtureCount) {
-      preflightErrors.push('Calculation gate fixture count does not match the fixture inventory.');
-    }
-    if (calculationGate.status === 'READY'
-      && (fixtureCount === 0 || !calculationReferenceCoverageComplete)) {
-      preflightErrors.push('RG-09 cannot be READY without fixtures and complete required coverage.');
-    }
+    fixtureCount = calculationFixtures.length;
+    missingCalculationCoverage = recomputeMissingCalculationCoverage(calculationFixtures);
   }
 } catch (error) {
   preflightErrors.push(`Calculation fixture inventory could not be loaded: ${error.message}`);
 }
 try {
-  const releaseTypes = await import('../../src/release/releaseGateTypes.ts');
-  requiredGateIds = releaseTypes.REQUIRED_RELEASE_GATE_IDS;
+  releaseTypesModule = await import('../../src/release/releaseGateTypes.ts');
+  requiredGateIds = releaseTypesModule.REQUIRED_RELEASE_GATE_IDS;
 } catch (error) {
   preflightErrors.push(`Required release-gate inventory could not be loaded: ${error.message}`);
+}
+try {
+  releaseReportModule = await import('../../src/release/releaseGateReport.ts');
+} catch (error) {
+  preflightErrors.push(`Release report validation could not be loaded: ${error.message}`);
 }
 
 const cleanPreflight = preflightErrors.length === 0;
@@ -336,23 +433,59 @@ if (cleanPreflight) {
   ]);
   if (existsSync(testReportPath)) {
     testReport = readJson(testReportPath, 'Vitest test report');
-    skippedTests.push(...extractSkippedTests(testReport));
+    testReportValid = releaseReportModule?.isVitestJsonReport(testReport) === true;
+    if (!testReportValid) {
+      preflightErrors.push('Vitest test report has an unrecognized or malformed JSON shape.');
+    } else {
+      testReportStartTime = testReport.startTime;
+      skippedTests.push(...extractSkippedTests(testReport));
+    }
   } else {
     preflightErrors.push('Vitest did not produce artifacts/release/test-report.json.');
   }
 
   temporalCommand = recordCommand('temporal-validation', ['run', 'test:temporal-validation']);
   acceptanceCommand = recordCommand('pr8-production-acceptance', ['run', 'test:pr8-acceptance'], {
-    PR9_ACCEPTANCE_REPORT_PATH: acceptanceReportPath
+    PR9_ACCEPTANCE_REPORT_PATH: acceptanceReportPath,
+    PR9_PR8_IMPLEMENTATION_SHA: PR8_ACCEPTED_IMPLEMENTATION_SHA,
+    PR9_EVALUATED_ON_SHA: candidateSha ?? ''
   });
   if (existsSync(acceptanceReportPath)) {
     pr8AcceptanceReport = readJson(acceptanceReportPath, 'PR-8 acceptance report');
-    pr8AcceptanceStatuses = resolvePr8Statuses(pr8AcceptanceReport);
+    if (isPr8AcceptanceReport(pr8AcceptanceReport)) {
+      pr8AcceptanceStatuses = resolvePr8Statuses(pr8AcceptanceReport);
+    } else {
+      preflightErrors.push('PR-8 acceptance report has an unrecognized or incomplete shape.');
+    }
+    try {
+      pr8ReportSha256 = sha256(readFileSync(acceptanceReportPath));
+    } catch (error) {
+      preflightErrors.push(`PR-8 acceptance report hash failed: ${error.message}`);
+    }
+    pr8EvaluatedOnCandidate = Boolean(pr8ReportSha256)
+      && isPr8AcceptanceReport(pr8AcceptanceReport)
+      && pr8AcceptanceReport.every(result =>
+        releaseReportModule?.pr8WasEvaluatedOnCandidate(
+          PR8_ACCEPTED_IMPLEMENTATION_SHA,
+          candidateSha,
+          result?.implementationSha,
+          result?.evaluatedOnSha,
+          acceptanceFilesChangedSince
+        ) === true
+      );
   } else {
     preflightErrors.push('PR-8 acceptance probe did not produce an output report.');
   }
 
-  calculationCommand = recordCommand('calculation-validation', ['run', 'test:calculation-validation']);
+  calculationCommand = recordCommand(
+    'calculation-validation',
+    ['run', 'test:calculation-validation'],
+    { PR9_FIXTURE_RESULTS_PATH: fixtureResultsPath }
+  );
+  if (existsSync(fixtureResultsPath)) {
+    calculationFixtureResults = readJson(fixtureResultsPath, 'Calculation fixture results');
+    calculationFixtureResultsAvailable = Array.isArray(calculationFixtureResults);
+  }
   buildCommand = recordCommand('production-build', ['run', 'build']);
   bundleCommand = recordCommand('bundle-tests', ['run', 'test:bundle']);
   determinismCommand = recordCommand('dasha-determinism', [
@@ -364,93 +497,143 @@ if (cleanPreflight) {
   ]);
 }
 
-let skippedTestsAllowed = false;
-if (policy && Array.isArray(policy.allowedSkippedTests)) {
-  const allowed = new Set(policy.allowedSkippedTests);
-  skippedTestsAllowed = skippedTests.every(name => allowed.has(name));
-}
-
 let fixtureCountToReport = fixtureCount;
 const gates = [];
-const pr8ReportPresent = Array.isArray(pr8AcceptanceReport)
-  && pr8AcceptanceReport.length === 2
-  && pr8AcceptanceReport.every(
-    result => (result.domain === 'CAREER' || result.domain === 'WEALTH')
-      && Array.isArray(result.gates)
-  );
+const pr8ReportPresent = isPr8AcceptanceReport(pr8AcceptanceReport);
 const pr8BaselinesPassed = pr8ReportPresent
   && pr8AcceptanceReport.every(result => result.reportStatus === 'PASS');
-const policyIsValid = policy
-  && Array.isArray(policy.requiredGates)
-  && Array.isArray(requiredGateIds)
-  && policy.requiredGates.length === requiredGateIds.length
-  && policy.requiredGates.every((gate, index) => gate.id === requiredGateIds[index])
-  && Array.isArray(policy.allowedSkippedTests)
-  && policy.allowedSkippedTests.length === 0;
-addGate(gates, 'RG-01', policyIsValid ? 'PASS' : 'FAIL', 'Release policy and required gate inventory.');
-addGate(gates, 'RG-02', cleanPreflight ? 'PASS' : 'FAIL', preflightErrors.join(' ') || 'Exact revision and toolchain verified.');
+const policyIsValid = releaseReportModule?.releasePolicyIsValid(policy, requiredGateIds ?? []) === true;
+addGate(
+  gates,
+  'RG-01',
+  policyIsValid ? 'PASS' : 'FAIL',
+  'Release policy and required gate inventory.',
+  policyIsValid ? ['docs/release/release-policy.json matches typed gate, blocker, and exclusion inventories.'] : []
+);
+addGate(
+  gates,
+  'RG-02',
+  cleanPreflight ? 'PASS' : 'FAIL',
+  preflightErrors.join(' ') || 'Exact revision and toolchain verified.',
+  cleanPreflight ? [`candidate=${candidateSha}`, `tested=${testedSha}`, `tree=${treeSha}`] : []
+);
 addGate(gates, 'RG-03', buildCommand && bundleCommand
   ? (buildCommand.passed && bundleCommand.passed ? 'PASS' : 'FAIL')
-  : 'NOT_RUN', 'Production build and bundle verification.');
-addGate(gates, 'RG-04', typecheckCommand ? (typecheckCommand.passed ? 'PASS' : 'FAIL') : 'NOT_RUN', 'Type checking.');
-addGate(gates, 'RG-05', testCommand ? (testCommand.passed ? 'PASS' : 'FAIL') : 'NOT_RUN', 'Repository test suite.');
-addGate(gates, 'RG-06', !testCommand
-  ? 'NOT_RUN'
-  : !testReport || !skippedTestsAllowed
-    ? 'FAIL'
-    : 'PASS', `Actual skipped tests: ${skippedTests.length}.`, skippedTests);
+  : 'NOT_RUN', 'Production build and bundle verification.',
+buildCommand?.passed && bundleCommand?.passed
+  ? [buildCommand.logPath, bundleCommand.logPath]
+  : []);
+addGate(
+  gates,
+  'RG-04',
+  typecheckCommand ? (typecheckCommand.passed ? 'PASS' : 'FAIL') : 'NOT_RUN',
+  'Type checking.',
+  typecheckCommand?.passed ? [typecheckCommand.logPath] : []
+);
+addGate(
+  gates,
+  'RG-05',
+  testCommand ? (testCommand.passed ? 'PASS' : 'FAIL') : 'NOT_RUN',
+  'Repository test suite.',
+  testCommand?.passed ? [testCommand.logPath] : []
+);
+const skippedTestStatus = releaseReportModule?.skippedTestsGateStatus(
+  Boolean(testCommand),
+  testReportValid ? testReport : undefined,
+  skippedTests,
+  Array.isArray(policy?.allowedSkippedTests) ? policy.allowedSkippedTests : []
+) ?? 'FAIL';
+addGate(
+  gates,
+  'RG-06',
+  skippedTestStatus,
+  `Actual skipped tests: ${skippedTests.length}; test report startTime: ${testReportStartTime ?? 'unavailable'}.`,
+  testReportValid ? [relative(root, testReportPath), `startTime=${testReportStartTime}`] : []
+);
 addGate(gates, 'RG-07', acceptanceCommand
   ? (acceptanceCommand.passed && pr8BaselinesPassed ? 'PASS' : 'FAIL')
-  : 'NOT_RUN', 'PR-8 golden acceptance production baselines.');
+  : 'NOT_RUN', 'PR-8 golden acceptance production baselines.',
+acceptanceCommand?.passed && pr8BaselinesPassed && pr8ReportSha256
+  ? [relative(root, acceptanceReportPath), `sha256=${pr8ReportSha256}`]
+  : []);
 addGate(gates, 'RG-08', temporalCommand
   ? (temporalCommand.passed ? 'PASS' : 'FAIL')
-  : 'NOT_RUN', 'Temporal calculation validation.');
-const calculationGateStatus = fixtureCount === undefined
-  || calculationReferenceGateStatus === undefined
+  : 'NOT_RUN', 'Temporal calculation validation.',
+temporalCommand?.passed ? [temporalCommand.logPath] : []);
+const calculationGateStatus = !Array.isArray(calculationFixtures)
   ? 'FAIL'
-  : fixtureCount === 0 || calculationReferenceGateStatus === 'BLOCKED'
-    ? 'BLOCKED'
-    : calculationReferenceCoverageComplete
-      ? calculationCommand
-        ? (calculationCommand.passed ? 'PASS' : 'FAIL')
-        : 'NOT_RUN'
-      : 'FAIL';
+  : releaseReportModule?.calculationFixtureGateStatus(
+      calculationFixtures,
+      calculationFixtureResultsAvailable ? calculationFixtureResults : undefined,
+      missingCalculationCoverage,
+      calculationCommand?.passed === true
+    ) ?? 'FAIL';
 addGate(gates, 'RG-09', calculationGateStatus,
-  `Approved calculation reference fixtures: ${fixtureCount ?? 'unknown'}; reference gate: ${calculationReferenceGateStatus ?? 'unknown'}; required coverage: ${calculationReferenceCoverageComplete ? 'complete' : 'incomplete'}.`);
+  `Approved calculation reference fixtures: ${fixtureCount ?? 'unknown'}; independently recomputed missing coverage: ${missingCalculationCoverage.length}.`,
+calculationGateStatus === 'PASS'
+  ? [relative(root, fixtureResultsPath), ...calculationFixtureResults.map(result => result.fixtureId)]
+  : []);
 addGate(gates, 'RG-10', 'BLOCKED', 'Independent Swiss/JPL reference parity is not approved.');
 addGate(gates, 'RG-11', 'BLOCKED', 'Owner-gated non-dusthana mechanism coverage is not approved.');
 addGate(gates, 'RG-12', determinismCommand
   ? (determinismCommand.passed ? 'PASS' : 'FAIL')
-  : 'NOT_RUN', 'Dasha determinism validation.');
-addGate(gates, 'RG-13', acceptanceCommand
-  ? (acceptanceCommand.passed && pr8ReportPresent ? 'BLOCKED' : 'FAIL')
-  : 'NOT_RUN', 'Actual PR-8 gate output plus retained adapter blockers.');
+  : 'NOT_RUN', 'Dasha determinism validation.',
+determinismCommand?.passed ? [determinismCommand.logPath] : []);
+const pr8GateStatus = !pr8EvaluatedOnCandidate
+  ? 'BLOCKED'
+  : acceptanceCommand && !acceptanceCommand.passed
+    ? 'FAIL'
+    : pr8ReportPresent
+      ? pr8BaselinesPassed ? 'BLOCKED' : 'FAIL'
+      : 'BLOCKED';
+addGate(
+  gates,
+  'RG-13',
+  pr8GateStatus,
+  pr8EvaluatedOnCandidate
+    ? 'Consumes candidate-linked PR-8 output; retained adapter blockers remain.'
+    : 'BLOCKED: PR-8 implementation/report linkage is missing or acceptance files changed since the approved implementation.',
+  pr8EvaluatedOnCandidate && pr8ReportSha256
+    ? [relative(root, acceptanceReportPath), `sha256=${pr8ReportSha256}`]
+    : []
+);
 addGate(gates, 'RG-14', policyIsValid
   && existsSync(resolve(root, 'docs/release/RELEASE_LIMITATIONS.md'))
   && existsSync(resolve(root, 'docs/release/CALCULATION_VALIDATION_MATRIX.md'))
   ? 'PASS'
-  : 'FAIL', 'Release limitations and excluded capabilities documented.');
+  : 'FAIL', 'Release limitations and excluded capabilities documented.',
+policyIsValid
+  && existsSync(resolve(root, 'docs/release/RELEASE_LIMITATIONS.md'))
+  && existsSync(resolve(root, 'docs/release/CALCULATION_VALIDATION_MATRIX.md'))
+  ? ['docs/release/RELEASE_LIMITATIONS.md', 'docs/release/CALCULATION_VALIDATION_MATRIX.md']
+  : []);
 
-let reportModule;
 let releaseReport;
 let releaseReportError;
 try {
-  reportModule = await import('../../src/release/releaseGateReport.ts');
-  releaseReport = reportModule.finalizeReleaseReport({
+  const validatedRunnerResult = releaseReportModule.createValidatedRunnerResult({
     gates,
     ...(fixtureCountToReport === undefined ? {} : { fixtureCount: fixtureCountToReport }),
-    pr8AcceptanceStatuses,
+    pr8AcceptanceStatuses: pr8EvaluatedOnCandidate ? pr8AcceptanceStatuses : [],
     metadata: {
       generatedAt: new Date().toISOString(),
       sourceRevision: testedSha ?? 'unavailable'
     }
   });
+  releaseReport = releaseReportModule.finalizeReleaseReport(validatedRunnerResult);
 } catch (error) {
   releaseReportError = error.message;
   preflightErrors.push(`Release report aggregation failed: ${error.message}`);
 }
 
 const manifest = {
+  testedRevisionKind: process.env.GITHUB_EVENT_NAME === 'pull_request'
+    ? 'PR_HEAD'
+    : process.env.GITHUB_EVENT_NAME === 'workflow_dispatch'
+      ? 'WORKFLOW_DISPATCH_SHA'
+      : tagName
+        ? 'TAG_COMMIT'
+        : 'EXPLICIT_SHA',
   candidateSha,
   testedSha,
   treeSha,
@@ -469,12 +652,20 @@ const manifest = {
   platform: process.platform,
   arch: process.arch,
   ...(prHeadSha === null ? {} : { prHeadSha }),
-  ...(mergeSha === null ? {} : { prMergeSha: mergeSha }),
+  ...(prMergeSha === null ? {} : { prMergeSha }),
+  pr8: {
+    implementationSha: pr8ImplementationSha,
+    reportSha256: pr8ReportSha256,
+    evaluatedOnCandidate: pr8EvaluatedOnCandidate,
+    ...(acceptanceFilesChangedSince.length > 0 ? { acceptanceFilesChangedSince } : {})
+  },
   commands,
   ...(pr8AcceptanceReport === undefined ? {} : { pr8AcceptanceReport }),
   limitations,
   skippedTests,
+  testReportStartTime: testReportStartTime ?? null,
   fixtureCount: fixtureCount ?? null,
+  missingCalculationCoverage,
   gateResults: releaseReport?.gates ?? gates,
   preflightErrors,
   ...(releaseReportError ? { releaseReportError } : {}),

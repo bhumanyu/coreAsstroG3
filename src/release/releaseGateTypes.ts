@@ -33,6 +33,25 @@ export const REQUIRED_RELEASE_GATES = Object.freeze([
   { id: REQUIRED_RELEASE_GATE_IDS[12], name: 'PR-8 production acceptance surfaces' },
   { id: REQUIRED_RELEASE_GATE_IDS[13], name: 'Limitations and excluded capabilities' }
 ] as const);
+
+export const RELEASE_POLICY_VERSION = 1;
+
+export const RETAINED_RELEASE_BLOCKERS = Object.freeze([
+  { id: 'external-reference-parity', status: 'BLOCKED' },
+  { id: 'owner-gated-non-dusthana-mechanisms', status: 'BLOCKED' },
+  { id: 'report-renderer', status: 'BLOCKED' },
+  { id: 'AppController async-state', status: 'BLOCKED' }
+] as const);
+
+export const EXCLUDED_RELEASE_CAPABILITIES = Object.freeze([
+  'Accounts',
+  'Sync',
+  'Snapshots',
+  'Notifications',
+  'PDF',
+  'Share-link security'
+] as const);
+
 export type ReleaseGateStatus = 'PASS' | 'FAIL' | 'BLOCKED' | 'NOT_RUN';
 export type CoverageStatus = 'PASSED' | 'BLOCKED' | 'NOT_TESTED' | 'SCOPE_EXCLUDED';
 export type ReleaseCoverageStatus = CoverageStatus;

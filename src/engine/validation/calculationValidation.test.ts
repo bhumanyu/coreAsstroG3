@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { afterAll, describe, expect, it } from 'vitest';
 import {
   angularDistance,
   compareAngle,
@@ -14,6 +16,20 @@ import { calculateSign, calculateWholeSignHouse, getDivisionalLongitude } from '
 import { generatePlanetaryPositions } from '../astroEngine';
 import { calculateVimshottari, VIMSHOTTARI_YEAR_DAYS } from '../dasha/vimshottari';
 import { Planet } from '../../types';
+
+const fixtureResults: Array<{
+  fixtureId: string;
+  kind: string;
+  compared: boolean;
+  passed: boolean;
+}> = [];
+
+afterAll(() => {
+  const outputPath = process.env.PR9_FIXTURE_RESULTS_PATH;
+  if (!outputPath) return;
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, `${JSON.stringify(fixtureResults, null, 2)}\n`, 'utf8');
+});
 
 describe('RG-09 calculation reference validation', () => {
   it('requires approved independent fixtures before RG-09 can pass', () => {
@@ -47,6 +63,14 @@ describe('RG-09 calculation reference validation', () => {
 
   for (const fixture of CALCULATION_REFERENCE_FIXTURES) {
     it(`validates approved reference ${fixture.id} through ${fixture.entryPoint}`, () => {
+      const fixtureResult = {
+        fixtureId: fixture.id,
+        kind: fixture.kind,
+        compared: true,
+        passed: false
+      };
+      fixtureResults.push(fixtureResult);
+
       expect(fixture.provenance.independentlyProduced).toBe(true);
       expect(fixture.provenance.sourceName.trim()).not.toBe('');
       expect(fixture.provenance.citation.trim()).not.toBe('');
@@ -160,6 +184,7 @@ describe('RG-09 calculation reference validation', () => {
         }
       }
 
+      fixtureResult.passed = true;
     });
   }
 

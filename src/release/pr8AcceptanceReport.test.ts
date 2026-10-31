@@ -11,6 +11,8 @@ it('writes real PR-8 production acceptance gate results for the release report',
     const result = runGoldenAcceptanceProductionGate(domain, 'STANDARD');
     return {
       domain,
+      implementationSha: process.env.PR9_PR8_IMPLEMENTATION_SHA ?? null,
+      evaluatedOnSha: process.env.PR9_EVALUATED_ON_SHA ?? null,
       reportStatus: result.report.status,
       gates: result.report.gates.map(gate => ({
         name: `${domain}:${gate.name}`,

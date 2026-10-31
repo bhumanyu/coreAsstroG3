@@ -9,6 +9,14 @@ Run the expanded release sequence from a clean checkout after installing the loc
 
 The runner resolves no alternate revision or toolchain; it records each command and its log in ignored `artifacts/release/`. The ordinary `npm run verify` intentionally does not orchestrate the new calculation and temporal validation suites.
 
+On pull requests, the exact tested candidate is the PR head commit; the merge SHA is recorded separately for information. `workflow_dispatch` intentionally permits an operator to select any full commit SHA. The runner still requires that candidate to match the checked-out revision and enforces the pinned tree/toolchain without fallback.
+
+RG-13 carries an explicit PR-8 linkage to accepted implementation revision `c1202ac9fca28ea36eb459c6045969cc02aa7df7` and hashes the generated acceptance report. A changed `src/acceptance/` file since that revision, or missing/mismatched report linkage, sets `pr8.evaluatedOnCandidate` false and leaves RG-13 `BLOCKED` until the accepted implementation linkage is refreshed.
+
+RG-06 removes any previous `test-report.json` before the test command. It accepts only the expected Vitest JSON structure and records its `startTime`; missing or malformed output fails the gate rather than reusing a stale report.
+
+RG-09 does not trust the fixture module's `READY` or `coverageComplete` flags. The test emits one result per fixture to `calculation-fixture-results.json`; the runner independently verifies exact inventory/result correspondence, comparison outcomes, provenance, and required coverage.
+
 ## Retained blockers
 
 - **Independent reference parity — BLOCKED:** External Swiss Ephemeris / JPL Horizons comparison remains blocked pending independently captured reference data.
