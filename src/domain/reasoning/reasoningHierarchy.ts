@@ -287,7 +287,7 @@ export function summarizeLayers(
         weightedSupport,
         weightedChallenge,
         evidenceIds: Object.freeze(
-          layerEvidence.map((item) => item.evidenceId)
+          layerEvidence.map((item) => item.identityKey)
         )
       });
     })
