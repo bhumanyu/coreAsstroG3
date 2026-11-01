@@ -28,6 +28,7 @@ export interface ReasoningTraceEvidenceLink {
   readonly evidenceOccurrenceId: string;
   readonly semanticIdentityKey?: string;
   readonly producerRuleId?: string;
+  readonly sourceRuleId?: string;
   readonly sourceRecordId?: string;
   /** relatedEvidenceIds are occurrence IDs and are preserved in that namespace. */
   readonly sourceRecordOccurrenceIds: readonly string[];
@@ -119,7 +120,8 @@ export function buildReasoningTraceCompleteness(params: {
 
   for (const item of evidence) {
     const synthesisReference = synthesisReferenceByOccurrence.get(item.id);
-    const producerRuleId = item.ruleId ?? item.provenance?.ruleId;
+    const producerRuleId = item.provenance?.ruleId;
+    const sourceRuleId = item.ruleId;
     const chartInputAvailable = item.planet !== undefined ||
       item.house !== undefined ||
       item.timing !== undefined;
@@ -141,7 +143,7 @@ export function buildReasoningTraceCompleteness(params: {
         message: 'Evidence occurrence ' + item.id + ' has no semantic identityKey.'
       }));
     }
-    if (!producerRuleId) {
+    if (!producerRuleId && !sourceRuleId) {
       diagnostics.push(Object.freeze({
         code: 'MISSING_SOURCE_RULE',
         evidenceOccurrenceId: item.id,
@@ -179,6 +181,7 @@ export function buildReasoningTraceCompleteness(params: {
       evidenceOccurrenceId: item.id,
       ...(item.identityKey ? { semanticIdentityKey: item.identityKey } : {}),
       ...(producerRuleId ? { producerRuleId } : {}),
+      ...(sourceRuleId ? { sourceRuleId } : {}),
       ...(item.sourceRecordId ? { sourceRecordId: item.sourceRecordId } : {}),
       sourceRecordOccurrenceIds: Object.freeze([...item.relatedEvidenceIds]),
       rootEvidenceIdentityKeys: Object.freeze([...(item.rootEvidenceIds ?? [])]),
