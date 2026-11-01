@@ -122,11 +122,11 @@ describe('deduplicateReasoningEvidence', () => {
       const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
 
       const inputPrimaryFirst = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-PRIMARY', {
           identityKey,
           layer: 'PRIMARY_PROMISE'
         }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-SECONDARY', {
           identityKey,
           layer: 'SECONDARY_SUPPORT'
         })
