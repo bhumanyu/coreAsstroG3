@@ -133,6 +133,49 @@ export const CareerAnalysisCard: React.FC<CareerAnalysisCardProps> = ({
         </div>
       </div>
 
+      {detail.confidenceCoverage && (
+        <section
+          aria-label="C11 evidence confidence and coverage"
+          className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 space-y-2"
+        >
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+            <span className="font-semibold text-slate-200">
+              Evidence confidence: {formatEnum(detail.canonicalFinalSynthesis?.confidence ?? 'UNKNOWN')}
+            </span>
+            <span className="text-slate-400">
+              Coverage: {formatEnum(detail.confidenceCoverage.status)}
+            </span>
+            <span className="text-slate-400">
+              Evidence quality: {formatEnum(detail.confidenceCoverage.quality)}
+            </span>
+          </div>
+          {(detail.confidenceCoverage.missingRequiredLayers.length > 0 ||
+            detail.confidenceCoverage.missingSupportingLayers.length > 0 ||
+            detail.confidenceCoverage.missingOptionalLayers.length > 0) && (
+            <p className="text-[10px] text-slate-400">
+              Missing required: {detail.confidenceCoverage.missingRequiredLayers.join(', ') || 'none'} ·
+              Supporting: {detail.confidenceCoverage.missingSupportingLayers.join(', ') || 'none'} ·
+              Optional: {detail.confidenceCoverage.missingOptionalLayers.join(', ') || 'none'}
+            </p>
+          )}
+          {detail.confidenceReasons && detail.confidenceReasons.length > 0 && (
+            <ul className="space-y-1 text-[10px] text-slate-400">
+              {detail.confidenceReasons.map((reason, index) => (
+                <li key={reason.code + '-' + (reason.layer ?? 'GENERAL') + '-' + index}>
+                  {reason.message}
+                </li>
+              ))}
+            </ul>
+          )}
+          {detail.traceCompleteness && (
+            <p className="text-[10px] text-slate-400">
+              Trace completeness: {formatEnum(detail.traceCompleteness.status)} ·
+              {detail.traceCompleteness.diagnostics.length} diagnostic(s)
+            </p>
+          )}
+        </section>
+      )}
+
       {detail.manifestationSynthesis && detail.manifestationSynthesis.length > 0 ? (
         <div className="pt-2 space-y-2">
           <span className="text-[11px] font-mono-code text-slate-400 block">
