@@ -231,12 +231,6 @@ export function mapCanonicalCareerEvidence(
 }
 
 /**
- * Exposed validation function for testing C11 reference checking.
- *
- * This allows tests to assert on the validation result without affecting the main mapper output.
- */
-
-/**
  * Validates that every declared root link resolves to a semantic identity
  * present in this canonical Career evidence graph. Occurrence IDs and producer
  * source IDs are deliberately not accepted as root identities.
@@ -246,6 +240,11 @@ export function validateRootEvidenceLinks(
 ): RootEvidenceValidationResult {
   return validateDomainEvidenceRootLinks(evidence);
 }
+
+/**
+ * Exposed validation function for testing C11 reference checking.
+ * This allows tests to assert on the validation result without affecting the main mapper output.
+ */
 export function validateC11References(
   evidence: readonly DomainEvidence[],
   finalSynthesis: CareerFinalSynthesisResult
