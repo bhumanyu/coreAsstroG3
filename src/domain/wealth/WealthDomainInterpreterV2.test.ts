@@ -1004,24 +1004,20 @@ describe('WealthDomainInterpreterV2', () => {
   });
 
   // 5. D2 evaluation matrix
-  describe('D2 Varga relationship evaluation', () => {
-    it('evaluates D2 CONFIRMS when supporting', () => {
-      const rel = evaluateD2Relationship([], undefined, undefined, undefined, 'CONFIRMED');
-      expect(rel).toBe('CONFIRMS');
+  describe('D2 Varga relationship evaluation — A08 containment', () => {
+    it('keeps D2 unavailable when a legacy CONFIRMED status is declared', () => {
+      expect(evaluateD2Relationship([], undefined, undefined, undefined, 'CONFIRMED')).toBe('UNAVAILABLE');
     });
 
-    it('evaluates D2 CONFLICTS when challenging', () => {
-      const rel = evaluateD2Relationship([], undefined, undefined, undefined, 'CONFLICTED');
-      expect(rel).toBe('CONFLICTS');
+    it('keeps D2 unavailable when a legacy CONFLICTED status is declared', () => {
+      expect(evaluateD2Relationship([], undefined, undefined, undefined, 'CONFLICTED')).toBe('UNAVAILABLE');
     });
 
-    it('evaluates D2 UNAVAILABLE when no D2 data exists', () => {
-      const rel = evaluateD2Relationship([], [], [], [], 'NOT_APPLICABLE');
-      expect(rel).toBe('UNAVAILABLE');
+    it('keeps D2 unavailable when no D2 data exists', () => {
+      expect(evaluateD2Relationship([], [], [], [], 'NOT_APPLICABLE')).toBe('UNAVAILABLE');
     });
 
-    it('evaluates D2 CONFIRMS when linked to natal promise evidence ids', () => {
-      const natalPromiseIds = ['PROMISE-2H', 'PROMISE-2L'];
+    it('keeps D2 unavailable even when a single linked relationship is declared', () => {
       const linkedD2: readonly DomainEvidence[] = [
         createDomainEvidence({
           id: 'D2-SUPP',
@@ -1030,36 +1026,46 @@ describe('WealthDomainInterpreterV2', () => {
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
           source: 'D2',
-          statement: 'D2 supports liquid wealth',
+          statement: 'Unvalidated D2 supports liquid wealth',
           polarity: 'SUPPORTING',
           strength: 'STRONG',
           priority: 50,
           relatedEvidenceIds: ['PROMISE-2H']
         })
       ];
-      const rel = evaluateD2Relationship(undefined, linkedD2, natalPromiseIds);
-      expect(rel).toBe('CONFIRMS');
+      expect(evaluateD2Relationship(undefined, linkedD2, ['PROMISE-2H'])).toBe('UNAVAILABLE');
     });
 
-    it('evaluates D2 UNAVAILABLE when D2 evidence has no intersecting links to natalPromiseEvidenceIds', () => {
-      const natalPromiseIds = ['PROMISE-2H', 'PROMISE-2L'];
-      const unlinkedD2: readonly DomainEvidence[] = [
+    it('keeps D2 unavailable when relationship declarations conflict', () => {
+      const declarations: readonly DomainEvidence[] = [
         createDomainEvidence({
-          id: 'D2-UNLINKED',
+          id: 'D2-SUPPORT',
           sourceType: 'VARGA',
           domain: 'WEALTH',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
           source: 'D2',
-          statement: 'D2 supports unrelated pattern',
+          statement: 'Unvalidated D2 support declaration',
           polarity: 'SUPPORTING',
           strength: 'STRONG',
           priority: 50,
-          relatedEvidenceIds: ['SOME-UNRELATED-ID']
+          relatedEvidenceIds: ['PROMISE-2H']
+        }),
+        createDomainEvidence({
+          id: 'D2-CHALLENGE',
+          sourceType: 'VARGA',
+          domain: 'WEALTH',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D2',
+          statement: 'Unvalidated D2 challenge declaration',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 50,
+          relatedEvidenceIds: ['PROMISE-2H']
         })
       ];
-      const rel = evaluateD2Relationship(undefined, unlinkedD2, natalPromiseIds);
-      expect(rel).toBe('UNAVAILABLE');
+      expect(evaluateD2Relationship(undefined, declarations, ['PROMISE-2H'])).toBe('UNAVAILABLE');
     });
   });
 
