@@ -1408,3 +1408,130 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     });
   });
 });
+
+describe('A02 — ProductAnalysisService canonical domain independence', () => {
+  function createServiceWithMissingDomain(missingDomain: 'CAREER' | 'WEALTH') {
+    return new ProductAnalysisService({
+      calculateHoroscope,
+      runPipeline: async (options) => {
+        const state = await runLifeAnalysisProduct({
+          ...options,
+          includeAiExplanation: false
+        });
+        const domainInterpretations = state.domainInterpretations?.filter(
+          (interpretation) => interpretation.domain !== missingDomain
+        );
+
+        if (missingDomain === 'CAREER') {
+          return {
+            ...state,
+            career: undefined,
+            careerArtifacts: undefined,
+            domainInterpretations
+          };
+        }
+
+        return {
+          ...state,
+          wealth: undefined,
+          domainInterpretations
+        };
+      }
+    });
+  }
+
+  async function analyzeWithFirstValidSelection(
+    productService: ProductAnalysisService
+  ): Promise<ProductAnalysis> {
+    const asOf = '2024-01-01T00:00:00.000Z';
+    await productService.analyze(CANONICAL_BIRTH_DETAILS, {
+      includeAiExplanation: false,
+      asOf
+    });
+
+    const report = productService.lastPipelineState?.temporalState?.dashaInterpretation;
+    expect(report).toBeDefined();
+    const periods = listSelectableMdAdPeriods(report!);
+    const mahadasha = periods.mahadashas.find((candidate) => candidate.valid);
+    expect(mahadasha).toBeDefined();
+    const antardasha = periods.antardashas.find(
+      (candidate) => candidate.valid && candidate.mahadashaId === mahadasha!.id
+    );
+    expect(antardasha).toBeDefined();
+
+    return productService.analyze(CANONICAL_BIRTH_DETAILS, {
+      includeAiExplanation: false,
+      asOf,
+      selectedPeriod: {
+        mahadashaId: mahadasha!.id,
+        antardashaId: antardasha!.id
+      }
+    });
+  }
+
+  it('keeps Wealth selected-period output available when Career artifacts are missing', async () => {
+    const productService = createServiceWithMissingDomain('CAREER');
+    const result = await analyzeWithFirstValidSelection(productService);
+
+    expect(result.selectedPeriod?.status).toBe('OK');
+    if (result.selectedPeriod?.status !== 'OK') return;
+
+    expect(result.selectedPeriod.synthesis.provenance.career.status).toBe('MISSING');
+    expect(result.selectedPeriod.synthesis.provenance.wealth.status).toBe('PRESENT');
+    expect(result.selectedPeriod.synthesis.missingInputs).toContainEqual(
+      expect.objectContaining({
+        domain: 'CAREER',
+        code: 'CAREER_ACTIVATION_MISSING'
+      })
+    );
+  });
+
+  it('keeps Career selected-period output available when Wealth interpretation is missing', async () => {
+    const productService = createServiceWithMissingDomain('WEALTH');
+    const result = await analyzeWithFirstValidSelection(productService);
+
+    expect(result.selectedPeriod?.status).toBe('OK');
+    if (result.selectedPeriod?.status !== 'OK') return;
+
+    expect(result.selectedPeriod.synthesis.provenance.career.status).toBe('PRESENT');
+    expect(result.selectedPeriod.synthesis.provenance.wealth.status).toBe('MISSING');
+    expect(result.selectedPeriod.synthesis.missingInputs).toContainEqual(
+      expect.objectContaining({
+        domain: 'WEALTH',
+        code: 'WEALTH_ACTIVATION_MISSING'
+      })
+    );
+  });
+
+  it('selectPeriodForRun preserves Wealth output when Career artifacts are missing', async () => {
+    const productService = createServiceWithMissingDomain('CAREER');
+    const asOf = '2024-01-01T00:00:00.000Z';
+    const run = await productService.analyzeRun(CANONICAL_BIRTH_DETAILS, {
+      includeAiExplanation: false,
+      asOf
+    });
+
+    const report = run.snapshot.pipelineState?.temporalState?.dashaInterpretation;
+    expect(report).toBeDefined();
+    const periods = listSelectableMdAdPeriods(report!);
+    const mahadasha = periods.mahadashas.find((candidate) => candidate.valid);
+    expect(mahadasha).toBeDefined();
+    const antardasha = periods.antardashas.find(
+      (candidate) => candidate.valid && candidate.mahadashaId === mahadasha!.id
+    );
+    expect(antardasha).toBeDefined();
+
+    const result = await productService.selectPeriodForRun(
+      run.snapshot,
+      mahadasha!.id,
+      antardasha!.id,
+      false
+    );
+
+    expect(result.selectedPeriod?.status).toBe('OK');
+    if (result.selectedPeriod?.status !== 'OK') return;
+    expect(result.selectedPeriod.synthesis.provenance.career.status).toBe('MISSING');
+    expect(result.selectedPeriod.synthesis.provenance.wealth.status).toBe('PRESENT');
+  });
+});
+

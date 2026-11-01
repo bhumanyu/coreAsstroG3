@@ -56,9 +56,9 @@ export interface BuildProductSelectedPeriodSynthesisInput {
   readonly context: AnalysisContext;
   readonly temporalState: AnalysisTemporalState;
   readonly horoscope: Horoscope;
-  readonly careerArtifacts: CareerInternalArtifacts;
-  readonly careerEvidence: readonly DomainEvidence[];
-  readonly careerDashaEvidence: readonly DomainEvidence[];
+  readonly careerArtifacts?: CareerInternalArtifacts;
+  readonly careerEvidence?: readonly DomainEvidence[];
+  readonly careerDashaEvidence?: readonly DomainEvidence[];
   readonly wealthEvidence?: readonly DomainEvidence[];
   readonly careerBaseline?: CareerConclusionData;
   readonly wealthBaseline?: WealthConclusionData;
@@ -103,6 +103,10 @@ function buildSelectedCareerDashaActivationInternal(
   selectedPeriod: SelectedPeriodActivationContext
 ): { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess } | { readonly ok: false; readonly errorCode: Extract<SelectedCareerDashaActivationResult, { ok: false }>['error'] } {
   const { careerArtifacts, horoscope } = input;
+  if (!careerArtifacts) {
+    return { ok: false, errorCode: 'INCOMPLETE_CANONICAL_INPUT' };
+  }
+
   const result = buildSelectedCareerDashaActivation({
     horoscope,
     natal: careerArtifacts.natal,
@@ -184,11 +188,12 @@ function buildSelectedPeriodSynthesisWrapper(
  *
  * Sequence:
  * 1. createSelectedPeriodActivationContext
- * 2. buildSelectedCareerDashaActivation (pass BOTH canonical inputs when present; if absent, neither)
- * 3. evaluateSelectedWealthPeriodActivation
- * 4. buildSelectedPeriodSynthesis (with partial activation support)
+ * 2. buildSelectedCareerDashaActivation when Career artifacts are available;
+ *    otherwise preserve INCOMPLETE_CANONICAL_INPUT as a Career-only failure.
+ * 3. evaluateSelectedWealthPeriodActivation independently from Wealth evidence.
+ * 4. buildSelectedPeriodSynthesis (with partial activation support).
  *
- * Domain activation failures degrade to partial synthesis (do not hard-fail).
+ * Career and Wealth activation failures degrade independently to partial synthesis (do not hard-fail).
  * Context resolution failures still hard-fail (invariant violation).
  * No horoscope calculation, no interpreter calls, context.asOf passed unchanged.
  */

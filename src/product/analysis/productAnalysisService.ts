@@ -169,18 +169,8 @@ export class ProductAnalysisService {
 
       // PBA-07: Build selected-period synthesis if selection is provided
       if (options?.selectedPeriod) {
-        // Check if careerArtifacts are available
-        if (!pipelineState.careerArtifacts) {
-          return finish({
-            ...productAnalysis,
-            selectedPeriod: {
-              status: 'UNAVAILABLE',
-              error: 'CAREER_ARTIFACTS_UNAVAILABLE'
-            }
-          });
-        }
-
-        // Check if temporalState is available
+        // Temporal context is shared and required. Domain inputs are independent:
+        // a missing Career or Wealth result must not suppress the other domain.
         if (!pipelineState.temporalState) {
           return finish({
             ...productAnalysis,
@@ -191,24 +181,17 @@ export class ProductAnalysisService {
           });
         }
 
-        // Check if career baseline is available
-        if (!pipelineState.career?.conclusionData) {
-          return finish({
-            ...productAnalysis,
-            selectedPeriod: {
-              status: 'UNAVAILABLE',
-              error: 'CAREER_BASELINE_UNAVAILABLE'
-            }
-          });
-        }
+        const hasCareerActivationInputs = pipelineState.careerArtifacts !== undefined;
+        const hasWealthActivationInputs =
+          pipelineState.wealth !== undefined &&
+          isWealthDomainInterpretation(pipelineState.wealth);
 
-        // Check if wealth baseline is available
-        if (!pipelineState.wealth?.conclusionData) {
+        if (!hasCareerActivationInputs && !hasWealthActivationInputs) {
           return finish({
             ...productAnalysis,
             selectedPeriod: {
               status: 'UNAVAILABLE',
-              error: 'WEALTH_BASELINE_UNAVAILABLE'
+              error: 'CAREER_AND_WEALTH_INPUTS_UNAVAILABLE'
             }
           });
         }
@@ -219,9 +202,13 @@ export class ProductAnalysisService {
           temporalState: pipelineState.temporalState,
           horoscope,
           careerArtifacts: pipelineState.careerArtifacts,
-          careerEvidence: pipelineState.career?.evidence ?? [],
-          careerDashaEvidence: pipelineState.careerArtifacts.careerDashaEvidence,
-          wealthEvidence: pipelineState.wealth?.evidence,
+          careerEvidence: pipelineState.career && isCareerDomainInterpretation(pipelineState.career)
+            ? pipelineState.career.evidence
+            : undefined,
+          careerDashaEvidence: pipelineState.careerArtifacts?.careerDashaEvidence,
+          wealthEvidence: pipelineState.wealth && isWealthDomainInterpretation(pipelineState.wealth)
+            ? pipelineState.wealth.evidence
+            : undefined,
           careerBaseline: pipelineState.career && isCareerDomainInterpretation(pipelineState.career)
             ? pipelineState.career.conclusionData
             : undefined,
@@ -394,17 +381,15 @@ export class ProductAnalysisService {
     if (!pipelineState.temporalState) {
       throw new Error('Cannot select period: temporalState unavailable.');
     }
-    if (!pipelineState.careerArtifacts) {
-      throw new Error('Cannot select period: careerArtifacts unavailable.');
-    }
-    if (!pipelineState.career?.conclusionData) {
-      throw new Error('Cannot select period: career baseline unavailable.');
-    }
-    if (!pipelineState.wealth?.conclusionData) {
-      throw new Error('Cannot select period: wealth baseline unavailable.');
+    const hasCareerActivationInputs = pipelineState.careerArtifacts !== undefined;
+    const hasWealthActivationInputs =
+      pipelineState.wealth !== undefined &&
+      isWealthDomainInterpretation(pipelineState.wealth);
+    if (!hasCareerActivationInputs && !hasWealthActivationInputs) {
+      throw new Error('Cannot select period: Career and Wealth activation inputs are unavailable.');
     }
 
-    const temporalState = pipelineState.temporalState!;
+    const temporalState = pipelineState.temporalState;
 
     // Reconstruct the base product analysis (preserves natal baseline and dasha.current)
     const productAnalysis = mapProductAnalysis({
@@ -429,10 +414,14 @@ export class ProductAnalysisService {
       context,
       temporalState,
       horoscope,
-      careerArtifacts: pipelineState.careerArtifacts!,
-      careerEvidence: pipelineState.career?.evidence ?? [],
-      careerDashaEvidence: pipelineState.careerArtifacts!.careerDashaEvidence,
-      wealthEvidence: pipelineState.wealth?.evidence,
+      careerArtifacts: pipelineState.careerArtifacts,
+      careerEvidence: pipelineState.career && isCareerDomainInterpretation(pipelineState.career)
+        ? pipelineState.career.evidence
+        : undefined,
+      careerDashaEvidence: pipelineState.careerArtifacts?.careerDashaEvidence,
+      wealthEvidence: pipelineState.wealth && isWealthDomainInterpretation(pipelineState.wealth)
+        ? pipelineState.wealth.evidence
+        : undefined,
       careerBaseline: pipelineState.career && isCareerDomainInterpretation(pipelineState.career)
         ? pipelineState.career.conclusionData
         : undefined,
@@ -471,7 +460,7 @@ export class ProductAnalysisService {
             selectedPeriod: selectedPeriodResult.value,
             selectedPeriodEvidence: {
               careerEvidence: pipelineState.career?.evidence ?? [],
-              careerDashaEvidence: pipelineState.careerArtifacts!.careerDashaEvidence,
+              careerDashaEvidence: pipelineState.careerArtifacts?.careerDashaEvidence ?? [],
               wealthEvidence: pipelineState.wealth?.evidence ?? []
             }
           });
