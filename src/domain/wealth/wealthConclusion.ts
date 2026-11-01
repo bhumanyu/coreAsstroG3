@@ -189,10 +189,6 @@ export function buildWealthConclusionData(params: {
   if (accumulationStatus === 'CHALLENGED') {
     mainChallenges.push('Accumulation requires strict expenditure control');
   }
-  if (d2Relationship === 'CONFLICTS') {
-    mainChallenges.push('D2 Hora indicates execution friction in asset retention');
-  }
-
   const highManifestations = manifestations
     .filter((m) => m.confidence === 'VERY_HIGH' || m.confidence === 'HIGH')
     .map((m) => m.mode as WealthManifestationMode);
