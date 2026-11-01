@@ -554,6 +554,28 @@ function buildFinalConflicts(
  * @param input - Canonical integration input with C4–C10 outputs
  * @returns Frozen CareerFinalSynthesisResult from the canonical engine
  */
+export interface CareerProducerEvidenceProvenance {
+  readonly sourceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+}
+
+/** Deterministic per-record provenance quality; never reads natal promise strength. */
+export function deriveCareerProducerEvidenceQuality(
+  records: readonly CareerProducerEvidenceProvenance[]
+): 'HIGH' | 'MEDIUM' | 'LOW' {
+  if (records.length === 0) return 'MEDIUM';
+
+  const completeCount = records.filter(
+    item => item.sourceIds.length > 0 && item.ruleIds.length > 0
+  ).length;
+  if (completeCount === records.length) return 'HIGH';
+
+  const anyProvenance = records.some(
+    item => item.sourceIds.length > 0 || item.ruleIds.length > 0
+  );
+  return anyProvenance ? 'MEDIUM' : 'LOW';
+}
+
 export function buildCareerFinalAnalysis(
   input: CareerFinalSynthesisIntegrationInput
 ): CareerFinalSynthesisResult {
@@ -623,17 +645,7 @@ export function buildCareerFinalAnalysis(
 
   // Producer quality is evaluated per evidence record, not inferred from promise strength.
   const producerEvidenceRecords = [...natal.evidence, ...dasha.evidence, ...d10.evidence];
-  const completeProducerProvenanceCount = producerEvidenceRecords.filter(
-    item => item.sourceIds.length > 0 && item.ruleIds.length > 0
-  ).length;
-  const anyProducerProvenance = producerEvidenceRecords.some(
-    item => item.sourceIds.length > 0 || item.ruleIds.length > 0
-  );
-  const evidenceQuality: 'HIGH' | 'MEDIUM' | 'LOW' = producerEvidenceRecords.length === 0
-    ? 'MEDIUM'
-    : completeProducerProvenanceCount === producerEvidenceRecords.length
-      ? 'HIGH'
-      : anyProducerProvenance ? 'MEDIUM' : 'LOW';
+  const evidenceQuality = deriveCareerProducerEvidenceQuality(producerEvidenceRecords);
 
   // Merge all evidence IDs, source IDs, and rule IDs deterministically
   const evidenceIds = mergeEvidenceIds(natalEvidenceIds, dashaEvidenceIds, d10EvidenceIds, expressionEvidenceIds);
