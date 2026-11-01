@@ -8,9 +8,14 @@ import {
  * Creates an immutable EvidenceProvenance instance with a computed deterministic evidenceId.
  */
 export function createEvidenceProvenance(
-  input: EvidenceIdentityInput
+  input: EvidenceIdentityInput,
+  occurrenceId?: string
 ): EvidenceProvenance {
-  const evidenceId = buildEvidenceId(input);
+  const normalizedOccurrenceId = occurrenceId?.trim();
+  if (occurrenceId !== undefined && !normalizedOccurrenceId) {
+    throw new Error('Evidence occurrenceId must be non-empty when supplied');
+  }
+  const evidenceId = normalizedOccurrenceId ?? buildEvidenceId(input);
 
   return Object.freeze({
     evidenceId,
