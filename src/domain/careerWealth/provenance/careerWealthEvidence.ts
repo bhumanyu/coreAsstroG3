@@ -109,7 +109,8 @@ export interface CreateCareerWealthEvidenceInput {
 
 /**
  * Factory that creates a CareerWealthEvidence instance ensuring:
- * - DomainEvidence.id is the occurrence ID when supplied, otherwise provenance.evidenceId
+ * - DomainEvidence.id and provenance.evidenceId are the same occurrence ID
+ * - DomainEvidence.identityKey is a separate semantic identity, excluding effect/strength
  * - DomainEvidence.ruleId === provenance.ruleId
  * - DomainEvidence.polarity === mapEffectToPolarity(provenance.effect)
  * - DomainEvidence.domain === provenance.domain
