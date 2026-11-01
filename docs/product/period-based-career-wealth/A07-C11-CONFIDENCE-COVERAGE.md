@@ -13,15 +13,16 @@ C11 remains the sole final Career synthesis authority. `finalStrength` and `fina
 | Transit | Optional | Transit direction is not `UNAVAILABLE` |
 
 ## Deterministic confidence policy
-- Base confidence is derived from natal foundation quality: strong/very strong → HIGH; moderate → MEDIUM; weak/very weak/undetermined → LOW.
+- Base confidence is derived from an independent evidence-quality assessment when supplied. If none is supplied, complete provenance defaults to HIGH and partial/unknown provenance defaults to MEDIUM. Natal promise strength is not used as confidence quality.
 - Missing required natal evidence caps confidence at LOW.
 - One missing supporting layer caps confidence at MEDIUM. Two or more missing supporting layers cap it at LOW.
 - Missing optional transit evidence is reported but does not cap confidence.
 - Any HIGH-severity conflict caps confidence at LOW. Otherwise any MODERATE-severity conflict caps it at MEDIUM. LOW-severity conflicts do not apply a cap.
 - If any provenance arrays are supplied but evidence/source/rule IDs are not all present, provenance is PARTIAL and confidence is capped at MEDIUM.
+- An explicit LOW or MEDIUM evidence-quality assessment applies the matching confidence cap/reason; this is independent of `finalStrength`.
 - If no provenance arrays are supplied, provenance is NOT_PROVIDED and is explicitly reported without assuming it is complete or silently applying a cap.
 
-Every cap is represented in `confidenceReasons`; each layer's requirement and availability, missing-layer lists, and provenance state are exposed in `confidenceCoverage`.
+Every cap is represented in `confidenceReasons`; each layer's requirement and availability, missing-layer lists, independent evidence quality, and provenance state are exposed in `confidenceCoverage`.
 
 ## Product projection
 The canonical C11 confidence coverage and reasons are included in `AiCareerCanonicalC11Fact` through `projectCanonicalCareerC11`. The projection type guard rejects C11 values that omit the new metadata.
