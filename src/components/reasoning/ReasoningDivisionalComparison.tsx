@@ -12,6 +12,7 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
   d10,
   d2
 }) => {
+  void d2; // Incoming D2 declarations are ignored while the validation gate is closed.
   const d10Rel = d10?.relationship ?? 'UNAVAILABLE';
   const isD10Available = d10Rel !== 'UNAVAILABLE';
   const d10BadgeClass = getVargaRelationshipBadgeClass(d10Rel);
