@@ -3067,7 +3067,7 @@ describe('Wealth period activation contracts', () => {
         axis: 'DASHA',
         source: 'DASHA',
         effect: 'SUPPORT',
-        strength: 'SECONDARY'
+        strength: 'MODERATE'
       }
     });
 
