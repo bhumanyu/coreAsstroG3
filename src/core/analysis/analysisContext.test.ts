@@ -67,6 +67,18 @@ describe('AnalysisContext and AnalysisContextFactory (P0-02A)', () => {
       expect(normalizeAsOf(null, clock)).toBe('2040-03-04T05:06:07.000Z');
       expect(clock.now).toHaveBeenCalledTimes(2);
     });
+
+    it.each(['', 'not-a-valid-date'])('rejects invalid injected clock values: %s', (now) => {
+      const clock = { now: vi.fn(() => now) };
+      expect(() => normalizeAsOf(undefined, clock)).toThrow();
+    });
+
+    it('rejects a runtime clock value that is not a string', () => {
+      const clock = { now: vi.fn(() => 123 as unknown as string) };
+      expect(() => normalizeAsOf(undefined, clock)).toThrow(
+        'Invalid clock value for asOf: expected string, received number'
+      );
+    });
   });
 
   describe('createAnalysisContext', () => {
@@ -92,12 +104,18 @@ describe('AnalysisContext and AnalysisContextFactory (P0-02A)', () => {
     });
 
     it.each(['', '   ', 'not-a-valid-date'])(
-      'preserves the existing context error contract for invalid asOf "%s"',
+      'fails immediately when constructing a context with invalid asOf "%s"',
       (asOf) => {
-        const context = createAnalysisContext({ asOf, methodology: mockMethodology });
-        expect(context.asOf).toBe(asOf);
+        expect(() => createAnalysisContext({ asOf, methodology: mockMethodology })).toThrow();
       }
     );
+
+    it('fails immediately for an invalid Date instead of creating a placeholder context', () => {
+      expect(() => createAnalysisContext({
+        asOf: new Date(NaN),
+        methodology: mockMethodology
+      })).toThrow('Invalid asOf Date');
+    });
 
     it('creates an immutable context with frozen methodology and context', () => {
       const context = createAnalysisContext({
