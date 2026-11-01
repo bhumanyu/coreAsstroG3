@@ -2,7 +2,11 @@ import {
   CareerEvidenceFamily,
   type ThemeInterpretationEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
-import { createDomainEvidence } from '../interpretation';
+import {
+  assertUniqueDomainEvidenceOccurrenceIds,
+  createDomainEvidence,
+  validateDomainEvidenceRootLinks
+} from '../interpretation';
 import type {
   DomainEvidence,
   EvidencePhase,
@@ -122,8 +126,7 @@ export const resolveSubjectKey = resolveCareerSubjectKey;
 export function buildCareerEvidence(
   rawEvidence: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[]
 ): readonly DomainEvidence[] {
-  return Object.freeze(
-    rawEvidence.map((item) => {
+  const mappedEvidence = rawEvidence.map((item) => {
       const role = mapCareerRole(item);
       const relatedEvidenceIds = resolveRelatedCareerPromiseEvidenceIds(item, rawEvidence);
       const period = mapCareerDashaPeriod(item);
@@ -155,6 +158,8 @@ export function buildCareerEvidence(
             effect: item.effect,
             strength: provenanceStrength
           },
+          occurrenceId: item.id,
+          ...(item.identityKey ? { identityKey: item.identityKey } : {}),
           statement: item.statement,
           sourceType: mapCareerSourceType(item),
           role,
@@ -164,6 +169,7 @@ export function buildCareerEvidence(
           planet,
           house,
           relatedEvidenceIds,
+          rootEvidenceIds: item.rootEvidenceIds,
           timing,
           evidenceFamily: item.evidenceFamily
         });
@@ -182,13 +188,25 @@ export function buildCareerEvidence(
         priority: mapCareerPriority(item.priority),
         ruleId: item.ruleId,
         relatedEvidenceIds,
+        rootEvidenceIds: item.rootEvidenceIds,
         timing,
         evidenceFamily: item.evidenceFamily,
         planet,
-        house
+        house,
+        ...(item.identityKey ? { identityKey: item.identityKey } : {})
       });
-    })
-  );
+    });
+
+  assertUniqueDomainEvidenceOccurrenceIds(mappedEvidence);
+  const rootLinkValidation = validateDomainEvidenceRootLinks(mappedEvidence);
+  if (!rootLinkValidation.isValid) {
+    const unresolved = rootLinkValidation.unresolved
+      .map((item) => `${item.sourceOccurrenceId} -> ${item.rootIdentityKey} (${item.code})`)
+      .join('; ');
+    throw new Error(`Career evidence root-link validation failed: ${unresolved}`);
+  }
+
+  return Object.freeze(mappedEvidence);
 }
 
 export function mapCareerRole(
