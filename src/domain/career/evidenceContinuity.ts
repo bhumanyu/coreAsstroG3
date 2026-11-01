@@ -29,7 +29,7 @@ export type EvidenceContinuitySeverity = 'ERROR' | 'WARNING' | 'INFO';
 /**
  * Issue codes for evidence continuity validation.
  *
- * All 12 codes from the specification:
+ * Existing continuity codes plus A03 root-link resolution:
  * 1. DUPLICATE_OCCURRENCE_ID: Multiple evidence records share the same occurrence id
  * 2. UNRESOLVED_SEMANTIC_IDENTITY: Evidence has no resolvable semantic identity (empty/whitespace/sentinel identityKey)
  * 3. MISSING_REQUIRED_REFERENCE: C11 references a required evidence ID that is not present in canonical evidence
@@ -42,6 +42,7 @@ export type EvidenceContinuitySeverity = 'ERROR' | 'WARNING' | 'INFO';
  * 10. ORPHANED_EVIDENCE: Evidence is produced but not referenced by C11 (informational)
  * 11. IDENTITY_KEY_COLLISION: Different semantic facts share the same identityKey (semantic conflict)
  * 12. CONTRADICTORY_DASHA_EVIDENCE: Dasha evidence with contradictory direction/effect combinations (C9 contract violation)
+ * 13. UNRESOLVED_ROOT_EVIDENCE_REFERENCE: A derived occurrence references a missing/non-semantic root identity
  */
 export type EvidenceContinuityIssueCode =
   | 'DUPLICATE_OCCURRENCE_ID'
