@@ -1244,6 +1244,7 @@ function mapCareerWealthFinalSynthesisToFact(
     ...(syn.activationHierarchy ? { activationHierarchy: syn.activationHierarchy } : {}),
     timingStatus: syn.timingStatus,
     divisionalStatus: syn.divisionalStatus,
+    ...(syn.d2AvailabilityReason ? { d2AvailabilityReason: syn.d2AvailabilityReason } : {}),
     manifestationStatus: syn.manifestationStatus,
     confidence: syn.confidence,
     primaryPromise: syn.primaryPromise,
