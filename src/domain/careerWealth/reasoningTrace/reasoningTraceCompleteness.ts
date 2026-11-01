@@ -182,7 +182,7 @@ export function buildReasoningTraceCompleteness(params: {
       ...(item.identityKey ? { semanticIdentityKey: item.identityKey } : {}),
       ...(producerRuleId ? { producerRuleId } : {}),
       ...(sourceRuleId ? { sourceRuleId } : {}),
-      ...(item.sourceRecordId ? { sourceRecordId: item.sourceRecordId } : {}),
+      ...(sourceRecordId ? { sourceRecordId } : {}),
       sourceRecordOccurrenceIds: Object.freeze([...item.relatedEvidenceIds]),
       rootEvidenceIdentityKeys: Object.freeze([...(item.rootEvidenceIds ?? [])]),
       ...(chartInput ? { chartInput } : {})
