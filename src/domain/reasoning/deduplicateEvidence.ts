@@ -231,6 +231,7 @@ export function canonicalToWeighted(
         weight: item.weight,
         statement: item.statement,
         relatedEvidenceIds: item.relatedEvidenceIds,
+        ...(item.rootEvidenceIds.length > 0 ? { rootEvidenceIds: item.rootEvidenceIds } : {}),
         sourceIds: item.sourceIds,
         occurrenceCount: item.occurrenceCount
       })
