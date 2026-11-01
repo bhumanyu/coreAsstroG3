@@ -226,6 +226,7 @@ export function validateDomainEvidenceRootLinks(
         Boolean(identity) && identity !== UNRESOLVED_IDENTITY_SENTINEL
       )
   );
+  const occurrenceIds = new Set(evidence.map((item) => item.id.trim()));
 
   const unresolved: DomainEvidenceRootLinkDiagnostic[] = [];
   for (const item of evidence) {
@@ -236,7 +237,7 @@ export function validateDomainEvidenceRootLinks(
           rootIdentityKey,
           code: 'ROOT_EVIDENCE_SELF_REFERENCE'
         }));
-      } else if (!semanticIdentities.has(rootIdentityKey)) {
+      } else if (occurrenceIds.has(rootIdentityKey) || !semanticIdentities.has(rootIdentityKey)) {
         unresolved.push(Object.freeze({
           sourceOccurrenceId: item.id,
           rootIdentityKey,
