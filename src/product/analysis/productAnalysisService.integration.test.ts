@@ -668,33 +668,22 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       }
     });
 
-    it('invalid asOf: unparseable date → ERROR (pipeline rejects before selection)', async () => {
-      // First, run a baseline analysis to populate lastPipelineState
-      await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false
+    it('invalid asOf: context construction rejects before horoscope or pipeline execution', async () => {
+      const calculateHoroscopeSpy = vi.fn(calculateHoroscope);
+      const runPipelineSpy = vi.fn(runLifeAnalysisProduct);
+      const failFastService = new ProductAnalysisService({
+        calculateHoroscope: calculateHoroscopeSpy,
+        runPipeline: runPipelineSpy
       });
 
-      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
-      expect(report).toBeDefined();
-
-      const selection = getValidMdAdSelection(report!);
-
-      // Pass an unparseable asOf date
-      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+      await expect(failFastService.analyze(CANONICAL_BIRTH_DETAILS, {
         includeAiExplanation: false,
-        asOf: 'not-a-valid-date' as any,
-        selectedPeriod: {
-          mahadashaId: selection.mahadashaId,
-          antardashaId: selection.antardashaId
-        }
-      });
+        asOf: 'not-a-valid-date'
+      })).rejects.toThrow('Invalid asOf timestamp');
 
-      // Assertion (a): Based on tracing createAnalysisContext and resolveAnalysisTemporalState:
-      // - createAnalysisContext catches the normalizeAsOf error and returns the invalid string as-is
-      // - resolveAnalysisTemporalState throws an error if asOf is invalid
-      // Therefore, the pipeline rejects invalid asOf before selection with ERROR status
-      expect(analysis.status).toBe('ERROR');
-      expect(analysis.warnings.length).toBeGreaterThan(0);
+      // Invalid input is rejected before any expensive or stateful analysis work.
+      expect(calculateHoroscopeSpy).not.toHaveBeenCalled();
+      expect(runPipelineSpy).not.toHaveBeenCalled();
     });
 
     it('invalid selection: valid MD + nonexistent AD → INVALID_SELECTION', async () => {
