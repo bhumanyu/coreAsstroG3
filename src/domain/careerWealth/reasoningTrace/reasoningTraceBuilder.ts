@@ -20,6 +20,8 @@ export interface AddEvidenceNodeInput {
   readonly label: string;
   readonly subjectKey?: string;
   readonly domain?: ReasoningNodeDomain;
+  readonly occurrenceId?: string;
+  readonly identityKey?: string;
 }
 
 export interface AddConclusionNodeInput {
@@ -64,7 +66,7 @@ export class ReasoningTraceBuilder {
       domain,
       axis: input.provenance.axis,
       subjectKey,
-      evidenceId: input.provenance.evidenceId
+      evidenceId: input.occurrenceId ?? input.provenance.evidenceId
     });
 
     if (this.nodes.has(nodeId)) {
@@ -76,7 +78,8 @@ export class ReasoningTraceBuilder {
       type: 'EVIDENCE',
       domain,
       axis: input.provenance.axis,
-      evidenceId: input.provenance.evidenceId,
+      evidenceId: input.occurrenceId ?? input.provenance.evidenceId,
+      ...(input.identityKey ? { identityKey: input.identityKey } : {}),
       subjectKey,
       label: input.label
     });
