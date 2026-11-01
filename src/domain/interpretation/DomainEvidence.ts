@@ -47,6 +47,12 @@ export interface DomainEvidence {
   readonly priority: number;
   readonly ruleId?: string;
   readonly relatedEvidenceIds: readonly string[];
+  /**
+   * Canonical semantic identities of root facts this occurrence depends on.
+   * These are identityKey values, never occurrence IDs or producer source IDs.
+   * Empty/absent means this evidence is itself a root or has no declared root links.
+   */
+  readonly rootEvidenceIds?: readonly string[];
   readonly notes?: string;
   readonly provenance?: EvidenceProvenance;
   readonly timing?: {
@@ -160,6 +166,61 @@ export function tryResolveC11SemanticIdentity(e: DomainEvidence): string | null 
   return null;
 }
 
+
+/**
+ * Validates and canonicalizes root semantic references.
+ *
+ * Root references use identityKey namespace. They must not be confused with
+ * DomainEvidence.id (occurrence identity) or relatedEvidenceIds (producer provenance).
+ */
+function normalizeRootEvidenceIds(
+  rootEvidenceIds: readonly string[] | undefined,
+  occurrenceId: string
+): readonly string[] {
+  if (rootEvidenceIds === undefined) return Object.freeze([]);
+
+  const normalized = rootEvidenceIds.map((rootId) => {
+    const value = rootId?.trim();
+    if (!value) {
+      throw new Error(`createDomainEvidence: rootEvidenceIds must contain non-empty semantic identity keys (occurrence: ${occurrenceId})`);
+    }
+    if (value === UNRESOLVED_IDENTITY_SENTINEL) {
+      throw new Error(`createDomainEvidence: rootEvidenceIds cannot contain the unresolved identity sentinel (occurrence: ${occurrenceId})`);
+    }
+    if (value === occurrenceId) {
+      throw new Error(`createDomainEvidence: rootEvidenceIds cannot reference the occurrence id (occurrence: ${occurrenceId})`);
+    }
+    return value;
+  });
+
+  const unique = new Set(normalized);
+  if (unique.size !== normalized.length) {
+    throw new Error(`createDomainEvidence: rootEvidenceIds must be unique (occurrence: ${occurrenceId})`);
+  }
+
+  return Object.freeze([...unique].sort((a, b) => a.localeCompare(b)));
+}
+
+/**
+ * Fails closed when one occurrence ID is emitted more than once in a collection.
+ * Multiple occurrences of one semantic fact are valid only when their IDs differ.
+ */
+export function assertUniqueDomainEvidenceOccurrenceIds(
+  evidence: readonly DomainEvidence[]
+): void {
+  const seen = new Set<string>();
+  for (const item of evidence) {
+    const occurrenceId = item.id?.trim();
+    if (!occurrenceId) {
+      throw new Error('DomainEvidence occurrence ID must be non-empty');
+    }
+    if (seen.has(occurrenceId)) {
+      throw new Error(`Duplicate DomainEvidence occurrence ID detected: ${occurrenceId}`);
+    }
+    seen.add(occurrenceId);
+  }
+}
+
 export function createDomainEvidence(
   evidence: Partial<DomainEvidence> & {
     id: string;
@@ -183,6 +244,8 @@ export function createDomainEvidence(
     throw new Error(`createDomainEvidence: identityKey cannot be the sentinel "${UNRESOLVED_IDENTITY_SENTINEL}" (reserved)`);
   }
 
+  const rootEvidenceIds = normalizeRootEvidenceIds(evidence.rootEvidenceIds, trimmedId);
+
   return Object.freeze({
     id: trimmedId,
     sourceType: evidence.sourceType,
@@ -197,6 +260,7 @@ export function createDomainEvidence(
     relatedEvidenceIds: Object.freeze([
       ...(evidence.relatedEvidenceIds ?? [])
     ]),
+    ...(rootEvidenceIds.length > 0 ? { rootEvidenceIds } : {}),
     ...(evidence.ruleId ? { ruleId: evidence.ruleId } : {}),
     ...(evidence.notes ? { notes: evidence.notes } : {}),
     ...(evidence.provenance ? { provenance: Object.freeze(evidence.provenance) } : {}),
