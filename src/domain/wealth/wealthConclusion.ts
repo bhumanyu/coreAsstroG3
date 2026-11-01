@@ -304,7 +304,7 @@ export function buildD2Statement(
   relationship: VargaRelationship
 ): string {
   if (relationship === 'UNAVAILABLE' || d2Evidence.length === 0) {
-    return 'D2 Hora divisional analysis unavailable or neutral.';
+    return 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
   }
   if (relationship === 'CONFIRMS') {
     return 'D2 Hora confirms liquid wealth potential and resource accumulation.';
