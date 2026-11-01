@@ -2835,7 +2835,9 @@ describe('Wealth period activation contracts', () => {
     const mapped = linkWealthEvidence(buildWealthEvidence(rawEvidence));
     const venusMapped = mapped.find((item) => item.ruleId === 'WEALTH_VENUS_KARAKA_001');
     const legacyMapped = mapped.find((item) => item.ruleId === legacyRaw?.ruleId);
-    expect(venusMapped?.provenance?.evidenceId).toBeDefined();
+    expect(venusMapped?.provenance?.evidenceId).toBe(venusMapped?.id);
+    expect(venusMapped?.identityKey).toBeDefined();
+    expect(venusMapped?.identityKey).not.toBe(venusMapped?.id);
     expect(venusMapped?.id).toBe(venusRaw?.id);
     expect(legacyMapped?.id).toBe(legacyRaw?.id);
 
