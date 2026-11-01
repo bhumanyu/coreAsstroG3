@@ -1753,7 +1753,7 @@ describe('WealthDomainInterpreterV2', () => {
 
       const completeness = calculateWealthDataCompleteness(evidence);
       expect(completeness.primaryFactors).toBe('AVAILABLE');
-      expect(completeness.d2).toBe('AVAILABLE');
+      expect(completeness.d2).toBe('UNAVAILABLE');
       expect(completeness.dasha).toBe('UNAVAILABLE');
     });
 
