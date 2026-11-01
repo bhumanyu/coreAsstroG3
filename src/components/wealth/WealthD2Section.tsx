@@ -8,9 +8,10 @@ export interface WealthD2SectionProps {
 }
 
 export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
-  const formattedRelationship = formatD2Relationship(d2.relationship);
-  const badgeClass = getD2RelationshipBadgeClass(d2.relationship);
-  const isAvailable = d2.relationship !== 'UNAVAILABLE';
+  // UI is fail-closed too: no upstream view-model declaration can mark D2 available.
+  const formattedRelationship = formatD2Relationship('UNAVAILABLE');
+  const badgeClass = getD2RelationshipBadgeClass('UNAVAILABLE');
+  const isAvailable = false;
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -52,7 +53,7 @@ export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            {d2.statement || 'Hora (D2) divisional relationship data is unavailable for this calculation.'}
+            {d2.statement || 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'}
           </span>
         </div>
       )}
