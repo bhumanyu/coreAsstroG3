@@ -134,6 +134,7 @@ export interface WealthConclusionData {
   readonly mainStrengths: readonly string[];
   readonly mainChallenges: readonly string[];
   readonly d2Relationship: VargaRelationship;
+  readonly d2AvailabilityReason?: string;
   readonly accumulationDashaEffect: TimingActivationEffect;
   readonly gainsDashaEffect: TimingActivationEffect;
   readonly fortuneDashaEffect: TimingActivationEffect;
