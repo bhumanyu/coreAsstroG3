@@ -73,7 +73,7 @@ describe('careerEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
   });
 
   describe('Concern 12: Migrated producer CAREER_6L_10L_LINK_001 canonical provenance', () => {
-    it('emits evidence.id === evidence.provenance.evidenceId with provenance.ruleId and order-independent id', () => {
+    it('preserves occurrence IDs and derives an order-independent semantic identityKey', () => {
       const rawEvidenceMarsSaturn: ThemeInterpretationEvidence<CareerEvidenceFamily>[] = [
         {
           id: 'raw-link-mars-saturn',
@@ -113,11 +113,15 @@ describe('careerEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
       expect(mappedMarsSaturn.provenance?.ruleId).toBe('CAREER_6L_10L_LINK_001');
       expect(mappedSaturnMars.provenance?.ruleId).toBe('CAREER_6L_10L_LINK_001');
 
-      // 3. Core determinism guarantee: id is identical when input planets array order is reversed
-      expect(mappedMarsSaturn.id).toBe(mappedSaturnMars.id);
-      expect(mappedMarsSaturn.id).toBe(
-        'CW-CAREER-NATAL-D1-CAREER_6L_10L_LINK_001-L6_L10_LINK-SUPPORT-PRIMARY'
+      // 3. Occurrence IDs preserve producer identity; semantic identity is stable across planet order.
+      expect(mappedMarsSaturn.id).toBe('raw-link-mars-saturn');
+      expect(mappedSaturnMars.id).toBe('raw-link-saturn-mars');
+      expect(mappedMarsSaturn.id).not.toBe(mappedSaturnMars.id);
+      expect(mappedMarsSaturn.identityKey).toBe(mappedSaturnMars.identityKey);
+      expect(mappedMarsSaturn.identityKey).toBe(
+        'CW-CAREER-NATAL-D1-CAREER_6L_10L_LINK_001-L6_L10_LINK'
       );
+      expect(mappedMarsSaturn.identityKey).not.toBe(mappedMarsSaturn.id);
     });
   });
 
