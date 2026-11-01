@@ -669,7 +669,9 @@ export function buildWealthReasoningTraceGraph(params: {
       const evNodeId = traceBuilder.addEvidenceNode({
         provenance: e.provenance,
         label: e.statement,
-        subjectKey: e.provenance.ruleId
+        subjectKey: e.provenance.ruleId,
+        occurrenceId: e.id,
+        identityKey: e.identityKey
       });
       const targetNodeId =
         e.provenance.axis === 'NATAL'
@@ -771,9 +773,7 @@ export function buildWealthReasoningTraceGraph(params: {
 
   const graph = traceBuilder.build();
   validateReasoningTrace(graph);
-  validateEvidenceNodes(graph, new Set(params.evidence.flatMap((e) =>
-    e.identityKey ? [e.id, e.identityKey] : [e.id]
-  )));
+  validateEvidenceNodes(graph, new Set(params.evidence.map(e => e.id)));
   if (!params.synthesisRuleId || !params.synthesisEvidenceReferences) return graph;
   return Object.freeze({
     ...graph,
