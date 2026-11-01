@@ -10,9 +10,13 @@ export interface ReasoningVargaSectionProps {
 export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ varga }) => {
   const chartName = varga.chart === 'D2' ? 'Hora (D2)' : 'Dasamsa (D10)';
   const domainTarget = varga.chart === 'D2' ? 'liquid asset accumulation' : 'vocational capacity';
-  const formattedRelationship = formatVargaRelationship(varga.relationship);
-  const badgeClass = getVargaRelationshipBadgeClass(varga.relationship);
-  const isAvailable = varga.relationship !== 'UNAVAILABLE';
+  const relationship = varga.chart === 'D2' ? 'UNAVAILABLE' : varga.relationship;
+  const statement = varga.chart === 'D2'
+    ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+    : varga.statement;
+  const formattedRelationship = formatVargaRelationship(relationship);
+  const badgeClass = getVargaRelationshipBadgeClass(relationship);
+  const isAvailable = relationship !== 'UNAVAILABLE';
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -22,7 +26,7 @@ export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ va
             <Layers className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{chartName} Divisional Confirmation</h2>
+            <h2 className="text-base font-semibold text-slate-100">{chartName} {varga.chart === 'D2' ? 'Availability' : 'Divisional Confirmation'}</h2>
             <p className="text-xs text-slate-400">Harmonic verification of {domainTarget} against natal indicators</p>
           </div>
         </div>
@@ -38,9 +42,9 @@ export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ va
 
       {isAvailable ? (
         <div className="space-y-3">
-          {varga.statement && (
+          {statement && (
             <p className="text-xs text-slate-300 leading-relaxed font-sans">
-              {varga.statement}
+              {statement}
             </p>
           )}
           <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
