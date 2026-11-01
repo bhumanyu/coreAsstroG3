@@ -1324,7 +1324,8 @@ export function assertWealthPeriodActivationContract(
     }
     if (occurrence.provenance && (
       occurrence.provenance.domain !== 'WEALTH' ||
-      occurrence.provenance.evidenceId !== (occurrence.identityKey ?? occurrence.id) ||
+      occurrence.provenance.evidenceId !== occurrence.id ||
+      (occurrence.identityKey !== undefined && occurrence.identityKey === occurrence.id) ||
       (occurrence.ruleId !== undefined && occurrence.provenance.ruleId !== occurrence.ruleId)
     )) {
       throw new WealthPeriodActivationContractError(
