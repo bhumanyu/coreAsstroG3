@@ -4,6 +4,8 @@ import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { createAnalysisContext } from './analysisContextFactory';
 import { resolveAnalysisTemporalState } from './resolveAnalysisTemporalState';
 import { Planet } from '../../types';
+import { runLifeAnalysisProduct } from '../../product/life-analysis/lifeAnalysisProductService';
+import { STAGE1_GOLDEN_HOROSCOPE } from '../../integration/stage1/stage1GoldenFixture';
 
 describe('resolveAnalysisTemporalState Unit Test Suite', () => {
   const testMethodology = {
@@ -160,4 +162,107 @@ describe('resolveAnalysisTemporalState Unit Test Suite', () => {
       state2.dashaInterpretation?.current?.mahadasha.planet
     );
   });
+  
+  it('A05: keeps the full Dasha timeline while replacing only active current for the requested asOf', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '1990-01-01T00:00:00.000Z');
+    const originalTimeline = horoscope.dashaInterpretation?.mahadashas;
+    const originalEmbeddedCurrent = horoscope.dashaInterpretation?.current;
+    const context = createAnalysisContext({
+      asOf: '2024-06-15T00:00:00.000Z',
+      methodology: testMethodology
+    });
+
+    const state = resolveAnalysisTemporalState(horoscope, context);
+
+    expect(state.dashaInterpretation).toBeDefined();
+    expect(state.dashaInterpretation?.current?.mahadasha.planet).toBe(Planet.JUPITER);
+    expect(state.dashaInterpretation?.mahadashas).toBe(originalTimeline);
+    expect(horoscope.dashaInterpretation?.current).toBe(originalEmbeddedCurrent);
+    expect(horoscope.dashaInterpretation?.mahadashas).toBe(originalTimeline);
+  });
+
+  it('A05: treats missing canonical Vimshottari data as unavailable despite an embedded active Dasha', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '1990-01-01T00:00:00.000Z');
+    const brokenHoroscope = {
+      ...horoscope,
+      vimshottari: undefined
+    };
+    const context = createAnalysisContext({
+      asOf: '2024-06-15T00:00:00.000Z',
+      methodology: testMethodology
+    });
+
+    const state = resolveAnalysisTemporalState(brokenHoroscope, context);
+
+    expect(state.dashaInterpretation).toBeUndefined();
+    expect(brokenHoroscope.dashaInterpretation?.current).toBeDefined();
+  });
+
+  it('A05: recalculates all three active levels from the requested instant', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const firstMahadasha = horoscope.vimshottari?.mahadashas[0];
+    const firstAntardasha = firstMahadasha?.antardashas[0];
+    const firstPratyantardasha = firstAntardasha?.pratyantardashas?.[0];
+    expect(firstMahadasha).toBeDefined();
+    expect(firstAntardasha).toBeDefined();
+    expect(firstPratyantardasha).toBeDefined();
+    if (!firstMahadasha || !firstAntardasha || !firstPratyantardasha) return;
+
+    const context = createAnalysisContext({
+      asOf: firstPratyantardasha.start,
+      methodology: testMethodology
+    });
+    const state = resolveAnalysisTemporalState(horoscope, context);
+    const current = state.dashaInterpretation?.current;
+
+    expect(current?.mahadasha.start).toBe(firstMahadasha.start);
+    expect(current?.antardasha.start).toBe(firstAntardasha.start);
+    expect(current?.pratyantardasha?.start).toBe(firstPratyantardasha.start);
+    expect(state.asOf).toBe(context.asOf);
+  });
+
+  it('A05: preserves timeline/report availability metadata and exposes explicit unavailability on failed recomputation', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '1990-01-01T00:00:00.000Z');
+    const brokenHoroscope = { ...horoscope, vimshottari: undefined };
+    const context = createAnalysisContext({
+      asOf: '2024-06-15T00:00:00.000Z',
+      methodology: testMethodology
+    });
+    const state = resolveAnalysisTemporalState(brokenHoroscope, context);
+    expect(state.asOf).toBe(context.asOf);
+    expect(state.dashaInterpretation).toBeUndefined();
+    expect(brokenHoroscope.dashaInterpretation?.availability).toBe('AVAILABLE');
+  });
+
+  it('A05: product pipeline passes one canonical temporalState instance to Career, Wealth and AI', async () => {
+    const { vi } = await import('vitest');
+    const careerModule = await import('../../domain/career/CareerDomainInterpreterV2');
+    const wealthModule = await import('../../domain/wealth/WealthDomainInterpreterV2');
+    const aiModule = await import('../../ai/product/aiExplanationService');
+    const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
+    const wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
+    const aiSpy = vi.spyOn(aiModule, 'runAiExplanation');
+    try {
+      const context = createAnalysisContext({
+        asOf: '2024-06-15T00:00:00.000Z',
+        methodology: testMethodology
+      });
+      const result = await runLifeAnalysisProduct({
+        horoscope: STAGE1_GOLDEN_HOROSCOPE,
+        context,
+        includeAiExplanation: true
+      });
+      expect(result.status).toMatch(/READY|PARTIAL/);
+      const canonical = result.temporalState;
+      expect(canonical).toBeDefined();
+      expect(careerSpy.mock.calls[0]?.[1].temporalState).toBe(canonical);
+      expect(wealthSpy.mock.calls[0]?.[1].temporalState).toBe(canonical);
+      expect(aiSpy.mock.calls[0]?.[0].temporalState).toBe(canonical);
+    } finally {
+      careerSpy.mockRestore();
+      wealthSpy.mockRestore();
+      aiSpy.mockRestore();
+    }
+  });
+
 });
