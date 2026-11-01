@@ -683,7 +683,7 @@ export interface WealthDimensionManifestationSynthesisFact {
   readonly natalSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly dashaSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly transitSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
-  readonly d2Support: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly d2Support: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'UNAVAILABLE';
   readonly factors: readonly WealthManifestationFactorFact[];
   readonly summary: string;
 }
