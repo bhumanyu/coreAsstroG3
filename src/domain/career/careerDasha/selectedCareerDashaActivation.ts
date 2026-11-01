@@ -69,6 +69,26 @@ function sameSortedIds(left: readonly string[], right: readonly string[]): boole
     sortedLeft.every((id, index) => id === sortedRight[index]);
 }
 
+function candidateSourceEvidenceOwnershipValid(
+  candidate: CareerExpressionCanonicalCandidate,
+  mechanismCandidates: readonly CareerMechanismCandidate[]
+): boolean {
+  const mechanismById = new Map(
+    mechanismCandidates.map((mechanism) => [mechanism.candidateId, mechanism])
+  );
+  return candidate.evidence.every((item) => {
+    const mechanism = mechanismById.get(item.sourceMechanismId);
+    if (!mechanism) return false;
+
+    // Candidate construction derives provenance.evidenceIds from evidence[].evidenceId.
+    const mechanismEvidenceIds = new Set(mechanism.evidence.map((evidence) => evidence.evidenceId));
+    const provenanceEvidenceIds = new Set(mechanism.provenance.evidenceIds);
+    return item.sourceEvidenceIds.every((sourceEvidenceId) =>
+      mechanismEvidenceIds.has(sourceEvidenceId) && provenanceEvidenceIds.has(sourceEvidenceId)
+    );
+  });
+}
+
 function hasCandidateScopedMechanismProvenance(
   expression: CareerExpression,
   candidate: CareerExpressionCanonicalCandidate,
@@ -108,16 +128,8 @@ function hasCandidateScopedMechanismProvenance(
   })).sort((left, right) => left.evidenceId.localeCompare(right.evidenceId));
   return JSON.stringify(actualEvidence) === JSON.stringify(expectedEvidence) &&
     expectedEvidence.every((item) => {
-      if (!candidate.sourceMechanismIds.includes(item.sourceMechanismId)) return false;
-      const mechanism = mechanismById.get(item.sourceMechanismId);
-      if (!mechanism) return false;
-
-      // Candidate construction derives provenance.evidenceIds from evidence[].evidenceId.
-      const mechanismEvidenceIds = new Set(mechanism.evidence.map((evidence) => evidence.evidenceId));
-      const provenanceEvidenceIds = new Set(mechanism.provenance.evidenceIds);
-      return item.sourceEvidenceIds.every((sourceEvidenceId) =>
-        mechanismEvidenceIds.has(sourceEvidenceId) && provenanceEvidenceIds.has(sourceEvidenceId)
-      );
+      return candidate.sourceMechanismIds.includes(item.sourceMechanismId) &&
+        mechanismById.has(item.sourceMechanismId);
     });
 }
 
@@ -259,6 +271,7 @@ export type SelectedCareerDashaActivationError =
   | 'INVALID_CANDIDATE_EVIDENCE_ID'
   | 'DUPLICATE_SOURCE_MECHANISM_ID'
   | 'INVALID_SOURCE_MECHANISM_ID'
+  | 'INVALID_SOURCE_EVIDENCE_OWNERSHIP'
   | 'COVERAGE_INVARIANT_VIOLATED';
 
 export type SelectedCareerDashaActivationResult =
@@ -535,6 +548,9 @@ export function buildSelectedCareerDashaActivation(params: {
         !candidate.sourceMechanismIds.includes(item.sourceMechanismId)
       )) {
         return { ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' };
+      }
+      if (!candidateSourceEvidenceOwnershipValid(candidate, mechanismCandidates)) {
+        return { ok: false, error: 'INVALID_SOURCE_EVIDENCE_OWNERSHIP' };
       }
     }
 

@@ -14,11 +14,11 @@ Any future rule must conform to [`CareerMechanismResolutionRule`](../../../src/d
 
 ## Current fail-closed status
 
-**Status: PENDING CONFIRMATION for all five families.** The artifact has no durable reference to an owner approval message, issue, or commit, so the prior status-only conversational record is not treated as an auditable approval. No mechanism mapping, family-specific evidence contract, or resolver rule is approved; the existing resolver suite continues to pin the fail-closed behavior. No family is activated.
+**Status: All five families remain inactive pending explicit owner confirmation; no deferral decision is recorded as approved.** There is no durable reference to an owner approval message, issue, or commit. No mechanism mapping, family-specific evidence contract, or resolver rule is approved; the existing resolver suite continues to pin the fail-closed behavior.
 
 `careerMechanismResolverRules.ts` documents the staged per-family implementation template: explicit rule ID and pathway, canonical establishing-edge predicates with the provenance intersection invariant, existing `PatternLevelEstablishingEvidence`/source firewall, existing mechanism types only, deterministic precedence/deduplication, and the required family-specific tests. The template is documentation only; no rule is instantiated or registered.
 
-The owner decision is to keep each family deferred. The mapping and evidence-contract fields below remain unapproved and `TBD`; they must be completed and frozen before any future activation in a separate per-family PR. No empty placeholder rule is permitted.
+No owner decision has been recorded as approved for any family. The mapping and evidence-contract fields below remain unapproved and `TBD`; they must be completed and frozen before any future activation in a separate per-family PR. No empty placeholder rule is permitted.
 
 ## Owner decision register
 
@@ -26,7 +26,7 @@ For each family below, complete every owner-decision field. Outputs must be sele
 
 ### CAREER_HOUSE_NETWORK family
 
-**Decision status: PENDING CONFIRMATION.**
+**Status: Inactive pending explicit owner confirmation; no deferral decision is recorded as approved.**
 
 Known classifications:
 
@@ -49,7 +49,7 @@ Known classifications:
 
 ### KENDRA_TRIKONA family
 
-**Decision status: PENDING CONFIRMATION.**
+**Status: Inactive pending explicit owner confirmation; no deferral decision is recorded as approved.**
 
 Known classifications emitted by `kendraTrikonaDetector.ts`:
 
@@ -67,7 +67,7 @@ Known classifications emitted by `kendraTrikonaDetector.ts`:
 
 ### UPACHAYA_PROGRESSION family
 
-**Decision status: PENDING CONFIRMATION.**
+**Status: Inactive pending explicit owner confirmation; no deferral decision is recorded as approved.**
 
 Known classification:
 
@@ -89,7 +89,7 @@ The chain is recorded as an existing candidate only; the owner must confirm whet
 
 ### PARIVARTANA_YOGA family
 
-**Decision status: PENDING CONFIRMATION.**
+**Status: Inactive pending explicit owner confirmation; no deferral decision is recorded as approved.**
 
 Known sub-types:
 
@@ -108,7 +108,7 @@ Known sub-types:
 
 ### CAREER_YOGA_STRUCTURE family
 
-**Decision status: PENDING CONFIRMATION.**
+**Status: Inactive pending explicit owner confirmation; no deferral decision is recorded as approved.**
 
 Known classification from `careerYogaDetector.ts`:
 
@@ -126,4 +126,4 @@ Known classification from `careerYogaDetector.ts`:
 
 | Owner | Decision date | All family mappings and evidence contracts confirmed? | Status |
 |---|---|---|---|
-| Not recorded | — | No; an auditable approval reference is required | PENDING CONFIRMATION for all five families |
+| Not recorded | — | No; an auditable approval reference is required | All five families inactive pending explicit owner confirmation; no deferral decision is recorded as approved |

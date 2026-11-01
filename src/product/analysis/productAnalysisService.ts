@@ -322,6 +322,7 @@ export class ProductAnalysisService {
             error === 'INVALID_CANDIDATE_EVIDENCE_ID' ||
             error === 'DUPLICATE_SOURCE_MECHANISM_ID' ||
             error === 'INVALID_SOURCE_MECHANISM_ID' ||
+            error === 'INVALID_SOURCE_EVIDENCE_OWNERSHIP' ||
             error === 'COVERAGE_INVARIANT_VIOLATED'
           ) {
             return 'SYNTHESIS_FAILED';
@@ -527,6 +528,7 @@ export class ProductAnalysisService {
         error === 'INVALID_CANDIDATE_EVIDENCE_ID' ||
         error === 'DUPLICATE_SOURCE_MECHANISM_ID' ||
         error === 'INVALID_SOURCE_MECHANISM_ID' ||
+        error === 'INVALID_SOURCE_EVIDENCE_OWNERSHIP' ||
         error === 'COVERAGE_INVARIANT_VIOLATED'
       ) {
         return 'SYNTHESIS_FAILED';

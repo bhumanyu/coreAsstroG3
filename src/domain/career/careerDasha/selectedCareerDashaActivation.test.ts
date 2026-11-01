@@ -4991,7 +4991,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       }
     });
 
-    it('leaves evidence unresolved when its source mechanism does not own the referenced evidence ID', () => {
+    it('rejects caller-matching canonical evidence when its source mechanism does not own the referenced ID', () => {
       const evidence = Object.freeze({
         evidenceId: 'CANONICAL-EVIDENCE',
         sourceMechanismId: 'MECH-1',
@@ -5003,7 +5003,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       const callerAnalysis = makeExpressionAnalysisWithLinkedEvidence();
       const callerExpression = Object.freeze({
         ...callerAnalysis.expressions[0],
-        supportingEvidenceIds: Object.freeze(['UNRELATED-EVIDENCE'])
+        supportingEvidenceIds: Object.freeze(['CANONICAL-EVIDENCE'])
       });
       const mechanismCandidate: CareerMechanismCandidate = Object.freeze({
         candidateId: 'MECH-1',
@@ -5040,14 +5040,10 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         mechanismCandidates: Object.freeze([mechanismCandidate])
       });
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.expressionActivations).toHaveLength(0);
-        expect(result.value.candidateCoverage[0].representationStatus).toBe('UNRESOLVED');
-      }
+      expect(result).toEqual({ ok: false, error: 'INVALID_SOURCE_EVIDENCE_OWNERSHIP' });
     });
 
-    it('rejects candidate source mechanism IDs absent from supplied mechanism candidates before caller matching', () => {
+    it('rejects dangling candidate source mechanism IDs before caller matching', () => {
       const evidence = Object.freeze({
         evidenceId: 'CANONICAL-EVIDENCE',
         sourceMechanismId: 'MISSING-MECH',
