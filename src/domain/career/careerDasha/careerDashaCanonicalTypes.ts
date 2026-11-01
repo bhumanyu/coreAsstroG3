@@ -122,6 +122,7 @@ export interface CareerDashaCanonicalAnalysis {
   readonly ad: CareerDashaCanonicalPeriod;
   readonly pd: CareerDashaCanonicalPeriod;
   readonly evidence: readonly CareerDashaCanonicalEvidence[];
+  /** Aggregate canonical natal identityKey references; never occurrence or producer IDs. */
   readonly rootEvidenceIds: readonly string[];
   readonly statement: string;
   readonly hierarchy?: CareerDashaActivationHierarchy;
