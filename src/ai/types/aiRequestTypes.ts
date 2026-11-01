@@ -23,4 +23,6 @@ export interface AiRequest {
    * When present, should contain deduplicated evidence IDs from the context.
    */
   readonly traceabilityIds?: readonly string[];
+  /** Version of the explanation prompt contract consumed by the provider. */
+  readonly promptVersion?: string;
 }
