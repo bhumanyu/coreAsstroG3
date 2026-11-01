@@ -48,6 +48,8 @@ describe('Stage-1 AI Projection Integration', () => {
     const d2Conf = projectedWealth.vargaConfirmations.find((v) => v.varga === 'D2');
     expect(d2Conf).toBeDefined();
     expect(d2Conf?.relationship).toBe('UNAVAILABLE');
+    expect(d2Conf?.availability).toBe('UNAVAILABLE');
+    expect(d2Conf?.unavailabilityReason).toContain('independent validation');
     const wealthConclusionData = projectedWealth.conclusion.conclusionData as Record<string, unknown> | undefined;
     expect(wealthConclusionData?.d2AvailabilityReason).toBeTruthy();
   });
@@ -133,6 +135,7 @@ describe('Stage-1 AI Projection Integration', () => {
     // Wealth D2 is UNAVAILABLE, not fabricated
     const wealthD2 = projectedWealth.vargaConfirmations.find((v) => v.varga === 'D2');
     expect(wealthD2?.relationship).toBe('UNAVAILABLE');
+    expect(wealthD2?.availability).toBe('UNAVAILABLE');
     expect(projectedWealth.dashaActivation.effect).toBe('INSUFFICIENT_DATA');
   });
 
