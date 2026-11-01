@@ -123,10 +123,13 @@ export function projectDomainInterpretationForAi(
       interpretation.vargaConfirmations.map((v) =>
         Object.freeze({
           varga: v.varga,
-          relationship: v.relationship,
-          ...(v.availability ? { availability: v.availability } : {}),
-          ...(v.unavailabilityReason ? { unavailabilityReason: v.unavailabilityReason } : {}),
-          statement: v.statement
+          relationship: v.varga === 'D2' ? 'UNAVAILABLE' : v.relationship,
+          ...(v.varga === 'D2'
+            ? { availability: 'UNAVAILABLE' as const, unavailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.' }
+            : v.availability ? { availability: v.availability } : {}),
+          statement: v.varga === 'D2'
+            ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+            : v.statement
         })
       )
     ),
