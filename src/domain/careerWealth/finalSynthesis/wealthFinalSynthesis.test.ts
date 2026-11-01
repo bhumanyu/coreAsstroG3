@@ -277,7 +277,13 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.d2Evidence).toHaveLength(1);
       expect(result.d2Evidence![0].id).toBe('D2-EV-1');
       expect(result.evidenceIds).toContain('NATAL-W-1');
-      expect(result.evidenceIds).toContain('D2-EV-1');
+      expect(result.evidenceIds).not.toContain('D2-EV-1');
+      expect(result.divisionalStatus).toBe('UNAVAILABLE');
+      expect(result.d2AvailabilityReason).toContain('D2 calculation and interpretation');
+      for (const dimension of Object.values(result.dimensions ?? {})) {
+        expect(dimension.divisionalStatus).toBe('UNAVAILABLE');
+        expect(dimension.divisionalEffect).toBe('UNAVAILABLE');
+      }
       expect(result.ruleIds).toContain('CW-05-WEALTH-SYNTHESIS');
       expect(result.ruleIds).toContain('NATAL-W-R1');
       expect(result.ruleIds).toContain('D2-R-1');
