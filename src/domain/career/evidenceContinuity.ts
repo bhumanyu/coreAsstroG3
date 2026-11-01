@@ -57,7 +57,8 @@ export type EvidenceContinuityIssueCode =
   | 'ORPHANED_EVIDENCE'
   | 'IDENTITY_KEY_COLLISION'
   | 'CONTRADICTORY_DASHA_EVIDENCE'
-  | 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE';
+  | 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE'
+  | 'ROOT_EVIDENCE_CYCLE';
 
 /**
  * Individual evidence continuity issue.
@@ -162,7 +163,9 @@ export function validateEvidenceContinuity(
 
   for (const unresolved of rootEvidenceValidation.unresolved) {
     issues.push({
-      code: 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE',
+      code: unresolved.code === 'ROOT_EVIDENCE_CYCLE'
+        ? 'ROOT_EVIDENCE_CYCLE'
+        : 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE',
       severity: 'ERROR',
       evidenceId: unresolved.sourceOccurrenceId,
       identityKey: unresolved.rootIdentityKey,
@@ -438,7 +441,7 @@ export function validateEvidenceContinuity(
 
   // Calculate counts
   const provenanceIssueCount = issues.filter(
-    i => i.code === 'MISSING_SOURCE_REFERENCE' || i.code === 'MISSING_RULE_PROVENANCE' || i.code === 'PROVENANCE_DISAGREEMENT' || i.code === 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE'
+    i => i.code === 'MISSING_SOURCE_REFERENCE' || i.code === 'MISSING_RULE_PROVENANCE' || i.code === 'PROVENANCE_DISAGREEMENT' || i.code === 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE' || i.code === 'ROOT_EVIDENCE_CYCLE'
   ).length;
 
   const duplicateCountingRiskCount = issues.filter(
