@@ -40,6 +40,7 @@ describe('careerIntelligenceProjection', () => {
         confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -126,6 +127,7 @@ describe('careerIntelligenceProjection', () => {
         confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -170,6 +172,7 @@ describe('careerIntelligenceProjection', () => {
         confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -214,6 +217,7 @@ describe('careerIntelligenceProjection', () => {
         confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -258,6 +262,7 @@ describe('careerIntelligenceProjection', () => {
         confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -298,6 +303,7 @@ describe('careerIntelligenceProjection', () => {
         confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -342,6 +348,7 @@ describe('careerIntelligenceProjection', () => {
         confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -386,6 +393,7 @@ describe('careerIntelligenceProjection', () => {
         confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -435,6 +443,7 @@ describe('careerIntelligenceProjection', () => {
             confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -521,6 +530,7 @@ describe('careerIntelligenceProjection', () => {
             confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -581,6 +591,7 @@ describe('careerIntelligenceProjection', () => {
             confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
@@ -1225,6 +1236,7 @@ describe('careerIntelligenceProjection', () => {
             confidence: 'HIGH' as CareerFinalConfidence,
         confidenceCoverage: {
           status: 'COMPLETE',
+          quality: 'HIGH',
           layers: [],
           missingRequiredLayers: [],
           missingSupportingLayers: [],
