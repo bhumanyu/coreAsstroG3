@@ -91,7 +91,7 @@ export function evaluateWealthDimension(
   // Collect canonical evidence IDs (identityKey) for dimension result
   // sourceIds remain available in reasoningTrace for occurrence-level provenance
   const dimensionEvidenceIds = Array.from(
-    new Set(deduplicatedDimEvidence.map((e) => e.evidenceId))
+    new Set(deduplicatedDimEvidence.map((e) => e.identityKey))
   );
 
   const mdTiming: DashaTimingEvidence = dashaTimings?.md ?? {
@@ -325,7 +325,7 @@ export function evaluateWealthReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.layer === 'PRIMARY_PROMISE')
-        .map((e) => e.evidenceId)
+        .map((e) => e.identityKey)
     )
   );
 
