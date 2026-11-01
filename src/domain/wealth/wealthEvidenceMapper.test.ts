@@ -288,11 +288,40 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
         rootEvidenceIds: ['ROOT_SEMANTIC_KEY']
       };
 
-      const [mapped] = buildWealthEvidence([rawItemWithIdentityKey]);
+      const rootEvidence: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'ROOT_OCCURRENCE_ID',
+        ruleId: 'WEALTH_ROOT_FACT',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: 'Canonical root evidence',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2],
+        identityKey: 'ROOT_SEMANTIC_KEY'
+      };
+      const [, mapped] = buildWealthEvidence([rootEvidence, rawItemWithIdentityKey]);
 
       expect(mapped.id).toBe('RAW_OCCURRENCE_ID_123');
       expect(mapped.identityKey).toBe('SEMANTIC_KEY_ABC');
       expect(mapped.rootEvidenceIds).toEqual(['ROOT_SEMANTIC_KEY']);
+    });
+
+    it('rejects a Wealth root link that does not resolve to a semantic identity', () => {
+      const invalidRootReference: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'WEALTH_DERIVED_OCCURRENCE',
+        ruleId: 'WEALTH_DERIVED_RULE',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: 'Derived evidence with unresolved root',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2],
+        identityKey: 'WEALTH_DERIVED_SEMANTIC',
+        rootEvidenceIds: ['MISSING_ROOT_SEMANTIC_ID']
+      };
+
+      expect(() => buildWealthEvidence([invalidRootReference]))
+        .toThrow(/Wealth evidence root-link validation failed/);
     });
 
     it('uses item.id as id when identityKey is absent', () => {
