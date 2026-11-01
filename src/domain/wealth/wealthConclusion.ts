@@ -127,7 +127,6 @@ export function buildWealthConclusionData(params: {
   readonly overallStatus: WealthDimensionStatus;
   readonly dimensions: readonly WealthDimensionInterpretation[];
   readonly d2Relationship: VargaRelationship;
-  readonly d2AvailabilityReason?: string;
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
   readonly evidence: readonly DomainEvidence[];
