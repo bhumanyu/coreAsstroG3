@@ -1034,6 +1034,10 @@ describe('A07 — C11 confidence coverage and provenance policy', () => {
       ...completeInput,
       natalDirection: 'CHALLENGE',
       natalStrength: 'WEAK',
+      dashaDirection: 'CHALLENGE',
+      d10Direction: 'CHALLENGE',
+      expressionDirection: 'NEUTRAL',
+      transitDirection: 'CHALLENGE',
       evidenceQuality: 'HIGH'
     });
     expect(result.finalStrength).toBe('WEAK');
