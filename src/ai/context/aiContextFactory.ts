@@ -771,8 +771,12 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
   return {
     d9,
     d10,
-    // D2 is intentionally absent because Wealth D2 interpretation is not implemented
-    d2: undefined
+    // D2 remains explicitly unavailable until independent calculation and interpretation validation.
+    d2: {
+      varga: 'D2',
+      status: 'UNAVAILABLE' as AiAvailability,
+      reason: 'D2 calculation and interpretation have not passed independent validation.'
+    }
   };
 }
 
@@ -1145,7 +1149,7 @@ function buildWealthFact(
         natalSupport: synObj.natalSupport,
         dashaSupport: synObj.dashaSupport,
         transitSupport: synObj.transitSupport,
-        d2Support: synObj.d2Support,
+        d2Support: 'UNAVAILABLE',
         factors: synObj.factors.map((f: WealthManifestationFactor): WealthManifestationFactorFact => ({
           id: f.id,
           dimension: f.dimension,
@@ -1217,13 +1221,13 @@ function mapCareerWealthFinalSynthesisToFact(
           ...(dimVal.activationSummary ? { activationSummary: dimVal.activationSummary } : {}),
           ...(dimVal.activationHierarchy ? { activationHierarchy: dimVal.activationHierarchy } : {}),
           timingStatus: dimVal.timingStatus,
-          divisionalStatus: dimVal.divisionalStatus,
+          divisionalStatus: 'UNAVAILABLE',
           manifestationStatus: dimVal.manifestationStatus,
           confidence: dimVal.confidence,
           primaryPromise: dimVal.primaryPromise,
           dashaEffect: dimVal.dashaEffect,
           timingEffect: dimVal.timingEffect,
-          divisionalEffect: dimVal.divisionalEffect,
+          divisionalEffect: 'UNAVAILABLE',
           summary: dimVal.summary,
           ruleIds: dimVal.ruleIds ? [...dimVal.ruleIds] : undefined,
           evidenceIds: [...dimVal.evidenceIds],
@@ -1246,8 +1250,8 @@ function mapCareerWealthFinalSynthesisToFact(
     ...(syn.activationSummary ? { activationSummary: syn.activationSummary } : {}),
     ...(syn.activationHierarchy ? { activationHierarchy: syn.activationHierarchy } : {}),
     timingStatus: syn.timingStatus,
-    divisionalStatus: syn.divisionalStatus,
-    ...(syn.d2AvailabilityReason ? { d2AvailabilityReason: syn.d2AvailabilityReason } : {}),
+    divisionalStatus: 'UNAVAILABLE',
+    d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; canonical Wealth reasoning keeps D2 UNAVAILABLE.',
     ...(traceCompleteness ? { traceCompleteness } : {}),
     manifestationStatus: syn.manifestationStatus,
     confidence: syn.confidence,
