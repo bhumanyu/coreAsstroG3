@@ -190,16 +190,7 @@ export function synthesizeWealthFinal(
       candidate = 'INSUFFICIENT_DATA';
     }
 
-    // D2 structural layer (Divisional Layer: D2 conflict downgrades candidate by 1 notch)
-    if (divisionalStatus === 'CONFLICTS') {
-      if (candidate === 'VERY_STRONG') {
-        candidate = 'STRONG';
-      } else if (candidate === 'STRONG') {
-        candidate = 'MODERATE';
-      } else if (candidate === 'MODERATE') {
-        candidate = 'MIXED';
-      }
-    }
+    // D2 is unavailable and therefore does not alter promise strength or confidence.
 
     // Dasha timing impact (Activation Layer: genuine CHALLENGE downgrades candidate by 1 notch)
     if (activationStatus === 'CHALLENGE') {
