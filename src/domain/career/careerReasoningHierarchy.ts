@@ -261,7 +261,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'SUPPORT')
-        .map((e) => e.evidenceId)
+        .map((e) => e.identityKey)
     )
   );
 
@@ -269,7 +269,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'CHALLENGE')
-        .map((e) => e.evidenceId)
+        .map((e) => e.identityKey)
     )
   );
 
@@ -277,7 +277,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
-        .map((e) => e.evidenceId)
+        .map((e) => e.identityKey)
     )
   );
 
@@ -287,7 +287,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.layer === 'PRIMARY_PROMISE')
-        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.representativeOccurrenceId])
     )
   );
 
@@ -295,7 +295,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'SUPPORT')
-        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.representativeOccurrenceId])
     )
   );
 
@@ -303,7 +303,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'CHALLENGE')
-        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.representativeOccurrenceId])
     )
   );
 
@@ -311,7 +311,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
-        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.representativeOccurrenceId])
     )
   );
 
