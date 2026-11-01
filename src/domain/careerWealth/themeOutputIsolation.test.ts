@@ -85,6 +85,12 @@ describe('canonical interpretation independence from legacy theme outputs', () =
       expect(outputs.analysis).toBeDefined();
       expect(outputs.aiCanonical.career).toBeDefined();
       expect(outputs.aiCanonical.wealth).toBeDefined();
+      expectNoLegacyThemeReferences({
+        analysis: outputs.analysis,
+        aiCanonical: outputs.aiCanonical,
+        c11Career: outputs.c11Career,
+        cw05Wealth: outputs.cw05Wealth
+      }, horoscope);
     } finally {
       careerThemeSpy.mockRestore();
       wealthThemeSpy.mockRestore();
@@ -207,6 +213,12 @@ describe('canonical interpretation independence from legacy theme outputs', () =
       expect(perturbedOutputs.cw05Wealth).toEqual(baselineOutputs.cw05Wealth);
       expect(perturbedOutputs.selectedPeriod).toEqual(baselineOutputs.selectedPeriod);
       expect(perturbedOutputs.aiCanonical).toEqual(baselineOutputs.aiCanonical);
+      expectNoLegacyThemeReferences({
+        analysis: perturbedOutputs.analysis,
+        aiCanonical: perturbedOutputs.aiCanonical,
+        c11Career: perturbedOutputs.c11Career,
+        cw05Wealth: perturbedOutputs.cw05Wealth
+      }, horoscope);
     } finally {
       careerThemeSpy.mockRestore();
       wealthThemeSpy.mockRestore();
@@ -344,4 +356,29 @@ function wealthRegressionProjection(
       natalEvidenceIds: synthesis.natalEvidenceIds
     }
   };
+}
+
+function expectNoLegacyThemeReferences(
+  canonicalOutputs: unknown,
+  horoscope: ReturnType<typeof calculateHoroscope>
+): void {
+  const legacyNodes = collectObjectGraph([
+    horoscope.themeInterpretationV2,
+    horoscope.fullNatalAnalysis?.lifeThemes
+  ]);
+  const canonicalNodes = collectObjectGraph([canonicalOutputs]);
+  const sharedNodes = Array.from(canonicalNodes).filter((node) => legacyNodes.has(node));
+  expect(sharedNodes).toEqual([]);
+}
+
+function collectObjectGraph(roots: readonly unknown[]): Set<object> {
+  const visited = new Set<object>();
+  const pending = [...roots];
+  while (pending.length > 0) {
+    const value = pending.pop();
+    if (value === null || typeof value !== 'object' || visited.has(value)) continue;
+    visited.add(value);
+    pending.push(...Object.values(value));
+  }
+  return visited;
 }

@@ -204,7 +204,11 @@ export function buildWealthEvidence(
   return Object.freeze(
     producerEvidence.map((item) => {
       const role = mapWealthRole(item);
-      const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, producerEvidence);
+      const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, producerEvidence)
+        .map((id) => {
+          const relatedItem = producerEvidence.find((candidate) => candidate.id === id);
+          return relatedItem?.identityKey ?? id;
+        });
       const period = mapWealthDashaPeriod(item);
       const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? item.planets?.[0] ?? undefined;
       const house = item.houses?.[0] ?? undefined;

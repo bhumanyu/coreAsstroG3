@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import * as wealthEvidenceProducerModule from './wealthEvidenceProducer';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import {
@@ -142,6 +143,28 @@ describe('WealthDomainInterpreterV2', () => {
     const temporalState = resolveAnalysisTemporalState(targetHoroscope, context);
     return { context, temporalState };
   }
+
+  it('surfaces producer rule failures as error diagnostics', () => {
+    const producer = vi.spyOn(wealthEvidenceProducerModule, 'produceWealthDomainEvidence')
+      .mockReturnValue({
+        evidence: [],
+        ruleErrors: [{ ruleId: 'WEALTH_RULE_FIXTURE', error: 'fixture failure' }],
+        d2Relationship: 'UNAVAILABLE',
+        referenceDatasetAvailable: false
+      });
+
+    try {
+      const result = interpretWealthV2(horoscope, makeDomainOptions());
+      expect(result.diagnostics).toContainEqual({
+        code: 'WEALTH_EVIDENCE_RULE_FAILED',
+        severity: 'ERROR',
+        message: 'Wealth evidence rule WEALTH_RULE_FIXTURE failed: fixture failure',
+        relatedIds: ['WEALTH_RULE_FIXTURE']
+      });
+    } finally {
+      producer.mockRestore();
+    }
+  });
 
   function makeProducerChart(options: {
     readonly supportingHouses?: readonly number[];

@@ -1526,6 +1526,8 @@ export function evaluateD10Relationship(
   d10Evidence?: readonly DomainEvidence[],
   natalPromiseEvidenceIds?: readonly string[]
 ): VargaRelationship {
+  // Compatibility-only adapter. Canonical Career reasoning must use canonical D10 inputs and
+  // must not pass theme evidence or legacy status through this helper.
   /**
    * P2-11C Gate 5: Single-source cutover for D10 relationship evaluation
    *
@@ -1686,7 +1688,8 @@ export function compareLegacyAndCanonicalStructuralReasoning(
   // Build canonical C4 structural reasoning
   const canonicalStructural = buildCareerStructuralReasoning({ horoscope });
 
-  // Extract legacy structural evidence from theme interpretation
+  // Compatibility-only structural comparison. This opt-in helper is not part of canonical
+  // interpretCareerV2 output and must remain isolated from its production reasoning path.
   const themeInterpretation = interpretCareerTheme({
     horoscope,
     dashaInterpretation: options.temporalState.dashaInterpretation

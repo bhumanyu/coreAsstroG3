@@ -33,6 +33,8 @@ import {
   produceWealthEvidence
 } from './wealthEvidenceProducer';
 
+// This presentation wrapper consumes shared producer output; canonical Wealth reasoning owns
+// its contract in the domain layer and must not depend on this wrapper's result shape.
 export { checkDataCompleteness };
 
 export const WEALTH_STRUCTURAL_FAMILIES: ReadonlySet<WealthEvidenceFamily> = new Set<WealthEvidenceFamily>([

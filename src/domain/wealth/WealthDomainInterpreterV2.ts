@@ -115,6 +115,12 @@ export function interpretWealthV2(
     horoscope,
     dashaInterpretation: options.temporalState.dashaInterpretation
   });
+  const producerDiagnostics = wealthProduction.ruleErrors.map((ruleError) => ({
+    code: 'WEALTH_EVIDENCE_RULE_FAILED',
+    severity: 'ERROR' as const,
+    message: `Wealth evidence rule ${ruleError.ruleId} failed: ${ruleError.error}`,
+    relatedIds: [ruleError.ruleId]
+  }));
   const rawMappedEvidence = buildWealthEvidence(wealthProduction.evidence);
   const evidence = linkWealthEvidence(rawMappedEvidence);
 
@@ -555,6 +561,7 @@ export function interpretWealthV2(
     vargaConfirmations,
     manifestations: cw01Result.manifestations,
     conflicts,
+    ...(producerDiagnostics.length > 0 ? { diagnostics: producerDiagnostics } : {}),
     conclusion,
     timingActivations,
     periodTimingActivations,

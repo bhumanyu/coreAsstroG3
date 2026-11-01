@@ -41,8 +41,14 @@ export interface WealthEvidenceProducerRecord {
 
 export interface WealthEvidenceProducerOutput {
   readonly evidence: readonly WealthEvidenceProducerRecord[];
+  readonly ruleErrors: readonly WealthEvidenceProducerRuleError[];
   readonly d2Relationship: VargaRelationship;
   readonly referenceDatasetAvailable: boolean;
+}
+
+export interface WealthEvidenceProducerRuleError {
+  readonly ruleId: string;
+  readonly error: string;
 }
 
 export interface WealthEvidenceProducerInput {
@@ -87,19 +93,26 @@ export function produceWealthDomainEvidence(
 
   return Object.freeze({
     evidence,
+    ruleErrors: Object.freeze(
+      production.ruleErrors.map((ruleError) => Object.freeze({ ...ruleError }))
+    ),
     d2Relationship: resolveD2ProducerRelationship(d2Records),
     referenceDatasetAvailable: production.dataCompleteness === 'COMPLETE'
   });
 }
 
-function resolveD2ProducerRelationship(
+export function resolveD2ProducerRelationship(
   evidence: readonly WealthEvidenceProducerRecord[]
 ): VargaRelationship {
   if (evidence.length === 0) return 'UNAVAILABLE';
 
-  const declaredRelationship = evidence.find((item) => item.vargaEvidence?.relationship)
-    ?.vargaEvidence?.relationship;
-  if (declaredRelationship) return declaredRelationship;
+  const declaredRelationships = new Set(
+    evidence
+      .map((item) => item.vargaEvidence?.relationship)
+      .filter((relationship): relationship is VargaRelationship => Boolean(relationship))
+  );
+  if (declaredRelationships.size > 1) return 'UNAVAILABLE';
+  if (declaredRelationships.size === 1) return Array.from(declaredRelationships)[0];
 
   const supports = evidence.some((item) => item.effect === 'SUPPORT');
   const challenges = evidence.some((item) => item.effect === 'CHALLENGE');
