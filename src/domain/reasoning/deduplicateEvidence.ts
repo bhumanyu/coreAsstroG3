@@ -27,7 +27,8 @@ const REASONING_LAYER_PRECEDENCE: readonly ReasoningLayer[] = [
  */
 export interface CanonicalReasoningEvidence {
   readonly identityKey: string;
-  readonly evidenceId: string;
+  /** Deterministic representative occurrence ID; sourceIds retains every occurrence. */
+  readonly representativeOccurrenceId: string;
   readonly ruleId?: string;
   readonly layer: ReasoningLayer;
   readonly direction: ReasoningDirection;
@@ -182,9 +183,10 @@ export function deduplicateReasoningEvidence(
     // layer = deterministically-chosen canonical layer, layers = full set of all occurrence layers
     const primaryLayer = REASONING_LAYER_PRECEDENCE.find(l => layers.has(l)) ?? group[0].layer;
 
+    const sortedSourceIds = Array.from(sourceIds).sort((a, b) => a.localeCompare(b));
     const canonicalItem: CanonicalReasoningEvidence = Object.freeze({
       identityKey,
-      evidenceId: identityKey, // Use identityKey as the canonical ID for determinism
+      representativeOccurrenceId: sortedSourceIds[0],
       ruleId,
       layer: primaryLayer,
       direction: mergedDirection,
@@ -195,7 +197,7 @@ export function deduplicateReasoningEvidence(
       relatedEvidenceIds: Object.freeze(Array.from(relatedEvidenceIds).sort((a, b) => a.localeCompare(b))),
       occurrenceCount: group.length,
       // sourceIds = distinct occurrence IDs; occurrenceCount = total occurrences (including duplicates)
-      sourceIds: Object.freeze(Array.from(sourceIds).sort((a, b) => a.localeCompare(b))),
+      sourceIds: Object.freeze(sortedSourceIds),
       rootEvidenceIds: Object.freeze(Array.from(rootEvidenceIds).sort((a, b) => a.localeCompare(b))),
       layers: Object.freeze(REASONING_LAYER_PRECEDENCE.filter(l => layers.has(l)))
     });
@@ -222,7 +224,7 @@ export function canonicalToWeighted(
     canonical.map((item) =>
       Object.freeze({
         identityKey: item.identityKey,
-        evidenceId: item.evidenceId,
+        evidenceId: item.representativeOccurrenceId,
         ruleId: item.ruleId,
         layer: item.layer,
         direction: item.direction,
