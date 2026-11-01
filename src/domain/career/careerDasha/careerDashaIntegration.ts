@@ -563,20 +563,20 @@ function resolveNatalRootEvidenceIds(
     return Object.freeze([]);
   }
 
-  const matchingIds: string[] = [];
+  const matchingIds = new Set<string>();
 
   for (const evidence of natal.evidence) {
     // Parse identityKey using the canonical parser
     const parsed = parseEvidenceIdentityKey(evidence.identityKey);
 
-    // Only match if the key is canonical AND the subjectKey matches the planet
+    // Only match canonical semantic keys whose subject matches this planet.
+    // Repeated occurrences of one semantic fact contribute one root reference.
     if (parsed && parsed.subjectKey === planet) {
-      // Root references use the semantic identity namespace, never occurrence IDs.
-      matchingIds.push(evidence.identityKey);
+      matchingIds.add(evidence.identityKey);
     }
   }
 
-  return Object.freeze(matchingIds);
+  return Object.freeze([...matchingIds].sort((a, b) => a.localeCompare(b)));
 }
 
 /**
