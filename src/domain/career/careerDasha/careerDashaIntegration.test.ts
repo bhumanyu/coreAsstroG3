@@ -626,7 +626,7 @@ describe('C9 Dasha Integration', () => {
 
       // The natalRootIds should include the natal evidence ID
       if (saturnEvidence) {
-        expect(saturnEvidence.provenance.natalRootIds).toContain('natal-saturn-evidence-1');
+        expect(saturnEvidence.provenance.natalRootIds).toContain('CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN');
       }
     });
 
@@ -765,7 +765,7 @@ describe('C9 Dasha Integration', () => {
 
       // The natalRootIds should include the natal evidence ID
       if (saturnEvidence) {
-        expect(saturnEvidence.provenance.natalRootIds).toContain('natal-saturn-10th-evidence');
+        expect(saturnEvidence.provenance.natalRootIds).toContain('CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN-10TH_HOUSE');
       }
     });
 
@@ -1081,7 +1081,7 @@ describe('C9 Dasha Integration', () => {
       // The natalRootIds should include the evidence ID
       // Subject key (SATURN) should be at the correct position (index 5) despite normalized ruleId
       if (saturnEvidence) {
-        expect(saturnEvidence.provenance.natalRootIds).toContain('hyphenated-ruleid-evidence');
+        expect(saturnEvidence.provenance.natalRootIds).toContain('CW-CAREER-NATAL-D1-SATURN_10TH_LORD_EXAM-SATURN');
       }
     });
   });
