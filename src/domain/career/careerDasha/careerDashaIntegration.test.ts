@@ -624,7 +624,7 @@ describe('C9 Dasha Integration', () => {
       const saturnEvidence = result.evidence.find(e => e.planet === Planet.SATURN);
       expect(saturnEvidence).toBeDefined();
 
-      // The natalRootIds should include the natal evidence ID
+      // natalRootIds contains the natal semantic identityKey, not its occurrence ID
       if (saturnEvidence) {
         expect(saturnEvidence.provenance.natalRootIds).toContain('CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN');
       }
@@ -1078,7 +1078,7 @@ describe('C9 Dasha Integration', () => {
       const saturnEvidence = result.evidence.find(e => e.planet === Planet.SATURN);
       expect(saturnEvidence).toBeDefined();
 
-      // The natalRootIds should include the evidence ID
+      // natalRootIds contains the natal semantic identityKey, not its occurrence ID
       // Subject key (SATURN) should be at the correct position (index 5) despite normalized ruleId
       if (saturnEvidence) {
         expect(saturnEvidence.provenance.natalRootIds).toContain('CW-CAREER-NATAL-D1-SATURN_10TH_LORD_EXAM-SATURN');
