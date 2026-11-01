@@ -85,6 +85,8 @@ export interface WeightedReasoningEvidence {
   readonly weight: number;
   readonly statement: string;
   readonly relatedEvidenceIds: readonly string[];
+  /** Canonical semantic root identities referenced by this occurrence. */
+  readonly rootEvidenceIds?: readonly string[];
   readonly sourceIds: readonly string[];
   readonly occurrenceCount?: number;
 }
