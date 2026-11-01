@@ -254,6 +254,7 @@ export function buildWealthEvidence(
           planet,
           house,
           relatedEvidenceIds,
+          rootEvidenceIds: item.rootEvidenceIds,
           timing,
           evidenceFamily: item.evidenceFamily,
           dimension
@@ -273,6 +274,7 @@ export function buildWealthEvidence(
         priority: mapWealthPriority(item.priority),
         ruleId: item.ruleId,
         relatedEvidenceIds,
+        rootEvidenceIds: item.rootEvidenceIds,
         timing,
         evidenceFamily: item.evidenceFamily,
         dimension,
