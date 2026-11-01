@@ -4,7 +4,6 @@ import {
   deduplicateCanonicalEvidence,
   sortCanonicalEvidence,
   checkDashaEvidenceMappable,
-  validateRootEvidenceLinks,
   type CanonicalCareerEvidenceInput,
   type SemanticEvidenceGroup
 } from './canonicalCareerEvidenceMapper';
