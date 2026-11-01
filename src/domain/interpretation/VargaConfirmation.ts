@@ -27,7 +27,7 @@ export function createVargaConfirmation(
     ...confirmation,
     availability,
     ...(availability === 'UNAVAILABLE'
-      ? { unavailabilityReason: confirmation.unavailabilityReason ?? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.' }
+      ? { unavailabilityReason: confirmation.unavailabilityReason ?? (confirmation.varga === 'D2' ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.' : 'Divisional relationship is unavailable for this calculation.') }
       : {}),
     evidenceIds: Object.freeze([
       ...confirmation.evidenceIds
