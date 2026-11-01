@@ -1,6 +1,6 @@
 # A03 — Root-Fact and Occurrence Identity
 
-**Status:** Implementation committed to feature branch; runtime validation pending  
+**Status:** A03 baseline merged via PR #4; post-merge correctness fixes are committed to the feature branch and require a follow-up PR/CI run  
 **Base:** `main` at `5b990ad0668b030ae6917738764d43034e6f1116` (A02 merged)  
 **Scope:** Evidence identity contracts, root-link propagation, duplicate occurrence guardrails and reasoning projections  
 **Canonical authorities preserved:** Career C11; Wealth CW-05; shared temporal authority unchanged
@@ -130,12 +130,26 @@ The reasoning changes are identity/provenance projections only. The canonical Ca
 
 Repository source was inspected and updated on the feature branch. The branch is based directly on current `main`; no merge-base drift was detected at the last comparison.
 
-The following have **NOT_RUN** in this implementation environment:
+PR #4 was merged at commit `4fc4d009a757f48b0d0e6409af29063bffd65082`, using tested PR head `0cfb513546b5a1a0951216fc29eec90e2efeddb1`. The workflow runs for that tested head were:
+
+- CI Workflows: **FAIL** — `npm run lint` / `tsc --noEmit` reported syntax errors in `DomainEvidence.identity.test.ts` (the test file was malformed by an insertion conflict).
+- Release Gate: **FAIL** — `npm run verify:release` returned `Release status: FAIL`; the captured log does not include the manifest's individual failing gate details.
+
+Follow-up corrections now committed to this branch after the merge:
+- Rebuilt `DomainEvidence.identity.test.ts` as a complete, syntactically coherent test suite.
+- Removed a duplicate `trimmedIdentityKey` declaration found during source audit.
+- Added empty/whitespace `identityKey` rejection and canonical trimming.
+- Enforced normalized Wealth occurrence uniqueness.
+- Deduplicated repeated C9 natal semantic root references.
+- Updated the canonical product trace test to assert occurrence IDs and semantic identity separately.
+- Updated the identity-contract documentation.
+
+These follow-up changes have **NOT_RUN**:
 - `npm ci`
 - `npm run lint`
 - Targeted Vitest suites
 - `npm test`
 - `npm run build`
-- GitHub Actions CI for an A03 pull request
+- `npm run verify:release`
 
-No runtime test or CI success is claimed. A03 is not ready to merge until the actual TypeScript/lint/test/build gates pass against the exact branch head SHA.
+The follow-up branch head must pass the actual TypeScript/lint/test/build/release gates before the corrections are merged. No runtime success is claimed.
