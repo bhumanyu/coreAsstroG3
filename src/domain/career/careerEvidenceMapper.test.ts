@@ -125,6 +125,62 @@ describe('careerEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
     });
   });
 
+  describe('A03 — Root and occurrence identity at producer boundary', () => {
+    it('preserves rootEvidenceIds and resolves them against semantic identityKey values', () => {
+      const root: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        id: 'career-root-occurrence',
+        ruleId: 'CAREER_ROOT_FACT',
+        evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
+        statement: 'Career root fact',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [10],
+        identityKey: 'CAREER_ROOT_SEMANTIC'
+      };
+      const derived: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        id: 'career-derived-occurrence',
+        ruleId: 'CAREER_DERIVED_FACT',
+        evidenceFamily: CareerEvidenceFamily.FUNCTIONAL_ROLE,
+        statement: 'Derived Career fact',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'SECONDARY',
+        planets: [Planet.SATURN],
+        identityKey: 'CAREER_DERIVED_SEMANTIC',
+        rootEvidenceIds: ['CAREER_ROOT_SEMANTIC']
+      };
+
+      const [mappedRoot, mappedDerived] = buildCareerEvidence([root, derived]);
+
+      expect(mappedRoot.id).toBe('career-root-occurrence');
+      expect(mappedDerived.id).toBe('career-derived-occurrence');
+      expect(mappedDerived.rootEvidenceIds).toEqual(['CAREER_ROOT_SEMANTIC']);
+    });
+
+    it('rejects duplicate producer occurrence IDs before evidence can be double-counted', () => {
+      const first: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        id: 'duplicate-career-occurrence',
+        ruleId: 'CAREER_RULE_A',
+        evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
+        statement: 'First Career occurrence',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [10],
+        identityKey: 'CAREER_SEMANTIC_A'
+      };
+      const second: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        ...first,
+        ruleId: 'CAREER_RULE_B',
+        identityKey: 'CAREER_SEMANTIC_B'
+      };
+
+      expect(() => buildCareerEvidence([first, second]))
+        .toThrow(/Duplicate DomainEvidence occurrence ID detected: duplicate-career-occurrence/);
+    });
+  });
+
   describe('Concern 13: Non-migrated legacy producers unchanged regression', () => {
     it('preserves id, ruleId, polarity, phase, and priority without provenance on legacy producers', () => {
       const rawLegacyItems: ThemeInterpretationEvidence<CareerEvidenceFamily>[] = [
