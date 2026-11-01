@@ -43,13 +43,16 @@ canonicalizing the returned value.
 - Injected clock values are checked for string type and passed through
   `normalizeAsOf` again, so clock output receives the same parseability check
   and UTC canonicalization as explicit timestamps.
+- ISO-like calendar date components are checked before JavaScript parsing to
+  reject impossible dates (for example, February 30) that `Date` would
+  otherwise silently roll into the following month.
 
 ### Tests
 
 - `src/core/analysis/analysisContext.test.ts` now expects invalid explicit
   values to throw during context construction.
-- Added invalid `Date`, invalid injected-clock timestamp, and runtime
-  non-string clock-output coverage.
+- Added invalid `Date`, impossible calendar date, invalid injected-clock
+  timestamp, unsupported runtime type, and non-string clock-output coverage.
 - `src/core/analysis/resolveAnalysisTemporalState.test.ts` now asserts that
   invalid values fail before temporal-state resolution.
 - `src/product/analysis/productAnalysisService.integration.test.ts` now
