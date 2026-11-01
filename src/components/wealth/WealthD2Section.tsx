@@ -8,6 +8,7 @@ export interface WealthD2SectionProps {
 }
 
 export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
+  void d2; // Incoming declarations are intentionally ignored while D2 is gated.
   // UI is fail-closed too: no upstream view-model declaration can mark D2 available.
   const formattedRelationship = formatD2Relationship('UNAVAILABLE');
   const badgeClass = getD2RelationshipBadgeClass('UNAVAILABLE');
