@@ -54,7 +54,7 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
           </div>
           <div>
             <h3 id="wealth-analysis-heading" className="text-base font-semibold text-slate-100">
-              Wealth & Prosperity Domain (D2 / 2nd & 11th Houses)
+              Wealth & Prosperity Domain (2nd & 11th Houses)
             </h3>
             <p className="text-xs text-slate-400">
               Multi-dimensional analysis across accumulation, gains, fortune, and speculation
@@ -113,6 +113,9 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
           >
             {formatEnum(detail.d2Relationship)}
           </span>
+          {detail.d2AvailabilityReason && (
+            <p className="mt-1 text-[10px] leading-relaxed text-slate-400">{detail.d2AvailabilityReason}</p>
+          )}
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1">
