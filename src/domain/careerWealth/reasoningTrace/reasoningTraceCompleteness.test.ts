@@ -59,6 +59,7 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
     ]);
     expect(result.links.every(link => link.synthesisEvidenceNamespace === 'IDENTITY')).toBe(true);
     expect(result.links.find(link => link.evidenceOccurrenceId === dasha.id)?.sourceRecordOccurrenceIds).toEqual([natal.id]);
+    expect(result.links.find(link => link.evidenceOccurrenceId === dasha.id)?.sourceRuleId).toBe('CAREER-DASHA-RULE-1');
   });
 
   it('builds a complete representative Wealth CW-05 trace using occurrence references', () => {
