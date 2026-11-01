@@ -14,6 +14,8 @@ describe('createVargaConfirmation — A08 D2 containment', () => {
     });
 
     expect(confirmation.relationship).toBe('UNAVAILABLE');
+    expect(confirmation.strength).toBe('UNDETERMINED');
+    expect(confirmation.confidence).toBe('UNDETERMINED');
     expect(confirmation.availability).toBe('UNAVAILABLE');
     expect(confirmation.unavailabilityReason).toContain('independent validation');
     expect(confirmation.statement).toContain('independent validation');
