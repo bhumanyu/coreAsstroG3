@@ -224,7 +224,8 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
 
     expect(viewModel.wealthDetail?.manifestationSynthesis).toBeDefined();
     expect(viewModel.wealthDetail?.manifestationSynthesis).toEqual(mockWealthManifestations);
-    expect(viewModel.wealthDetail?.d2Relationship).toBe('PARTIALLY_CONFIRMS');
+    expect(viewModel.wealthDetail?.d2Relationship).toBe('UNAVAILABLE');
+    expect(viewModel.wealthDetail?.d2AvailabilityReason).toContain('independent validation');
     expect(viewModel.wealthDetail?.overallStatus).toBe('MIXED');
     expect(viewModel.wealthDetail?.accumulationStatus).toBe('CHALLENGED');
     expect(viewModel.wealthDetail?.gainsStatus).toBe('SUPPORTED');
