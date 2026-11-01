@@ -538,15 +538,21 @@ Derivation logic (classifyReasoningEvidence):
 
 Subject/object must be deterministic and normalized. The identity key construction uses these subject/object keys to distinguish semantic facts (e.g., JUPITER/HOUSE_10 vs JUPITER/HOUSE_7 are different semantic facts).
 
-### W0.4.5 Root Evidence Link (Forward-Looking)
+### W0.4.5 Root Evidence Link (A03)
 
-Root evidence linkage is a forward-looking (W1) concept. The current repository does NOT implement a rootEvidenceId field:
+A03 implements root-fact dependency links without changing the W0.4 three-level identity contract.
 
-- Verified: zero grep matches for "rootEvidenceId" in the codebase
-- Current linkage field: `relatedEvidenceIds` in DomainEvidence
-- W0.4 does NOT introduce a new root-link mechanism
+- `identityKey` remains the semantic/root identity of the evidence fact.
+- `id` and `provenance.evidenceId` remain occurrence identity and must be equal for provenance-backed Career/Wealth evidence.
+- `relatedEvidenceIds` and aggregated `sourceIds` remain producer/source occurrence provenance.
+- `rootEvidenceIds` is a separate optional array containing canonical semantic `identityKey` references for the root facts that a derived occurrence depends on.
+- Root links must resolve against semantic identity keys in the same domain evidence graph. An occurrence ID or producer source ID is not a valid root reference.
+- Root links are normalized, unique, sorted, immutable and may not point to the occurrence's own semantic identity.
+- Missing root links are not fabricated. A root occurrence may legitimately have an empty/absent `rootEvidenceIds` array.
+- The canonical Career mapper validates root links and the Career evidence-continuity gate fails on unresolved root references.
+- The Wealth evidence mapper applies the same root-link validation when a Wealth producer supplies explicit root references.
 
-Future W1 work may establish a root evidence tree structure for evidence dependency tracking, but this is outside the scope of W0.4.
+C9 already produces `natalRootIds`; A03 corrects these to reference natal `identityKey` values rather than natal occurrence `evidenceId` values, and projects them into `DomainEvidence.rootEvidenceIds`. C10 root references are projected when present; the current D10 producer does not fabricate natal links.
 
 ### W0.4.6 Reference to Existing Identity & Dedup Mechanisms
 
