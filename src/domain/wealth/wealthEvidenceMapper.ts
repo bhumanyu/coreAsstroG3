@@ -2,6 +2,7 @@ import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import {
+  assertUniqueDomainEvidenceOccurrenceIds,
   createDomainEvidence,
   validateDomainEvidenceRootLinks
 } from '../interpretation';
@@ -286,6 +287,7 @@ export function buildWealthEvidence(
       });
     });
 
+  assertUniqueDomainEvidenceOccurrenceIds(mappedEvidence);
   const rootLinkValidation = validateDomainEvidenceRootLinks(mappedEvidence);
   if (!rootLinkValidation.isValid) {
     const unresolved = rootLinkValidation.unresolved
