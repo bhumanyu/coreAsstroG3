@@ -87,33 +87,22 @@ export const DashaPage: React.FC<DashaPageProps> = ({
     [analysis]
   );
 
-  // Log selectedPeriod changes
-  useEffect(() => {
-    console.log('selectedPeriod changed:', selectedPeriod);
-    console.log('selectedPeriod status:', selectedPeriod?.status);
-    if (selectedPeriod && selectedPeriod.status === 'OK') {
-      console.log('selectedPeriod synthesis:', selectedPeriod.synthesis);
-    } else {
-      console.log('selectedPeriod synthesis: not available (status is not OK)');
-    }
-  }, [selectedPeriod]);
-
-  // Log selectionState changes
-  useEffect(() => {
-    console.log('selectionState changed:', selectionState);
-  }, [selectionState]);
-
   // State for period selection
   const [domainToggle, setDomainToggle] = useState<'CAREER' | 'WEALTH' | 'BOTH'>('BOTH');
-  const [submittedPeriod, setSubmittedPeriod] = useState<{ mahadashaId: string; antardashaId: string } | null>(null);
+  
+  // Context-scoped submitted period: associate with the analysis identity it was submitted under
+  // to prevent the just-submitted selection from being invalidated by its own resulting snapshot.
+  const [submittedPeriod, setSubmittedPeriod] = useState<{
+    readonly mahadashaId: string;
+    readonly antardashaId: string;
+    readonly analysisId: string;
+  } | null>(null);
 
-  // NOTE: Commented out because it was clearing submittedPeriod when dashPeriodOptions changes
-  // during period selection updates, causing the report to not render.
-  // The handleSelectionChange callback (below) handles clearing when user changes dropdowns.
-  // useEffect(() => {
-  //   // New options identify a new analysis selection context; invalidate its report too.
-  //   setSubmittedPeriod(null);
-  // }, [dashPeriodOptions]);
+  // Invalidate stale submittedPeriod when analysis identity changes (new chart or re-analysis)
+  useEffect(() => {
+    // New options identify a new analysis selection context; invalidate its report too.
+    setSubmittedPeriod(null);
+  }, [dashPeriodOptions]);
 
   // isSubmitting is derived from selectionState
   const isSubmitting = selectionStatus === 'SUBMITTING';
@@ -125,25 +114,18 @@ export const DashaPage: React.FC<DashaPageProps> = ({
 
   // Handle period selection
   const handleSelectPeriod = useCallback(async (mahadashaId: string, antardashaId: string) => {
-    console.log('handleSelectPeriod called with:', mahadashaId, antardashaId);
-    if (!onSelectPeriod) {
-      console.log('onSelectPeriod is undefined');
-      return;
-    }
+    if (!onSelectPeriod) return;
 
-    setSubmittedPeriod({ mahadashaId, antardashaId });
-    console.log('Calling onSelectPeriod...');
+    // Set submittedPeriod with current analysisId before calling onSelectPeriod
+    // This ensures the report only renders if the synthesis matches the context it was submitted under
+    setSubmittedPeriod({
+      mahadashaId,
+      antardashaId,
+      analysisId: analysis?.analysisId ?? ''
+    });
 
     await onSelectPeriod(mahadashaId, antardashaId);
-    console.log('onSelectPeriod completed');
-    
-    // Check the result after a small delay to let state update
-    setTimeout(() => {
-      console.log('After delay - selectedPeriod:', selectedPeriod);
-      console.log('After delay - selectionStatus:', selectionStatus);
-      console.log('After delay - submittedPeriod:', submittedPeriod);
-    }, 100);
-  }, [onSelectPeriod, selectedPeriod, selectionStatus, submittedPeriod]);
+  }, [onSelectPeriod, analysis?.analysisId]);
 
   // 1. Error state when no analysis is available
   if (status === 'ERROR' && !analysis) {
@@ -215,6 +197,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
           selectedPeriod.synthesis &&
           selectionStatus === 'READY' &&
           submittedPeriod &&
+          submittedPeriod.analysisId === analysis.analysisId &&
           selectedPeriod.synthesis.period.mahadashaId === submittedPeriod.mahadashaId &&
           selectedPeriod.synthesis.period.antardashaId === submittedPeriod.antardashaId;
         return canShowSelectedPeriodReport ? (
