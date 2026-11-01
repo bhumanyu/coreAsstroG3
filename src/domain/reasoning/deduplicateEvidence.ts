@@ -38,6 +38,8 @@ export interface CanonicalReasoningEvidence {
   readonly relatedEvidenceIds: readonly string[];
   readonly occurrenceCount: number;
   readonly sourceIds: readonly string[];
+  /** Canonical root semantic identities referenced by the grouped occurrences. */
+  readonly rootEvidenceIds: readonly string[];
   readonly layers: readonly ReasoningLayer[];
 }
 
@@ -78,7 +80,21 @@ function deriveIdentityKey(evidence: WeightedReasoningEvidence): string {
 export function deduplicateReasoningEvidence(
   evidence: readonly WeightedReasoningEvidence[]
 ): readonly CanonicalReasoningEvidence[] {
-  // Group by identity key
+  // An occurrence is a unique event in the evidence graph. Repeating an ID is
+  // not another occurrence and must fail before it can inflate occurrenceCount.
+  const seenOccurrenceIds = new Set<string>();
+  for (const item of evidence) {
+    const occurrenceId = item.evidenceId?.trim();
+    if (!occurrenceId) {
+      throw new Error('WeightedReasoningEvidence occurrence ID must be non-empty');
+    }
+    if (seenOccurrenceIds.has(occurrenceId)) {
+      throw new Error(`Duplicate reasoning evidence occurrence ID detected: ${occurrenceId}`);
+    }
+    seenOccurrenceIds.add(occurrenceId);
+  }
+
+  // Group by semantic identity key
   const groups = new Map<string, WeightedReasoningEvidence[]>();
 
   for (const item of evidence) {
@@ -106,6 +122,7 @@ export function deduplicateReasoningEvidence(
     let statementEvidenceId = '';
     let statementWeight = 0;
     const relatedEvidenceIds: Set<string> = new Set();
+    const rootEvidenceIds: Set<string> = new Set();
     let ruleId: string | undefined;
 
     for (const item of group) {
@@ -140,9 +157,16 @@ export function deduplicateReasoningEvidence(
         }
       }
 
-      // Accumulate related evidence IDs
+      // Accumulate producer provenance and canonical root links separately.
       for (const relatedId of item.relatedEvidenceIds ?? []) {
         relatedEvidenceIds.add(relatedId);
+      }
+      for (const rootId of item.rootEvidenceIds ?? []) {
+        const normalizedRootId = rootId?.trim();
+        if (!normalizedRootId) {
+          throw new Error(`Invalid empty root evidence reference on occurrence: ${item.evidenceId}`);
+        }
+        rootEvidenceIds.add(normalizedRootId);
       }
 
       // Use the first ruleId if available (preserve from first occurrence with ruleId)
@@ -172,6 +196,7 @@ export function deduplicateReasoningEvidence(
       occurrenceCount: group.length,
       // sourceIds = distinct occurrence IDs; occurrenceCount = total occurrences (including duplicates)
       sourceIds: Object.freeze(Array.from(sourceIds).sort((a, b) => a.localeCompare(b))),
+      rootEvidenceIds: Object.freeze(Array.from(rootEvidenceIds).sort((a, b) => a.localeCompare(b))),
       layers: Object.freeze(REASONING_LAYER_PRECEDENCE.filter(l => layers.has(l)))
     });
 
