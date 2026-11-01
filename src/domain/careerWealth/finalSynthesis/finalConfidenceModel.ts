@@ -303,21 +303,16 @@ function determineBaseConfidence(
     return 'LOW';
   }
 
-  const highQualityAxes = [
+  const applicableAxes = [
     breakdown.natal,
     breakdown.activation,
     breakdown.timing,
     breakdown.divisional,
     breakdown.manifestation
-  ].filter((quality) => quality === 'HIGH').length;
+  ].filter((quality) => quality !== 'NOT_APPLICABLE');
 
-  const mediumOrHigherAxes = [
-    breakdown.natal,
-    breakdown.activation,
-    breakdown.timing,
-    breakdown.divisional,
-    breakdown.manifestation
-  ].filter(
+  const highQualityAxes = applicableAxes.filter((quality) => quality === 'HIGH').length;
+  const mediumOrHigherAxes = applicableAxes.filter(
     (quality) => quality === 'HIGH' || quality === 'MEDIUM'
   ).length;
 
