@@ -4,7 +4,7 @@ import type {
   SynthesisAxisStatus
 } from './careerWealthFinalSynthesisTypes';
 
-export type ConfidenceEvidenceQuality = 'HIGH' | 'MEDIUM' | 'LOW';
+export type ConfidenceEvidenceQuality = 'HIGH' | 'MEDIUM' | 'LOW' | 'NOT_APPLICABLE';
 
 export type ConfidenceContradictionLevel = 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
 
