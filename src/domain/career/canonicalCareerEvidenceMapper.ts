@@ -519,6 +519,7 @@ function mapNatalEvidence(
         priority: evidence.priority,
         ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.rootEvidenceIds,
         notes,
         provenance: evidence.ruleId ? {
           evidenceId: `${evidence.evidenceId}:SUPPORTING`,
@@ -583,6 +584,7 @@ function mapNatalEvidence(
         priority: evidence.priority,
         ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.rootEvidenceIds,
         provenance: evidence.ruleId ? {
           evidenceId: evidence.evidenceId,
           ruleId: evidence.ruleId, // Keep canonical ruleId in provenance
