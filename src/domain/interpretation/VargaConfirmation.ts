@@ -29,7 +29,12 @@ export function createVargaConfirmation(
     : confirmation.unavailabilityReason ?? 'Divisional relationship is unavailable for this calculation.';
   return Object.freeze({
     ...confirmation,
-    ...(isD2 ? { relationship: 'UNAVAILABLE' as const, statement: unavailabilityReason } : {}),
+    ...(isD2 ? {
+      relationship: 'UNAVAILABLE' as const,
+      strength: 'UNDETERMINED' as const,
+      confidence: 'UNDETERMINED' as const,
+      statement: unavailabilityReason
+    } : {}),
     ...(isUnavailable ? {
       availability: 'UNAVAILABLE' as const,
       unavailabilityReason
