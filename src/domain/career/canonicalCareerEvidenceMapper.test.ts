@@ -1299,6 +1299,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(evidence.polarity).toBe('SUPPORTING');
       expect(evidence.strength).toBe('STRONG');
       expect(evidence.identityKey).toBe('d10-identity-1');
+      expect(evidence.rootEvidenceIds).toEqual(['natal-root-1']);
       expect(evidence.ruleId).toBe('RULE_D10_1');
 
       // D10 cannot establish natal promise (phase is VARGA_CONFIRMATION, not NATAL_PROMISE)
