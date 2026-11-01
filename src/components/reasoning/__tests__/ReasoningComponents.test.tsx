@@ -318,9 +318,9 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
 
       render(<ReasoningVargaSection varga={varga} />);
 
-      expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
-      expect(screen.getByText('Modifies')).toBeInTheDocument();
-      expect(screen.getByText('Hora modifies asset growth timing.')).toBeInTheDocument();
+      expect(screen.getByText('Hora (D2) Availability')).toBeInTheDocument();
+      expect(screen.getByText('Unavailable')).toBeInTheDocument();
+      expect(screen.getByText(/D2 calculation and interpretation have not passed independent validation/)).toBeInTheDocument();
     });
 
     it('renders UNAVAILABLE varga relationship cleanly', () => {
@@ -610,9 +610,8 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
       expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
       expect(screen.getByText('D10 Mars strongly confirms vocational promise.')).toBeInTheDocument();
-      expect(screen.getByText('D2 Sun in second modifies accumulation tempo.')).toBeInTheDocument();
+      expect(screen.getByText(/D2 calculation and interpretation have not passed independent validation/)).toBeInTheDocument();
       expect(screen.getByText('Confirms')).toBeInTheDocument();
-      expect(screen.getByText('Modifies')).toBeInTheDocument();
     });
 
     it('renders "Unavailable" when relationship is UNAVAILABLE and never fabricates', () => {
@@ -625,7 +624,7 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
 
       expect(screen.getAllByText('Unavailable').length).toBeGreaterThanOrEqual(2);
       expect(screen.getByText(/Dasamsa \(D10\) harmonic data is unavailable/i)).toBeInTheDocument();
-      expect(screen.getByText(/Hora \(D2\) harmonic data is unavailable/i)).toBeInTheDocument();
+      expect(screen.getByText(/D2 calculation and interpretation have not passed independent validation/i)).toBeInTheDocument();
     });
   });
 
