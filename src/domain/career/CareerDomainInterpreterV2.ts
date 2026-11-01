@@ -1369,6 +1369,7 @@ export function buildCareerReasoningTraceGraph(params: {
     ...graph,
     traceCompleteness: buildReasoningTraceCompleteness({
       domain: 'CAREER',
+      conclusionNodeId: finalNodeId,
       synthesisRuleId: params.synthesisRuleId,
       synthesisEvidenceReferences: params.synthesisEvidenceReferences,
       evidence: params.evidence
