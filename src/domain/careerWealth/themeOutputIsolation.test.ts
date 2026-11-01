@@ -27,7 +27,7 @@ const methodology = {
 } as const;
 
 describe('canonical interpretation independence from legacy theme outputs', () => {
-  it('keeps canonical conclusions, selected-period synthesis, and AI canonical facts unchanged when theme output is perturbed', async () => {
+  it('keeps canonical conclusions, view-model projections, and canonical AI context unchanged when theme output is perturbed', async () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology });
 
@@ -42,11 +42,16 @@ describe('canonical interpretation independence from legacy theme outputs', () =
     const originalWealthTheme = wealthThemeModule.interpretWealthTheme;
     const careerThemeSpy = vi.spyOn(careerThemeModule, 'interpretCareerTheme');
     const wealthThemeSpy = vi.spyOn(wealthThemeModule, 'interpretWealthTheme');
+    let originalCareerResult: ReturnType<typeof careerThemeModule.interpretCareerTheme> | undefined;
+    let perturbedCareerResult: ReturnType<typeof careerThemeModule.interpretCareerTheme> | undefined;
+    let originalWealthResult: ReturnType<typeof wealthThemeModule.interpretWealthTheme> | undefined;
+    let perturbedWealthResult: ReturnType<typeof wealthThemeModule.interpretWealthTheme> | undefined;
 
     try {
       careerThemeSpy.mockImplementation((input) => {
         const theme = originalCareerTheme(input);
-        return {
+        originalCareerResult = theme;
+        perturbedCareerResult = {
           ...theme,
           evidence: Object.freeze([]),
           conclusion: Object.freeze({
@@ -60,10 +65,12 @@ describe('canonical interpretation independence from legacy theme outputs', () =
             dataCompleteness: 'INSUFFICIENT'
           })
         };
+        return perturbedCareerResult;
       });
       wealthThemeSpy.mockImplementation((input) => {
         const theme = originalWealthTheme(input);
-        return {
+        originalWealthResult = theme;
+        perturbedWealthResult = {
           ...theme,
           evidence: Object.freeze([]),
           conclusion: Object.freeze({
@@ -77,6 +84,7 @@ describe('canonical interpretation independence from legacy theme outputs', () =
             dataCompleteness: 'INSUFFICIENT'
           })
         };
+        return perturbedWealthResult;
       });
 
       const perturbed = await runLifeAnalysisProduct({
@@ -85,15 +93,29 @@ describe('canonical interpretation independence from legacy theme outputs', () =
         includeAiExplanation: false
       });
       expect(perturbed.status).not.toBe('ERROR');
+      expect(careerThemeSpy).toHaveBeenCalled();
+      expect(wealthThemeSpy).toHaveBeenCalled();
+      expect(perturbedCareerResult).not.toEqual(originalCareerResult);
+      expect(perturbedCareerResult?.conclusion.summary).not.toBe(originalCareerResult?.conclusion.summary);
+      expect(perturbedWealthResult).not.toEqual(originalWealthResult);
+      expect(perturbedWealthResult?.conclusion.summary).not.toBe(originalWealthResult?.conclusion.summary);
+      expect(perturbed.temporalState).toEqual(baseline.temporalState);
 
       const selection = resolveValidSelection(baseline.temporalState?.dashaInterpretation);
       const baselineOutputs = projectCanonicalOutputs(baseline, horoscope, context, selection);
       const perturbedOutputs = projectCanonicalOutputs(perturbed, horoscope, context, selection);
 
-      expect.soft(perturbedOutputs.c11Career).toEqual(baselineOutputs.c11Career);
-      expect.soft(perturbedOutputs.cw05Wealth).toEqual(baselineOutputs.cw05Wealth);
-      expect.soft(perturbedOutputs.selectedPeriod).toEqual(baselineOutputs.selectedPeriod);
-      expect.soft(perturbedOutputs.aiCanonical).toEqual(baselineOutputs.aiCanonical);
+      expect(perturbedOutputs.analysis).toEqual(baselineOutputs.analysis);
+      expect(perturbedOutputs.careerEvidence).toEqual(baselineOutputs.careerEvidence);
+      expect(perturbedOutputs.wealthEvidence).toEqual(baselineOutputs.wealthEvidence);
+      expect(perturbedOutputs.careerConclusion).toEqual(baselineOutputs.careerConclusion);
+      expect(perturbedOutputs.wealthConclusion).toEqual(baselineOutputs.wealthConclusion);
+      expect(perturbedOutputs.careerConclusionData).toEqual(baselineOutputs.careerConclusionData);
+      expect(perturbedOutputs.wealthConclusionData).toEqual(baselineOutputs.wealthConclusionData);
+      expect(perturbedOutputs.c11Career).toEqual(baselineOutputs.c11Career);
+      expect(perturbedOutputs.cw05Wealth).toEqual(baselineOutputs.cw05Wealth);
+      expect(perturbedOutputs.selectedPeriod).toEqual(baselineOutputs.selectedPeriod);
+      expect(perturbedOutputs.aiCanonical).toEqual(baselineOutputs.aiCanonical);
     } finally {
       careerThemeSpy.mockRestore();
       wealthThemeSpy.mockRestore();
@@ -142,7 +164,8 @@ function projectCanonicalOutputs(
     !wealthInterpretation.conclusionData ||
     !state.careerArtifacts ||
     !state.temporalState ||
-    !state.lifeAnalysis) {
+    !state.lifeAnalysis ||
+    !state.analysis) {
     throw new Error('Expected complete Career/Wealth canonical pipeline outputs');
   }
 
@@ -169,6 +192,13 @@ function projectCanonicalOutputs(
   });
 
   return {
+    analysis: state.analysis,
+    careerEvidence: careerInterpretation.evidence,
+    wealthEvidence: wealthInterpretation.evidence,
+    careerConclusion: careerInterpretation.conclusion,
+    wealthConclusion: wealthInterpretation.conclusion,
+    careerConclusionData: careerInterpretation.conclusionData,
+    wealthConclusionData: wealthInterpretation.conclusionData,
     c11Career: careerInterpretation.conclusionData.canonicalCareerFinalSynthesis,
     cw05Wealth: wealthInterpretation.conclusionData.wealthFinalSynthesis,
     selectedPeriod: selectedPeriod.value,
