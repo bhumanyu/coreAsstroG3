@@ -1344,7 +1344,9 @@ function createA06Router(
 }
 
 function createA06Response(request: AiRequest, model = 'fake-model-v1'): AiResponse {
-  const evidenceId = request.traceabilityIds?.[0];
+  const evidenceId = request.context.career?.canonicalC11?.canonicalEvidenceIds[0]
+    ?? request.context.wealth?.finalSynthesis?.evidenceIds[0]
+    ?? request.traceabilityIds?.[0];
   return Object.freeze({
     requestId: request.requestId,
     format: 'STRUCTURED',
@@ -1385,8 +1387,15 @@ describe('A06 — AI execution independence and grounding', () => {
     expect(capturedRequest?.traceabilityIds).toEqual(
       expect.arrayContaining(canonicalEvidenceIds)
     );
+    const c11EvidenceId = capturedRequest?.context.career?.canonicalC11?.canonicalEvidenceIds[0];
+    if (c11EvidenceId) {
+      expect(capturedRequest?.traceabilityIds).toContain(c11EvidenceId);
+    }
 
     if (result.kind === 'SUCCESS') {
+      if (c11EvidenceId) {
+        expect(result.supportingEvidence.map((item) => item.evidence.id)).toContain(c11EvidenceId);
+      }
       expect(result.providerId).toBe('a06-deterministic-fake');
       expect(result.providerVersion).toBe('fake-provider-v1');
       expect(result.model).toBe('fake-model-v1');
