@@ -1,13 +1,9 @@
 import type { DomainEvidence } from '../interpretation';
-import {
-  WealthEvidenceFamily
-} from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
+import { WealthEvidenceFamily } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { WealthDataCompleteness } from './wealthTypes';
 
 export function calculateWealthDataCompleteness(
-  evidence: readonly DomainEvidence[],
-  rawEvidence?: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[]
+  evidence: readonly DomainEvidence[]
 ): WealthDataCompleteness {
   const has2H = evidence.some(
     (e) => e.evidenceFamily === WealthEvidenceFamily.SECOND_HOUSE

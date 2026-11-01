@@ -230,13 +230,14 @@ describe('WealthDomainInterpreterV2', () => {
   }
 
   // 1. Core integration & legacy preservation
-  it('preserves existing wealth conclusion summary and version V2', () => {
+  it('uses the canonical wealth conclusion without the legacy theme summary', () => {
     const legacy = interpretWealthTheme(horoscope);
     const v2 = interpretWealthV2(horoscope, makeDomainOptions());
 
     expect(v2.domain).toBe('WEALTH');
     expect(v2.version).toBe('V2');
-    expect(v2.conclusion.statement).toContain(legacy.conclusion.summary);
+    expect(v2.conclusion.statement).not.toContain(legacy.conclusion.summary);
+    expect(v2.conclusion.statement).toContain('Wealth potential is strongly supported');
     expect(v2.conclusionData).toBeDefined();
     expect(v2.generatedAt).toBeDefined();
   });

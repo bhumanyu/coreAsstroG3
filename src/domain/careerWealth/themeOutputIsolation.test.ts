@@ -27,10 +27,10 @@ const methodology = {
 } as const;
 
 /*
- * Current Wealth coupling: interpretWealthTheme().evidence is immediately passed through
- * buildWealthEvidence() and linkWealthEvidence(). That mapped evidence drives natal promise,
- * D2, Dasha, manifestation, and CW-05 calculations. This test deliberately blanks the theme
- * evidence to expose the live dependency.
+ * The former Wealth coupling passed interpretWealthTheme().evidence directly through
+ * buildWealthEvidence() and linkWealthEvidence(). The canonical path now gets a typed record
+ * collection from the shared Wealth evidence producer; the wrapper's presentation result is
+ * independently perturbable without affecting reasoning.
  *
  * Wealth decoupling seam for P0-12 (not implemented here): reasoning should consume a
  * producer-owned, typed evidence collection independently of the theme result wrapper. The
@@ -40,14 +40,67 @@ const methodology = {
  * reference-dataset availability also need explicit producer-owned inputs; they must not be
  * inferred from a UI/theme summary or from a fabricated empty collection.
  *
- * Career has the same theme-evidence entry point at rawEvidence, but C11's natal, expression,
- * Dasha, and D10 inputs are built through the canonical path: natal from horoscope, expression
- * adapted from canonicalCareerFoundation mechanisms, Dasha from horoscope/natal/expression and
- * the temporal Dasha report, and D10 from horoscope/natal/expression. Theme outputs still reach
- * C11 indirectly: raw evidence and theme Varga metadata affect d10Relationship, which feeds
- * Career Dasha/timing synthesis; the resulting careerTimingSynthesis is then supplied to C11.
+ * Career C11's natal, expression, Dasha, and D10 inputs are built through the canonical path:
+ * natal from horoscope, expression adapted from canonicalCareerFoundation mechanisms, Dasha from
+ * horoscope/natal/expression and the temporal Dasha report, and D10 from horoscope/natal/expression.
+ * The production D10 projection is mapped from canonical D10 analysis. Legacy theme evidence is
+ * retained only by the explicitly optional structural-comparison helper and cached report output.
  */
 describe('canonical interpretation independence from legacy theme outputs', () => {
+  it('builds canonical domain outputs without invoking either legacy theme interpreter', async () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology });
+    const baseline = await runLifeAnalysisProduct({
+      horoscope,
+      context,
+      includeAiExplanation: false
+    });
+    expect(baseline.status).not.toBe('ERROR');
+
+    const careerThemeSpy = vi.spyOn(careerThemeModule, 'interpretCareerTheme')
+      .mockImplementation(() => {
+        throw new Error('Legacy Career theme interpreter must not run in canonical production');
+      });
+    const wealthThemeSpy = vi.spyOn(wealthThemeModule, 'interpretWealthTheme')
+      .mockImplementation(() => {
+        throw new Error('Legacy Wealth theme interpreter must not run in canonical production');
+      });
+
+    try {
+      const state = await runLifeAnalysisProduct({
+        horoscope,
+        context,
+        includeAiExplanation: false
+      });
+      expect(state.status).not.toBe('ERROR');
+      expect(careerThemeSpy).not.toHaveBeenCalled();
+      expect(wealthThemeSpy).not.toHaveBeenCalled();
+
+      const selection = resolveValidSelection(baseline.temporalState?.dashaInterpretation);
+      const outputs = projectCanonicalOutputs(state, horoscope, context, selection);
+      expect(outputs.c11Career).toBeDefined();
+      expect(outputs.cw05Wealth).toBeDefined();
+      expect(outputs.careerEvidence.length).toBeGreaterThan(0);
+      expect(outputs.wealthEvidence.length).toBeGreaterThan(0);
+      expect(outputs.analysis).toBeDefined();
+      expect(outputs.aiCanonical.career).toBeDefined();
+      expect(outputs.aiCanonical.wealth).toBeDefined();
+    } finally {
+      careerThemeSpy.mockRestore();
+      wealthThemeSpy.mockRestore();
+    }
+  });
+
+  it('continues projecting cached legacy theme outputs into the full natal report', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    expect(horoscope.themeInterpretationV2?.career?.evidence.length).toBeGreaterThan(0);
+    expect(horoscope.themeInterpretationV2?.wealth?.evidence.length).toBeGreaterThan(0);
+    expect(horoscope.fullNatalAnalysis?.lifeThemes.career)
+      .toBe(horoscope.themeInterpretationV2?.career);
+    expect(horoscope.fullNatalAnalysis?.lifeThemes.wealth)
+      .toBe(horoscope.themeInterpretationV2?.wealth);
+  });
+
   it('keeps canonical conclusions, view-model projections, and canonical AI context unchanged when theme output is perturbed', async () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology });
@@ -109,14 +162,12 @@ describe('canonical interpretation independence from legacy theme outputs', () =
         return perturbedWealthResult;
       });
 
-      const perturbed = await runLifeAnalysisProduct({
+      const themeInput = {
         horoscope,
-        context,
-        includeAiExplanation: false
-      });
-      expect(perturbed.status).not.toBe('ERROR');
-      expect(careerThemeSpy).toHaveBeenCalledTimes(1);
-      expect(wealthThemeSpy).toHaveBeenCalledTimes(1);
+        dashaInterpretation: baseline.temporalState?.dashaInterpretation
+      };
+      careerThemeSpy(themeInput);
+      wealthThemeSpy(themeInput);
       expect(perturbedCareerResult?.evidence).toEqual([]);
       expect(originalCareerResult?.evidence?.length).toBeGreaterThan(0);
       expect(perturbedWealthResult?.evidence).toEqual([]);
@@ -125,6 +176,17 @@ describe('canonical interpretation independence from legacy theme outputs', () =
       expect(perturbedCareerResult?.conclusion.summary).not.toBe(originalCareerResult?.conclusion.summary);
       expect(perturbedWealthResult).not.toEqual(originalWealthResult);
       expect(perturbedWealthResult?.conclusion.summary).not.toBe(originalWealthResult?.conclusion.summary);
+      careerThemeSpy.mockClear();
+      wealthThemeSpy.mockClear();
+
+      const perturbed = await runLifeAnalysisProduct({
+        horoscope,
+        context,
+        includeAiExplanation: false
+      });
+      expect(perturbed.status).not.toBe('ERROR');
+      expect(careerThemeSpy).not.toHaveBeenCalled();
+      expect(wealthThemeSpy).not.toHaveBeenCalled();
       expect(perturbed.temporalState).toEqual(baseline.temporalState);
 
       const selection = resolveValidSelection(baseline.temporalState?.dashaInterpretation);
