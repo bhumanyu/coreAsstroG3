@@ -201,6 +201,63 @@ function normalizeRootEvidenceIds(
   return Object.freeze([...unique].sort((a, b) => a.localeCompare(b)));
 }
 
+export interface DomainEvidenceRootLinkDiagnostic {
+  readonly sourceOccurrenceId: string;
+  readonly rootIdentityKey: string;
+  readonly code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED' | 'ROOT_EVIDENCE_SELF_REFERENCE';
+}
+
+export interface DomainEvidenceRootLinkValidation {
+  readonly isValid: boolean;
+  readonly unresolved: readonly DomainEvidenceRootLinkDiagnostic[];
+}
+
+/**
+ * Resolves root links only against semantic identityKey values in the same domain graph.
+ * Occurrence IDs and relatedEvidenceIds are deliberately not accepted as root identities.
+ */
+export function validateDomainEvidenceRootLinks(
+  evidence: readonly DomainEvidence[]
+): DomainEvidenceRootLinkValidation {
+  const semanticIdentities = new Set(
+    evidence
+      .map((item) => item.identityKey?.trim())
+      .filter((identity): identity is string =>
+        Boolean(identity) && identity !== UNRESOLVED_IDENTITY_SENTINEL
+      )
+  );
+
+  const unresolved: DomainEvidenceRootLinkDiagnostic[] = [];
+  for (const item of evidence) {
+    for (const rootIdentityKey of item.rootEvidenceIds ?? []) {
+      if (rootIdentityKey === item.identityKey) {
+        unresolved.push(Object.freeze({
+          sourceOccurrenceId: item.id,
+          rootIdentityKey,
+          code: 'ROOT_EVIDENCE_SELF_REFERENCE'
+        }));
+      } else if (!semanticIdentities.has(rootIdentityKey)) {
+        unresolved.push(Object.freeze({
+          sourceOccurrenceId: item.id,
+          rootIdentityKey,
+          code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED'
+        }));
+      }
+    }
+  }
+
+  const sorted = unresolved.sort((a, b) =>
+    a.sourceOccurrenceId.localeCompare(b.sourceOccurrenceId) ||
+    a.rootIdentityKey.localeCompare(b.rootIdentityKey) ||
+    a.code.localeCompare(b.code)
+  );
+
+  return Object.freeze({
+    isValid: sorted.length === 0,
+    unresolved: Object.freeze(sorted)
+  });
+}
+
 /**
  * Fails closed when one occurrence ID is emitted more than once in a collection.
  * Multiple occurrences of one semantic fact are valid only when their IDs differ.
