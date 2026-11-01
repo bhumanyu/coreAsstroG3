@@ -58,7 +58,7 @@ export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ va
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            {varga.statement || `${chartName} divisional relationship data is unavailable for this calculation.`}
+            {statement || `${chartName} divisional relationship data is unavailable for this calculation.`}
           </span>
         </div>
       )}
