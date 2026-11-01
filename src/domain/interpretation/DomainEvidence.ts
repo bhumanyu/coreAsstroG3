@@ -204,7 +204,7 @@ function normalizeRootEvidenceIds(
 export interface DomainEvidenceRootLinkDiagnostic {
   readonly sourceOccurrenceId: string;
   readonly rootIdentityKey: string;
-  readonly code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED' | 'ROOT_EVIDENCE_SELF_REFERENCE';
+  readonly code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED' | 'ROOT_EVIDENCE_SELF_REFERENCE' | 'ROOT_EVIDENCE_CYCLE';
 }
 
 export interface DomainEvidenceRootLinkValidation {
@@ -245,6 +245,52 @@ export function validateDomainEvidenceRootLinks(
       }
     }
   }
+
+  // Detect multi-node cycles in the semantic root graph. Self references are
+  // rejected at creation time; this catches longer dependency loops.
+  const edgesByIdentity = new Map<string, Array<{
+    readonly sourceOccurrenceId: string;
+    readonly rootIdentityKey: string;
+  }>>();
+  for (const item of evidence) {
+    const identityKey = item.identityKey?.trim();
+    if (!identityKey || identityKey === UNRESOLVED_IDENTITY_SENTINEL) continue;
+    const edges = edgesByIdentity.get(identityKey) ?? [];
+    for (const rootIdentityKey of item.rootEvidenceIds ?? []) {
+      if (semanticIdentities.has(rootIdentityKey)) {
+        edges.push({ sourceOccurrenceId: item.id, rootIdentityKey });
+      }
+    }
+    edgesByIdentity.set(identityKey, edges);
+  }
+
+  const visitState = new Map<string, 'VISITING' | 'VISITED'>();
+  const cycleEdges = new Set<string>();
+  const visit = (identityKey: string): void => {
+    if (visitState.get(identityKey) === 'VISITED') return;
+    if (visitState.get(identityKey) === 'VISITING') return;
+    visitState.set(identityKey, 'VISITING');
+
+    for (const edge of edgesByIdentity.get(identityKey) ?? []) {
+      if (visitState.get(edge.rootIdentityKey) === 'VISITING') {
+        const edgeKey = `${edge.sourceOccurrenceId}::${edge.rootIdentityKey}`;
+        if (!cycleEdges.has(edgeKey)) {
+          cycleEdges.add(edgeKey);
+          unresolved.push(Object.freeze({
+            sourceOccurrenceId: edge.sourceOccurrenceId,
+            rootIdentityKey: edge.rootIdentityKey,
+            code: 'ROOT_EVIDENCE_CYCLE'
+          }));
+        }
+      } else {
+        visit(edge.rootIdentityKey);
+      }
+    }
+
+    visitState.set(identityKey, 'VISITED');
+  };
+
+  for (const identityKey of edgesByIdentity.keys()) visit(identityKey);
 
   const sorted = unresolved.sort((a, b) =>
     a.sourceOccurrenceId.localeCompare(b.sourceOccurrenceId) ||
