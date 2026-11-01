@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  buildCareerFinalAnalysis
+  buildCareerFinalAnalysis,
+  deriveCareerProducerEvidenceQuality
 } from './careerFinalSynthesisIntegration';
 
 import type {
@@ -1572,5 +1573,33 @@ describe('P2-08D-04: Invariant tests - Nested immutability', () => {
       expect(Object.isFrozen(result.conflicts[0])).toBe(true);
       expect(Object.isFrozen(result.conflicts[0].evidenceIds)).toBe(true);
     }
+  });
+});
+
+
+describe('A07 producer evidence quality', () => {
+  it('returns HIGH only when every producer record has source and rule provenance', () => {
+    expect(deriveCareerProducerEvidenceQuality([
+      { sourceIds: ['SRC-1'], ruleIds: ['RULE-1'] },
+      { sourceIds: ['SRC-2'], ruleIds: ['RULE-2'] }
+    ])).toBe('HIGH');
+  });
+
+  it('returns MEDIUM when producer diagnostics are partial', () => {
+    expect(deriveCareerProducerEvidenceQuality([
+      { sourceIds: ['SRC-1'], ruleIds: ['RULE-1'] },
+      { sourceIds: ['SRC-2'], ruleIds: [] }
+    ])).toBe('MEDIUM');
+  });
+
+  it('returns LOW when producer records contain no provenance', () => {
+    expect(deriveCareerProducerEvidenceQuality([
+      { sourceIds: [], ruleIds: [] },
+      { sourceIds: [], ruleIds: [] }
+    ])).toBe('LOW');
+  });
+
+  it('returns MEDIUM when no producer records are supplied', () => {
+    expect(deriveCareerProducerEvidenceQuality([])).toBe('MEDIUM');
   });
 });
