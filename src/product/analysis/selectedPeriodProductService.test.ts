@@ -1108,4 +1108,52 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       }
     });
   });
+
+  describe('A02 — canonical Career/Wealth independence', () => {
+    it('preserves Wealth selected-period synthesis when Career artifacts are unavailable', () => {
+      const input = makeInput();
+      const result = buildProductSelectedPeriodSynthesis({
+        ...input,
+        careerArtifacts: undefined,
+        careerEvidence: undefined,
+        careerDashaEvidence: undefined,
+        careerBaseline: undefined
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.provenance.career.status).toBe('MISSING');
+      expect(result.value.provenance.wealth.status).toBe('PRESENT');
+      expect(result.value.missingInputs).toContainEqual(
+        expect.objectContaining({
+          domain: 'CAREER',
+          code: 'CAREER_ACTIVATION_MISSING'
+        })
+      );
+      expect(result.value.wealth.dimensions).toBeDefined();
+    });
+
+    it('preserves Career selected-period synthesis when Wealth evidence is unavailable', () => {
+      const input = makeInput();
+      const result = buildProductSelectedPeriodSynthesis({
+        ...input,
+        wealthEvidence: undefined,
+        wealthBaseline: undefined
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.provenance.career.status).toBe('PRESENT');
+      expect(result.value.provenance.wealth.status).toBe('MISSING');
+      expect(result.value.missingInputs).toContainEqual(
+        expect.objectContaining({
+          domain: 'WEALTH',
+          code: 'WEALTH_ACTIVATION_MISSING'
+        })
+      );
+      expect(result.value.career.expressions).toBeDefined();
+    });
+  });
 });
