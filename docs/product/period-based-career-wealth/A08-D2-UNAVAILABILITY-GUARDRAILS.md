@@ -10,6 +10,8 @@ D2 remains `UNAVAILABLE` in canonical Wealth reasoning until both the D2 calcula
 - Wealth manifestation synthesis ignores incoming D2 declarations, emits `d2Support: UNAVAILABLE`, and creates no D2 support/challenge factor.
 - CW-05 ignores `d2Relationship`, D2 synthesis evidence and manifestation D2 hints for relationship, confidence, status, and canonical evidence-ID aggregation. Raw mapped D2 occurrences may remain in the diagnostic `d2Evidence` field, explicitly marked as unvalidated.
 - CW-05 and Wealth conclusion projections expose `divisionalStatus: UNAVAILABLE` and an explicit `d2AvailabilityReason`.
+- Varga confirmation DTOs carry explicit unavailable availability/reason metadata when D2 is present only as diagnostic evidence.
+- AI context, life-analysis, product-analysis, reasoning-view-model, chart-export and UI adapters all force D2 to UNAVAILABLE; incoming declarations and stale statements cannot upgrade or contradict the gate.
 - AI Wealth manifestation and final-synthesis projections preserve the unavailable state and reason.
 
 ## Confidence and completeness
