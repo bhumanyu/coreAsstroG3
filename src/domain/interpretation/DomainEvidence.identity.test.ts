@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import {
   assertUniqueDomainEvidenceOccurrenceIds,
   createDomainEvidence,
@@ -35,6 +34,24 @@ describe('DomainEvidence root and occurrence identity contract (A03)', () => {
     expect(Object.isFrozen(evidence.rootEvidenceIds)).toBe(true);
   });
 
+  it('trims a supplied semantic identity key', () => {
+    const evidence = createDomainEvidence({
+      ...base,
+      id: 'identity-normalization-occurrence',
+      identityKey: '  semantic-key  '
+    });
+
+    expect(evidence.identityKey).toBe('semantic-key');
+  });
+
+  it('rejects an empty semantic identity key when one is supplied', () => {
+    expect(() => createDomainEvidence({
+      ...base,
+      id: 'empty-semantic-identity-occurrence',
+      identityKey: '   '
+    })).toThrow(/identityKey must be non-empty/);
+  });
+
   it('allows distinct occurrences to share one semantic identity', () => {
     const first = createDomainEvidence({
       ...base,
@@ -66,7 +83,28 @@ describe('DomainEvidence root and occurrence identity contract (A03)', () => {
     });
 
     expect(() => assertUniqueDomainEvidenceOccurrenceIds([first, second]))
-      .toThrow(/Duplicate DomainEvidence occurrence ID detect  it('rejects a root key that collides with any occurrence ID in the graph', () => {
+      .toThrow(/Duplicate DomainEvidence occurrence ID detected: duplicate-occurrence/);
+  });
+
+  it('accepts a root link that resolves to a semantic identityKey in the same graph', () => {
+    const root = createDomainEvidence({
+      ...base,
+      id: 'root-occurrence',
+      identityKey: 'root-semantic-identity'
+    });
+    const derived = createDomainEvidence({
+      ...base,
+      id: 'derived-occurrence',
+      identityKey: 'derived-semantic-identity',
+      rootEvidenceIds: ['root-semantic-identity']
+    });
+
+    const validation = validateDomainEvidenceRootLinks([root, derived]);
+    expect(validation.isValid).toBe(true);
+    expect(validation.unresolved).toEqual([]);
+  });
+
+  it('rejects a root key that collides with any occurrence ID in the graph', () => {
     const root = createDomainEvidence({
       ...base,
       id: 'same-string-occurrence',
@@ -107,9 +145,6 @@ describe('DomainEvidence root and occurrence identity contract (A03)', () => {
     expect(validation.unresolved).toContainEqual(expect.objectContaining({
       code: 'ROOT_EVIDENCE_CYCLE'
     }));
-  });
-
-ed: duplicate-occurrence/);
   });
 
   it('rejects empty, duplicate, sentinel, and self-referential root links', () => {
