@@ -775,28 +775,6 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
   };
 }
 
-function mapThemeEffectToStatus(
-  effect: string | undefined
-):
-  | 'STRONGLY_SUPPORTED'
-  | 'SUPPORTED'
-  | 'NEUTRAL'
-  | 'MIXED'
-  | 'CHALLENGED'
-  | 'LIMITED_EVIDENCE' {
-  switch (effect) {
-    case 'SUPPORT':
-      return 'SUPPORTED';
-    case 'CHALLENGE':
-      return 'CHALLENGED';
-    case 'MIXED':
-      return 'MIXED';
-    case 'NEUTRAL':
-      return 'NEUTRAL';
-    default:
-      return 'LIMITED_EVIDENCE';
-  }
-}
 
 function buildCareerFact(
   horoscope: Horoscope,
