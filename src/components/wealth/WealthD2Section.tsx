@@ -53,7 +53,7 @@ export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            {d2.statement || 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'}
+            {'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'}
           </span>
         </div>
       )}
