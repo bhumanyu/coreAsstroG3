@@ -35,7 +35,8 @@ function normalizeSegment(value: string): string {
 }
 
 /**
- * Builds a deterministic, human-readable evidence identifier.
+ * Builds a deterministic, human-readable occurrence identifier.
+ * Includes effect/strength so distinct occurrences remain distinct.
  * Format: CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]-<EFFECT>-<STRENGTH>
  */
 export function buildEvidenceId(input: EvidenceIdentityInput): string {
@@ -67,7 +68,7 @@ export function buildEvidenceId(input: EvidenceIdentityInput): string {
 }
 
 /**
- * Builds a canonical evidence identity key from ONLY semantic fields.
+ * Builds a canonical semantic identity key (identityKey) from ONLY semantic fields.
  * Excludes effect, strength, and any layer/prose to enable identity-based deduplication.
  * Same fact with different direction/strength will have the same identity key.
  * Format: CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]
