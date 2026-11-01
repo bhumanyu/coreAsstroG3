@@ -3045,6 +3045,65 @@ describe('Wealth period activation contracts', () => {
       'DUPLICATE_IDENTITY'
     );
 
+    const provenanceBackedTiming = createDomainEvidence({
+      id: 'MD-TIMING-OCCURRENCE',
+      sourceType: 'DASHA',
+      domain: 'WEALTH',
+      role: 'SECONDARY',
+      phase: 'DASHA_ACTIVATION',
+      source: 'DASHA',
+      statement: 'Provenance-backed timing occurrence',
+      polarity: 'SUPPORTING',
+      strength: 'MODERATE',
+      priority: 50,
+      timing: { period: 'MD' },
+      ruleId: 'WEALTH_DASHA_RULE',
+      identityKey: 'WEALTH_DASHA_SEMANTIC_IDENTITY',
+      relatedEvidenceIds: [promise.id],
+      provenance: {
+        evidenceId: 'MD-TIMING-OCCURRENCE',
+        ruleId: 'WEALTH_DASHA_RULE',
+        domain: 'WEALTH',
+        axis: 'DASHA',
+        source: 'DASHA',
+        effect: 'SUPPORT',
+        strength: 'SECONDARY'
+      }
+    });
+
+    expect(() => assertWealthPeriodActivationContract(
+      activationFor(provenanceBackedTiming.id),
+      [provenanceBackedTiming, promise],
+      [promise.id],
+      false
+    )).not.toThrow();
+
+    expectContractErrorCode(
+      () => assertWealthPeriodActivationContract(
+        activationFor(provenanceBackedTiming.id),
+        [{
+          ...provenanceBackedTiming,
+          provenance: {
+            ...provenanceBackedTiming.provenance!,
+            evidenceId: 'DIFFERENT-OCCURRENCE-ID'
+          }
+        }, promise],
+        [promise.id],
+        false
+      ),
+      'OWNER_MISMATCH'
+    );
+
+    expectContractErrorCode(
+      () => assertWealthPeriodActivationContract(
+        activationFor(provenanceBackedTiming.id),
+        [{ ...provenanceBackedTiming, identityKey: provenanceBackedTiming.id }, promise],
+        [promise.id],
+        false
+      ),
+      'OWNER_MISMATCH'
+    );
+
     const unprovenancedTiming = createDomainEvidence({
       id: 'MD-MISSING-PROVENANCE',
       sourceType: 'DASHA',
