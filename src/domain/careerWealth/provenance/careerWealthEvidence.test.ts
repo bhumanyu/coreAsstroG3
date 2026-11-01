@@ -34,6 +34,22 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     );
   });
 
+  it('keeps a caller occurrence ID separate from the semantic identityKey', () => {
+    const evidence = createCareerWealthEvidence({
+      identity,
+      occurrenceId: 'producer-occurrence-42',
+      identityKey: 'CW-CAREER-NATAL-D1-CAREER_10TH_LORD_SUPPORT-SATURN',
+      rootEvidenceIds: ['CW-CAREER-NATAL-D1-SATURN_ROOT-SATURN'],
+      statement: 'Occurrence and semantic identity remain separate'
+    });
+
+    expect(evidence.id).toBe('producer-occurrence-42');
+    expect(evidence.provenance.evidenceId).toBe('producer-occurrence-42');
+    expect(evidence.identityKey).toBe('CW-CAREER-NATAL-D1-CAREER_10TH_LORD_SUPPORT-SATURN');
+    expect(evidence.identityKey).not.toBe(evidence.id);
+    expect(evidence.rootEvidenceIds).toEqual(['CW-CAREER-NATAL-D1-SATURN_ROOT-SATURN']);
+  });
+
   it('guarantees evidence.ruleId === evidence.provenance.ruleId', () => {
     const evidence = createCareerWealthEvidence({
       identity,
