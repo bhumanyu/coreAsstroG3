@@ -15,7 +15,7 @@ D2 remains `UNAVAILABLE` in canonical Wealth reasoning until both the D2 calcula
 - AI Wealth manifestation and final-synthesis projections preserve the unavailable state and reason.
 
 ## Confidence and completeness
-Unvalidated D2 evidence is not counted as an evidence source and cannot increase coverage or confidence. It is not interpreted as negative evidence either. Its absence is represented as unavailable, not as a challenge.
+Unvalidated D2 evidence is not counted as an evidence source and cannot increase coverage or confidence. CW-05 final-confidence quality classifies the gated D2 axis as `NOT_APPLICABLE` and excludes it from confidence-axis counts. The product-level overall confidence calculation also excludes gated D2 rather than treating it as a missing required layer. D2 is not interpreted as negative evidence; its absence is represented as unavailable, not as a challenge.
 
 ## Gates required before D2 can become available
 1. D2 chart construction and planetary/house mapping are independently verified against approved reference fixtures.
