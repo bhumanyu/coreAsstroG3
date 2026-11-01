@@ -131,8 +131,8 @@ export interface CareerConfidenceReason {
     | 'REQUIRED_LAYER_UNAVAILABLE'
     | 'SUPPORTING_LAYER_UNAVAILABLE'
     | 'OPTIONAL_LAYER_UNAVAILABLE'
-    | 'NATAL_QUALITY_LOW'
-    | 'NATAL_QUALITY_MODERATE'
+    | 'EVIDENCE_QUALITY_LOW'
+    | 'EVIDENCE_QUALITY_MODERATE'
     | 'CONFLICT_HIGH_SEVERITY'
     | 'CONFLICT_MODERATE_SEVERITY'
     | 'PROVENANCE_PARTIAL'
@@ -257,6 +257,9 @@ export interface CareerFinalSynthesisInput {
    * Used to surface contradictions between layers for diagnostic purposes.
    */
   readonly conflicts?: readonly CareerFinalConflict[];
+
+  /** Independent evidence-quality assessment; never inferred from Career promise strength. */
+  readonly evidenceQuality?: 'HIGH' | 'MEDIUM' | 'LOW';
 
   /**
    * Evidence traceability: canonical identity of evidence items (deduplicated).
