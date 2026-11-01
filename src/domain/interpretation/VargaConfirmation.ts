@@ -24,10 +24,9 @@ export function createVargaConfirmation(
   const isD2 = confirmation.varga === 'D2';
   const isUnavailable = isD2 || confirmation.availability === 'UNAVAILABLE' ||
     confirmation.relationship === 'UNAVAILABLE';
-  const unavailabilityReason = confirmation.unavailabilityReason ??
-    (isD2
-      ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
-      : 'Divisional relationship is unavailable for this calculation.');
+  const unavailabilityReason = isD2
+    ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+    : confirmation.unavailabilityReason ?? 'Divisional relationship is unavailable for this calculation.';
   return Object.freeze({
     ...confirmation,
     ...(isD2 ? { relationship: 'UNAVAILABLE' as const, statement: unavailabilityReason } : {}),
