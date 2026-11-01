@@ -621,6 +621,20 @@ export function buildCareerFinalAnalysis(
 
   const expressionEvidenceIds = collectExpressionEvidenceIds(expression);
 
+  // Producer quality is evaluated per evidence record, not inferred from promise strength.
+  const producerEvidenceRecords = [...natal.evidence, ...dasha.evidence, ...d10.evidence];
+  const completeProducerProvenanceCount = producerEvidenceRecords.filter(
+    item => item.sourceIds.length > 0 && item.ruleIds.length > 0
+  ).length;
+  const anyProducerProvenance = producerEvidenceRecords.some(
+    item => item.sourceIds.length > 0 || item.ruleIds.length > 0
+  );
+  const evidenceQuality: 'HIGH' | 'MEDIUM' | 'LOW' = producerEvidenceRecords.length === 0
+    ? 'MEDIUM'
+    : completeProducerProvenanceCount === producerEvidenceRecords.length
+      ? 'HIGH'
+      : anyProducerProvenance ? 'MEDIUM' : 'LOW';
+
   // Merge all evidence IDs, source IDs, and rule IDs deterministically
   const evidenceIds = mergeEvidenceIds(natalEvidenceIds, dashaEvidenceIds, d10EvidenceIds, expressionEvidenceIds);
   const sourceIds = mergeEvidenceIds(natalSourceIds, dashaSourceIds, d10SourceIds);
@@ -654,7 +668,8 @@ export function buildCareerFinalAnalysis(
     conflicts,
     evidenceIds,
     sourceIds,
-    ruleIds
+    ruleIds,
+    evidenceQuality
   });
 
   // Return result from canonical engine with contradictory evidence diagnostics
