@@ -19,13 +19,16 @@ export interface ReasoningTraceChartInputReference {
 
 export interface ReasoningTraceEvidenceLink {
   readonly domain: 'CAREER' | 'WEALTH';
+  readonly conclusionNodeId: string;
   readonly synthesisRuleId: string;
+  readonly includedInSynthesis: boolean;
   readonly synthesisEvidenceReference?: string;
   readonly synthesisEvidenceNamespace?: ReasoningTraceEvidenceNamespace;
   /** DomainEvidence.id; never replaced by identityKey or a provenance alias. */
   readonly evidenceOccurrenceId: string;
   readonly semanticIdentityKey?: string;
   readonly producerRuleId?: string;
+  readonly sourceRecordId?: string;
   /** relatedEvidenceIds are occurrence IDs and are preserved in that namespace. */
   readonly sourceRecordOccurrenceIds: readonly string[];
   /** rootEvidenceIds are semantic identity keys and remain in their own namespace. */
@@ -51,6 +54,7 @@ export interface ReasoningTraceCompletenessDiagnostic {
 
 export interface ReasoningTraceCompleteness {
   readonly status: 'COMPLETE' | 'PARTIAL' | 'INCOMPLETE';
+  readonly conclusionNodeId: string;
   readonly synthesisRuleId: string;
   readonly expectedEvidenceReferenceCount: number;
   readonly resolvedEvidenceOccurrenceCount: number;
@@ -66,11 +70,12 @@ export interface ReasoningTraceCompleteness {
  */
 export function buildReasoningTraceCompleteness(params: {
   readonly domain: 'CAREER' | 'WEALTH';
+  readonly conclusionNodeId: string;
   readonly synthesisRuleId: string;
   readonly synthesisEvidenceReferences: readonly ReasoningTraceEvidenceReference[];
   readonly evidence: readonly DomainEvidence[];
 }): ReasoningTraceCompleteness {
-  const { domain, synthesisRuleId, synthesisEvidenceReferences, evidence } = params;
+  const { domain, conclusionNodeId, synthesisRuleId, synthesisEvidenceReferences, evidence } = params;
   const occurrenceIds = new Set(evidence.map(item => item.id));
   const includedOccurrenceIds = new Set<string>();
   const synthesisReferenceByOccurrence = new Map<string, ReasoningTraceEvidenceReference>();
@@ -109,8 +114,7 @@ export function buildReasoningTraceCompleteness(params: {
     const producerRuleId = item.ruleId ?? item.provenance?.ruleId;
     const chartInputAvailable = item.planet !== undefined ||
       item.house !== undefined ||
-      item.timing !== undefined ||
-      item.evidenceFamily !== undefined;
+      item.timing !== undefined;
     const chartInput: ReasoningTraceChartInputReference | undefined = chartInputAvailable
       ? Object.freeze({
           source: item.source,
@@ -136,7 +140,7 @@ export function buildReasoningTraceCompleteness(params: {
         message: 'Evidence occurrence ' + item.id + ' has no producer/source rule ID.'
       }));
     }
-    if (!chartInput) {
+    if (!chartInput && !item.sourceRecordId) {
       diagnostics.push(Object.freeze({
         code: 'MISSING_CHART_CALCULATION_LINK',
         evidenceOccurrenceId: item.id,
@@ -157,7 +161,9 @@ export function buildReasoningTraceCompleteness(params: {
 
     links.push(Object.freeze({
       domain,
+      conclusionNodeId,
       synthesisRuleId,
+      includedInSynthesis: Boolean(synthesisReference),
       ...(synthesisReference ? {
         synthesisEvidenceReference: synthesisReference.id,
         synthesisEvidenceNamespace: synthesisReference.namespace
@@ -165,6 +171,7 @@ export function buildReasoningTraceCompleteness(params: {
       evidenceOccurrenceId: item.id,
       ...(item.identityKey ? { semanticIdentityKey: item.identityKey } : {}),
       ...(producerRuleId ? { producerRuleId } : {}),
+      ...(item.sourceRecordId ? { sourceRecordId: item.sourceRecordId } : {}),
       sourceRecordOccurrenceIds: Object.freeze([...item.relatedEvidenceIds]),
       rootEvidenceIdentityKeys: Object.freeze([...(item.rootEvidenceIds ?? [])]),
       ...(chartInput ? { chartInput } : {})
@@ -195,6 +202,7 @@ export function buildReasoningTraceCompleteness(params: {
 
   return Object.freeze({
     status,
+    conclusionNodeId,
     synthesisRuleId,
     expectedEvidenceReferenceCount: synthesisEvidenceReferences.length,
     resolvedEvidenceOccurrenceCount: includedOccurrenceIds.size,
