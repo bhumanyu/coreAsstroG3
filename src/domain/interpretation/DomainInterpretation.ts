@@ -18,6 +18,13 @@ import type { ReasoningTrace } from '../reasoning/reasoningTypes';
 
 export type DomainTimingActivation = CareerTimingActivation | WealthTimingActivation;
 
+export interface DomainInterpretationDiagnostic {
+  readonly code: string;
+  readonly severity: 'WARNING' | 'ERROR';
+  readonly message: string;
+  readonly relatedIds?: readonly string[];
+}
+
 export interface CommonDomainConclusionFields {
   readonly natalStatus?: string;
   readonly overallStatus?: string;
@@ -53,6 +60,7 @@ export interface DomainInterpretation {
   readonly vargaConfirmations: readonly VargaConfirmation[];
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
+  readonly diagnostics?: readonly DomainInterpretationDiagnostic[];
   readonly conclusion: DomainConclusion;
   readonly timingActivations?: readonly DomainTimingActivation[];
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
@@ -107,6 +115,14 @@ export function createDomainInterpretation(
     vargaConfirmations: Object.freeze([...vargaConfirmations]),
     manifestations: Object.freeze([...manifestations]),
     conflicts: Object.freeze([...conflicts]),
+    ...(interpretation.diagnostics
+      ? { diagnostics: Object.freeze(interpretation.diagnostics.map((diagnostic) =>
+          Object.freeze({
+            ...diagnostic,
+            ...(diagnostic.relatedIds ? { relatedIds: Object.freeze([...diagnostic.relatedIds]) } : {})
+          })
+        )) }
+      : {}),
     conclusion:
       interpretation.conclusion ??
       createDomainConclusion({

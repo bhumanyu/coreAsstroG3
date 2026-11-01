@@ -2,7 +2,8 @@ import type {
   DomainInterpretation,
   DomainTimingActivation,
   DomainConclusionData,
-  DomainDataCompleteness
+  DomainDataCompleteness,
+  DomainInterpretationDiagnostic
 } from './DomainInterpretation';
 import { type Clock, systemClock } from '../../core/analysis/Clock';
 import type { DomainEvidence } from './DomainEvidence';
@@ -26,6 +27,7 @@ export interface DomainInterpretationParts {
   readonly vargaConfirmations: readonly VargaConfirmation[];
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
+  readonly diagnostics?: readonly DomainInterpretationDiagnostic[];
   readonly conclusion: DomainConclusion;
   readonly timingActivations?: readonly DomainTimingActivation[];
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
@@ -72,6 +74,18 @@ export function buildDomainInterpretation(
     conflicts: Object.freeze([
       ...parts.conflicts
     ]),
+    ...(parts.diagnostics !== undefined
+      ? {
+          diagnostics: Object.freeze(parts.diagnostics.map((diagnostic) =>
+            Object.freeze({
+              ...diagnostic,
+              ...(diagnostic.relatedIds
+                ? { relatedIds: Object.freeze([...diagnostic.relatedIds]) }
+                : {})
+            })
+          ))
+        }
+      : {}),
     conclusion: parts.conclusion,
     ...(parts.timingActivations ? { timingActivations: Object.freeze([...parts.timingActivations]) } : {}),
     ...(parts.periodTimingActivations

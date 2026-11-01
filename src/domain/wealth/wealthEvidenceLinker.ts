@@ -1,14 +1,14 @@
 import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import type { DomainEvidence } from '../interpretation';
+import type { WealthEvidenceProducerRecord } from './wealthEvidenceProducer';
 
 export function resolveRelatedWealthPromiseEvidenceIds(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>,
-  allRawEvidence: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[]
+  item: WealthEvidenceProducerRecord,
+  allEvidence: readonly WealthEvidenceProducerRecord[]
 ): readonly string[] {
-  const structuralItems = allRawEvidence.filter(
+  const structuralItems = allEvidence.filter(
     (e) =>
       e.evidenceFamily === WealthEvidenceFamily.SECOND_HOUSE ||
       e.evidenceFamily === WealthEvidenceFamily.SECOND_LORD ||

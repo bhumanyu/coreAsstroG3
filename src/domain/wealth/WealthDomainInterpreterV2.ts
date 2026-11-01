@@ -1,5 +1,4 @@
 import type { Horoscope, Planet } from '../../types';
-import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import {
   WealthEvidenceFamily,
   type WealthEvidence
@@ -81,6 +80,7 @@ import {
   buildD2Statement
 } from './wealthConclusion';
 import { calculateWealthDataCompleteness } from './wealthDataCompleteness';
+import { produceWealthDomainEvidence } from './wealthEvidenceProducer';
 import { calculateWealthConfidence } from './wealthConfidence';
 import { detectWealthConflicts } from './wealthConflicts';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
@@ -111,12 +111,17 @@ export function interpretWealthV2(
   const context = options.context;
   const asOfDate = analysisAsOfDate(context);
 
-  const themeInterpretation = interpretWealthTheme({
+  const wealthProduction = produceWealthDomainEvidence({
     horoscope,
     dashaInterpretation: options.temporalState.dashaInterpretation
   });
-  const rawEvidence = themeInterpretation.evidence;
-  const rawMappedEvidence = buildWealthEvidence(rawEvidence);
+  const producerDiagnostics = wealthProduction.ruleErrors.map((ruleError) => ({
+    code: 'WEALTH_EVIDENCE_RULE_FAILED',
+    severity: 'ERROR' as const,
+    message: `Wealth evidence rule ${ruleError.ruleId} failed: ${ruleError.error}`,
+    relatedIds: [ruleError.ruleId]
+  }));
+  const rawMappedEvidence = buildWealthEvidence(wealthProduction.evidence);
   const evidence = linkWealthEvidence(rawMappedEvidence);
 
   const supportingEvidence = evidence.filter(
@@ -133,13 +138,7 @@ export function interpretWealthV2(
 
   // D2 Varga confirmation
   const d2Evidence = evidence.filter((item) => item.source === 'D2');
-  const d2Relationship = evaluateD2Relationship(
-    natalEvidence,
-    d2Evidence,
-    natalPromiseEvidenceIds,
-    rawEvidence,
-    themeInterpretation.metadata?.vargaConfirmationStatus
-  );
+  const d2Relationship = wealthProduction.d2Relationship;
 
   // Dasha Timing & Multi-dimension evaluation
   const dashaEvidence = evidence.filter(
@@ -190,7 +189,7 @@ export function interpretWealthV2(
   const hasVargaConflict = conflicts.some((c) => c.tier === 'PRIMARY_VS_VARGA');
   const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
 
-  const dataCompleteness = calculateWealthDataCompleteness(evidence, rawEvidence);
+  const dataCompleteness = calculateWealthDataCompleteness(evidence);
   const natalStrength = calculateDomainStrength(natalSupporting, natalChallenging);
 
   const natalConfidence = calculateEvidenceConfidence(natalEvidence, {
@@ -203,11 +202,7 @@ export function interpretWealthV2(
     domain: 'WEALTH',
     strength: natalStrength,
     confidence: natalConfidence,
-    statement: buildWealthNatalStatement(
-      supportingEvidence,
-      challengingEvidence,
-      themeInterpretation.conclusion?.summary
-    ),
+    statement: buildWealthNatalStatement(supportingEvidence, challengingEvidence),
     evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
     challengingEvidenceIds: natalChallenging.map((item) => item.id).sort()
@@ -259,7 +254,7 @@ export function interpretWealthV2(
   const pdTimingAvailable = Boolean(currentDasha?.pratyantardasha?.planet);
   // COMPLETE means the natal-producer dataset was fully evaluated. PARTIAL/INSUFFICIENT are not
   // treated as an authoritative zero-promise reference set because an absent promise is ambiguous.
-  const referenceDatasetAvailable = themeInterpretation.metadata?.dataCompleteness === 'COMPLETE';
+  const referenceDatasetAvailable = wealthProduction.referenceDatasetAvailable;
 
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
@@ -388,7 +383,7 @@ export function interpretWealthV2(
       natalPromise,
       dashaActivation,
       transitTrigger,
-      themeInterpretation.conclusion?.summary,
+      undefined,
       {
         vargaConfirmations,
         conclusionData
@@ -566,6 +561,7 @@ export function interpretWealthV2(
     vargaConfirmations,
     manifestations: cw01Result.manifestations,
     conflicts,
+    ...(producerDiagnostics.length > 0 ? { diagnostics: producerDiagnostics } : {}),
     conclusion,
     timingActivations,
     periodTimingActivations,

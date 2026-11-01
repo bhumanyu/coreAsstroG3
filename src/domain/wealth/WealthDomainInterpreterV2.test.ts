@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import * as wealthEvidenceProducerModule from './wealthEvidenceProducer';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import {
@@ -143,6 +144,28 @@ describe('WealthDomainInterpreterV2', () => {
     return { context, temporalState };
   }
 
+  it('surfaces producer rule failures as error diagnostics', () => {
+    const producer = vi.spyOn(wealthEvidenceProducerModule, 'produceWealthDomainEvidence')
+      .mockReturnValue({
+        evidence: [],
+        ruleErrors: [{ ruleId: 'WEALTH_RULE_FIXTURE', error: 'fixture failure' }],
+        d2Relationship: 'UNAVAILABLE',
+        referenceDatasetAvailable: false
+      });
+
+    try {
+      const result = interpretWealthV2(horoscope, makeDomainOptions());
+      expect(result.diagnostics).toContainEqual({
+        code: 'WEALTH_EVIDENCE_RULE_FAILED',
+        severity: 'ERROR',
+        message: 'Wealth evidence rule WEALTH_RULE_FIXTURE failed: fixture failure',
+        relatedIds: ['WEALTH_RULE_FIXTURE']
+      });
+    } finally {
+      producer.mockRestore();
+    }
+  });
+
   function makeProducerChart(options: {
     readonly supportingHouses?: readonly number[];
     readonly afflictedLordHouses?: readonly number[];
@@ -230,13 +253,14 @@ describe('WealthDomainInterpreterV2', () => {
   }
 
   // 1. Core integration & legacy preservation
-  it('preserves existing wealth conclusion summary and version V2', () => {
+  it('uses the canonical wealth conclusion without the legacy theme summary', () => {
     const legacy = interpretWealthTheme(horoscope);
     const v2 = interpretWealthV2(horoscope, makeDomainOptions());
 
     expect(v2.domain).toBe('WEALTH');
     expect(v2.version).toBe('V2');
-    expect(v2.conclusion.statement).toContain(legacy.conclusion.summary);
+    expect(v2.conclusion.statement).not.toContain(legacy.conclusion.summary);
+    expect(v2.conclusion.statement).toContain('Wealth potential is strongly supported');
     expect(v2.conclusionData).toBeDefined();
     expect(v2.generatedAt).toBeDefined();
   });

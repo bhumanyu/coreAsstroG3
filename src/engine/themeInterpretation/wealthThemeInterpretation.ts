@@ -12,7 +12,6 @@ import {
 import {
   WealthEvidenceFamily,
   WealthEvidence,
-  WealthRule,
   WealthEvidenceFamilySummary,
   WealthSubthemeKey,
   WealthSubthemeSummary,
@@ -22,19 +21,21 @@ import {
   WealthInterpretationConclusion,
   WealthNatalPromise,
   WealthThemeInterpretationMetadata,
-  WealthThemeInterpretation,
-  WEALTH_FAMILY_RANK
+  WealthThemeInterpretation
 } from './wealthThemeInterpretationTypes';
-import { WEALTH_RULES } from './rules/wealth/wealthRules';
 import {
-  evaluateRule,
-  isPresentEvidence,
-  deduplicateEvidenceById,
-  sortEvidenceDeterministically,
   groupEvidenceByFamily,
   buildFamilySummaries,
   deepFreeze
 } from './themeInterpretationUtils';
+import {
+  checkWealthProducerDataCompleteness as checkDataCompleteness,
+  produceWealthEvidence
+} from './wealthEvidenceProducer';
+
+// This presentation wrapper consumes shared producer output; canonical Wealth reasoning owns
+// its contract in the domain layer and must not depend on this wrapper's result shape.
+export { checkDataCompleteness };
 
 export const WEALTH_STRUCTURAL_FAMILIES: ReadonlySet<WealthEvidenceFamily> = new Set<WealthEvidenceFamily>([
   WealthEvidenceFamily.SECOND_HOUSE,
@@ -85,25 +86,6 @@ function getWealthDomain(family: WealthEvidenceFamily): WealthDomain | undefined
     default:
       return undefined;
   }
-}
-
-export function checkDataCompleteness(context: ThemeInterpretationContext): 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT' {
-  const hasHouseInt = Boolean(context.houseInterpretation);
-  const hasPlanetInt = Boolean(context.planetInterpretation);
-  const hasYogas = Boolean(context.yogas);
-  const hasDivisional = Boolean(context.divisionalInterpretation);
-  const hasRoles = Boolean(context.functionalRoles);
-  const hasStrength = Boolean(context.planetaryStrength);
-  const hasDasha = Boolean(context.dashaInterpretation);
-  const hasDrishti = Boolean(context.natalGrahaDrishti);
-
-  if (!hasHouseInt || !hasPlanetInt) {
-    return 'INSUFFICIENT';
-  }
-  if (!hasYogas || !hasDivisional || !hasRoles || !hasStrength || !hasDasha || !hasDrishti) {
-    return 'PARTIAL';
-  }
-  return 'COMPLETE';
 }
 
 export function computeWealthNatalPromise(
@@ -446,29 +428,11 @@ export function interpretWealthTheme(
   input: ThemeInterpretationContextInput | Horoscope
 ): WealthThemeInterpretation {
   const context = buildThemeInterpretationContext(input);
-
-  const rawEvidence: WealthEvidence[] = [];
-  let evaluatedRulesCount = 0;
-  let triggeredRulesCount = 0;
-  const ruleErrors: { ruleId: string; error: string }[] = [];
-
-  // Step 1: Run all registered wealth rules (non-D2 in v1)
-  for (const rule of WEALTH_RULES) {
-    evaluatedRulesCount++;
-    const result = evaluateRule(rule, context, undefined, ruleErrors);
-    if (isPresentEvidence(result)) {
-      triggeredRulesCount++;
-      if (Array.isArray(result.evidence)) {
-        rawEvidence.push(...(result.evidence as readonly WealthEvidence[]));
-      } else if (result.evidence) {
-        rawEvidence.push(result.evidence as WealthEvidence);
-      }
-    }
-  }
-
-  // Step 2: Build evidence, deduplicated, sorted, and family summaries
-  const deduplicated = deduplicateEvidenceById(rawEvidence);
-  const sortedEvidence = sortEvidenceDeterministically(deduplicated, WEALTH_FAMILY_RANK);
+  const production = produceWealthEvidence(context);
+  const sortedEvidence = production.evidence;
+  const evaluatedRulesCount = production.evaluatedRulesCount;
+  const triggeredRulesCount = production.triggeredRulesCount;
+  const ruleErrors = production.ruleErrors;
   const familySummaries = buildFamilySummaries(sortedEvidence);
 
   // Step 3: Compute canonical WealthNatalPromise

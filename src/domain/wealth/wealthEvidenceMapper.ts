@@ -1,7 +1,6 @@
 import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import { createDomainEvidence } from '../interpretation';
 import type {
   DomainEvidence,
@@ -19,9 +18,10 @@ import type {
 import { resolveRelatedWealthPromiseEvidenceIds } from './wealthEvidenceLinker';
 import { createCareerWealthEvidence } from '../careerWealth/provenance/careerWealthEvidence';
 import { Planet } from '../../types';
+import type { WealthEvidenceProducerRecord } from './wealthEvidenceProducer';
 
 export function mapWealthSourceType(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): EvidenceSourceType {
   if (isWealthTransitEvidence(item)) {
     return 'TRANSIT';
@@ -71,7 +71,7 @@ export function mapWealthSourceType(
 }
 
 export function mapWealthDashaPeriod(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): 'MD' | 'AD' | 'PD' | undefined {
   const level = item.timingEvidence?.dashaLevel;
   if (level === 'MAHADASHA') return 'MD';
@@ -81,7 +81,7 @@ export function mapWealthDashaPeriod(
 }
 
 export function mapWealthDimension(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): WealthDimension | undefined {
   switch (item.evidenceFamily) {
     case WealthEvidenceFamily.SECOND_HOUSE:
@@ -107,7 +107,7 @@ export function mapWealthDimension(
 }
 
 export function isWealthTransitEvidence(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): boolean {
   return (
     Boolean(item.transitEvidence) ||
@@ -123,7 +123,7 @@ export function isWealthTransitEvidence(
  * Guaranteed never to rely on positional array indexes or raw planet ordering.
  */
 export function resolveWealthSubjectKey(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): string {
   // Karaka rules: derive from the ruleId's karaka planet
   if (item.ruleId === 'WEALTH_VENUS_KARAKA_001' || item.ruleId.includes('VENUS_KARAKA')) {
@@ -159,7 +159,7 @@ export const resolveSubjectKey = resolveWealthSubjectKey;
 
 /** Strict semantic subject resolution for provenance-enabled wealth evidence. */
 export function resolveRequiredWealthSubjectKey(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): string {
   if (!item.ruleId?.trim()) {
     throw new Error('Wealth evidence provenance requires a non-empty ruleId');
@@ -199,12 +199,16 @@ export function resolveRequiredWealthSubjectKey(
 }
 
 export function buildWealthEvidence(
-  rawEvidence: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[]
+  producerEvidence: readonly WealthEvidenceProducerRecord[]
 ): readonly DomainEvidence[] {
   return Object.freeze(
-    rawEvidence.map((item) => {
+    producerEvidence.map((item) => {
       const role = mapWealthRole(item);
-      const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, rawEvidence);
+      const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, producerEvidence)
+        .map((id) => {
+          const relatedItem = producerEvidence.find((candidate) => candidate.id === id);
+          return relatedItem?.identityKey ?? id;
+        });
       const period = mapWealthDashaPeriod(item);
       const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? item.planets?.[0] ?? undefined;
       const house = item.houses?.[0] ?? undefined;
@@ -281,7 +285,7 @@ export function buildWealthEvidence(
 }
 
 export function mapWealthRole(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): EvidenceRole {
   switch (item.evidenceFamily) {
     case WealthEvidenceFamily.SECOND_HOUSE:
@@ -340,7 +344,7 @@ export function mapWealthRole(
 }
 
 export function mapWealthPhase(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): EvidencePhase {
   if (isWealthTransitEvidence(item)) {
     return 'TRANSIT_TRIGGER';
@@ -366,7 +370,7 @@ export function mapWealthPhase(
 }
 
 export function mapWealthSource(
-  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+  item: WealthEvidenceProducerRecord
 ): EvidenceSource {
   if (
     item.vargaEvidence?.varga === 'D2' ||

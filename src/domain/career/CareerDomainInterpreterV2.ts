@@ -146,6 +146,7 @@ import {
 import {
   buildCareerD10Analysis
 } from './careerD10/careerD10Integration';
+import type { CareerD10CanonicalRelationship } from './careerD10/careerD10CanonicalTypes';
 import {
   mapCanonicalCareerEvidence
 } from './canonicalCareerEvidenceMapper';
@@ -212,11 +213,6 @@ export function interpretCareerV2(
   const context = options.context;
   const asOfDate = analysisAsOfDate(context);
 
-  const themeInterpretation = interpretCareerTheme({
-    horoscope,
-    dashaInterpretation: options.temporalState.dashaInterpretation
-  });
-  const rawEvidence = themeInterpretation.evidence;
   const activeDashaReport = options.temporalState.dashaInterpretation;
 
   /**
@@ -540,8 +536,7 @@ export function interpretCareerV2(
     confidence: natalConfidence,
     statement: buildCareerNatalStatement(
       supportingEvidence,
-      challengingEvidence,
-      themeInterpretation.conclusion?.summary
+      challengingEvidence
     ),
     evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
@@ -620,12 +615,7 @@ export function interpretCareerV2(
 
   // D10 Varga Confirmation
   const d10Evidence = evidence.filter((item) => item.source === 'D10');
-  const d10Relationship = evaluateD10Relationship(
-    rawEvidence,
-    themeInterpretation.metadata?.vargaConfirmationStatus,
-    d10Evidence,
-    natalPromiseEvidenceIds
-  );
+  const d10Relationship = mapCanonicalD10Relationship(canonicalD10Analysis.relationship);
 
   const vargaConfirmation = createVargaConfirmation({
     domain: 'CAREER',
@@ -727,7 +717,7 @@ export function interpretCareerV2(
       dashaActivation,
       transitTrigger,
       vargaConfirmations,
-      themeInterpretation.conclusion?.summary,
+      undefined,
       d10Relationship,
       {
         timingActivations,
@@ -1211,6 +1201,24 @@ export function interpretCareerV2(
   });
 }
 
+function mapCanonicalD10Relationship(
+  relationship: CareerD10CanonicalRelationship
+): VargaRelationship {
+  switch (relationship) {
+    case 'REINFORCES':
+      return 'CONFIRMS';
+    case 'QUALIFIES':
+    case 'PRESERVES':
+      return 'PARTIALLY_CONFIRMS';
+    case 'MODIFIES':
+      return 'MODIFIES';
+    case 'CONFLICTS':
+      return 'CONFLICTS';
+    case 'UNAVAILABLE':
+      return 'UNAVAILABLE';
+  }
+}
+
 export function buildCareerReasoningTraceGraph(params: {
   readonly evidence: readonly DomainEvidence[];
   readonly natalStrength?: DomainStrength;
@@ -1518,6 +1526,8 @@ export function evaluateD10Relationship(
   d10Evidence?: readonly DomainEvidence[],
   natalPromiseEvidenceIds?: readonly string[]
 ): VargaRelationship {
+  // Compatibility-only adapter. Canonical Career reasoning must use canonical D10 inputs and
+  // must not pass theme evidence or legacy status through this helper.
   /**
    * P2-11C Gate 5: Single-source cutover for D10 relationship evaluation
    *
@@ -1678,7 +1688,8 @@ export function compareLegacyAndCanonicalStructuralReasoning(
   // Build canonical C4 structural reasoning
   const canonicalStructural = buildCareerStructuralReasoning({ horoscope });
 
-  // Extract legacy structural evidence from theme interpretation
+  // Compatibility-only structural comparison. This opt-in helper is not part of canonical
+  // interpretCareerV2 output and must remain isolated from its production reasoning path.
   const themeInterpretation = interpretCareerTheme({
     horoscope,
     dashaInterpretation: options.temporalState.dashaInterpretation
