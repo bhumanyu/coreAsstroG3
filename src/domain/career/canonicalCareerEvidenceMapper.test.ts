@@ -4,6 +4,7 @@ import {
   deduplicateCanonicalEvidence,
   sortCanonicalEvidence,
   checkDashaEvidenceMappable,
+  validateRootEvidenceLinks,
   type CanonicalCareerEvidenceInput,
   type SemanticEvidenceGroup
 } from './canonicalCareerEvidenceMapper';
@@ -875,6 +876,196 @@ describe('CanonicalCareerEvidenceMapper', () => {
       // Dasha evidence has no fabricated ruleId
       expect(evidence.ruleId).toBeUndefined();
       expect(evidence.provenance?.ruleId).toBeUndefined();
+    });
+
+    it('projects Dasha natalRootIds into canonical rootEvidenceIds and resolves them by identityKey', () => {
+      const rootIdentityKey = 'CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN';
+      const natalEvidence: WeightedReasoningEvidence = {
+        identityKey: rootIdentityKey,
+        evidenceId: 'natal-occurrence-1',
+        ruleId: 'SATURN_10TH_LORD',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 1,
+        weight: 3,
+        statement: 'Saturn natal root fact',
+        relatedEvidenceIds: [],
+        sourceIds: ['raw-natal-source-1']
+      };
+      const dashaEvidence: CareerDashaCanonicalEvidence = {
+        identityKey: 'CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER',
+        id: 'dasha-occurrence-1',
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Saturn MD activates Career',
+        sourceIds: ['dasha-source-occurrence-1'],
+        provenance: {
+          source: 'C9_DASHA',
+          activationLevel: 'MD',
+          natalRootIds: [rootIdentityKey]
+        }
+      };
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT',
+        overallStrength: 'STRONG',
+        dominantLevel: 'MD',
+        md: {
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          statement: 'Saturn MD'
+        },
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: [dashaEvidence],
+        rootEvidenceIds: [rootIdentityKey],
+        statement: 'Dasha roots'
+      };
+
+      const result = mapCanonicalCareerEvidence({
+        natal: {
+          ...createEmptyNatalAnalysis(),
+          evidence: [natalEvidence],
+          reasoningTrace: {
+            ...createEmptyNatalAnalysis().reasoningTrace,
+            primaryPromise: [natalEvidence]
+          }
+        },
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      });
+
+      const mappedDasha = result.evidence.find((item) => item.id === 'dasha-occurrence-1');
+      expect(mappedDasha?.rootEvidenceIds).toEqual([rootIdentityKey]);
+      expect(mappedDasha?.relatedEvidenceIds).toEqual(['dasha-source-occurrence-1']);
+      expect(result.rootEvidenceValidation).toEqual({
+        isValid: true,
+        unresolved: []
+      });
+    });
+
+    it('does not accept an occurrence ID as a root semantic reference', () => {
+      const rootIdentityKey = 'CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN';
+      const natalEvidence: WeightedReasoningEvidence = {
+        identityKey: rootIdentityKey,
+        evidenceId: 'natal-occurrence-1',
+        ruleId: 'SATURN_10TH_LORD',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 1,
+        weight: 3,
+        statement: 'Saturn natal root fact',
+        relatedEvidenceIds: [],
+        sourceIds: []
+      };
+      const dashaEvidence: CareerDashaCanonicalEvidence = {
+        identityKey: 'CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER',
+        id: 'dasha-occurrence-1',
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Saturn MD activates Career',
+        sourceIds: [],
+        provenance: {
+          source: 'C9_DASHA',
+          activationLevel: 'MD',
+          natalRootIds: ['natal-occurrence-1']
+        }
+      };
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT',
+        overallStrength: 'STRONG',
+        dominantLevel: 'MD',
+        md: {
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          statement: 'Saturn MD'
+        },
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: [dashaEvidence],
+        rootEvidenceIds: ['natal-occurrence-1'],
+        statement: 'Dasha roots'
+      };
+
+      const result = mapCanonicalCareerEvidence({
+        natal: {
+          ...createEmptyNatalAnalysis(),
+          evidence: [natalEvidence],
+          reasoningTrace: {
+            ...createEmptyNatalAnalysis().reasoningTrace,
+            primaryPromise: [natalEvidence]
+          }
+        },
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      });
+
+      expect(result.rootEvidenceValidation.isValid).toBe(false);
+      expect(result.rootEvidenceValidation.unresolved).toContainEqual({
+        sourceOccurrenceId: 'dasha-occurrence-1',
+        rootIdentityKey: 'natal-occurrence-1',
+        code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED'
+      });
+    });
+
+    it('fails closed when canonical Career evidence reuses an occurrence ID', () => {
+      const first: WeightedReasoningEvidence = {
+        identityKey: 'semantic-a',
+        evidenceId: 'duplicate-natal-occurrence',
+        ruleId: 'RULE_A',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 1,
+        weight: 3,
+        statement: 'First fact',
+        relatedEvidenceIds: [],
+        sourceIds: []
+      };
+      const second: WeightedReasoningEvidence = {
+        ...first,
+        identityKey: 'semantic-b',
+        ruleId: 'RULE_B',
+        statement: 'Second fact'
+      };
+
+      expect(() => mapCanonicalCareerEvidence({
+        natal: {
+          ...createEmptyNatalAnalysis(),
+          evidence: [first, second],
+          reasoningTrace: {
+            ...createEmptyNatalAnalysis().reasoningTrace,
+            primaryPromise: [first, second]
+          }
+        },
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      })).toThrow(/Duplicate DomainEvidence occurrence ID detected: duplicate-natal-occurrence/);
     });
 
     describe('Finding 5: Table-driven eligibility matrix for checkDashaEvidenceMappable', () => {
