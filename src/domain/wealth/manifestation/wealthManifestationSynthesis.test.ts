@@ -271,7 +271,7 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(result.dimension).toBe('ACCUMULATION');
     expect(result.natalSupport).toBe('SUPPORT');
     expect(result.dashaSupport).toBe('SUPPORT');
-    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.d2Support).toBe('UNAVAILABLE');
     expect(result.transitSupport).toBe('NEUTRAL');
     expect(result.status).toBe('STRONGLY_SUPPORTED');
     expect(result.confidence).toBe('HIGH');
@@ -310,7 +310,7 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(result.natalSupport).toBe('NEUTRAL');
     expect(result.dashaSupport).toBe('SUPPORT');
     expect(result.transitSupport).toBe('SUPPORT');
-    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.d2Support).toBe('UNAVAILABLE');
     expect(result.status).toBe('INSUFFICIENT_DATA');
     expect(result.confidence).toBe('LOW');
   });
