@@ -104,24 +104,13 @@ export function produceWealthDomainEvidence(
   });
 }
 
+/**
+ * D2 is intentionally contained as UNAVAILABLE until its calculation and interpretation
+ * validation gates are independently approved. Producer declarations and polarity alone
+ * are not sufficient to promote canonical Wealth D2 availability.
+ */
 export function resolveD2ProducerRelationship(
-  evidence: readonly WealthEvidenceProducerRecord[]
+  _evidence: readonly WealthEvidenceProducerRecord[]
 ): VargaRelationship {
-  if (evidence.length === 0) return 'UNAVAILABLE';
-
-  const declaredRelationships = new Set(
-    evidence
-      .map((item) => item.vargaEvidence?.relationship)
-      .filter((relationship): relationship is VargaRelationship => Boolean(relationship))
-  );
-  if (declaredRelationships.size > 1) return 'UNAVAILABLE';
-  // One declared relationship is authoritative; undeclared effect evidence must not override it.
-  if (declaredRelationships.size === 1) return Array.from(declaredRelationships)[0];
-
-  const supports = evidence.some((item) => item.effect === 'SUPPORT');
-  const challenges = evidence.some((item) => item.effect === 'CHALLENGE');
-  if (supports && challenges) return 'PARTIALLY_CONFIRMS';
-  if (supports) return 'CONFIRMS';
-  if (challenges) return 'CONFLICTS';
   return 'UNAVAILABLE';
 }
