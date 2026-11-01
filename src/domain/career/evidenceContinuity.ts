@@ -144,6 +144,7 @@ export interface EvidenceContinuityValidationInput {
  * - Emits MISSING_REQUIRED_REFERENCE for C11 references not present in canonical evidence
  * - Emits REFERENCE_NAMESPACE_MISMATCH when C11 reference resolves as occurrence ID only
  * - Validates relatedEvidenceIds presence (MISSING_SOURCE_REFERENCE)
+ * - Validates rootEvidenceIds resolve to canonical semantic identity keys
  * - Validates ruleId presence (MISSING_RULE_PROVENANCE)
  * - Detects provenance disagreement across occurrences (PROVENANCE_DISAGREEMENT)
  * - Validates reference uniqueness in requiredC11EvidenceIds (DUPLICATE_C11_REFERENCE)
