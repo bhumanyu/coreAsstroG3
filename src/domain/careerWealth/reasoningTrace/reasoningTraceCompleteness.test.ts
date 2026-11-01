@@ -152,16 +152,25 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
   it('preserves two distinct occurrences sharing one semantic root identity', () => {
     const first = evidence({ id: 'OCCURRENCE-A', identityKey: 'SHARED-SEMANTIC-IDENTITY' });
     const second = evidence({ id: 'OCCURRENCE-B', identityKey: 'SHARED-SEMANTIC-IDENTITY', ruleId: 'RULE-B' });
+    const dependent = evidence({
+      id: 'OCCURRENCE-C',
+      identityKey: 'DEPENDENT-SEMANTIC-IDENTITY',
+      ruleId: 'RULE-C',
+      rootEvidenceIds: ['SHARED-SEMANTIC-IDENTITY'],
+      relatedEvidenceIds: ['OCCURRENCE-A', 'OCCURRENCE-B']
+    });
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
       conclusionNodeId: 'CAREER-C11-FINAL',
       synthesisRuleId: 'C11',
       synthesisEvidenceReferences: [{ id: 'SHARED-SEMANTIC-IDENTITY', namespace: 'IDENTITY' }],
-      evidence: [first, second]
+      evidence: [first, second, dependent]
     });
     expect(result.resolvedEvidenceOccurrenceCount).toBe(2);
-    expect(result.links.map(link => link.evidenceOccurrenceId)).toEqual(['OCCURRENCE-A', 'OCCURRENCE-B']);
-    expect(result.links.every(link => link.semanticIdentityKey === 'SHARED-SEMANTIC-IDENTITY')).toBe(true);
+    expect(result.links.map(link => link.evidenceOccurrenceId)).toEqual(['OCCURRENCE-A', 'OCCURRENCE-B', 'OCCURRENCE-C']);
+    expect(result.links.filter(link => link.semanticIdentityKey === 'SHARED-SEMANTIC-IDENTITY')).toHaveLength(2);
+    expect(result.links.find(link => link.evidenceOccurrenceId === 'OCCURRENCE-C')?.rootEvidenceIdentityKeys).toEqual(['SHARED-SEMANTIC-IDENTITY']);
+    expect(result.diagnostics.some(item => item.code === 'UNRESOLVED_ROOT_EVIDENCE_LINK')).toBe(false);
   });
 
   it('round-trips the trace report through API-style JSON serialization', () => {
