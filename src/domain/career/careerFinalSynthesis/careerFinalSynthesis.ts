@@ -421,11 +421,11 @@ function deriveConfidence(
   ruleIds: readonly string[]
 ): { readonly confidence: CareerFinalConfidence; readonly coverage: CareerConfidenceCoverage; readonly reasons: readonly CareerConfidenceReason[] } {
   const layerCoverage: readonly CareerConfidenceLayerCoverage[] = Object.freeze([
-    Object.freeze({ layer: 'NATAL', requirement: 'REQUIRED', availability: layers.natal ? 'AVAILABLE' : 'UNAVAILABLE' }),
-    Object.freeze({ layer: 'DASHA', requirement: 'SUPPORTING', availability: layers.dasha ? 'AVAILABLE' : 'UNAVAILABLE' }),
-    Object.freeze({ layer: 'D10', requirement: 'SUPPORTING', availability: layers.d10 ? 'AVAILABLE' : 'UNAVAILABLE' }),
-    Object.freeze({ layer: 'EXPRESSION', requirement: 'SUPPORTING', availability: layers.expression ? 'AVAILABLE' : 'UNAVAILABLE' }),
-    Object.freeze({ layer: 'TRANSIT', requirement: 'OPTIONAL', availability: layers.transit ? 'AVAILABLE' : 'UNAVAILABLE' })
+    Object.freeze({ layer: 'NATAL' as const, requirement: 'REQUIRED' as const, availability: layers.natal ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }),
+    Object.freeze({ layer: 'DASHA' as const, requirement: 'SUPPORTING' as const, availability: layers.dasha ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }),
+    Object.freeze({ layer: 'D10' as const, requirement: 'SUPPORTING' as const, availability: layers.d10 ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }),
+    Object.freeze({ layer: 'EXPRESSION' as const, requirement: 'SUPPORTING' as const, availability: layers.expression ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }),
+    Object.freeze({ layer: 'TRANSIT' as const, requirement: 'OPTIONAL' as const, availability: layers.transit ? 'AVAILABLE' as const : 'UNAVAILABLE' as const })
   ]);
   const missingRequiredLayers = layerCoverage.filter(x => x.requirement === 'REQUIRED' && x.availability === 'UNAVAILABLE').map(x => x.layer);
   const missingSupportingLayers = layerCoverage.filter(x => x.requirement === 'SUPPORTING' && x.availability === 'UNAVAILABLE').map(x => x.layer);
