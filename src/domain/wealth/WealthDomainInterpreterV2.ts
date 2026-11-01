@@ -100,7 +100,9 @@ import {
   mapManifestationStatusToEdgeType,
   mapPromiseStatusToEdgeType,
   type ReasoningEdgeType,
-  type ReasoningTraceGraph
+  type ReasoningTraceGraph,
+  buildReasoningTraceCompleteness,
+  type ReasoningTraceEvidenceReference
 } from '../careerWealth/reasoningTrace';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
@@ -553,7 +555,9 @@ export function interpretWealthV2(
     wealthTimingSynthesis,
     d2Relationship,
     wealthManifestationSynthesis,
-    wealthFinalSynthesis
+    wealthFinalSynthesis,
+    synthesisRuleId: 'CW-05-WEALTH-SYNTHESIS',
+    synthesisEvidenceReferences: wealthFinalSynthesis.evidenceIds.map((id): ReasoningTraceEvidenceReference => ({ id, namespace: 'OCCURRENCE' }))
   });
 
   return buildDomainInterpretation({
@@ -622,6 +626,8 @@ export function buildWealthReasoningTraceGraph(params: {
   readonly wealthTimingSynthesis?: WealthTimingSynthesis;
   readonly d2Relationship?: VargaRelationship;
   readonly wealthManifestationSynthesis?: WealthManifestationSynthesis;
+  readonly synthesisRuleId?: string;
+  readonly synthesisEvidenceReferences?: readonly ReasoningTraceEvidenceReference[];
   readonly wealthFinalSynthesis: CareerWealthFinalSynthesis;
 }): ReasoningTraceGraph {
   const traceBuilder = new ReasoningTraceBuilder('WEALTH');
@@ -768,7 +774,16 @@ export function buildWealthReasoningTraceGraph(params: {
   validateEvidenceNodes(graph, new Set(params.evidence.flatMap((e) =>
     e.identityKey ? [e.id, e.identityKey] : [e.id]
   )));
-  return graph;
+  if (!params.synthesisRuleId || !params.synthesisEvidenceReferences) return graph;
+  return Object.freeze({
+    ...graph,
+    traceCompleteness: buildReasoningTraceCompleteness({
+      domain: 'WEALTH',
+      synthesisRuleId: params.synthesisRuleId,
+      synthesisEvidenceReferences: params.synthesisEvidenceReferences,
+      evidence: params.evidence
+    })
+  });
 }
 
 /**
