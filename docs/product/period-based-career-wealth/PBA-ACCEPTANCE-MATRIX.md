@@ -1018,7 +1018,7 @@ D2 manifestation factors now attribute evidence IDs only when an evidence item's
   - ✅ `npm run lint`: PASS
   - ✅ `npm run verify`: PASS (309 test files, 5,730 passed, 4 skipped; lint, production build, and bundle scan passed)
 
-`normalizeAsOf` and `createAnalysisContext` now accept an injected optional clock; omitted `asOf` uses `clock.now()`, while explicit normalization and the existing invalid-input catch contract remain unchanged. The Phase 6 temporal contract documents UTC normalization, display timezone policy, half-open intervals, no clamping, reproducibility metadata, and that no default forecast horizon is yet owner-approved. Forecast production wiring remains gated.
+`normalizeAsOf` and `createAnalysisContext` accept an injected optional clock; omitted `asOf` uses `clock.now()`, and both explicit timestamps and clock output are validated and normalized to UTC. A04 removes the invalid-input catch-and-substitute behavior: invalid explicit input or invalid clock output throws during context construction, before horoscope calculation or product pipeline execution. The Phase 6 temporal contract documents UTC normalization, display timezone policy, half-open intervals, no clamping, reproducibility metadata, and that no default forecast horizon is yet owner-approved. Forecast production wiring remains gated.
 
 ## Phase 6 PR-036 — Clock Through Product Analysis Service
 
