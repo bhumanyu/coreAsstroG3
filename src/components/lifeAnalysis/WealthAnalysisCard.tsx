@@ -111,9 +111,7 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
           >
             {formatEnum('UNAVAILABLE')}
           </span>
-          {detail.d2AvailabilityReason && (
-            <p className="mt-1 text-[10px] leading-relaxed text-slate-400">{detail.d2AvailabilityReason}</p>
-          )}
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-400">D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.</p>
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1">
