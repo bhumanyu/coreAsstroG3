@@ -460,7 +460,7 @@ export class ProductAnalysisService {
             selectedPeriod: selectedPeriodResult.value,
             selectedPeriodEvidence: {
               careerEvidence: pipelineState.career?.evidence ?? [],
-              careerDashaEvidence: pipelineState.careerArtifacts!.careerDashaEvidence,
+              careerDashaEvidence: pipelineState.careerArtifacts?.careerDashaEvidence ?? [],
               wealthEvidence: pipelineState.wealth?.evidence ?? []
             }
           });
