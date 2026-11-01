@@ -34,7 +34,6 @@ import {
   evaluateCareerTimingActivation,
   evaluateDashaEffect,
   evaluateTransitEffect,
-  evaluateD10Relationship,
   calculateCareerDataCompleteness,
   buildCareerConclusionData,
   buildCareerHeadline,
@@ -47,6 +46,7 @@ import {
   mapCareerPhase,
   type CareerConclusionData
 } from './CareerDomainInterpreterV2';
+import { evaluateD10Relationship } from './careerCompatibility';
 import {
   mapCanonicalCareerEvidence,
   checkDashaEvidenceMappable,

@@ -19,7 +19,11 @@ export interface WealthEvidenceProduction {
   readonly evidence: readonly WealthEvidence[];
   readonly evaluatedRulesCount: number;
   readonly triggeredRulesCount: number;
-  readonly ruleErrors: readonly { readonly ruleId: string; readonly error: string }[];
+  readonly ruleErrors: readonly {
+    readonly ruleId: string;
+    readonly error: string;
+    readonly evidenceFamily: WealthEvidenceFamily;
+  }[];
   readonly dataCompleteness: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT';
 }
 
@@ -48,11 +52,22 @@ export function produceWealthEvidence(
   const rawEvidence: WealthEvidence[] = [];
   let evaluatedRulesCount = 0;
   let triggeredRulesCount = 0;
-  const ruleErrors: { ruleId: string; error: string }[] = [];
+  const ruleErrors: {
+    ruleId: string;
+    error: string;
+    evidenceFamily: WealthEvidenceFamily;
+  }[] = [];
 
   for (const rule of WEALTH_RULES) {
     evaluatedRulesCount++;
-    const result = evaluateRule(rule, context, undefined, ruleErrors);
+    const ruleErrorsForRule: { ruleId: string; error: string }[] = [];
+    const result = evaluateRule(rule, context, undefined, ruleErrorsForRule);
+    ruleErrors.push(
+      ...ruleErrorsForRule.map((ruleError) => ({
+        ...ruleError,
+        evidenceFamily: rule.evidenceFamily
+      }))
+    );
     if (!isPresentEvidence(result)) continue;
 
     triggeredRulesCount++;

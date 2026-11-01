@@ -183,6 +183,10 @@ export function buildLifeAnalysisViewModel(
     currentTimingEffect: deriveWealthTimingEffect(wealthTiming),
     manifestationSynthesis: wealthConclusionData?.wealthManifestationSynthesis,
     finalSynthesis: wealthConclusionData?.wealthFinalSynthesis,
+    ...(wealth.diagnostics ? { diagnostics: wealth.diagnostics } : {}),
+    ...(wealth.dataCompleteness && 'evidenceProduction' in wealth.dataCompleteness
+      ? { evidenceProduction: wealth.dataCompleteness.evidenceProduction }
+      : {}),
     ...(wealthDashaHierarchy ? { dashaHierarchy: wealthDashaHierarchy } : {})
   };
 

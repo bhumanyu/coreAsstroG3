@@ -54,14 +54,12 @@ describe('Wealth evidence producer adapter contract', () => {
           record.planets?.[0]
       );
       expect(domainEvidence.house).toBe(record.houses?.[0]);
+      expect(domainEvidence.id).toBe(record.id);
       if (record.identityKey) {
         expect(domainEvidence.identityKey).toBe(record.identityKey);
       }
       if (record.ruleId === 'WEALTH_VENUS_KARAKA_001') {
         expect(domainEvidence.provenance?.ruleId).toBe(record.ruleId);
-        expect(domainEvidence.id).toBe(domainEvidence.provenance?.evidenceId);
-      } else {
-        expect(domainEvidence.id).toBe(record.identityKey ?? record.id);
       }
       for (const relatedId of domainEvidence.relatedEvidenceIds) {
         expect(mapped.some((candidate) => candidate.id === relatedId)).toBe(true);
@@ -138,12 +136,58 @@ describe('Wealth evidence producer adapter contract', () => {
     const d2 = mapped.find((item) => item.id === 'OCC-D2');
     const dasha = mapped.find((item) => item.id === 'OCC-DASHA');
     const transit = mapped.find((item) => item.id === 'OCC-TRANSIT');
-    expect(mapped[0].id).toBe('SEM-SECOND');
+    expect(mapped[0].id).toBe('OCC-SECOND');
     expect(mapped[0].identityKey).toBe('SEM-SECOND');
-    expect(d2?.relatedEvidenceIds).toEqual(['SEM-SECOND']);
-    expect(dasha?.relatedEvidenceIds).toEqual(['SEM-SECOND']);
-    expect(transit?.relatedEvidenceIds).toEqual(['SEM-SECOND']);
+    expect(d2?.relatedEvidenceIds).toEqual(['OCC-SECOND']);
+    expect(dasha?.relatedEvidenceIds).toEqual(['OCC-SECOND']);
+    expect(transit?.relatedEvidenceIds).toEqual(['OCC-SECOND']);
     expect(mapped[0].relatedEvidenceIds).toEqual([]);
+  });
+
+  it('preserves distinct occurrences that share a canonical identity key', () => {
+    const records: readonly WealthEvidenceProducerRecord[] = [
+      {
+        id: 'OCC-SECOND-A',
+        identityKey: 'SEM-SECOND',
+        ruleId: 'WEALTH_SECOND_HOUSE_FIXTURE_A',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        priority: 'PRIMARY',
+        strength: 'STRONG',
+        effect: 'SUPPORT',
+        statement: 'First second-house occurrence',
+        houses: [2]
+      },
+      {
+        id: 'OCC-SECOND-B',
+        identityKey: 'SEM-SECOND',
+        ruleId: 'WEALTH_SECOND_HOUSE_FIXTURE_B',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        priority: 'PRIMARY',
+        strength: 'MODERATE',
+        effect: 'CHALLENGE',
+        statement: 'Second second-house occurrence',
+        houses: [2]
+      }
+    ];
+
+    const mapped = buildWealthEvidence(records);
+    expect(mapped).toHaveLength(2);
+    expect(mapped.map((item) => item.id)).toEqual(['OCC-SECOND-A', 'OCC-SECOND-B']);
+    expect(mapped.map((item) => item.identityKey)).toEqual(['SEM-SECOND', 'SEM-SECOND']);
+  });
+
+  it('rejects duplicate producer occurrence IDs', () => {
+    const record: WealthEvidenceProducerRecord = {
+      id: 'DUPLICATE-OCCURRENCE',
+      ruleId: 'WEALTH_SECOND_HOUSE_FIXTURE',
+      evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+      priority: 'PRIMARY',
+      strength: 'STRONG',
+      effect: 'SUPPORT',
+      statement: 'Duplicate identity contract fixture'
+    };
+    expect(() => buildWealthEvidence([record, { ...record, statement: 'duplicate' }]))
+      .toThrow('Duplicate Wealth producer occurrence ID: DUPLICATE-OCCURRENCE');
   });
 });
 

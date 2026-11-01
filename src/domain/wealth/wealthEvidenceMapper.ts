@@ -201,14 +201,18 @@ export function resolveRequiredWealthSubjectKey(
 export function buildWealthEvidence(
   producerEvidence: readonly WealthEvidenceProducerRecord[]
 ): readonly DomainEvidence[] {
+  const seenIds = new Set<string>();
+  for (const item of producerEvidence) {
+    if (seenIds.has(item.id)) {
+      throw new Error(`Duplicate Wealth producer occurrence ID: ${item.id}`);
+    }
+    seenIds.add(item.id);
+  }
+
   return Object.freeze(
     producerEvidence.map((item) => {
       const role = mapWealthRole(item);
-      const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, producerEvidence)
-        .map((id) => {
-          const relatedItem = producerEvidence.find((candidate) => candidate.id === id);
-          return relatedItem?.identityKey ?? id;
-        });
+      const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, producerEvidence);
       const period = mapWealthDashaPeriod(item);
       const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? item.planets?.[0] ?? undefined;
       const house = item.houses?.[0] ?? undefined;
@@ -239,6 +243,8 @@ export function buildWealthEvidence(
             effect: item.effect,
             strength: provenanceStrength
           },
+          occurrenceId: item.id,
+          ...(item.identityKey ? { identityKey: item.identityKey } : {}),
           statement: item.statement,
           sourceType: mapWealthSourceType(item),
           role,
@@ -255,13 +261,7 @@ export function buildWealthEvidence(
       }
 
       return createDomainEvidence({
-        // NOTE: This prioritizes identityKey (semantic identity) over item.id (occurrence ID) for the id field.
-        // This is intentional for compatibility in the legacy Wealth mapper, which does not yet use
-        // canonical semantic identity resolution. When identityKey is present on the raw evidence item,
-        // it becomes the occurrence ID in the DomainEvidence to enable cross-layer matching.
-        // The identityKey field is also set separately for future canonical migration.
-        // Contract: id = identityKey if present, otherwise id = item.id (original occurrence ID).
-        id: (item as any).identityKey ?? item.id,
+        id: item.id,
         sourceType: mapWealthSourceType(item),
         domain: 'WEALTH',
         role,
@@ -278,7 +278,7 @@ export function buildWealthEvidence(
         dimension,
         planet,
         house,
-        identityKey: (item as any).identityKey
+        ...(item.identityKey ? { identityKey: item.identityKey } : {})
       });
     })
   );

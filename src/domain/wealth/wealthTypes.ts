@@ -107,6 +107,7 @@ export interface WealthDataCompleteness {
   readonly d2: 'AVAILABLE' | 'UNAVAILABLE';
   readonly dasha: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
   readonly transit: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly evidenceProduction?: 'PARTIAL' | 'INSUFFICIENT';
 }
 
 export interface WealthEvidenceClassification {

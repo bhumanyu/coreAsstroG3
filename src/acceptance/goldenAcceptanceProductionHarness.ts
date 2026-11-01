@@ -798,10 +798,34 @@ function traceConclusion(
   // We assert evidence-ID references independently instead of claiming trace-status parity
   const status = 'UNAVAILABLE';
   const evidenceIds = graph.nodes.flatMap(node => node.evidenceId ? [node.evidenceId] : []);
+  const traceEvidenceAliases = new Map<string, EvidenceResolverRecord>();
+  if (domain === 'WEALTH') {
+    const occurrenceIds = new Set(interpretation.evidence.map(record => record.id));
+    for (const record of interpretation.evidence) {
+      const identityKey = record.identityKey;
+      if (!identityKey || identityKey === record.id || occurrenceIds.has(identityKey)) continue;
+      if (!traceEvidenceAliases.has(identityKey)) {
+        traceEvidenceAliases.set(identityKey, {
+          id: identityKey,
+          domain: record.domain,
+          source: record.source,
+          ruleId: record.ruleId,
+          role: record.role,
+          provenance: record.provenance
+            ? {
+                source: record.provenance.source,
+                ruleId: record.provenance.ruleId,
+                axis: record.provenance.axis
+              }
+            : undefined
+        });
+      }
+    }
+  }
 
   // Resolve all trace evidence IDs through discriminated resolver
   const resolutionMap = resolveEvidenceIds(evidenceIds, {
-    domainUniverse: interpretation.evidence
+    domainUniverse: [...interpretation.evidence, ...traceEvidenceAliases.values()]
   }, domain);
   const evidence = evidenceIds.map(id => acceptanceEvidenceFromResolution(
     id,

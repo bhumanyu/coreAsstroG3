@@ -48,12 +48,12 @@ import {
   buildCareerTransitStatement,
   buildD10Statement,
   evaluateCareerTimingActivation,
-  evaluateD10Relationship,
   evaluateDashaEffect as evaluateCareerDashaEffect,
   evaluateTransitEffect as evaluateCareerTransitEffect,
   calculateCareerDataCompleteness,
   buildCareerConclusionData
 } from '../../domain/career/CareerDomainInterpreterV2';
+import { evaluateD10Relationship } from '../../domain/career/careerCompatibility';
 import type {
   Stage1GoldenExpectation,
   Stage1IntegrationInput

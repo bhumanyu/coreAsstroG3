@@ -123,7 +123,12 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
 
     // Structural validation
     expect(() => validateReasoningTrace(graph)).not.toThrow();
-    expect(() => validateEvidenceNodes(graph, new Set(interpretation.evidence.map((e) => e.id)))).not.toThrow();
+    expect(() => validateEvidenceNodes(
+      graph,
+      new Set(interpretation.evidence.flatMap((e) =>
+        e.identityKey ? [e.id, e.identityKey] : [e.id]
+      ))
+    )).not.toThrow();
 
     // Assert exact node presence for Wealth
     const natalNode = graph.nodes.find((n) => n.axis === 'NATAL' && n.subjectKey === 'NATAL_PROMISE');

@@ -18,7 +18,6 @@ import {
   evaluateCareerTimingActivation,
   evaluateDashaEffect,
   evaluateTransitEffect,
-  evaluateD10Relationship,
   resolveCareerConclusionStrength,
   resolveCurrentActivation,
   resolveCurrentPressure,
@@ -33,6 +32,7 @@ import {
   buildCareerConclusion,
   calculateCareerDataCompleteness
 } from './CareerDomainInterpreterV2';
+import { evaluateD10Relationship } from './careerCompatibility';
 
 export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   createDomainEvidence({

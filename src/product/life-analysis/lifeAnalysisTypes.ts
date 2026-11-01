@@ -242,6 +242,8 @@ export interface LifeAnalysisWealthDetailViewModel {
   readonly dashaHierarchy?: DashaWealthHierarchySynthesis;
   readonly manifestationSynthesis?: WealthManifestationSynthesis;
   readonly finalSynthesis?: CareerWealthFinalSynthesis;
+  readonly diagnostics?: DomainInterpretation['diagnostics'];
+  readonly evidenceProduction?: 'PARTIAL' | 'INSUFFICIENT';
 }
 
 export interface LifeAnalysisTimingDomainEffect {

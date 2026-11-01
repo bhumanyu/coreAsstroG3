@@ -49,6 +49,7 @@ export interface WealthEvidenceProducerOutput {
 export interface WealthEvidenceProducerRuleError {
   readonly ruleId: string;
   readonly error: string;
+  readonly evidenceFamily: WealthEvidenceFamily;
 }
 
 export interface WealthEvidenceProducerInput {
@@ -112,6 +113,7 @@ export function resolveD2ProducerRelationship(
       .filter((relationship): relationship is VargaRelationship => Boolean(relationship))
   );
   if (declaredRelationships.size > 1) return 'UNAVAILABLE';
+  // One declared relationship is authoritative; undeclared effect evidence must not override it.
   if (declaredRelationships.size === 1) return Array.from(declaredRelationships)[0];
 
   const supports = evidence.some((item) => item.effect === 'SUPPORT');

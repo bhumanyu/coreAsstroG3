@@ -148,7 +148,11 @@ describe('WealthDomainInterpreterV2', () => {
     const producer = vi.spyOn(wealthEvidenceProducerModule, 'produceWealthDomainEvidence')
       .mockReturnValue({
         evidence: [],
-        ruleErrors: [{ ruleId: 'WEALTH_RULE_FIXTURE', error: 'fixture failure' }],
+        ruleErrors: [{
+          ruleId: 'WEALTH_RULE_FIXTURE',
+          error: 'fixture failure',
+          evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE
+        }],
         d2Relationship: 'UNAVAILABLE',
         referenceDatasetAvailable: false
       });
@@ -158,9 +162,51 @@ describe('WealthDomainInterpreterV2', () => {
       expect(result.diagnostics).toContainEqual({
         code: 'WEALTH_EVIDENCE_RULE_FAILED',
         severity: 'ERROR',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
         message: 'Wealth evidence rule WEALTH_RULE_FIXTURE failed: fixture failure',
         relatedIds: ['WEALTH_RULE_FIXTURE']
       });
+      expect(
+        result.dataCompleteness && 'evidenceProduction' in result.dataCompleteness
+          ? result.dataCompleteness.evidenceProduction
+          : undefined
+      ).toBe('INSUFFICIENT');
+      expect(
+        result.dataCompleteness && 'primaryFactors' in result.dataCompleteness
+          ? result.dataCompleteness.primaryFactors
+          : 'AVAILABLE'
+      ).not.toBe('AVAILABLE');
+    } finally {
+      producer.mockRestore();
+    }
+  });
+
+  it('keeps recoverable non-required-family failures diagnostic-only', () => {
+    const options = makeDomainOptions();
+    const baseline = interpretWealthV2(horoscope, options);
+    const originalProducer = wealthEvidenceProducerModule.produceWealthDomainEvidence;
+    const production = originalProducer({
+      horoscope,
+      dashaInterpretation: options.temporalState.dashaInterpretation
+    });
+    const producer = vi.spyOn(wealthEvidenceProducerModule, 'produceWealthDomainEvidence')
+      .mockReturnValue({
+        ...production,
+        ruleErrors: [{
+          ruleId: 'WEALTH_ASPECT_RECOVERABLE_FIXTURE',
+          error: 'recoverable fixture failure',
+          evidenceFamily: WealthEvidenceFamily.ASPECT
+        }],
+        referenceDatasetAvailable: true
+      });
+
+    try {
+      const result = interpretWealthV2(horoscope, options);
+      expect(result.diagnostics).toContainEqual(expect.objectContaining({
+        code: 'WEALTH_EVIDENCE_RULE_FAILED',
+        evidenceFamily: WealthEvidenceFamily.ASPECT
+      }));
+      expect(result.dataCompleteness).toEqual(baseline.dataCompleteness);
     } finally {
       producer.mockRestore();
     }
@@ -2789,9 +2835,9 @@ describe('Wealth period activation contracts', () => {
     const mapped = linkWealthEvidence(buildWealthEvidence(rawEvidence));
     const venusMapped = mapped.find((item) => item.ruleId === 'WEALTH_VENUS_KARAKA_001');
     const legacyMapped = mapped.find((item) => item.ruleId === legacyRaw?.ruleId);
-    expect(venusMapped?.provenance?.evidenceId).toBe(venusMapped?.id);
-    expect(venusMapped?.id).not.toBe(venusRaw?.id);
-    expect(legacyMapped?.id).toBe((legacyRaw as unknown as { identityKey?: string }).identityKey ?? legacyRaw?.id);
+    expect(venusMapped?.provenance?.evidenceId).toBeDefined();
+    expect(venusMapped?.id).toBe(venusRaw?.id);
+    expect(legacyMapped?.id).toBe(legacyRaw?.id);
 
     const natalPromiseEvidenceIds = mapped
       .filter((item) => item.phase === 'NATAL_PROMISE')

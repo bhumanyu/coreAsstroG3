@@ -55,8 +55,15 @@ export function assertCareerWealthEvidenceContract(evidence: CareerWealthEvidenc
   if (!evidence.ruleId?.trim() || !provenance.ruleId?.trim()) {
     throw new Error('CareerWealthEvidence contract: ruleId must be non-empty');
   }
-  if (evidence.id !== provenance.evidenceId) {
-    throw new Error('CareerWealthEvidence contract: evidence.id must equal provenance.evidenceId');
+  if (evidence.identityKey !== undefined) {
+    if (!evidence.identityKey.trim()) {
+      throw new Error('CareerWealthEvidence contract: identityKey must be non-empty when provided');
+    }
+    if (evidence.identityKey !== provenance.evidenceId) {
+      throw new Error('CareerWealthEvidence contract: identityKey must equal provenance.evidenceId');
+    }
+  } else if (evidence.id !== provenance.evidenceId) {
+    throw new Error('CareerWealthEvidence contract: evidence.id must equal provenance.evidenceId when identityKey is absent');
   }
   if (evidence.ruleId !== provenance.ruleId) {
     throw new Error('CareerWealthEvidence contract: ruleId must equal provenance.ruleId');
@@ -74,6 +81,8 @@ export function assertCareerWealthEvidenceContract(evidence: CareerWealthEvidenc
 
 export interface CreateCareerWealthEvidenceInput {
   readonly identity: EvidenceIdentityInput;
+  readonly occurrenceId?: string;
+  readonly identityKey?: string;
   readonly statement: string;
   readonly sourceType?: EvidenceSourceType;
   readonly role?: EvidenceRole;
@@ -95,7 +104,7 @@ export interface CreateCareerWealthEvidenceInput {
 
 /**
  * Factory that creates a CareerWealthEvidence instance ensuring:
- * - DomainEvidence.id === provenance.evidenceId
+ * - DomainEvidence.id is the occurrence ID when supplied, otherwise provenance.evidenceId
  * - DomainEvidence.ruleId === provenance.ruleId
  * - DomainEvidence.polarity === mapEffectToPolarity(provenance.effect)
  * - DomainEvidence.domain === provenance.domain
@@ -110,7 +119,7 @@ export function createCareerWealthEvidence(
   const polarity = mapEffectToPolarity(provenance.effect);
 
   const domainEvidence = createDomainEvidence({
-    id: provenance.evidenceId,
+    id: input.occurrenceId ?? provenance.evidenceId,
     sourceType: input.sourceType ?? 'OTHER',
     domain: provenance.domain as DomainId,
     role: input.role,
@@ -128,7 +137,8 @@ export function createCareerWealthEvidence(
     evidenceFamily: input.evidenceFamily,
     dimension: input.dimension,
     planet: input.planet,
-    house: input.house
+    house: input.house,
+    identityKey: input.identityKey ?? (input.occurrenceId ? provenance.evidenceId : undefined)
   });
 
   const careerWealthEvidence = domainEvidence as CareerWealthEvidence;

@@ -118,6 +118,7 @@ export function interpretWealthV2(
   const producerDiagnostics = wealthProduction.ruleErrors.map((ruleError) => ({
     code: 'WEALTH_EVIDENCE_RULE_FAILED',
     severity: 'ERROR' as const,
+    evidenceFamily: ruleError.evidenceFamily,
     message: `Wealth evidence rule ${ruleError.ruleId} failed: ${ruleError.error}`,
     relatedIds: [ruleError.ruleId]
   }));
@@ -189,7 +190,10 @@ export function interpretWealthV2(
   const hasVargaConflict = conflicts.some((c) => c.tier === 'PRIMARY_VS_VARGA');
   const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
 
-  const dataCompleteness = calculateWealthDataCompleteness(evidence);
+  const dataCompleteness = applyProducerCompleteness(
+    calculateWealthDataCompleteness(evidence),
+    wealthProduction
+  );
   const natalStrength = calculateDomainStrength(natalSupporting, natalChallenging);
 
   const natalConfidence = calculateEvidenceConfidence(natalEvidence, {
@@ -582,6 +586,36 @@ export function interpretWealthV2(
   });
 }
 
+// These four structural families establish the core accumulation and gains reference set.
+const REQUIRED_WEALTH_EVIDENCE_FAMILIES: ReadonlySet<WealthEvidenceFamily> = new Set([
+  WealthEvidenceFamily.SECOND_HOUSE,
+  WealthEvidenceFamily.SECOND_LORD,
+  WealthEvidenceFamily.ELEVENTH_HOUSE,
+  WealthEvidenceFamily.ELEVENTH_LORD
+]);
+
+function applyProducerCompleteness(
+  completeness: WealthDataCompleteness,
+  production: ReturnType<typeof produceWealthDomainEvidence>
+): WealthDataCompleteness {
+  if (production.ruleErrors.length === 0) return completeness;
+
+  const requiredFamilyFailed = production.ruleErrors.some((error) =>
+    REQUIRED_WEALTH_EVIDENCE_FAMILIES.has(error.evidenceFamily)
+  );
+  const referenceUnavailableWithErrors =
+    !production.referenceDatasetAvailable && production.ruleErrors.length > 0;
+  if (!requiredFamilyFailed && !referenceUnavailableWithErrors) return completeness;
+
+  return Object.freeze({
+    ...completeness,
+    primaryFactors: completeness.primaryFactors === 'AVAILABLE'
+      ? 'PARTIAL'
+      : completeness.primaryFactors,
+    evidenceProduction: referenceUnavailableWithErrors ? 'INSUFFICIENT' : 'PARTIAL'
+  });
+}
+
 export function buildWealthReasoningTraceGraph(params: {
   readonly evidence: readonly DomainEvidence[];
   readonly overallStatus?: WealthDimensionStatus | string;
@@ -731,7 +765,9 @@ export function buildWealthReasoningTraceGraph(params: {
 
   const graph = traceBuilder.build();
   validateReasoningTrace(graph);
-  validateEvidenceNodes(graph, new Set(params.evidence.map((e) => e.id)));
+  validateEvidenceNodes(graph, new Set(params.evidence.flatMap((e) =>
+    e.identityKey ? [e.id, e.identityKey] : [e.id]
+  )));
   return graph;
 }
 
@@ -1288,7 +1324,7 @@ export function assertWealthPeriodActivationContract(
     }
     if (occurrence.provenance && (
       occurrence.provenance.domain !== 'WEALTH' ||
-      occurrence.provenance.evidenceId !== occurrence.id ||
+      occurrence.provenance.evidenceId !== (occurrence.identityKey ?? occurrence.id) ||
       (occurrence.ruleId !== undefined && occurrence.provenance.ruleId !== occurrence.ruleId)
     )) {
       throw new WealthPeriodActivationContractError(

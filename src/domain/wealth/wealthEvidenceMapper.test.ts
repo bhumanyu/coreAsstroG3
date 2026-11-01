@@ -178,7 +178,7 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
   });
 
   describe('Concern 12: Migrated producer WEALTH_VENUS_KARAKA_001 canonical provenance', () => {
-    it('emits evidence.id === evidence.provenance.evidenceId with provenance.ruleId and order-independent id', () => {
+    it('preserves occurrence IDs alongside provenance identity and rule ID', () => {
       const rawEvidenceVenusOnly: ThemeInterpretationEvidence<WealthEvidenceFamily>[] = [
         {
           id: 'raw-venus-karaka-1',
@@ -210,17 +210,17 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
       const [mappedVenusOnly] = buildWealthEvidence(rawEvidenceVenusOnly);
       const [mappedMultiReversed] = buildWealthEvidence(rawEvidenceMultiPlanetsReversed);
 
-      // 1. Assert evidence.id === evidence.provenance.evidenceId
-      expect(mappedVenusOnly.id).toBe(mappedVenusOnly.provenance?.evidenceId);
-      expect(mappedMultiReversed.id).toBe(mappedMultiReversed.provenance?.evidenceId);
+      expect(mappedVenusOnly.id).toBe('raw-venus-karaka-1');
+      expect(mappedMultiReversed.id).toBe('raw-venus-karaka-2');
+      expect(mappedVenusOnly.provenance?.evidenceId)
+        .toBe(mappedMultiReversed.provenance?.evidenceId);
 
       // 2. Assert provenance.ruleId === 'WEALTH_VENUS_KARAKA_001'
       expect(mappedVenusOnly.provenance?.ruleId).toBe('WEALTH_VENUS_KARAKA_001');
       expect(mappedMultiReversed.provenance?.ruleId).toBe('WEALTH_VENUS_KARAKA_001');
 
-      // 3. Core determinism guarantee: id is identical
-      expect(mappedVenusOnly.id).toBe(mappedMultiReversed.id);
-      expect(mappedVenusOnly.id).toBe(
+      // Semantic provenance identity remains deterministic across occurrence records.
+      expect(mappedVenusOnly.provenance?.evidenceId).toBe(
         'CW-WEALTH-NATAL-D1-WEALTH_VENUS_KARAKA_001-VENUS_KARAKA-SUPPORT-PRIMARY'
       );
     });
@@ -271,8 +271,8 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
     });
   });
 
-  describe('Finding 3: Legacy Wealth mapper id/identityKey contract', () => {
-    it('uses identityKey as id when present on raw evidence item', () => {
+  describe('Wealth mapper occurrence and semantic identity contract', () => {
+    it('preserves item.id and carries identityKey separately', () => {
       const rawItemWithIdentityKey: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
         id: 'RAW_OCCURRENCE_ID_123',
         ruleId: 'WEALTH_2H_STRONG',
@@ -287,11 +287,8 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
 
       const [mapped] = buildWealthEvidence([rawItemWithIdentityKey]);
 
-      // Contract: id = identityKey when present
-      expect(mapped.id).toBe('SEMANTIC_KEY_ABC');
+      expect(mapped.id).toBe('RAW_OCCURRENCE_ID_123');
       expect(mapped.identityKey).toBe('SEMANTIC_KEY_ABC');
-      // Original occurrence ID is not preserved in id field
-      expect(mapped.id).not.toBe('RAW_OCCURRENCE_ID_123');
     });
 
     it('uses item.id as id when identityKey is absent', () => {

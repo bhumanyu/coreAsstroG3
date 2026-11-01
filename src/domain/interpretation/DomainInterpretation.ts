@@ -22,6 +22,7 @@ export interface DomainInterpretationDiagnostic {
   readonly code: string;
   readonly severity: 'WARNING' | 'ERROR';
   readonly message: string;
+  readonly evidenceFamily?: string;
   readonly relatedIds?: readonly string[];
 }
 

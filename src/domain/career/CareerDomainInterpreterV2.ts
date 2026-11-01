@@ -1,9 +1,4 @@
 import type { Horoscope, Planet } from '../../types';
-import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
-import {
-  CareerEvidenceFamily,
-  type ThemeInterpretationEvidence
-} from '../../engine/themeInterpretation/themeInterpretationTypes';
 import {
   createHoroscopeForecastContext
 } from '../../core/analysis';
@@ -46,13 +41,7 @@ import type {
   CareerDataCompleteness,
   CareerEvidenceClassification
 } from './careerTypes';
-import {
-  linkCareerEvidence,
-  resolveRelatedCareerPromiseEvidenceIds
-} from './careerEvidenceLinker';
-import {
-  buildCareerEvidence
-} from './careerEvidenceMapper';
+import { resolveRelatedCareerPromiseEvidenceIds } from './careerEvidenceLinker';
 import {
   deriveCareerManifestations,
   buildCareerManifestations,
@@ -87,9 +76,7 @@ import type { CareerManifestationSynthesis } from './manifestation/careerManifes
 import { synthesizeCareerFinal } from '../careerWealth/finalSynthesis/careerFinalSynthesis';
 import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import {
-  buildCareerStructuralReasoning,
-  toDomainEvidence,
-  type CareerStructuralReasoning
+  toDomainEvidence
 } from './careerStructuralReasoningIntegration';
 import type {
   CareerExpressionAnalysisResult
@@ -1520,84 +1507,6 @@ export function evaluateTransitEffect(
   return 'TRIGGER';
 }
 
-export function evaluateD10Relationship(
-  rawEvidence?: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[],
-  legacyStatus?: string,
-  d10Evidence?: readonly DomainEvidence[],
-  natalPromiseEvidenceIds?: readonly string[]
-): VargaRelationship {
-  // Compatibility-only adapter. Canonical Career reasoning must use canonical D10 inputs and
-  // must not pass theme evidence or legacy status through this helper.
-  /**
-   * P2-11C Gate 5: Single-source cutover for D10 relationship evaluation
-   *
-   * Primary path: canonical D10 evidence (d10Evidence from canonical mapper)
-   * Fallback path: rawEvidence/legacyStatus for backward compatibility
-   *
-   * The fallback is intentionally retained because:
-   * 1. Legacy consumers may still call this function with rawEvidence directly
-   * 2. Theme interpretation D10 hints (vargaEvidence) are not currently emitted by canonical mapper
-   * 3. The fallback provides graceful degradation for edge cases
-   *
-   * Future gate: Remove fallback when canonical D10 evidence fully replaces legacy D10 production
-   */
-  if (d10Evidence && d10Evidence.length === 0 && (!rawEvidence || rawEvidence.length === 0)) {
-    return 'UNAVAILABLE';
-  }
-
-  // DomainEvidence-based path (primary)
-  if (d10Evidence && d10Evidence.length > 0) {
-    const linkedD10 =
-      natalPromiseEvidenceIds && natalPromiseEvidenceIds.length > 0
-        ? d10Evidence.filter((e) =>
-          (e.relatedEvidenceIds ?? []).some((id) => natalPromiseEvidenceIds.includes(id))
-        )
-        : d10Evidence;
-
-    if (linkedD10.length > 0) {
-      const hasSupport = linkedD10.some((e) => e.polarity === 'SUPPORTING');
-      const hasChallenge = linkedD10.some((e) => e.polarity === 'CHALLENGING');
-      if (hasSupport && !hasChallenge) return 'CONFIRMS';
-      if (hasSupport && hasChallenge) return 'MODIFIES';
-      if (hasChallenge && !hasSupport) return 'CONFLICTS';
-    }
-    // No linked D10 → do not fabricate; fall through to raw/legacy hints below.
-  }
-
-  // Fallback hints from raw evidence or legacy status
-  const d10Item = rawEvidence?.find(
-    (e) =>
-      e.evidenceFamily === CareerEvidenceFamily.D10 ||
-      e.vargaEvidence?.varga === 'D10'
-  );
-
-  if (d10Item?.vargaEvidence?.relationship) {
-    return d10Item.vargaEvidence.relationship as VargaRelationship;
-  }
-
-  if (legacyStatus === 'CONFIRMED' || legacyStatus === 'CONFIRMS') {
-    return 'CONFIRMS';
-  }
-  if (legacyStatus === 'CONFLICTED' || legacyStatus === 'CONFLICTS') {
-    return 'CONFLICTS';
-  }
-  if (legacyStatus === 'NOT_APPLICABLE' || legacyStatus === 'UNAVAILABLE') {
-    return 'UNAVAILABLE';
-  }
-
-  if (d10Item) {
-    if (d10Item.effect === 'SUPPORT') {
-      return 'CONFIRMS';
-    }
-    if (d10Item.effect === 'CHALLENGE') {
-      return 'CONFLICTS';
-    }
-    return 'MODIFIES';
-  }
-
-  return 'UNAVAILABLE';
-}
-
 // Re-exports from modular files for full backward compatibility
 export {
   buildCareerEvidence,
@@ -1650,81 +1559,3 @@ export * from './careerTypes';
  * @param enableComparison - Flag to enable comparison (default false)
  * @returns Comparison result object (side-effect-free, does not affect interpretation)
  */
-export function compareLegacyAndCanonicalStructuralReasoning(
-  horoscope: Horoscope,
-  options: DomainReasoningOptions,
-  enableComparison: boolean = false
-): {
-  enabled: boolean;
-  canonicalStructural: CareerStructuralReasoning;
-  legacyEvidence: readonly DomainEvidence[];
-  comparisonNotes: string[];
-} {
-  if (!enableComparison) {
-    return {
-      enabled: false,
-      canonicalStructural: {
-        direction: 'UNAVAILABLE',
-        strength: 'UNDETERMINED',
-        primarySupport: 0,
-        primaryChallenge: 0,
-        supportingSupport: 0,
-        supportingChallenge: 0,
-        challengingSupport: 0,
-        challengingChallenge: 0,
-        mixedWeight: 0,
-        evidence: [],
-        primaryEvidenceIds: [],
-        supportingEvidenceIds: [],
-        challengingEvidenceIds: [],
-        conflicts: [],
-        statement: 'Comparison disabled'
-      } as CareerStructuralReasoning,
-      legacyEvidence: [],
-      comparisonNotes: ['Comparison disabled by default']
-    };
-  }
-
-  // Build canonical C4 structural reasoning
-  const canonicalStructural = buildCareerStructuralReasoning({ horoscope });
-
-  // Compatibility-only structural comparison. This opt-in helper is not part of canonical
-  // interpretCareerV2 output and must remain isolated from its production reasoning path.
-  const themeInterpretation = interpretCareerTheme({
-    horoscope,
-    dashaInterpretation: options.temporalState.dashaInterpretation
-  });
-  const rawEvidence = themeInterpretation.evidence;
-  const rawMappedEvidence = buildCareerEvidence(rawEvidence);
-  const legacyEvidence = linkCareerEvidence(rawMappedEvidence);
-
-  // Filter for legacy structural evidence (NATAL_STRUCTURE dimension)
-  // Note: DomainEvidence does not preserve the dimension field from ThemeInterpretationEvidence,
-  // so we filter by source and evidenceFamily instead
-  const legacyStructuralEvidence = legacyEvidence.filter(
-    (e) => e.source === 'D1' && (
-      e.evidenceFamily === 'TENTH_HOUSE' ||
-      e.evidenceFamily === 'TENTH_LORD' ||
-      e.evidenceFamily === 'SIXTH_HOUSE' ||
-      e.evidenceFamily === 'SIXTH_LORD' ||
-      e.evidenceFamily === 'SECOND_HOUSE' ||
-      e.evidenceFamily === 'SECOND_LORD' ||
-      e.evidenceFamily === 'ELEVENTH_HOUSE' ||
-      e.evidenceFamily === 'ELEVENTH_LORD'
-    )
-  );
-
-  const comparisonNotes: string[] = [
-    `Canonical C4 evidence count: ${canonicalStructural.evidence.length}`,
-    `Legacy structural evidence count: ${legacyStructuralEvidence.length}`,
-    `Canonical direction: ${canonicalStructural.direction}`,
-    `Canonical strength: ${canonicalStructural.strength}`
-  ];
-
-  return {
-    enabled: true,
-    canonicalStructural,
-    legacyEvidence: legacyStructuralEvidence,
-    comparisonNotes
-  };
-}
