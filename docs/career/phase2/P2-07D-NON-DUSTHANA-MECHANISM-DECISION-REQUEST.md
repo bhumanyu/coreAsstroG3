@@ -14,7 +14,7 @@ Any future rule must conform to [`CareerMechanismResolutionRule`](../../../src/d
 
 ## Current fail-closed status
 
-**Status: DEFERRED / owner-confirmed for all five families.** On 2026-11-01, owner Bhumanyu confirmed `DEFERRED` for each family below. No mechanism mapping, family-specific evidence contract, or resolver rule is approved; the existing resolver suite continues to pin the fail-closed behavior. This status decision does not activate a family.
+**Status: PENDING CONFIRMATION for all five families.** The artifact has no durable reference to an owner approval message, issue, or commit, so the prior status-only conversational record is not treated as an auditable approval. No mechanism mapping, family-specific evidence contract, or resolver rule is approved; the existing resolver suite continues to pin the fail-closed behavior. No family is activated.
 
 `careerMechanismResolverRules.ts` documents the staged per-family implementation template: explicit rule ID and pathway, canonical establishing-edge predicates with the provenance intersection invariant, existing `PatternLevelEstablishingEvidence`/source firewall, existing mechanism types only, deterministic precedence/deduplication, and the required family-specific tests. The template is documentation only; no rule is instantiated or registered.
 
@@ -26,7 +26,7 @@ For each family below, complete every owner-decision field. Outputs must be sele
 
 ### CAREER_HOUSE_NETWORK family
 
-**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
+**Decision status: PENDING CONFIRMATION.**
 
 Known classifications:
 
@@ -49,7 +49,7 @@ Known classifications:
 
 ### KENDRA_TRIKONA family
 
-**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
+**Decision status: PENDING CONFIRMATION.**
 
 Known classifications emitted by `kendraTrikonaDetector.ts`:
 
@@ -67,7 +67,7 @@ Known classifications emitted by `kendraTrikonaDetector.ts`:
 
 ### UPACHAYA_PROGRESSION family
 
-**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
+**Decision status: PENDING CONFIRMATION.**
 
 Known classification:
 
@@ -89,7 +89,7 @@ The chain is recorded as an existing candidate only; the owner must confirm whet
 
 ### PARIVARTANA_YOGA family
 
-**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
+**Decision status: PENDING CONFIRMATION.**
 
 Known sub-types:
 
@@ -108,7 +108,7 @@ Known sub-types:
 
 ### CAREER_YOGA_STRUCTURE family
 
-**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
+**Decision status: PENDING CONFIRMATION.**
 
 Known classification from `careerYogaDetector.ts`:
 
@@ -126,4 +126,4 @@ Known classification from `careerYogaDetector.ts`:
 
 | Owner | Decision date | All family mappings and evidence contracts confirmed? | Status |
 |---|---|---|---|
-| Bhumanyu | 2026-11-01 | No; this is a status-only deferral decision | DEFERRED for all five families |
+| Not recorded | — | No; an auditable approval reference is required | PENDING CONFIRMATION for all five families |

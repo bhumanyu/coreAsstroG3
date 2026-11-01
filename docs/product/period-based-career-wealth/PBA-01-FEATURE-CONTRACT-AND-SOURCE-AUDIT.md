@@ -523,7 +523,7 @@ Instrumented the canonical career foundation build to collect intermediate metri
 - Diagnostics for ORCHESTRATION_UNQUALIFIED_PATTERN_MECHANISM_*
 - Diagnostics for DISPOSITOR_CONTEXTS_NOT_GENERATED
 
-Compared outcomes with `enableDispositorContexts: false` (production default) vs `true` (two-pass orchestration).
+Compared outcomes with `enableDispositorContexts: false` and `true`. These are builder modes: the standalone builder defaults to `false`, while production explicitly passes `true` at `CareerDomainInterpreterV2.ts:258`.
 
 #### Findings
 
@@ -576,7 +576,7 @@ The pattern has houses [6, 8, 11] but lacks house 10, so it does not match any d
 - Resolved mechanisms (enableDispositorContexts=true): 0
 - Difference: 0
 
-**Conclusion**: The hard-coded `enableDispositorContexts: false` in CareerDomainInterpreterV2.ts (line 258) does not affect the outcome for this chart. Even with dispositor contexts enabled, the pattern still produces 0 mechanisms because it doesn't match any resolver rules.
+**Conclusion**: Production passes `enableDispositorContexts: true` at `CareerDomainInterpreterV2.ts:258`; the standalone builder default remains `false`. Enabling two-pass orchestration does not affect the outcome for this chart: the pattern still produces 0 mechanisms because it does not match any resolver rules.
 
 **5. Diagnostics**
 
@@ -591,7 +591,7 @@ The investigation confirms:
 1. Patterns are produced (1 pattern with houses [6, 8, 11])
 2. Pattern qualification is INSUFFICIENT_DATA (proceeds to mechanism resolution per gating policy)
 3. Mechanism resolution produces 0 candidates because the pattern does not match any resolver rules (only dusthana transformation patterns with house 10 are currently implemented)
-4. The `enableDispositorContexts: false` flag does not materially change the outcome
+4. The enabled production flag does not materially change the outcome for this chart
 5. No upstream dropped-input bug exists - the emptiness is due to rule coverage gap
 
 The `UNAVAILABLE` qualification basis in the selected-period builder is therefore justified for this chart, as canonical candidates are genuinely empty (not a silent proxy fallback).

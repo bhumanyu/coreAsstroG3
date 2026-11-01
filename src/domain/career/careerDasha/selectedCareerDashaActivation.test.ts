@@ -2819,7 +2819,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       }
     });
 
-    it('returns INCOMPLETE_CANONICAL_INPUT error when canonicalExpression is present with explicitly empty mechanismCandidates array', () => {
+    it('rejects unknown source mechanism IDs when mechanismCandidates is explicitly empty', () => {
       const horoscope = makeHoroscope();
       const natal = makeMinimalNatalAnalysis();
       const expression = makeExpressionAnalysisWithLinkedEvidence();
@@ -2884,12 +2884,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         mechanismCandidates: Object.freeze([]) // Explicitly empty array (genuinely no qualifying mechanisms)
       });
 
-      // Changed behavior: empty mechanismCandidates now emits UNAVAILABLE instead of rejecting
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.qualificationBasis).toBe('UNAVAILABLE');
-        expect(result.value.expressionActivations.length).toBe(0);
-      }
+      expect(result).toEqual({ ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' });
     });
 
     it('uses CANONICAL_STATUS when canonicalExpression is provided with mechanismCandidates', () => {
@@ -4890,12 +4885,22 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         patternId: `PATTERN-${candidateId}`,
         mechanismType: 'AUTHORITY' as CareerMechanismType,
         pathway: 'PRIMARY' as CareerMechanismPathway,
-        evidence: Object.freeze([]),
+        evidence: Object.freeze([Object.freeze({
+          evidenceId: candidateId === 'MECH-2' ? 'SOURCE-M2' : `SOURCE-${candidateId}`,
+          mechanismType: 'AUTHORITY' as CareerMechanismType,
+          source: 'PATTERN' as const,
+          role: 'ESTABLISHING' as const,
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          relationshipIds: Object.freeze([]),
+          explanation: `Evidence for ${candidateId}`
+        })]),
         provenance: Object.freeze({
           patternIds: Object.freeze([]),
           relationshipIds: Object.freeze([]),
           participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
-          evidenceIds: Object.freeze([]),
+          evidenceIds: Object.freeze([
+            candidateId === 'MECH-2' ? 'SOURCE-M2' : `SOURCE-${candidateId}`
+          ]),
           sourceStages: Object.freeze([])
         }),
         explanation: `Mechanism ${candidateId}`
@@ -4945,12 +4950,20 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         patternId: 'PATTERN-1',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
         pathway: 'PRIMARY' as CareerMechanismPathway,
-        evidence: Object.freeze([]),
+        evidence: Object.freeze([Object.freeze({
+          evidenceId: 'SOURCE-EVIDENCE',
+          mechanismType: 'AUTHORITY' as CareerMechanismType,
+          source: 'PATTERN' as const,
+          role: 'ESTABLISHING' as const,
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          relationshipIds: Object.freeze([]),
+          explanation: 'Mechanism source evidence'
+        })]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-1']),
           relationshipIds: Object.freeze([]),
           participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
-          evidenceIds: Object.freeze([]),
+          evidenceIds: Object.freeze(['SOURCE-EVIDENCE']),
           sourceStages: Object.freeze([])
         }),
         explanation: 'Mechanism one'
@@ -4976,6 +4989,83 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expect(activation.expression.sourceMechanismProvenance?.evidence[0].sourceMechanismId)
           .toBe('MECH-1');
       }
+    });
+
+    it('leaves evidence unresolved when its source mechanism does not own the referenced evidence ID', () => {
+      const evidence = Object.freeze({
+        evidenceId: 'CANONICAL-EVIDENCE',
+        sourceMechanismId: 'MECH-1',
+        sourceEvidenceIds: Object.freeze(['SOURCE-EVIDENCE']),
+        ruleId: 'RULE-1',
+        role: 'ESTABLISHING' as const
+      });
+      const candidate = makeCanonicalCandidate('CANDIDATE-1', ['MECH-1'], [evidence]);
+      const callerAnalysis = makeExpressionAnalysisWithLinkedEvidence();
+      const callerExpression = Object.freeze({
+        ...callerAnalysis.expressions[0],
+        supportingEvidenceIds: Object.freeze(['UNRELATED-EVIDENCE'])
+      });
+      const mechanismCandidate: CareerMechanismCandidate = Object.freeze({
+        candidateId: 'MECH-1',
+        patternId: 'PATTERN-1',
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([Object.freeze({
+          evidenceId: 'OTHER-EVIDENCE',
+          mechanismType: 'AUTHORITY' as CareerMechanismType,
+          source: 'PATTERN' as const,
+          role: 'ESTABLISHING' as const,
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          relationshipIds: Object.freeze([]),
+          explanation: 'Different evidence owned by this mechanism'
+        })]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze(['PATTERN-1']),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze(['OTHER-EVIDENCE']),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: 'Mechanism one'
+      });
+      const result = buildSelectedCareerDashaActivation({
+        horoscope: makeHoroscope(),
+        natal: makeMinimalNatalAnalysis(),
+        expression: Object.freeze({
+          ...callerAnalysis,
+          expressions: Object.freeze([callerExpression])
+        }),
+        selectedPeriod: makeSelectedPeriod(),
+        canonicalExpression: makeResult([candidate]),
+        mechanismCandidates: Object.freeze([mechanismCandidate])
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.expressionActivations).toHaveLength(0);
+        expect(result.value.candidateCoverage[0].representationStatus).toBe('UNRESOLVED');
+      }
+    });
+
+    it('rejects candidate source mechanism IDs absent from supplied mechanism candidates before caller matching', () => {
+      const evidence = Object.freeze({
+        evidenceId: 'CANONICAL-EVIDENCE',
+        sourceMechanismId: 'MISSING-MECH',
+        sourceEvidenceIds: Object.freeze(['SOURCE-EVIDENCE']),
+        ruleId: 'RULE-1',
+        role: 'ESTABLISHING' as const
+      });
+      const candidate = makeCanonicalCandidate('CANDIDATE-1', ['MISSING-MECH'], [evidence]);
+      const result = buildSelectedCareerDashaActivation({
+        horoscope: makeHoroscope(),
+        natal: makeMinimalNatalAnalysis(),
+        expression: makeExpressionAnalysisWithLinkedEvidence(),
+        selectedPeriod: makeSelectedPeriod(),
+        canonicalExpression: makeResult([candidate]),
+        mechanismCandidates: Object.freeze([])
+      });
+
+      expect(result).toEqual({ ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' });
     });
   });
 });

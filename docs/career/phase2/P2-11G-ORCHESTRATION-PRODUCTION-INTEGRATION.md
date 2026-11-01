@@ -20,11 +20,10 @@
 - ✅ Foundation exposed on `conclusionData.canonicalCareerFoundation`
 - ✅ 10H input wired: `resolveCareer10HFoundation({ horoscope })` passed when status is COMPLETE
 - ✅ 10L input wired: `resolveCareer10LFoundation({ foundation, houseLordship })` passed when resolvable
-- ⚠️ Dispositor contexts: Two-pass orchestration implemented (feature flag `enableDispositorContexts`)
-  - Default `false` in production to preserve current behavior (tracked blocker per review Finding 5)
+- ✅ Dispositor contexts: Production passes `enableDispositorContexts: true` at `CareerDomainInterpreterV2.ts:258`; the standalone builder default remains `false`
   - When `true`, builder runs two-pass orchestration: pass 1 (get mechanisms, build contexts), pass 2 (with contexts)
   - Upstream producers computed once and reused (invariant preserved)
-  - **P2-11B status: PARTIAL** - dispositor integration not yet production-enabled pending verification
+  - **P2-11B status: PARTIAL** for remaining identity-mapping/integration gaps; dispositor two-pass orchestration is production-enabled
 - ✅ Identity mappings: Partially implemented from explicit cross-stage linkage (fix per review Finding 1)
   - Pattern → Qualification mappings populated (via real pattern.identityKey and qualification.identityKey)
   - Qualification → Mechanism mappings NOT populated (mechanism candidates do not expose identityKey in current contract)
@@ -37,7 +36,7 @@
 **WIRED FEATURES (current milestone):**
 - 10H: `resolveCareer10HFoundation({ horoscope })` - passed when status is COMPLETE
 - 10L: `resolveCareer10LFoundation({ foundation, houseLordship })` - passed when resolvable
-- Dispositor contexts: Two-pass orchestration available via `enableDispositorContexts` flag (default false)
+- Dispositor contexts: Production explicitly enables two-pass orchestration; standalone builder default is false
 - Identity mappings: Populated from explicit linkage (partial coverage)
 
 **DEFERRED FEATURES (documented in P2-11G):**
@@ -96,12 +95,11 @@
   - Expected missing-data diagnostic (`ORCHESTRATION_MECHANISM_REFINER_INSUFFICIENT_DATA`) is present
 - Insufficient evidence remains UNAVAILABLE, never a negative astrological indication
 
-### Finding 5 (P2) — Keep `enableDispositorContexts` default `false` in production
-**Status:** ✅ COMPLETED
-- Verified `enableDispositorContexts` defaults to `false` in `canonicalCareerFoundationBuilder.ts` (line 113)
-- Verified `interpretCareerV2` call explicitly passes `enableDispositorContexts: false` (CareerDomainInterpreterV2.ts line 511)
-- Documentation updated to reflect P2-11B status as PARTIAL until Findings 1-4 pass
-- Dispositor contexts not enabled merely because factory returns non-empty context list
+### Finding 5 (P2) — Keep the standalone builder default `false`
+**Status:** ✅ COMPLETED; production explicitly overrides the default
+- `canonicalCareerFoundationBuilder.ts` retains `enableDispositorContexts: false` as its standalone default
+- Production passes `enableDispositorContexts: true` at `CareerDomainInterpreterV2.ts:258`
+- Dispositor contexts are enabled explicitly by the production caller, not implicitly by a non-empty factory result
 
 ### Finding 6 (P2) — Establish exact-SHA verification
 **Status:** ✅ COMPLETED (local verification complete, remote CI pending)
@@ -322,7 +320,7 @@ From `src/domain/career/orchestration/canonicalCareerPortsAdapter.ts`, the `defa
   - Build dispositor contexts from resolved mechanisms via `defaultCareerDispositorContextFactory.create`
   - Pass 2: re-orchestrate with contexts
 - **Invariant preservation:** Upstream producers (structural, graph, networks, patterns, relevance, condition) computed once and reused
-- Production caller (`interpretCareerV2`) calls builder with `enableDispositorContexts: false`
+- Production caller (`interpretCareerV2`) passes `enableDispositorContexts: true` at `CareerDomainInterpreterV2.ts:258`; the standalone builder default remains `false`
 - When `false`, mechanism refinements remain `UNRESOLVED` with status `UNAVAILABLE` and diagnostic `DISPOSITOR_CONTEXTS_NOT_GENERATED`
 - When `true`, mechanism refinements resolve to `REFINED` or `UNCHANGED` (if contexts built successfully)
 
@@ -335,7 +333,7 @@ Create `src/domain/career/orchestration/canonicalCareerFoundationBuilder.ts`:
 ```typescript
 export interface CanonicalCareerFoundationBuilderInput {
   readonly horoscope: Horoscope;
-  readonly enableDispositorContexts?: boolean; // Future enablement
+  readonly enableDispositorContexts?: boolean; // Standalone default is false; production opts in
 }
 
 export function buildCanonicalCareerFoundation(
@@ -427,8 +425,8 @@ The following changes were made to wire the canonical career foundation builder 
    - Added imports for `resolveCareer10HFoundation` and `resolveCareer10LFoundation`
    - Wired 10H: Call `resolveCareer10HFoundation({ horoscope })` and pass `result10H` only when status is COMPLETE
    - Wired 10L: Call `resolveCareer10LFoundation({ foundation, houseLordship })` and pass `result10L` only when resolvable
-   - Added feature flag `enableDispositorContexts` (default false) for future enablement
-   - Documented dispositor contexts blocker: requires two-pass orchestration or contract change
+   - Added feature flag `enableDispositorContexts` (standalone builder default false); production now explicitly enables it
+   - Two-pass orchestration is wired by the production caller at `CareerDomainInterpreterV2.ts:258`
 
 2. **careerTypes.ts**:
    - Added import for `CanonicalCareerFoundation`

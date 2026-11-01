@@ -107,9 +107,18 @@ function hasCandidateScopedMechanismProvenance(
     role: item.role
   })).sort((left, right) => left.evidenceId.localeCompare(right.evidenceId));
   return JSON.stringify(actualEvidence) === JSON.stringify(expectedEvidence) &&
-    expectedEvidence.every((item) =>
-      candidate.sourceMechanismIds.includes(item.sourceMechanismId)
-    );
+    expectedEvidence.every((item) => {
+      if (!candidate.sourceMechanismIds.includes(item.sourceMechanismId)) return false;
+      const mechanism = mechanismById.get(item.sourceMechanismId);
+      if (!mechanism) return false;
+
+      // Candidate construction derives provenance.evidenceIds from evidence[].evidenceId.
+      const mechanismEvidenceIds = new Set(mechanism.evidence.map((evidence) => evidence.evidenceId));
+      const provenanceEvidenceIds = new Set(mechanism.provenance.evidenceIds);
+      return item.sourceEvidenceIds.every((sourceEvidenceId) =>
+        mechanismEvidenceIds.has(sourceEvidenceId) && provenanceEvidenceIds.has(sourceEvidenceId)
+      );
+    });
 }
 
 /**
@@ -498,6 +507,7 @@ export function buildSelectedCareerDashaActivation(params: {
     if (new Set(mechanismCandidateIds).size !== mechanismCandidateIds.length) {
       return { ok: false, error: 'DUPLICATE_SOURCE_MECHANISM_ID' };
     }
+    const mechanismCandidateIdSet = new Set(mechanismCandidateIds);
 
     for (const candidate of canonicalExpression.expressions) {
       const evidenceIds = candidate.evidence.map(evidence => evidence.evidenceId);
@@ -515,6 +525,11 @@ export function buildSelectedCareerDashaActivation(params: {
       }
       if (new Set(candidate.sourceMechanismIds).size !== candidate.sourceMechanismIds.length) {
         return { ok: false, error: 'DUPLICATE_SOURCE_MECHANISM_ID' };
+      }
+      if (candidate.sourceMechanismIds.some((sourceMechanismId) =>
+        !mechanismCandidateIdSet.has(sourceMechanismId)
+      )) {
+        return { ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' };
       }
       if (candidate.evidence.some((item) =>
         !candidate.sourceMechanismIds.includes(item.sourceMechanismId)
