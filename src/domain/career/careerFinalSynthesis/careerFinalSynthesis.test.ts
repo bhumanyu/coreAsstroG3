@@ -1021,6 +1021,18 @@ describe('A07 — C11 confidence coverage and provenance policy', () => {
     expect(result.confidenceReasons).toHaveLength(0);
   });
 
+  it('caps confidence at LOW when required natal evidence is unavailable', () => {
+    const result = synthesizeCareerFinal({
+      ...completeInput,
+      natalDirection: 'UNAVAILABLE',
+      natalStrength: 'UNDETERMINED'
+    });
+    expect(result.confidence).toBe('LOW');
+    expect(result.confidenceCoverage.status).toBe('INSUFFICIENT');
+    expect(result.confidenceCoverage.missingRequiredLayers).toContain('NATAL');
+    expect(result.confidenceReasons.some(reason => reason.code === 'REQUIRED_LAYER_UNAVAILABLE' && reason.layer === 'NATAL' && reason.capApplied === 'LOW')).toBe(true);
+  });
+
   it('caps confidence when Dasha is missing while preserving strong natal promise', () => {
     const result = synthesizeCareerFinal({ ...completeInput, dashaEffect: undefined, dashaDirection: undefined });
     expect(result.finalStrength).toBe('STRONG');
