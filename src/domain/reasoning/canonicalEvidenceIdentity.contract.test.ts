@@ -540,6 +540,11 @@ describe('Canonical Evidence Identity & Deduplication Contract (spec §16)', () 
       expect(roundTrip[0].identityKey).toBe(canonical[0].identityKey);
       expect(roundTrip[0].evidenceId).toBe('OCCURRENCE_A');
       expect(roundTrip[0].evidenceId).not.toBe(roundTrip[0].identityKey);
+
+      const recanonicalized = deduplicateReasoningEvidence(roundTrip);
+      expect(recanonicalized[0].sourceIds).toEqual(canonical[0].sourceIds);
+      expect(recanonicalized[0].occurrenceCount).toBe(canonical[0].occurrenceCount);
+      expect(recanonicalized[0].representativeOccurrenceId).toBe(canonical[0].representativeOccurrenceId);
     });
 
     it('fails closed when DomainEvidence repeats an occurrence ID', () => {
