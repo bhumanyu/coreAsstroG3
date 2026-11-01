@@ -121,10 +121,13 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
     const [evA] = buildCareerEvidence([itemA]);
     const [evB] = buildCareerEvidence([itemB]);
 
+    expect(evA.id).toBe('raw-link-a');
+    expect(evB.id).toBe('raw-link-b');
     expect(evA.id).toBe(evA.provenance?.evidenceId);
+    expect(evB.id).toBe(evB.provenance?.evidenceId);
+    expect(evA.identityKey).toBe(evB.identityKey);
+    expect(evA.identityKey).not.toBe(evA.id);
     expect(evA.provenance?.ruleId).toBe('CAREER_6L_10L_LINK_001');
-    expect(evA.id).toBe(evB.id);
-    expect(evA.id).toBe('CW-CAREER-NATAL-D1-CAREER_6L_10L_LINK_001-L6_L10_LINK-SUPPORT-PRIMARY');
   }, 30000);
 
   it('runs buildWealthEvidence on WEALTH_VENUS_KARAKA_001 with order-independent determinism', async () => {
