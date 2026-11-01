@@ -107,11 +107,9 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
             D2 Hora
           </span>
           <span
-            className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${getVargaBadgeClass(
-              detail.d2Relationship
-            )}`}
+            className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${getVargaBadgeClass('UNAVAILABLE')}`}
           >
-            {formatEnum(detail.d2Relationship)}
+            {formatEnum('UNAVAILABLE')}
           </span>
           {detail.d2AvailabilityReason && (
             <p className="mt-1 text-[10px] leading-relaxed text-slate-400">{detail.d2AvailabilityReason}</p>
