@@ -173,7 +173,7 @@ export interface ContradictoryEvidenceDiagnostic {
 export interface RootEvidenceLinkDiagnostic {
   readonly sourceOccurrenceId: string;
   readonly rootIdentityKey: string;
-  readonly code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED' | 'ROOT_EVIDENCE_SELF_REFERENCE';
+  readonly code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED' | 'ROOT_EVIDENCE_SELF_REFERENCE' | 'ROOT_EVIDENCE_CYCLE';
 }
 
 export interface RootEvidenceValidationResult {
