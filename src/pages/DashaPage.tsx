@@ -100,9 +100,9 @@ export const DashaPage: React.FC<DashaPageProps> = ({
 
   // Invalidate stale submittedPeriod when analysis identity changes (new chart or re-analysis)
   useEffect(() => {
-    // New options identify a new analysis selection context; invalidate its report too.
+    // New analysis identity identifies a new selection context; invalidate its report too.
     setSubmittedPeriod(null);
-  }, [dashPeriodOptions]);
+  }, [analysis?.analysisId]);
 
   // isSubmitting is derived from selectionState
   const isSubmitting = selectionStatus === 'SUBMITTING';
@@ -114,18 +114,25 @@ export const DashaPage: React.FC<DashaPageProps> = ({
 
   // Handle period selection
   const handleSelectPeriod = useCallback(async (mahadashaId: string, antardashaId: string) => {
-    if (!onSelectPeriod) return;
+    if (!onSelectPeriod || !analysis) return;
 
     // Set submittedPeriod with current analysisId before calling onSelectPeriod
     // This ensures the report only renders if the synthesis matches the context it was submitted under
     setSubmittedPeriod({
       mahadashaId,
       antardashaId,
-      analysisId: analysis?.analysisId ?? ''
+      analysisId: analysis.analysisId
     });
 
     await onSelectPeriod(mahadashaId, antardashaId);
   }, [onSelectPeriod, analysis?.analysisId]);
+
+  // Clear submittedPeriod when selection fails
+  useEffect(() => {
+    if (selectedPeriod && selectedPeriod.status !== 'OK') {
+      setSubmittedPeriod(null);
+    }
+  }, [selectedPeriod?.status]);
 
   // 1. Error state when no analysis is available
   if (status === 'ERROR' && !analysis) {
