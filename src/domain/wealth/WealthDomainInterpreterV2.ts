@@ -779,6 +779,7 @@ export function buildWealthReasoningTraceGraph(params: {
     ...graph,
     traceCompleteness: buildReasoningTraceCompleteness({
       domain: 'WEALTH',
+      conclusionNodeId: finalNodeId,
       synthesisRuleId: params.synthesisRuleId,
       synthesisEvidenceReferences: params.synthesisEvidenceReferences,
       evidence: params.evidence
