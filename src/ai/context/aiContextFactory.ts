@@ -1,5 +1,6 @@
 import { Horoscope, Planet, Sign } from '../../types';
 import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
+import type { ReasoningTraceGraph } from '../../domain/careerWealth/reasoningTrace/reasoningTraceGraph';
 import { classifyReasoningEvidence } from '../../domain/reasoning/reasoningHierarchy';
 import type { TimingEffect } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import {
