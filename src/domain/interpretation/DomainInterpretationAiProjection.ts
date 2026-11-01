@@ -65,6 +65,8 @@ export interface DomainInterpretationAiProjection {
   readonly vargaConfirmations: readonly {
     readonly varga: EvidenceSource;
     readonly relationship: VargaRelationship;
+    readonly availability?: 'AVAILABLE' | 'UNAVAILABLE';
+    readonly unavailabilityReason?: string;
     readonly statement: string;
   }[];
 
@@ -122,6 +124,8 @@ export function projectDomainInterpretationForAi(
         Object.freeze({
           varga: v.varga,
           relationship: v.relationship,
+          ...(v.availability ? { availability: v.availability } : {}),
+          ...(v.unavailabilityReason ? { unavailabilityReason: v.unavailabilityReason } : {}),
           statement: v.statement
         })
       )
