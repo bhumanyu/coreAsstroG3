@@ -213,7 +213,8 @@ function projectWealth(analysis: ProductAnalysis): ExportedWealthInterpretationV
     confidence: wealth.overall.confidence,
     ...(wealth.overall.headline === undefined ? {} : { headline: wealth.overall.headline }),
     ...(wealth.overall.statement === undefined ? {} : { statement: wealth.overall.statement }),
-    d2Relationship: wealth.d2.relationship,
+    d2Relationship: 'UNAVAILABLE',
+    d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.',
     evidence: projectEvidence(wealth.evidence)
   };
 }
