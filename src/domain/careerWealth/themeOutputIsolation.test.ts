@@ -26,6 +26,27 @@ const methodology = {
   dashaSystem: 'VIMSHOTTARI'
 } as const;
 
+/*
+ * Current Wealth coupling: interpretWealthTheme().evidence is immediately passed through
+ * buildWealthEvidence() and linkWealthEvidence(). That mapped evidence drives natal promise,
+ * D2, Dasha, manifestation, and CW-05 calculations. This test deliberately blanks the theme
+ * evidence to expose the live dependency.
+ *
+ * Wealth decoupling seam for P0-12 (not implemented here): reasoning should consume a
+ * producer-owned, typed evidence collection independently of the theme result wrapper. The
+ * mapper/linker need stable occurrence ID, rule ID, statement, effect, evidence family,
+ * priority/strength, and available semantic subjects (planets/houses/dimension), identity key,
+ * and timing/transit/varga metadata used by their existing mapping rules. D2 relationship and
+ * reference-dataset availability also need explicit producer-owned inputs; they must not be
+ * inferred from a UI/theme summary or from a fabricated empty collection.
+ *
+ * Career has the same theme-evidence entry point at rawEvidence, but C11's natal, expression,
+ * Dasha, and D10 inputs are built through the canonical path: natal from horoscope, expression
+ * adapted from canonicalCareerFoundation mechanisms, Dasha from horoscope/natal/expression and
+ * the temporal Dasha report, and D10 from horoscope/natal/expression. Theme outputs still reach
+ * C11 indirectly: raw evidence and theme Varga metadata affect d10Relationship, which feeds
+ * Career Dasha/timing synthesis; the resulting careerTimingSynthesis is then supplied to C11.
+ */
 describe('canonical interpretation independence from legacy theme outputs', () => {
   it('keeps canonical conclusions, view-model projections, and canonical AI context unchanged when theme output is perturbed', async () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -110,6 +131,9 @@ describe('canonical interpretation independence from legacy theme outputs', () =
       const baselineOutputs = projectCanonicalOutputs(baseline, horoscope, context, selection);
       const perturbedOutputs = projectCanonicalOutputs(perturbed, horoscope, context, selection);
 
+      expect(wealthRegressionProjection(perturbedOutputs)).toEqual(
+        wealthRegressionProjection(baselineOutputs)
+      );
       expect(perturbedOutputs.analysis).toEqual(baselineOutputs.analysis);
       expect(perturbedOutputs.careerEvidence).toEqual(baselineOutputs.careerEvidence);
       expect(perturbedOutputs.wealthEvidence).toEqual(baselineOutputs.wealthEvidence);
@@ -221,4 +245,41 @@ function requireDomainInterpretation(
   const interpretation = interpretations?.find((candidate) => candidate.domain === domain);
   if (!interpretation) throw new Error(`Expected ${domain} domain interpretation`);
   return interpretation;
+}
+
+function wealthRegressionProjection(
+  outputs: ReturnType<typeof projectCanonicalOutputs>
+) {
+  const synthesis = outputs.wealthConclusionData.wealthFinalSynthesis;
+  return {
+    evidenceIds: outputs.wealthEvidence.map((item) => item.id),
+    natalEvidenceIds: outputs.wealthEvidence
+      .filter((item) => item.phase === 'NATAL_PROMISE')
+      .map((item) => item.id),
+    dimensionStatuses: outputs.wealthConclusionData.dimensions.map((dimension) => ({
+      dimension: dimension.dimension,
+      status: dimension.status,
+      supportingEvidenceIds: dimension.supportingEvidenceIds,
+      challengingEvidenceIds: dimension.challengingEvidenceIds
+    })),
+    conclusionStatuses: {
+      overall: outputs.wealthConclusionData.overallStatus,
+      accumulation: outputs.wealthConclusionData.accumulationStatus,
+      gains: outputs.wealthConclusionData.gainsStatus,
+      fortune: outputs.wealthConclusionData.fortuneStatus,
+      speculation: outputs.wealthConclusionData.speculationStatus
+    },
+    cw05: synthesis && {
+      status: synthesis.status,
+      finalStatus: synthesis.finalStatus,
+      promiseStatus: synthesis.promiseStatus,
+      activationStatus: synthesis.activationStatus,
+      timingStatus: synthesis.timingStatus,
+      divisionalStatus: synthesis.divisionalStatus,
+      manifestationStatus: synthesis.manifestationStatus,
+      confidence: synthesis.confidence,
+      evidenceIds: synthesis.evidenceIds,
+      natalEvidenceIds: synthesis.natalEvidenceIds
+    }
+  };
 }
