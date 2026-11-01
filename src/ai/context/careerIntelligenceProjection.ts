@@ -59,6 +59,12 @@ export function isCareerFinalSynthesisResult(
     typeof obj.finalDirection !== 'string' ||
     typeof obj.finalStrength !== 'string' ||
     typeof obj.confidence !== 'string' ||
+    typeof obj.confidenceCoverage !== 'object' || obj.confidenceCoverage === null ||
+    !Array.isArray((obj.confidenceCoverage as Record<string, unknown>).layers) ||
+    !Array.isArray((obj.confidenceCoverage as Record<string, unknown>).missingRequiredLayers) ||
+    !Array.isArray((obj.confidenceCoverage as Record<string, unknown>).missingSupportingLayers) ||
+    !Array.isArray((obj.confidenceCoverage as Record<string, unknown>).missingOptionalLayers) ||
+    !Array.isArray(obj.confidenceReasons) ||
     typeof obj.natalDirection !== 'string' ||
     typeof obj.natalStrength !== 'string' ||
     typeof obj.expressionStatus !== 'string' ||
@@ -186,6 +192,8 @@ export function projectCanonicalCareerC11(
     finalDirection: canonicalC11.finalDirection,
     finalStrength: canonicalC11.finalStrength,
     confidence: canonicalC11.confidence,
+    confidenceCoverage: canonicalC11.confidenceCoverage,
+    confidenceReasons: Object.freeze([...canonicalC11.confidenceReasons]),
     natalDirection: canonicalC11.natalDirection,
     natalStrength: canonicalC11.natalStrength,
     expressionStatus: canonicalC11.expressionStatus,
