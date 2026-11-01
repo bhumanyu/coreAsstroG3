@@ -90,6 +90,7 @@ export interface CareerDashaCanonicalEvidence {
 export interface CareerDashaCanonicalProvenance {
   readonly source: 'C9_DASHA';
   readonly activationLevel: CareerDashaCanonicalLevel;
+  /** Canonical natal identityKey values; never occurrence IDs or producer source IDs. */
   readonly natalRootIds: readonly string[];
 }
 
