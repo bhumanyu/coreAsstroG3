@@ -183,6 +183,20 @@ export function validateEvidenceContinuity(
     }
   }
 
+  // Provenance-backed evidence must keep occurrence identity in one namespace:
+  // provenance.evidenceId is an occurrence ID and must equal DomainEvidence.id.
+  for (const item of evidence) {
+    if (item.provenance && item.provenance.evidenceId !== item.id) {
+      issues.push({
+        code: 'PROVENANCE_DISAGREEMENT',
+        severity: 'ERROR',
+        identityKey: tryResolveC11SemanticIdentity(item) ?? undefined,
+        evidenceId: item.id,
+        message: `Evidence occurrence "${item.id}" disagrees with provenance.evidenceId "${item.provenance.evidenceId}" (occurrence/semantic identity namespace mismatch)`
+      });
+    }
+  }
+
   // Build occurrence index (id)
   const occurrenceIndex = new Map<string, DomainEvidence[]>();
   for (const e of evidence) {
