@@ -240,6 +240,9 @@ export function createDomainEvidence(
 
   // Validate identityKey if present (reject sentinel and empty/whitespace)
   const trimmedIdentityKey = evidence.identityKey?.trim();
+  if (evidence.identityKey !== undefined && !trimmedIdentityKey) {
+    throw new Error('createDomainEvidence: identityKey must be non-empty when provided');
+  }
   if (trimmedIdentityKey === UNRESOLVED_IDENTITY_SENTINEL) {
     throw new Error(`createDomainEvidence: identityKey cannot be the sentinel "${UNRESOLVED_IDENTITY_SENTINEL}" (reserved)`);
   }
@@ -273,7 +276,7 @@ export function createDomainEvidence(
     ...(evidence.dimension ? { dimension: evidence.dimension } : {}),
     ...(evidence.planet ? { planet: evidence.planet } : {}),
     ...(evidence.house !== undefined ? { house: evidence.house } : {}),
-    ...(evidence.identityKey ? { identityKey: evidence.identityKey } : {}),
+    ...(trimmedIdentityKey ? { identityKey: trimmedIdentityKey } : {}),
     ...(evidence.manifestationRuleIds ? { manifestationRuleIds: Object.freeze(evidence.manifestationRuleIds) } : {})
   });
 }
