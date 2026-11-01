@@ -112,6 +112,11 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
             {formatEnum('UNAVAILABLE')}
           </span>
           <p className="mt-1 text-[10px] leading-relaxed text-slate-400">D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.</p>
+          {detail.traceCompleteness && (
+            <p className="mt-1 text-[10px] text-slate-400">
+              Trace completeness: {formatEnum(detail.traceCompleteness.status)} · {detail.traceCompleteness.diagnostics.length} diagnostic(s)
+            </p>
+          )}
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1">
