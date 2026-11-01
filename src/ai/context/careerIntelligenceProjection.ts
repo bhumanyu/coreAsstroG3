@@ -194,6 +194,9 @@ export function projectCanonicalCareerC11(
     confidence: canonicalC11.confidence,
     confidenceCoverage: canonicalC11.confidenceCoverage,
     confidenceReasons: Object.freeze([...canonicalC11.confidenceReasons]),
+    ...(interpretation.conclusionData?.reasoningTraceGraph?.traceCompleteness
+      ? { traceCompleteness: interpretation.conclusionData.reasoningTraceGraph.traceCompleteness }
+      : {}),
     natalDirection: canonicalC11.natalDirection,
     natalStrength: canonicalC11.natalStrength,
     expressionStatus: canonicalC11.expressionStatus,
