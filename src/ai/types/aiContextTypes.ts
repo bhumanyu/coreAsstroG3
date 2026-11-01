@@ -7,6 +7,7 @@ import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
 import type { TimingEffect, TimingSourceCategory } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationMode } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
 import type { CareerConfidenceCoverage, CareerConfidenceReason } from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
+import type { ReasoningTraceCompleteness } from '../../domain/careerWealth/reasoningTrace/reasoningTraceCompleteness';
 import type { WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { WealthDimension } from '../../domain/wealth/wealthTypes';
 import type {
@@ -471,6 +472,7 @@ export interface AiCareerCanonicalC11Fact {
   readonly confidence: string;
   readonly confidenceCoverage: CareerConfidenceCoverage;
   readonly confidenceReasons: readonly CareerConfidenceReason[];
+  readonly traceCompleteness?: ReasoningTraceCompleteness;
   readonly natalDirection: string;
   readonly natalStrength: string;
   readonly expressionStatus: string;
