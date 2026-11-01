@@ -104,6 +104,8 @@ describe('Stage-1 AI Projection Integration', () => {
     expect(careerTrace?.traceCompleteness).toBeDefined();
     expect(careerTrace?.traceCompleteness?.conclusionNodeId).toBeTruthy();
     expect(projectedCareer?.evidence.every(item => Array.isArray(item.relatedEvidenceIds) && Array.isArray(item.rootEvidenceIds))).toBe(true);
+    expect(projectedCareer?.evidenceOccurrenceIds).toEqual(projectedCareer?.evidence.map(item => item.id));
+    expect(projectedCareer?.evidenceIdentityKeys).toEqual(projectedCareer?.evidence.flatMap(item => item.identityKey ? [item.identityKey] : []));
 
     expect(projectedCareer?.dashaActivation.effect).toBe(
       STAGE1_GOLDEN_EXPECTATION.career.dashaEffect
