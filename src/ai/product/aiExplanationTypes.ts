@@ -27,7 +27,7 @@ export interface AiExplanationViewModel {
   readonly providerKind: AiProviderKind;
   readonly providerVersion?: string;
   readonly model?: string;
-  readonly promptVersion: string;
+  readonly promptVersion?: string;
   readonly routingMode: AiRoutingMode;
   readonly fallbackUsed: boolean;
   readonly selectionReason: AiProviderSelectionReason;
