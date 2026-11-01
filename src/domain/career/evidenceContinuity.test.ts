@@ -59,6 +59,35 @@ describe('validateEvidenceContinuity', () => {
     expect(result.duplicateCountingRiskCount).toBe(0);
   });
 
+  it('rejects provenance.evidenceId when it differs from the occurrence id', () => {
+    const evidence = createMockEvidence({
+      id: 'canonical-occurrence-id',
+      identityKey: 'canonical-semantic-identity',
+      provenance: {
+        evidenceId: 'different-occurrence-id',
+        ruleId: 'RULE_1',
+        domain: 'CAREER',
+        axis: 'NATAL',
+        source: 'C4_STRUCTURAL_REASONING',
+        effect: 'SUPPORT',
+        strength: 'PRIMARY'
+      }
+    });
+
+    const result = validateEvidenceContinuity({
+      evidence: [evidence],
+      requiredC11EvidenceIds: ['canonical-semantic-identity'],
+      c11Validation: createMockC11Validation({ valid: true })
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      code: 'PROVENANCE_DISAGREEMENT',
+      severity: 'ERROR',
+      evidenceId: 'canonical-occurrence-id'
+    }));
+  });
+
   it('accepts a root link that resolves to a canonical semantic identity', () => {
     const evidence = [
       createMockEvidence({ id: 'root-occurrence', identityKey: 'root-semantic-identity' }),
