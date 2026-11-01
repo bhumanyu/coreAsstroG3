@@ -995,3 +995,90 @@ describe('C11 Final Synthesis', () => {
     });
   });
 });
+
+
+describe('A07 — C11 confidence coverage and provenance policy', () => {
+  const completeInput: CareerFinalSynthesisInput = {
+    natalDirection: 'SUPPORT',
+    natalStrength: 'STRONG',
+    dashaEffect: 'ACTIVATES',
+    dashaDirection: 'SUPPORT',
+    d10Direction: 'SUPPORT',
+    d10Strength: 'STRONG',
+    expressionDirection: 'SUPPORTED',
+    expressionStrength: 'STRONG',
+    transitDirection: 'SUPPORT',
+    evidenceIds: ['natal-semantic-1'],
+    sourceIds: ['natal-occurrence-1'],
+    ruleIds: ['RULE-NATAL-1']
+  };
+
+  it('returns HIGH confidence for complete required and supporting coverage with complete provenance', () => {
+    const result = synthesizeCareerFinal(completeInput);
+    expect(result.confidence).toBe('HIGH');
+    expect(result.confidenceCoverage.status).toBe('COMPLETE');
+    expect(result.confidenceCoverage.provenance).toBe('COMPLETE');
+    expect(result.confidenceReasons).toHaveLength(0);
+  });
+
+  it('caps confidence when Dasha is missing while preserving strong natal promise', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, dashaEffect: undefined, dashaDirection: undefined });
+    expect(result.finalStrength).toBe('STRONG');
+    expect(result.natalStrength).toBe('STRONG');
+    expect(result.confidence).toBe('MEDIUM');
+    expect(result.confidenceCoverage.missingSupportingLayers).toContain('DASHA');
+    expect(result.confidenceReasons.some(reason => reason.code === 'SUPPORTING_LAYER_UNAVAILABLE' && reason.layer === 'DASHA' && reason.capApplied === 'MEDIUM')).toBe(true);
+  });
+
+  it('caps confidence when D10 is missing while preserving strong natal promise', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, d10Direction: 'UNAVAILABLE', d10Strength: undefined });
+    expect(result.finalStrength).toBe('STRONG');
+    expect(result.confidence).toBe('MEDIUM');
+    expect(result.confidenceCoverage.missingSupportingLayers).toContain('D10');
+  });
+
+  it('reports missing expression as supporting coverage, not as a challenge', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, expressionDirection: 'UNAVAILABLE', expressionStrength: 'UNAVAILABLE' });
+    expect(result.expressionStatus).toBe('UNAVAILABLE');
+    expect(result.finalStrength).toBe('STRONG');
+    expect(result.confidence).toBe('MEDIUM');
+    expect(result.confidenceCoverage.missingSupportingLayers).toContain('EXPRESSION');
+  });
+
+  it('does not reduce confidence solely because optional transit evidence is absent', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, transitDirection: 'UNAVAILABLE' });
+    expect(result.confidence).toBe('HIGH');
+    expect(result.confidenceCoverage.missingOptionalLayers).toContain('TRANSIT');
+    expect(result.confidenceReasons.some(reason => reason.code === 'OPTIONAL_LAYER_UNAVAILABLE' && reason.capApplied === null)).toBe(true);
+  });
+
+  it('applies explicit conflict caps and exposes the reason', () => {
+    const result = synthesizeCareerFinal({
+      ...completeInput,
+      conflicts: [{
+        source: 'D10',
+        direction: 'CHALLENGE',
+        severity: 'HIGH',
+        evidenceIds: ['d10-conflict-1'],
+        statement: 'Conflicting D10 evidence'
+      }]
+    });
+    expect(result.confidence).toBe('LOW');
+    expect(result.confidenceReasons.some(reason => reason.code === 'CONFLICT_HIGH_SEVERITY' && reason.capApplied === 'LOW')).toBe(true);
+  });
+
+  it('reports partial producer provenance and applies the documented MEDIUM cap', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, sourceIds: [], ruleIds: [] });
+    expect(result.confidence).toBe('MEDIUM');
+    expect(result.confidenceCoverage.provenance).toBe('PARTIAL');
+    expect(result.confidenceReasons.some(reason => reason.code === 'PROVENANCE_PARTIAL')).toBe(true);
+  });
+
+  it('is deterministic for identical inputs', () => {
+    const first = synthesizeCareerFinal(completeInput);
+    const second = synthesizeCareerFinal(completeInput);
+    expect(second.confidence).toBe(first.confidence);
+    expect(second.confidenceCoverage).toEqual(first.confidenceCoverage);
+    expect(second.confidenceReasons).toEqual(first.confidenceReasons);
+  });
+});
