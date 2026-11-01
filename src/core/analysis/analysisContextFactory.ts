@@ -19,6 +19,31 @@ export const DEFAULT_METHODOLOGY: ProductMethodology = Object.freeze({
   dashaSystem: 'VIMSHOTTARI'
 });
 
+/**
+ * JavaScript's Date parser normalizes some impossible calendar dates (for
+ * example, February 30) instead of rejecting them. Validate an ISO-like date
+ * prefix before parsing so malformed calendar input cannot silently roll over.
+ */
+function assertValidCalendarDate(asOf: string): void {
+  const match = /^(\\d{4})-(\\d{2})-(\\d{2})(?:$|[T ])/.exec(asOf);
+  if (!match) return;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new Error(`Invalid asOf timestamp: "${asOf}"`);
+  }
+}
+
 export function normalizeAsOf(asOf?: Date | string | null, clock: Clock = systemClock): string {
   if (asOf === undefined || asOf === null) {
     const now = clock.now();
@@ -42,6 +67,7 @@ export function normalizeAsOf(asOf?: Date | string | null, clock: Clock = system
     if (trimmed.length === 0) {
       throw new Error('Invalid asOf string: empty string');
     }
+    assertValidCalendarDate(trimmed);
     const d = new Date(trimmed);
     if (isNaN(d.getTime())) {
       throw new Error(`Invalid asOf timestamp: "${asOf}"`);
