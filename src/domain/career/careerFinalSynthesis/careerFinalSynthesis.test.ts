@@ -1024,7 +1024,6 @@ describe('A07 — C11 confidence coverage and provenance policy', () => {
   it('caps confidence at LOW when required natal evidence is unavailable', () => {
     const result = synthesizeCareerFinal({
       ...completeInput,
-      natalDirection: 'UNAVAILABLE',
       natalStrength: 'UNDETERMINED'
     });
     expect(result.confidence).toBe('LOW');
