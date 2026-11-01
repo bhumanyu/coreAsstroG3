@@ -253,7 +253,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.layer === 'PRIMARY_PROMISE')
-        .map((e) => e.evidenceId)
+        .map((e) => e.identityKey)
     )
   );
 
