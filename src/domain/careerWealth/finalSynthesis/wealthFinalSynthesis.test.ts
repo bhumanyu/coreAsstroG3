@@ -256,19 +256,19 @@ describe('synthesizeWealthFinal (CW-05)', () => {
 
       // Verify overall axes
       expect(result.promiseStatus).toBe('STRONG');
-      expect(result.divisionalStatus).toBe('CONFIRMS');
+      expect(result.divisionalStatus).toBe('UNAVAILABLE');
       expect(result.finalStatus).toBe('STRONG');
       expect(result.riskProfile).toBe('ELEVATED');
 
       // Verify per-dimension axes
       const acc = result.dimensions!.ACCUMULATION;
       expect(acc.promiseStatus).toBe('STRONG');
-      expect(acc.divisionalStatus).toBe('CONFIRMS');
+      expect(acc.divisionalStatus).toBe('UNAVAILABLE');
       expect(acc.finalStatus).toBe('STRONG');
 
       const spec = result.dimensions!.SPECULATION;
       expect(spec.promiseStatus).toBe('CHALLENGED');
-      expect(spec.divisionalStatus).toBe('CONFIRMS');
+      expect(spec.divisionalStatus).toBe('UNAVAILABLE');
       expect(spec.finalStatus).toBe('CHALLENGED');
 
       // Verify provenance
@@ -286,7 +286,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       }
       expect(result.ruleIds).toContain('CW-05-WEALTH-SYNTHESIS');
       expect(result.ruleIds).toContain('NATAL-W-R1');
-      expect(result.ruleIds).toContain('D2-R-1');
+      expect(result.ruleIds).not.toContain('D2-R-1');
     });
 
     it('enforces speculation exclusion: weak speculation drives riskProfile to HIGH/ELEVATED without diluting overall wealth status', () => {
@@ -311,25 +311,25 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.challengedAreas).toContain('SPECULATION');
     });
 
-    it('enforces D2 conflict structural downgrade on overall and per-dimension statuses', () => {
-      const input: WealthFinalSynthesisInput = {
+    it('does not let a D2 conflict declaration alter CW-05 promise, confidence, or availability', () => {
+      const base: WealthFinalSynthesisInput = {
         natalPromise: {
           ACCUMULATION: 'STRONG',
           GAINS: 'STRONG',
           FORTUNE: 'STRONG',
           SPECULATION: 'STRONG'
         },
-        d2Relationship: 'CONFLICTS'
+        d2Relationship: 'UNAVAILABLE'
       };
+      const unavailable = synthesizeWealthFinal(base);
+      const conflictingDeclaration = synthesizeWealthFinal({ ...base, d2Relationship: 'CONFLICTS' });
 
-      const result = synthesizeWealthFinal(input);
-
-      expect(result.divisionalStatus).toBe('CONFLICTS');
-      // D2 conflict downgrades candidate from STRONG to MODERATE
-      expect(result.status).toBe('MODERATE');
-      expect(result.finalStatus).toBe('MODERATE');
-      expect(result.dimensions!.ACCUMULATION.status).toBe('MODERATE');
-      expect(result.confidence).toBe('LOW');
+      expect(conflictingDeclaration.divisionalStatus).toBe('UNAVAILABLE');
+      expect(conflictingDeclaration.d2AvailabilityReason).toBeTruthy();
+      expect(conflictingDeclaration.status).toBe(unavailable.status);
+      expect(conflictingDeclaration.finalStatus).toBe(unavailable.finalStatus);
+      expect(conflictingDeclaration.dimensions!.ACCUMULATION.status).toBe(unavailable.dimensions!.ACCUMULATION.status);
+      expect(conflictingDeclaration.confidence).toBe(unavailable.confidence);
     });
 
     it('enforces Dasha challenge downgrade across dimensions', () => {
