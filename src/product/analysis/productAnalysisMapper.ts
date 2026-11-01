@@ -306,13 +306,8 @@ export function mapD10Relationship(val?: string): D10ProductResult['relationship
 /**
  * Maps D2 relationship semantics.
  */
-export function mapD2Relationship(val?: string): D2ProductResult['relationship'] {
-  if (!val) return 'UNAVAILABLE';
-  const u = val.toUpperCase();
-  if (u.includes('PARTIAL')) return 'PARTIALLY_CONFIRMS';
-  if (u.includes('CONFIRM')) return 'CONFIRMS';
-  if (u.includes('MODIFY') || u.includes('MODIFIES')) return 'MODIFIES';
-  if (u.includes('CONFLICT')) return 'CONFLICTS';
+export function mapD2Relationship(_val?: string): D2ProductResult['relationship'] {
+  // Downstream product adapters cannot promote D2 before the domain validation gate is approved.
   return 'UNAVAILABLE';
 }
 
@@ -717,8 +712,8 @@ function mapWealth(
       }
     },
     d2: {
-      relationship: mapD2Relationship(detail?.d2Relationship ? String(detail.d2Relationship) : undefined),
-      statement: detail?.d2Statement
+      relationship: 'UNAVAILABLE',
+      statement: detail?.d2AvailabilityReason ?? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
     },
     activation: {
       dasha: {
