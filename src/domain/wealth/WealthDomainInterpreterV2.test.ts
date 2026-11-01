@@ -348,6 +348,8 @@ describe('WealthDomainInterpreterV2', () => {
     expect(golden.conclusion.strength).toBe('VERY_STRONG');
     expect(golden.dataCompleteness?.primaryFactors).toBe('AVAILABLE');
     expect(golden.dataCompleteness?.d2).toBe('UNAVAILABLE');
+    expect(golden.conclusionData?.wealthFinalSynthesis?.divisionalStatus).toBe('UNAVAILABLE');
+    expect(golden.conclusionData?.wealthFinalSynthesis?.d2AvailabilityReason).toContain('D2 calculation and interpretation');
     expect(golden.dataCompleteness?.dasha).toBe('AVAILABLE');
     expect(golden.dataCompleteness?.transit).toBe('AVAILABLE');
   });
@@ -602,7 +604,7 @@ describe('WealthDomainInterpreterV2', () => {
       expect(noMatchV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
       expect(noMatchV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
       // D2 remains unavailable until its independent validation gates are approved.
-      expect(noMatchV2.dataCompleteness?.d2).toBe('AVAILABLE');
+      expect(noMatchV2.dataCompleteness?.d2).toBe('UNAVAILABLE');
       expect(noMatchV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
