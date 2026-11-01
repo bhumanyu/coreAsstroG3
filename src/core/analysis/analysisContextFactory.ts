@@ -25,7 +25,7 @@ export const DEFAULT_METHODOLOGY: ProductMethodology = Object.freeze({
  * prefix before parsing so malformed calendar input cannot silently roll over.
  */
 function assertValidCalendarDate(asOf: string): void {
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})(?:$|[T ])/.exec(asOf);
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:$|[T ])/.exec(asOf);
   if (!match) return;
 
   const year = Number(match[1]);
