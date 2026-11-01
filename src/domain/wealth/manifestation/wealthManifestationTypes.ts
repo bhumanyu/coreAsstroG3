@@ -57,7 +57,7 @@ export interface WealthDimensionManifestationSynthesis {
   readonly natalSupport: WealthManifestationDirection;
   readonly dashaSupport: WealthManifestationDirection;
   readonly transitSupport: WealthManifestationDirection;
-  readonly d2Support: WealthManifestationDirection;
+  readonly d2Support: WealthManifestationDirection | 'UNAVAILABLE';
   readonly factors: readonly WealthManifestationFactor[];
   readonly summary: string;
 }
