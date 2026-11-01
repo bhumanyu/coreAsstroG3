@@ -300,22 +300,10 @@ export function buildWealthTransitStatement(
 }
 
 export function buildD2Statement(
-  d2Evidence: readonly DomainEvidence[],
-  relationship: VargaRelationship
+  _evidence: readonly DomainEvidence[],
+  _d2Relationship: VargaRelationship
 ): string {
-  if (relationship === 'UNAVAILABLE' || d2Evidence.length === 0) {
-    return 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
-  }
-  if (relationship === 'CONFIRMS') {
-    return 'D2 Hora confirms liquid wealth potential and resource accumulation.';
-  }
-  if (relationship === 'CONFLICTS') {
-    return 'D2 Hora diverges from natal promise, indicating financial caution in asset preservation.';
-  }
-  if (relationship === 'MODIFIES') {
-    return 'D2 Hora modifies the financial expression toward specialized asset structures.';
-  }
-  return 'D2 Hora partially confirms financial accumulation.';
+  return 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
 }
 
 export function buildWealthConclusion(
