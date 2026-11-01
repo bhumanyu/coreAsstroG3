@@ -1176,7 +1176,8 @@ function buildWealthFact(
 
 
   const wealthFinalSynthesis = wealthInterpretation?.conclusionData?.wealthFinalSynthesis;
-  const wealthFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(wealthFinalSynthesis);
+  const wealthTraceCompleteness = wealthInterpretation?.conclusionData?.reasoningTraceGraph?.traceCompleteness;
+  const wealthFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(wealthFinalSynthesis, wealthTraceCompleteness);
 
 
   if (wealthInterpretation) {
@@ -1197,7 +1198,8 @@ function buildWealthFact(
 }
 
 function mapCareerWealthFinalSynthesisToFact(
-  syn?: CareerWealthFinalSynthesis
+  syn?: CareerWealthFinalSynthesis,
+  traceCompleteness?: ReasoningTraceGraph['traceCompleteness']
 ): CareerWealthFinalSynthesisFact | undefined {
   if (!syn) return undefined;
   const dimensionsFact: Partial<Record<WealthDimension, WealthDimensionFinalSynthesisFact>> | undefined = syn.dimensions
@@ -1245,6 +1247,7 @@ function mapCareerWealthFinalSynthesisToFact(
     timingStatus: syn.timingStatus,
     divisionalStatus: syn.divisionalStatus,
     ...(syn.d2AvailabilityReason ? { d2AvailabilityReason: syn.d2AvailabilityReason } : {}),
+    ...(traceCompleteness ? { traceCompleteness } : {}),
     manifestationStatus: syn.manifestationStatus,
     confidence: syn.confidence,
     primaryPromise: syn.primaryPromise,
