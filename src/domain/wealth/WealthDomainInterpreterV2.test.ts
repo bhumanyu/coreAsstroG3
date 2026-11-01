@@ -318,12 +318,12 @@ describe('WealthDomainInterpreterV2', () => {
     expect(golden.domain).toBe('WEALTH');
     expect(golden.natalPromise.strength).toBe('VERY_STRONG');
     expect(golden.natalPromise.confidence).toBe('VERY_HIGH');
-    expect(golden.vargaConfirmations[0].relationship).toBe('CONFIRMS');
+    expect(golden.vargaConfirmations[0].relationship).toBe('UNAVAILABLE');
 
     const d2Evidence = golden.evidence.filter((e) => e.source === 'D2');
     const natalPromiseIds = golden.natalPromise.evidenceIds;
     const computedD2Rel = evaluateD2Relationship(undefined, d2Evidence, natalPromiseIds);
-    expect(computedD2Rel).toBe('CONFIRMS');
+    expect(computedD2Rel).toBe('UNAVAILABLE');
 
     expect(golden.timingActivations).toBeDefined();
     expect(golden.timingActivations?.length).toBe(4);
@@ -347,7 +347,7 @@ describe('WealthDomainInterpreterV2', () => {
 
     expect(golden.conclusion.strength).toBe('VERY_STRONG');
     expect(golden.dataCompleteness?.primaryFactors).toBe('AVAILABLE');
-    expect(golden.dataCompleteness?.d2).toBe('AVAILABLE');
+    expect(golden.dataCompleteness?.d2).toBe('UNAVAILABLE');
     expect(golden.dataCompleteness?.dasha).toBe('AVAILABLE');
     expect(golden.dataCompleteness?.transit).toBe('AVAILABLE');
   });
@@ -601,8 +601,7 @@ describe('WealthDomainInterpreterV2', () => {
       expect(emptyV2.natalPromise.evidenceIds).toEqual([]);
       expect(noMatchV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
       expect(noMatchV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
-      // D2 is an evaluated input here. The absence of matching structural evidence is a
-      // complete no-match result, not evidence that D2 data was unavailable.
+      // D2 remains unavailable until its independent validation gates are approved.
       expect(noMatchV2.dataCompleteness?.d2).toBe('AVAILABLE');
       expect(noMatchV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
