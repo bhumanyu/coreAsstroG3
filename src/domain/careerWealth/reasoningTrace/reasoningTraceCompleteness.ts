@@ -122,6 +122,8 @@ export function buildReasoningTraceCompleteness(params: {
     const synthesisReference = synthesisReferenceByOccurrence.get(item.id);
     const producerRuleId = item.provenance?.ruleId?.trim();
     const sourceRuleId = item.ruleId?.trim();
+    const semanticIdentityKey = item.identityKey?.trim();
+    const sourceRecordId = item.sourceRecordId?.trim();
     const chartInputAvailable = item.planet !== undefined ||
       item.house !== undefined ||
       item.timing !== undefined;
@@ -136,7 +138,7 @@ export function buildReasoningTraceCompleteness(params: {
         })
       : undefined;
 
-    if (!item.identityKey?.trim()) {
+    if (!semanticIdentityKey) {
       diagnostics.push(Object.freeze({
         code: 'MISSING_SEMANTIC_IDENTITY',
         evidenceOccurrenceId: item.id,
@@ -150,7 +152,7 @@ export function buildReasoningTraceCompleteness(params: {
         message: 'Evidence occurrence ' + item.id + ' has no producer/source rule ID.'
       }));
     }
-    if (!chartInput && !item.sourceRecordId) {
+    if (!chartInput && !sourceRecordId) {
       diagnostics.push(Object.freeze({
         code: 'MISSING_CHART_CALCULATION_LINK',
         evidenceOccurrenceId: item.id,
@@ -179,7 +181,7 @@ export function buildReasoningTraceCompleteness(params: {
         synthesisEvidenceNamespace: synthesisReference.namespace
       } : {}),
       evidenceOccurrenceId: item.id,
-      ...(item.identityKey ? { semanticIdentityKey: item.identityKey } : {}),
+      ...(semanticIdentityKey ? { semanticIdentityKey } : {}),
       ...(producerRuleId ? { producerRuleId } : {}),
       ...(sourceRuleId ? { sourceRuleId } : {}),
       ...(sourceRecordId ? { sourceRecordId } : {}),
