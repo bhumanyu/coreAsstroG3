@@ -163,7 +163,7 @@ export function buildLifeAnalysisViewModel(
   const wealthDetail: LifeAnalysisWealthDetailViewModel = {
     natalPromise: wealth.natalPromise.strength,
     d2Relationship: 'UNAVAILABLE',
-    d2AvailabilityReason: wealthConclusionData?.d2AvailabilityReason ?? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.',
+    d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.',
     currentDashaEffect: wealth.dashaActivation.effect,
     currentTransitEffect: wealth.transitTrigger.effect,
     overallStatus: wealthConclusionData?.overallStatus ?? 'UNAVAILABLE',
