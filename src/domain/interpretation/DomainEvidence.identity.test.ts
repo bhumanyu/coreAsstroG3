@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertUniqueDomainEvidenceOccurrenceIds,
-  createDomainEvidence
+  createDomainEvidence,
+  validateDomainEvidenceRootLinks
 } from './DomainEvidence';
 
 describe('DomainEvidence root and occurrence identity contract (A03)', () => {
@@ -65,7 +66,28 @@ describe('DomainEvidence root and occurrence identity contract (A03)', () => {
     });
 
     expect(() => assertUniqueDomainEvidenceOccurrenceIds([first, second]))
-      .toThrow(/Duplicate DomainEvidence occurrence ID detected: duplicate-occurrence/);
+      .toThrow(/Duplicate DomainEvidence occurrence ID detect  it('rejects cyclic root dependencies between semantic identities', () => {
+    const first = createDomainEvidence({
+      ...base,
+      id: 'root-a-occurrence',
+      identityKey: 'root-a-semantic',
+      rootEvidenceIds: ['root-b-semantic']
+    });
+    const second = createDomainEvidence({
+      ...base,
+      id: 'root-b-occurrence',
+      identityKey: 'root-b-semantic',
+      rootEvidenceIds: ['root-a-semantic']
+    });
+
+    const validation = validateDomainEvidenceRootLinks([first, second]);
+    expect(validation.isValid).toBe(false);
+    expect(validation.unresolved).toContainEqual(expect.objectContaining({
+      code: 'ROOT_EVIDENCE_CYCLE'
+    }));
+  });
+
+ed: duplicate-occurrence/);
   });
 
   it('rejects empty, duplicate, sentinel, and self-referential root links', () => {
