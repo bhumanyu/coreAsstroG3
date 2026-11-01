@@ -56,9 +56,9 @@ export interface BuildProductSelectedPeriodSynthesisInput {
   readonly context: AnalysisContext;
   readonly temporalState: AnalysisTemporalState;
   readonly horoscope: Horoscope;
-  readonly careerArtifacts: CareerInternalArtifacts;
-  readonly careerEvidence: readonly DomainEvidence[];
-  readonly careerDashaEvidence: readonly DomainEvidence[];
+  readonly careerArtifacts?: CareerInternalArtifacts;
+  readonly careerEvidence?: readonly DomainEvidence[];
+  readonly careerDashaEvidence?: readonly DomainEvidence[];
   readonly wealthEvidence?: readonly DomainEvidence[];
   readonly careerBaseline?: CareerConclusionData;
   readonly wealthBaseline?: WealthConclusionData;
@@ -103,6 +103,10 @@ function buildSelectedCareerDashaActivationInternal(
   selectedPeriod: SelectedPeriodActivationContext
 ): { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess } | { readonly ok: false; readonly errorCode: Extract<SelectedCareerDashaActivationResult, { ok: false }>['error'] } {
   const { careerArtifacts, horoscope } = input;
+  if (!careerArtifacts) {
+    return { ok: false, errorCode: 'INCOMPLETE_CANONICAL_INPUT' };
+  }
+
   const result = buildSelectedCareerDashaActivation({
     horoscope,
     natal: careerArtifacts.natal,
