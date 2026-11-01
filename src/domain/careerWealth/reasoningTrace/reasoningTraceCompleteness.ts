@@ -120,8 +120,8 @@ export function buildReasoningTraceCompleteness(params: {
 
   for (const item of evidence) {
     const synthesisReference = synthesisReferenceByOccurrence.get(item.id);
-    const producerRuleId = item.provenance?.ruleId;
-    const sourceRuleId = item.ruleId;
+    const producerRuleId = item.provenance?.ruleId?.trim();
+    const sourceRuleId = item.ruleId?.trim();
     const chartInputAvailable = item.planet !== undefined ||
       item.house !== undefined ||
       item.timing !== undefined;
