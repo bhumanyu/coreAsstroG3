@@ -204,7 +204,7 @@ export function buildReasoningTraceCompleteness(params: {
     a.code.localeCompare(b.code) ||
     (a.reference ?? '').localeCompare(b.reference ?? '')
   );
-  const missingOccurrence = sortedDiagnostics.some(d => d.code === 'MISSING_EVIDENCE_OCCURRENCE');
+  const missingOccurrence = sortedDiagnostics.some(d => d.code === 'MISSING_EVIDENCE_OCCURRENCE' || d.code === 'NO_SYNTHESIS_EVIDENCE_REFERENCES');
   const status: ReasoningTraceCompleteness['status'] = sortedDiagnostics.length === 0
     ? 'COMPLETE'
     : missingOccurrence || links.length === 0
