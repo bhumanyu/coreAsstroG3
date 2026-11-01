@@ -61,6 +61,7 @@ export interface AiRoutingResult {
   readonly providerId: string;
   readonly providerName: string;
   readonly providerKind: AiProviderKind;
+  readonly providerVersion?: string;
   readonly routingMode: AiRoutingMode;
   readonly fallbackUsed: boolean;
   readonly selectionReason: AiProviderSelectionReason;
