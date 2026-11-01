@@ -81,18 +81,33 @@ function deriveIdentityKey(evidence: WeightedReasoningEvidence): string {
 export function deduplicateReasoningEvidence(
   evidence: readonly WeightedReasoningEvidence[]
 ): readonly CanonicalReasoningEvidence[] {
-  // An occurrence is a unique event in the evidence graph. Repeating an ID is
-  // not another occurrence and must fail before it can inflate occurrenceCount.
+  // Every sourceId is an original occurrence ID. Validate the complete source
+  // set, not only the representative evidenceId, so canonical round-trips cannot
+  // silently discard occurrences or count one source occurrence twice.
   const seenOccurrenceIds = new Set<string>();
   for (const item of evidence) {
     const occurrenceId = item.evidenceId?.trim();
     if (!occurrenceId) {
       throw new Error('WeightedReasoningEvidence occurrence ID must be non-empty');
     }
-    if (seenOccurrenceIds.has(occurrenceId)) {
-      throw new Error(`Duplicate reasoning evidence occurrence ID detected: ${occurrenceId}`);
+
+    const providedSourceIds = item.sourceIds ?? [];
+    const uniqueProvidedSourceIds = new Set(providedSourceIds);
+    if (uniqueProvidedSourceIds.size !== providedSourceIds.length) {
+      throw new Error(`Duplicate source occurrence ID within WeightedReasoningEvidence: ${occurrenceId}`);
     }
-    seenOccurrenceIds.add(occurrenceId);
+
+    const itemOccurrenceIds = new Set([occurrenceId, ...providedSourceIds]);
+    for (const sourceOccurrenceId of itemOccurrenceIds) {
+      const normalizedId = sourceOccurrenceId?.trim();
+      if (!normalizedId) {
+        throw new Error(`WeightedReasoningEvidence source occurrence ID must be non-empty: ${occurrenceId}`);
+      }
+      if (seenOccurrenceIds.has(normalizedId)) {
+        throw new Error(`Duplicate reasoning evidence occurrence ID detected: ${normalizedId}`);
+      }
+      seenOccurrenceIds.add(normalizedId);
+    }
   }
 
   // Group by semantic identity key
@@ -143,8 +158,12 @@ export function deduplicateReasoningEvidence(
         maxPriority = item.priority;
       }
 
-      // Accumulate source IDs (distinct occurrence IDs)
+      // Accumulate every original occurrence ID. The representative evidenceId
+      // is also included for ordinary, non-aggregated WeightedReasoningEvidence.
       sourceIds.add(item.evidenceId);
+      for (const sourceOccurrenceId of item.sourceIds ?? []) {
+        sourceIds.add(sourceOccurrenceId);
+      }
 
       // Accumulate layers
       layers.add(item.layer);
@@ -195,7 +214,7 @@ export function deduplicateReasoningEvidence(
       weight: maxWeight,
       statement,
       relatedEvidenceIds: Object.freeze(Array.from(relatedEvidenceIds).sort((a, b) => a.localeCompare(b))),
-      occurrenceCount: group.length,
+      occurrenceCount: sortedSourceIds.length,
       // sourceIds = all distinct occurrence IDs; occurrenceCount = valid unique occurrences (duplicate IDs were rejected above).
       sourceIds: Object.freeze(sortedSourceIds),
       rootEvidenceIds: Object.freeze(Array.from(rootEvidenceIds).sort((a, b) => a.localeCompare(b))),
