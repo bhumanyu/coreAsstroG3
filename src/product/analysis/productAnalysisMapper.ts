@@ -713,7 +713,7 @@ function mapWealth(
     },
     d2: {
       relationship: 'UNAVAILABLE',
-      statement: detail?.d2AvailabilityReason ?? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+      statement: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
     },
     activation: {
       dasha: {
