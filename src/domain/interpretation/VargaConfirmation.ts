@@ -21,14 +21,14 @@ export interface VargaConfirmation {
 export function createVargaConfirmation(
   confirmation: VargaConfirmation
 ): VargaConfirmation {
-  const availability = confirmation.availability ??
-    (confirmation.relationship === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE');
+  const isUnavailable = confirmation.availability === 'UNAVAILABLE' ||
+    confirmation.relationship === 'UNAVAILABLE';
   return Object.freeze({
     ...confirmation,
-    availability,
-    ...(availability === 'UNAVAILABLE'
-      ? { unavailabilityReason: confirmation.unavailabilityReason ?? (confirmation.varga === 'D2' ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.' : 'Divisional relationship is unavailable for this calculation.') }
-      : {}),
+    ...(isUnavailable ? {
+      availability: 'UNAVAILABLE' as const,
+      unavailabilityReason: confirmation.unavailabilityReason ?? (confirmation.varga === 'D2' ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.' : 'Divisional relationship is unavailable for this calculation.')
+    } : confirmation.availability ? { availability: confirmation.availability } : {}),
     evidenceIds: Object.freeze([
       ...confirmation.evidenceIds
     ])
