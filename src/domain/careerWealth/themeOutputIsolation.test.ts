@@ -31,6 +31,7 @@ describe('canonical interpretation independence from legacy theme outputs', () =
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology });
 
+    // This verifies canonical AI context; generated explanation execution is deferred to AI-boundary integration coverage.
     const baseline = await runLifeAnalysisProduct({
       horoscope,
       context,
@@ -93,8 +94,12 @@ describe('canonical interpretation independence from legacy theme outputs', () =
         includeAiExplanation: false
       });
       expect(perturbed.status).not.toBe('ERROR');
-      expect(careerThemeSpy).toHaveBeenCalled();
-      expect(wealthThemeSpy).toHaveBeenCalled();
+      expect(careerThemeSpy).toHaveBeenCalledTimes(1);
+      expect(wealthThemeSpy).toHaveBeenCalledTimes(1);
+      expect(perturbedCareerResult?.evidence).toEqual([]);
+      expect(originalCareerResult?.evidence?.length).toBeGreaterThan(0);
+      expect(perturbedWealthResult?.evidence).toEqual([]);
+      expect(originalWealthResult?.evidence?.length).toBeGreaterThan(0);
       expect(perturbedCareerResult).not.toEqual(originalCareerResult);
       expect(perturbedCareerResult?.conclusion.summary).not.toBe(originalCareerResult?.conclusion.summary);
       expect(perturbedWealthResult).not.toEqual(originalWealthResult);
