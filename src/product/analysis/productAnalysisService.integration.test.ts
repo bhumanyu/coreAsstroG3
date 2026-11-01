@@ -1502,5 +1502,36 @@ describe('A02 — ProductAnalysisService canonical domain independence', () => {
       })
     );
   });
+
+  it('selectPeriodForRun preserves Wealth output when Career artifacts are missing', async () => {
+    const productService = createServiceWithMissingDomain('CAREER');
+    const asOf = '2024-01-01T00:00:00.000Z';
+    const run = await productService.analyzeRun(CANONICAL_BIRTH_DETAILS, {
+      includeAiExplanation: false,
+      asOf
+    });
+
+    const report = run.snapshot.pipelineState?.temporalState?.dashaInterpretation;
+    expect(report).toBeDefined();
+    const periods = listSelectableMdAdPeriods(report!);
+    const mahadasha = periods.mahadashas.find((candidate) => candidate.valid);
+    expect(mahadasha).toBeDefined();
+    const antardasha = periods.antardashas.find(
+      (candidate) => candidate.valid && candidate.mahadashaId === mahadasha!.id
+    );
+    expect(antardasha).toBeDefined();
+
+    const result = await productService.selectPeriodForRun(
+      run.snapshot,
+      mahadasha!.id,
+      antardasha!.id,
+      false
+    );
+
+    expect(result.selectedPeriod?.status).toBe('OK');
+    if (result.selectedPeriod?.status !== 'OK') return;
+    expect(result.selectedPeriod.synthesis.provenance.career.status).toBe('MISSING');
+    expect(result.selectedPeriod.synthesis.provenance.wealth.status).toBe('PRESENT');
+  });
 });
 
