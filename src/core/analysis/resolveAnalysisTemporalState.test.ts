@@ -160,4 +160,63 @@ describe('resolveAnalysisTemporalState Unit Test Suite', () => {
       state2.dashaInterpretation?.current?.mahadasha.planet
     );
   });
+  
+  it('A05: keeps the full Dasha timeline while replacing only active current for the requested asOf', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '1990-01-01T00:00:00.000Z');
+    const originalTimeline = horoscope.dashaInterpretation?.mahadashas;
+    const originalEmbeddedCurrent = horoscope.dashaInterpretation?.current;
+    const context = createAnalysisContext({
+      asOf: '2024-06-15T00:00:00.000Z',
+      methodology: testMethodology
+    });
+
+    const state = resolveAnalysisTemporalState(horoscope, context);
+
+    expect(state.dashaInterpretation).toBeDefined();
+    expect(state.dashaInterpretation?.current?.mahadasha.planet).toBe(Planet.JUPITER);
+    expect(state.dashaInterpretation?.mahadashas).toBe(originalTimeline);
+    expect(horoscope.dashaInterpretation?.current).toBe(originalEmbeddedCurrent);
+    expect(horoscope.dashaInterpretation?.mahadashas).toBe(originalTimeline);
+  });
+
+  it('A05: treats missing canonical Vimshottari data as unavailable despite an embedded active Dasha', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '1990-01-01T00:00:00.000Z');
+    const brokenHoroscope = {
+      ...horoscope,
+      vimshottari: undefined
+    };
+    const context = createAnalysisContext({
+      asOf: '2024-06-15T00:00:00.000Z',
+      methodology: testMethodology
+    });
+
+    const state = resolveAnalysisTemporalState(brokenHoroscope, context);
+
+    expect(state.dashaInterpretation).toBeUndefined();
+    expect(brokenHoroscope.dashaInterpretation?.current).toBeDefined();
+  });
+
+  it('A05: recalculates all three active levels from the requested instant', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const firstMahadasha = horoscope.vimshottari?.mahadashas[0];
+    const firstAntardasha = firstMahadasha?.antardashas[0];
+    const firstPratyantardasha = firstAntardasha?.pratyantardashas?.[0];
+    expect(firstMahadasha).toBeDefined();
+    expect(firstAntardasha).toBeDefined();
+    expect(firstPratyantardasha).toBeDefined();
+    if (!firstMahadasha || !firstAntardasha || !firstPratyantardasha) return;
+
+    const context = createAnalysisContext({
+      asOf: firstPratyantardasha.start,
+      methodology: testMethodology
+    });
+    const state = resolveAnalysisTemporalState(horoscope, context);
+    const current = state.dashaInterpretation?.current;
+
+    expect(current?.mahadasha.start).toBe(firstMahadasha.start);
+    expect(current?.antardasha.start).toBe(firstAntardasha.start);
+    expect(current?.pratyantardasha?.start).toBe(firstPratyantardasha.start);
+    expect(state.asOf).toBe(context.asOf);
+  });
+
 });
