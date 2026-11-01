@@ -1049,7 +1049,7 @@ describe('A07 — C11 confidence coverage and provenance policy', () => {
   });
 
   it('reports missing expression as supporting coverage, not as a challenge', () => {
-    const result = synthesizeCareerFinal({ ...completeInput, expressionDirection: 'UNAVAILABLE', expressionStrength: 'UNAVAILABLE' });
+    const result = synthesizeCareerFinal({ ...completeInput, expressionDirection: 'UNAVAILABLE', expressionStrength: undefined });
     expect(result.expressionStatus).toBe('UNAVAILABLE');
     expect(result.finalStrength).toBe('STRONG');
     expect(result.confidence).toBe('MEDIUM');
