@@ -257,7 +257,7 @@ describe('C11 Final Synthesis', () => {
       expect(result.finalDirection).toBe('SUPPORT');
     });
 
-    it('should derive LOW confidence for weak natal regardless of missing secondary evidence', () => {
+    it('does not infer LOW confidence from weak promise strength when evidence quality is unknown', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'WEAK'
@@ -265,7 +265,7 @@ describe('C11 Final Synthesis', () => {
 
       const result = synthesizeCareerFinal(input);
 
-      expect(result.confidence).toBe('LOW');
+      expect(result.confidence).toBe('MEDIUM');
     });
   });
 
@@ -630,7 +630,7 @@ describe('C11 Final Synthesis', () => {
   });
 
   describe('P2-08D-02: Confidence policy pinning', () => {
-    it('should return HIGH confidence for strong natal alone with no conflicts', () => {
+    it('returns MEDIUM confidence for strong natal when producer provenance is not supplied', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -640,11 +640,11 @@ describe('C11 Final Synthesis', () => {
 
       const result = synthesizeCareerFinal(input);
 
-      // Strong natal with no conflicts = HIGH confidence regardless of layer count
-      expect(result.confidence).toBe('HIGH');
+      // Promise strength is not confidence; provenance is unknown.
+      expect(result.confidence).toBe('MEDIUM');
     });
 
-    it('should return HIGH confidence for VERY_STRONG natal alone with no conflicts', () => {
+    it('returns MEDIUM confidence for VERY_STRONG natal when producer provenance is not supplied', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'VERY_STRONG',
@@ -654,7 +654,7 @@ describe('C11 Final Synthesis', () => {
 
       const result = synthesizeCareerFinal(input);
 
-      expect(result.confidence).toBe('HIGH');
+      expect(result.confidence).toBe('MEDIUM');
     });
 
     it('should return MEDIUM confidence for strong natal with moderate conflicts', () => {
@@ -694,7 +694,7 @@ describe('C11 Final Synthesis', () => {
 
       const result = synthesizeCareerFinal(input);
 
-      expect(result.confidence).toBe('MEDIUM');
+      expect(result.confidence).toBe('LOW');
     });
   });
 
@@ -936,8 +936,8 @@ describe('C11 Final Synthesis', () => {
       const contradictoryResult = synthesizeCareerFinal(contradictoryInput);
 
       // Consistent case should have equal or higher confidence
-      expect(consistentResult.confidence).toBe('HIGH');
-      expect(contradictoryResult.confidence).toBe('MEDIUM');
+      expect(consistentResult.confidence).toBe('MEDIUM');
+      expect(contradictoryResult.confidence).toBe('LOW');
       // Consistent case should be SUPPORTED
       expect(consistentResult.finalStatus).toBe('SUPPORTED');
       // Contradictory case should be downgraded
