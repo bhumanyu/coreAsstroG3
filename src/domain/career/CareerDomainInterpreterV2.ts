@@ -1261,7 +1261,9 @@ export function buildCareerReasoningTraceGraph(params: {
       const evNodeId = traceBuilder.addEvidenceNode({
         provenance: e.provenance,
         label: e.statement,
-        subjectKey: e.provenance.ruleId
+        subjectKey: e.provenance.ruleId,
+        occurrenceId: e.id,
+        identityKey: e.identityKey
       });
       const targetNodeId =
         e.provenance.axis === 'NATAL'
