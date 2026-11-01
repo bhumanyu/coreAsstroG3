@@ -20,8 +20,8 @@ export interface ReasoningTraceChartInputReference {
 export interface ReasoningTraceEvidenceLink {
   readonly domain: 'CAREER' | 'WEALTH';
   readonly synthesisRuleId: string;
-  readonly synthesisEvidenceReference: string;
-  readonly synthesisEvidenceNamespace: ReasoningTraceEvidenceNamespace;
+  readonly synthesisEvidenceReference?: string;
+  readonly synthesisEvidenceNamespace?: ReasoningTraceEvidenceNamespace;
   /** DomainEvidence.id; never replaced by identityKey or a provenance alias. */
   readonly evidenceOccurrenceId: string;
   readonly semanticIdentityKey?: string;
@@ -73,6 +73,7 @@ export function buildReasoningTraceCompleteness(params: {
   const { domain, synthesisRuleId, synthesisEvidenceReferences, evidence } = params;
   const occurrenceIds = new Set(evidence.map(item => item.id));
   const includedOccurrenceIds = new Set<string>();
+  const synthesisReferenceByOccurrence = new Map<string, ReasoningTraceEvidenceReference>();
   const diagnostics: ReasoningTraceCompletenessDiagnostic[] = [];
   const links: ReasoningTraceEvidenceLink[] = [];
 
@@ -97,11 +98,14 @@ export function buildReasoningTraceCompleteness(params: {
       continue;
     }
 
-    for (const item of matches) includedOccurrenceIds.add(item.id);
+    for (const item of matches) {
+      includedOccurrenceIds.add(item.id);
+      synthesisReferenceByOccurrence.set(item.id, reference);
+    }
   }
 
   for (const item of evidence) {
-    const included = includedOccurrenceIds.has(item.id);
+    const synthesisReference = synthesisReferenceByOccurrence.get(item.id);
     const producerRuleId = item.ruleId ?? item.provenance?.ruleId;
     const chartInputAvailable = item.planet !== undefined ||
       item.house !== undefined ||
@@ -154,8 +158,10 @@ export function buildReasoningTraceCompleteness(params: {
     links.push(Object.freeze({
       domain,
       synthesisRuleId,
-      synthesisEvidenceReference: item.identityKey ?? item.id,
-      synthesisEvidenceNamespace: item.identityKey ? 'IDENTITY' : 'OCCURRENCE',
+      ...(synthesisReference ? {
+        synthesisEvidenceReference: synthesisReference.id,
+        synthesisEvidenceNamespace: synthesisReference.namespace
+      } : {}),
       evidenceOccurrenceId: item.id,
       ...(item.identityKey ? { semanticIdentityKey: item.identityKey } : {}),
       ...(producerRuleId ? { producerRuleId } : {}),
