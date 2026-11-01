@@ -225,8 +225,8 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   };
 
   const d2: WealthD2ViewModel = {
-    relationship: wealth.d2.relationship,
-    statement: wealth.d2.statement
+    relationship: 'UNAVAILABLE',
+    statement: wealth.d2.statement ?? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
   };
 
   const rawPeriods = wealth.activation.dasha.periods ?? [];
