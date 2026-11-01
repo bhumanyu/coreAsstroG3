@@ -152,8 +152,10 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
 
     expect(evA.id).toBe('raw-venus-a');
     expect(evB.id).toBe('raw-venus-b');
-    expect(evA.identityKey).toBe(evA.provenance?.evidenceId);
-    expect(evB.identityKey).toBe(evB.provenance?.evidenceId);
+    expect(evA.id).toBe(evA.provenance?.evidenceId);
+    expect(evB.id).toBe(evB.provenance?.evidenceId);
+    expect(evA.identityKey).not.toBe(evA.provenance?.evidenceId);
+    expect(evB.identityKey).not.toBe(evB.provenance?.evidenceId);
     expect(evA.provenance?.ruleId).toBe('WEALTH_VENUS_KARAKA_001');
     expect(evA.identityKey).toBe(evB.identityKey);
   });
