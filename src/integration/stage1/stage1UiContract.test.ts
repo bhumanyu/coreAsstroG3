@@ -48,6 +48,7 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
       expect(d2Confirmation?.relationship ?? 'UNAVAILABLE').toBe(
         STAGE1_GOLDEN_EXPECTATION.wealth.d2Relationship
       );
+      expect(d2Confirmation?.availability ?? 'UNAVAILABLE').toBe('UNAVAILABLE');
 
       // 2. AI Projection Assertions
       expect(result.aiContext.domainInterpretations).toBeDefined();
