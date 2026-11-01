@@ -23,8 +23,10 @@ export function resolveWealthDimensionManifestation(
   dimension: WealthManifestationDimension,
   natalEvidence: readonly DomainEvidence[],
   wealthTimingSynthesis?: WealthTimingSynthesis,
-  d2Relationship?: VargaRelationship | string
+  _d2Relationship?: VargaRelationship | string
 ): WealthDimensionManifestationSynthesis {
+  // Containment boundary: no incoming declaration can promote D2 before validation approval.
+  const d2Relationship: VargaRelationship = 'UNAVAILABLE';
   const factors: WealthManifestationFactor[] = [];
   const ruleSet = getWealthDimensionRuleSet(dimension);
   const house = WEALTH_DIMENSION_HOUSES[dimension];
@@ -83,7 +85,7 @@ export function resolveWealthDimensionManifestation(
     .filter((item) => item.source === 'D2')
     .map((item) => item.id);
 
-  let d2Support: WealthManifestationDirection = 'NEUTRAL';
+  let d2Support: WealthManifestationDirection | 'UNAVAILABLE' = 'UNAVAILABLE';
   if (d2Relationship === 'CONFIRMS' || d2Relationship === 'PARTIALLY_CONFIRMS') {
     d2Support = 'SUPPORT';
     const isPartial = d2Relationship === 'PARTIALLY_CONFIRMS';
@@ -226,7 +228,7 @@ export function resolveWealthDimensionManifestation(
 export function synthesizeWealthManifestations(
   natalEvidence: readonly DomainEvidence[],
   wealthTimingSynthesis?: WealthTimingSynthesis,
-  d2Relationship?: VargaRelationship | string
+  _d2Relationship?: VargaRelationship | string
 ): WealthManifestationSynthesis {
   const dimMap: Record<string, WealthDimensionManifestationSynthesis> = {};
 
@@ -235,7 +237,7 @@ export function synthesizeWealthManifestations(
       dim,
       natalEvidence,
       wealthTimingSynthesis,
-      d2Relationship
+      'UNAVAILABLE'
     );
   }
 
