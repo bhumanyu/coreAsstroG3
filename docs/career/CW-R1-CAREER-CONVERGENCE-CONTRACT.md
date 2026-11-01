@@ -555,6 +555,7 @@ A03 implements root-fact dependency links without changing the W0.4 three-level 
 - `rootEvidenceIds` is a separate optional array containing canonical semantic `identityKey` references for the root facts that a derived occurrence depends on.
 - Root links must resolve against semantic identity keys in the same domain evidence graph. An occurrence ID or producer source ID is not a valid root reference.
 - Root links are normalized, unique, sorted, immutable and may not point to the occurrence's own semantic identity.
+- Root-link graphs must be acyclic; multi-node dependency cycles are rejected.
 - Missing root links are not fabricated. A root occurrence may legitimately have an empty/absent `rootEvidenceIds` array.
 - The canonical Career mapper validates root links and the Career evidence-continuity gate fails on unresolved root references.
 - The Wealth evidence mapper applies the same root-link validation when a Wealth producer supplies explicit root references.
