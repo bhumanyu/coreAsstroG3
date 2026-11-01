@@ -6,6 +6,7 @@ import type { CareerFactorCategory } from '../../domain/career/careerDasha/caree
 import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
 import type { TimingEffect, TimingSourceCategory } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationMode } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
+import type { CareerConfidenceCoverage, CareerConfidenceReason } from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
 import type { WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { WealthDimension } from '../../domain/wealth/wealthTypes';
 import type {
@@ -467,6 +468,8 @@ export interface AiCareerCanonicalC11Fact {
   readonly finalDirection: string;
   readonly finalStrength: string;
   readonly confidence: string;
+  readonly confidenceCoverage: CareerConfidenceCoverage;
+  readonly confidenceReasons: readonly CareerConfidenceReason[];
   readonly natalDirection: string;
   readonly natalStrength: string;
   readonly expressionStatus: string;
