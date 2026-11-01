@@ -66,7 +66,29 @@ describe('DomainEvidence root and occurrence identity contract (A03)', () => {
     });
 
     expect(() => assertUniqueDomainEvidenceOccurrenceIds([first, second]))
-      .toThrow(/Duplicate DomainEvidence occurrence ID detect  it('rejects cyclic root dependencies between semantic identities', () => {
+      .toThrow(/Duplicate DomainEvidence occurrence ID detect  it('rejects a root key that collides with any occurrence ID in the graph', () => {
+    const root = createDomainEvidence({
+      ...base,
+      id: 'same-string-occurrence',
+      identityKey: 'same-string-occurrence'
+    });
+    const derived = createDomainEvidence({
+      ...base,
+      id: 'derived-occurrence',
+      identityKey: 'derived-semantic-identity',
+      rootEvidenceIds: ['same-string-occurrence']
+    });
+
+    const validation = validateDomainEvidenceRootLinks([root, derived]);
+    expect(validation.isValid).toBe(false);
+    expect(validation.unresolved).toContainEqual(expect.objectContaining({
+      sourceOccurrenceId: 'derived-occurrence',
+      rootIdentityKey: 'same-string-occurrence',
+      code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED'
+    }));
+  });
+
+  it('rejects cyclic root dependencies between semantic identities', () => {
     const first = createDomainEvidence({
       ...base,
       id: 'root-a-occurrence',
