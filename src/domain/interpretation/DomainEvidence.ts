@@ -46,6 +46,8 @@ export interface DomainEvidence {
   readonly strength: EvidenceStrength;
   readonly priority: number;
   readonly ruleId?: string;
+  /** Exact upstream chart/source record reference when supplied by the producer. */
+  readonly sourceRecordId?: string;
   readonly relatedEvidenceIds: readonly string[];
   /**
    * Canonical semantic identities of root facts this occurrence depends on.
@@ -373,6 +375,7 @@ export function createDomainEvidence(
     ]),
     ...(rootEvidenceIds.length > 0 ? { rootEvidenceIds } : {}),
     ...(evidence.ruleId ? { ruleId: evidence.ruleId } : {}),
+    ...(evidence.sourceRecordId ? { sourceRecordId: evidence.sourceRecordId } : {}),
     ...(evidence.notes ? { notes: evidence.notes } : {}),
     ...(evidence.provenance ? { provenance: Object.freeze(evidence.provenance) } : {}),
     ...(evidence.timing ? { timing: Object.freeze({ ...evidence.timing }) } : {}),
