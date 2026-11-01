@@ -245,6 +245,10 @@ export function createDomainEvidence(
   }
 
   const rootEvidenceIds = normalizeRootEvidenceIds(evidence.rootEvidenceIds, trimmedId);
+  const trimmedIdentityKey = evidence.identityKey?.trim();
+  if (trimmedIdentityKey && rootEvidenceIds.includes(trimmedIdentityKey)) {
+    throw new Error(`createDomainEvidence: rootEvidenceIds cannot reference the evidence's own identityKey (occurrence: ${trimmedId})`);
+  }
 
   return Object.freeze({
     id: trimmedId,
