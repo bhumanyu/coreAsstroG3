@@ -67,6 +67,8 @@ export interface DomainInterpretationAiProjection {
     readonly relationship: VargaRelationship;
     readonly availability?: 'AVAILABLE' | 'UNAVAILABLE';
     readonly unavailabilityReason?: string;
+    readonly strength?: EvidenceStrength;
+    readonly confidence?: ConfidenceLevel;
     readonly statement: string;
   }[];
 
