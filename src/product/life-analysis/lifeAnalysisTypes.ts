@@ -183,6 +183,10 @@ export interface LifeAnalysisDomainSummaryViewModel {
 }
 
 export interface LifeAnalysisCareerDetailViewModel {
+  readonly canonicalFinalSynthesis?: import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerFinalSynthesisResult;
+  readonly confidenceCoverage?: import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerConfidenceCoverage;
+  readonly confidenceReasons?: readonly import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerConfidenceReason[];
+  readonly traceCompleteness?: import('../../domain/careerWealth/reasoningTrace/reasoningTraceCompleteness').ReasoningTraceCompleteness;
   readonly natalPromise: DomainStrength | 'UNAVAILABLE';
   readonly d10Relationship: VargaRelationship;
   readonly currentDashaEffect?: TimingActivationEffect | 'UNAVAILABLE' | string;
@@ -209,6 +213,7 @@ export interface LifeAnalysisCareerDetailViewModel {
 }
 
 export interface LifeAnalysisWealthDetailViewModel {
+  readonly traceCompleteness?: import('../../domain/careerWealth/reasoningTrace/reasoningTraceCompleteness').ReasoningTraceCompleteness;
   readonly natalPromise: DomainStrength | 'UNAVAILABLE';
   readonly d2Relationship: VargaRelationship;
   readonly d2AvailabilityReason?: string;
