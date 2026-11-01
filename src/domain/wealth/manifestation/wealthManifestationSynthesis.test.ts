@@ -117,7 +117,7 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     }
   });
 
-  it('attributes only explicit D2 source evidence IDs to the D2 factor', () => {
+  it('does not emit a D2 factor even when raw D2 evidence is present', () => {
     const evidence = [
       createDomainEvidence({
         id: 'WEALTH_EXPLICIT_D2_EVIDENCE',
@@ -125,35 +125,15 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
         domain: 'WEALTH',
         phase: 'VARGA_CONFIRMATION',
         source: 'D2',
-        statement: 'Explicit D2 evidence',
+        statement: 'Unvalidated D2 evidence',
         polarity: 'SUPPORTING',
         strength: 'STRONG',
         ruleId: 'WEALTH_D2_CONFIRMATION'
-      }),
-      createDomainEvidence({
-        id: 'WEALTH_NON_D2_VARGA_EVIDENCE',
-        sourceType: 'VARGA',
-        domain: 'WEALTH',
-        phase: 'VARGA_CONFIRMATION',
-        source: 'D1',
-        statement: 'Varga-classified evidence with non-D2 source provenance',
-        polarity: 'SUPPORTING',
-        strength: 'MODERATE',
-        ruleId: 'WEALTH_NON_D2_VARGA'
       })
     ];
-
-    const result = resolveWealthDimensionManifestation(
-      'ACCUMULATION',
-      evidence,
-      undefined,
-      'CONFIRMS'
-    );
-    const d2Factor = result.factors.find((factor) => factor.source === 'D2');
-
-    expect(d2Factor).toBeDefined();
-    expect(d2Factor?.evidenceIds).toContain('WEALTH_EXPLICIT_D2_EVIDENCE');
-    expect(d2Factor?.evidenceIds).not.toContain('WEALTH_NON_D2_VARGA_EVIDENCE');
+    const result = resolveWealthDimensionManifestation('ACCUMULATION', evidence, undefined, 'CONFIRMS');
+    expect(result.d2Support).toBe('UNAVAILABLE');
+    expect(result.factors.some(factor => factor.source === 'D2')).toBe(false);
   });
 
   it('synthesizes all 4 classical wealth dimensions via synthesizeWealthManifestations', () => {
@@ -265,12 +245,12 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(result.natalSupport).toBe('SUPPORT');
     expect(result.dashaSupport).toBe('CHALLENGE');
     expect(result.transitSupport).toBe('SUPPORT');
-    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.d2Support).toBe('UNAVAILABLE');
     expect(result.status).toBe('MIXED');
     expect(result.confidence).toBe('MEDIUM');
   });
 
-  it('Test D: resolves to STRONGLY_SUPPORTED when natal SUPPORT + structural secondary SUPPORT (dasha + D2) without transit (transit NEUTRAL)', () => {
+  it('Test D: resolves to STRONGLY_SUPPORTED from natal and Dasha support without validated D2', () => {
     const natalEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
 
     const mockWealthTiming = createMockWealthTiming({
@@ -297,7 +277,7 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(result.confidence).toBe('HIGH');
   });
 
-  it('Test 5: resolves to INSUFFICIENT_DATA when natal evidence for dimension is missing even with strong dasha + transit + D2 support', () => {
+  it('Test 5: resolves to INSUFFICIENT_DATA when natal evidence is missing despite Dasha and transit support', () => {
     const emptyNatalEvidence: DomainEvidence[] = [];
 
     const mockWealthTiming = createMockWealthTiming({
@@ -371,13 +351,13 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(synthesis.dimensions.ACCUMULATION.natalSupport).toBe('SUPPORT');
     expect(synthesis.dimensions.ACCUMULATION.dashaSupport).toBe('SUPPORT');
     expect(synthesis.dimensions.ACCUMULATION.transitSupport).toBe('SUPPORT');
-    expect(synthesis.dimensions.ACCUMULATION.d2Support).toBe('SUPPORT');
+    expect(synthesis.dimensions.ACCUMULATION.d2Support).toBe('UNAVAILABLE');
 
     // SPECULATION has natal CHALLENGE + secondary SUPPORT everywhere -> strictly CHALLENGED (natal ceiling)
     expect(synthesis.dimensions.SPECULATION.status).toBe('CHALLENGED');
     expect(synthesis.dimensions.SPECULATION.natalSupport).toBe('CHALLENGE');
     expect(synthesis.dimensions.SPECULATION.dashaSupport).toBe('SUPPORT');
     expect(synthesis.dimensions.SPECULATION.transitSupport).toBe('SUPPORT');
-    expect(synthesis.dimensions.SPECULATION.d2Support).toBe('SUPPORT');
+    expect(synthesis.dimensions.SPECULATION.d2Support).toBe('UNAVAILABLE');
   });
 });
