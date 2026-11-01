@@ -84,7 +84,10 @@ export interface DomainInterpretationAiProjection {
     readonly statement: string;
   }[];
 
+  /** Legacy primary evidence IDs; use the explicit occurrence/identity collections below for trace joins. */
   readonly evidenceIds: readonly string[];
+  readonly evidenceOccurrenceIds: readonly string[];
+  readonly evidenceIdentityKeys: readonly string[];
 
   readonly evidence: readonly DomainEvidenceAiProjection[];
 }
@@ -164,6 +167,8 @@ export function projectDomainInterpretationForAi(
     evidenceIds: Object.freeze(
       [...interpretation.conclusion.primaryEvidenceIds]
     ),
+    evidenceOccurrenceIds: Object.freeze(interpretation.evidence.map(e => e.id)),
+    evidenceIdentityKeys: Object.freeze(interpretation.evidence.flatMap(e => e.identityKey ? [e.identityKey] : [])),
 
     evidence: Object.freeze(
       interpretation.evidence.map((e) =>
