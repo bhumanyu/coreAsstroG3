@@ -60,6 +60,7 @@ export function isCareerFinalSynthesisResult(
     typeof obj.finalStrength !== 'string' ||
     typeof obj.confidence !== 'string' ||
     typeof obj.confidenceCoverage !== 'object' || obj.confidenceCoverage === null ||
+    !['HIGH', 'MEDIUM', 'LOW'].includes(String((obj.confidenceCoverage as Record<string, unknown>).quality)) ||
     !Array.isArray((obj.confidenceCoverage as Record<string, unknown>).layers) ||
     !Array.isArray((obj.confidenceCoverage as Record<string, unknown>).missingRequiredLayers) ||
     !Array.isArray((obj.confidenceCoverage as Record<string, unknown>).missingSupportingLayers) ||
