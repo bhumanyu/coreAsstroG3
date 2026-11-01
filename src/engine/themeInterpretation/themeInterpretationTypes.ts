@@ -118,6 +118,8 @@ export interface ThemeInterpretationEvidence<TFamily extends string = string> {
   readonly timingEvidence?: ThemeTimingEvidence;
   readonly transitEvidence?: ThemeTransitEvidence;
   readonly identityKey?: string;
+  /** Canonical semantic identity keys of root facts this evidence depends on. */
+  readonly rootEvidenceIds?: readonly string[];
 }
 
 export interface ThemeRuleResult<TFamily extends string = string> {
