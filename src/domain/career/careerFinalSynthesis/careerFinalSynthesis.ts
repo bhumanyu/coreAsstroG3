@@ -432,8 +432,10 @@ function deriveConfidence(
   const missingOptionalLayers = layerCoverage.filter(x => x.requirement === 'OPTIONAL' && x.availability === 'UNAVAILABLE').map(x => x.layer);
   const provenanceProvided = evidenceIds.length > 0 || sourceIds.length > 0 || ruleIds.length > 0;
   const provenance: CareerConfidenceCoverage['provenance'] = !provenanceProvided ? 'NOT_PROVIDED' : evidenceIds.length > 0 && sourceIds.length > 0 && ruleIds.length > 0 ? 'COMPLETE' : 'PARTIAL';
+  const evidenceQuality: CareerConfidenceCoverage['quality'] = natalStrength === 'UNDETERMINED' || natalStrength === 'WEAK' || natalStrength === 'VERY_WEAK' ? 'LOW' : natalStrength === 'MODERATE' ? 'MEDIUM' : 'HIGH';
   const coverage: CareerConfidenceCoverage = Object.freeze({
     status: missingRequiredLayers.length > 0 ? 'INSUFFICIENT' : missingSupportingLayers.length > 0 ? 'PARTIAL' : 'COMPLETE',
+    quality: evidenceQuality,
     layers: layerCoverage,
     missingRequiredLayers: Object.freeze(missingRequiredLayers),
     missingSupportingLayers: Object.freeze(missingSupportingLayers),
