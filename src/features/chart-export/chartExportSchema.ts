@@ -171,6 +171,7 @@ export interface ExportedWealthInterpretationV1 {
   readonly headline?: string;
   readonly statement?: string;
   readonly d2Relationship: string;
+  readonly d2AvailabilityReason?: string;
   readonly evidence: readonly ExportedEvidenceV1[];
 }
 
