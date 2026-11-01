@@ -188,11 +188,12 @@ function buildSelectedPeriodSynthesisWrapper(
  *
  * Sequence:
  * 1. createSelectedPeriodActivationContext
- * 2. buildSelectedCareerDashaActivation (pass BOTH canonical inputs when present; if absent, neither)
- * 3. evaluateSelectedWealthPeriodActivation
- * 4. buildSelectedPeriodSynthesis (with partial activation support)
+ * 2. buildSelectedCareerDashaActivation when Career artifacts are available;
+ *    otherwise preserve INCOMPLETE_CANONICAL_INPUT as a Career-only failure.
+ * 3. evaluateSelectedWealthPeriodActivation independently from Wealth evidence.
+ * 4. buildSelectedPeriodSynthesis (with partial activation support).
  *
- * Domain activation failures degrade to partial synthesis (do not hard-fail).
+ * Career and Wealth activation failures degrade independently to partial synthesis (do not hard-fail).
  * Context resolution failures still hard-fail (invariant violation).
  * No horoscope calculation, no interpreter calls, context.asOf passed unchanged.
  */
