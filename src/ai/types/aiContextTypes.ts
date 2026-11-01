@@ -380,7 +380,6 @@ export interface WealthDimensionFinalSynthesisFact {
   readonly activationHierarchy?: FinalSynthesisActivationHierarchy;
   readonly timingStatus?: SynthesisAxisStatus;
   readonly divisionalStatus?: VargaRelationship;
-  readonly d2AvailabilityReason?: string;
   readonly manifestationStatus?: FinalDomainStatus;
   readonly confidence: FinalDomainConfidence;
   readonly primaryPromise: DomainStrength;
@@ -407,6 +406,7 @@ export interface CareerWealthFinalSynthesisFact {
   readonly activationHierarchy?: FinalSynthesisActivationHierarchy;
   readonly timingStatus?: SynthesisAxisStatus;
   readonly divisionalStatus?: VargaRelationship;
+  readonly d2AvailabilityReason?: string;
   readonly manifestationStatus?: FinalDomainStatus;
   readonly confidence: FinalDomainConfidence;
   readonly primaryPromise: DomainStrength | string;
