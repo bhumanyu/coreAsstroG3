@@ -118,6 +118,7 @@ export interface CareerConfidenceLayerCoverage {
 
 export interface CareerConfidenceCoverage {
   readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT';
+  readonly quality: 'HIGH' | 'MEDIUM' | 'LOW';
   readonly layers: readonly CareerConfidenceLayerCoverage[];
   readonly missingRequiredLayers: readonly string[];
   readonly missingSupportingLayers: readonly string[];
