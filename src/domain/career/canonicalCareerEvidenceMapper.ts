@@ -43,7 +43,9 @@ import type {
 } from './careerD10/careerD10CanonicalTypes';
 
 import {
+  assertUniqueDomainEvidenceOccurrenceIds,
   createDomainEvidence,
+  validateDomainEvidenceRootLinks,
   type DomainEvidence,
   tryResolveSemanticIdentity,
   tryResolveC11SemanticIdentity,
@@ -116,6 +118,7 @@ export interface CanonicalCareerEvidenceInput {
 export interface EvidenceOccurrenceTrace {
   readonly id: string;
   readonly relatedEvidenceIds: readonly string[];
+  readonly rootEvidenceIds: readonly string[];
   readonly ruleId?: string;
   readonly producerStage: string; // Derived from phase (e.g., 'NATAL_PROMISE', 'DASHA_ACTIVATION')
   readonly polarity: EvidencePolarity;
@@ -167,11 +170,23 @@ export interface ContradictoryEvidenceDiagnostic {
  * Legacy evidence paths (buildCareerEvidence, toDomainEvidence, dashaFactorsEvidence) are disabled
  * to prevent double-counting.
  */
+export interface RootEvidenceLinkDiagnostic {
+  readonly sourceOccurrenceId: string;
+  readonly rootIdentityKey: string;
+  readonly code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED' | 'ROOT_EVIDENCE_SELF_REFERENCE' | 'ROOT_EVIDENCE_CYCLE';
+}
+
+export interface RootEvidenceValidationResult {
+  readonly isValid: boolean;
+  readonly unresolved: readonly RootEvidenceLinkDiagnostic[];
+}
+
 export interface CanonicalCareerEvidenceOutput {
   readonly evidence: readonly DomainEvidence[];
   readonly c11Validation: C11ValidationResult;
   readonly dedupTrace: readonly SemanticEvidenceGroup[];
   readonly contradictoryEvidence: readonly ContradictoryEvidenceDiagnostic[];
+  readonly rootEvidenceValidation: RootEvidenceValidationResult;
 }
 
 export function mapCanonicalCareerEvidence(
@@ -194,7 +209,12 @@ export function mapCanonicalCareerEvidence(
     ...transitEvidence
   ];
 
+  // Occurrence IDs are globally unique within one canonical Career evidence graph.
+  // Reusing an occurrence ID is not a duplicate fact; it is an invalid graph.
+  assertUniqueDomainEvidenceOccurrenceIds(allEvidence);
+
   const { evidence: deduplicated, dedupTrace } = deduplicateCanonicalEvidence(allEvidence);
+  const rootEvidenceValidation = validateRootEvidenceLinks(deduplicated);
   const sorted = sortCanonicalEvidence(deduplicated);
 
   // C11 validation: check that produced evidence IDs are cross-referenceable
@@ -205,13 +225,24 @@ export function mapCanonicalCareerEvidence(
     evidence: Object.freeze(sorted),
     c11Validation,
     dedupTrace,
-    contradictoryEvidence: Object.freeze(dashaContradictory)
+    contradictoryEvidence: Object.freeze(dashaContradictory),
+    rootEvidenceValidation
   });
 }
 
 /**
+ * Validates that every declared root link resolves to a semantic identity
+ * present in this canonical Career evidence graph. Occurrence IDs and producer
+ * source IDs are deliberately not accepted as root identities.
+ */
+export function validateRootEvidenceLinks(
+  evidence: readonly DomainEvidence[]
+): RootEvidenceValidationResult {
+  return validateDomainEvidenceRootLinks(evidence);
+}
+
+/**
  * Exposed validation function for testing C11 reference checking.
- *
  * This allows tests to assert on the validation result without affecting the main mapper output.
  */
 export function validateC11References(
@@ -305,6 +336,7 @@ export function deduplicateCanonicalEvidence(
         occurrences: [{
           id: group[0].id,
           relatedEvidenceIds: group[0].relatedEvidenceIds,
+          rootEvidenceIds: group[0].rootEvidenceIds ?? Object.freeze([]),
           ruleId: group[0].ruleId,
           producerStage: group[0].phase,
           polarity: group[0].polarity
@@ -327,6 +359,7 @@ export function deduplicateCanonicalEvidence(
     const occurrenceTrace: EvidenceOccurrenceTrace[] = group.map(e => ({
       id: e.id,
       relatedEvidenceIds: e.relatedEvidenceIds,
+      rootEvidenceIds: e.rootEvidenceIds ?? Object.freeze([]),
       ruleId: e.ruleId,
       producerStage: e.phase,
       polarity: e.polarity
@@ -399,6 +432,7 @@ export function deduplicateCanonicalEvidence(
       priority: maxPriority,
       ruleId: mergedRuleId,
       relatedEvidenceIds: Array.from(new Set(allSourceIds)).sort(),
+      rootEvidenceIds: Array.from(new Set(group.flatMap(e => e.rootEvidenceIds ?? []))).sort(),
       notes: `Merged ${group.length} occurrences with identityKey: ${identityKey}${uniqueRuleIds.length > 1 ? ` (multi-provenance: ${uniqueRuleIds.join(', ')})` : ''}`,
       provenance: mergedProvenance,
       timing: first.timing,
@@ -485,6 +519,7 @@ function mapNatalEvidence(
         priority: evidence.priority,
         ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.rootEvidenceIds,
         notes,
         provenance: evidence.ruleId ? {
           evidenceId: `${evidence.evidenceId}:SUPPORTING`,
@@ -549,6 +584,7 @@ function mapNatalEvidence(
         priority: evidence.priority,
         ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.rootEvidenceIds,
         provenance: evidence.ruleId ? {
           evidenceId: evidence.evidenceId,
           ruleId: evidence.ruleId, // Keep canonical ruleId in provenance
@@ -715,6 +751,7 @@ function mapDashaEvidence(
         strength,
         priority: 1,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.provenance.natalRootIds,
         notes,
         timing: {
           period: evidence.level,
@@ -737,6 +774,7 @@ function mapDashaEvidence(
         strength,
         priority: 1,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.provenance.natalRootIds,
         notes,
         timing: {
           period: evidence.level,
@@ -765,6 +803,7 @@ function mapDashaEvidence(
         strength,
         priority: 1,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.provenance.natalRootIds,
         timing: {
           period: evidence.level,
           level: evidence.level,
@@ -830,6 +869,7 @@ function mapD10Evidence(
         priority: evidence.weight,
         ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.provenance.natalRootIds,
         notes,
         provenance: evidence.provenance.ruleIds.length > 0 ? {
           evidenceId: `${evidence.id}:SUPPORTING`,
@@ -857,6 +897,7 @@ function mapD10Evidence(
         priority: evidence.weight,
         ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.provenance.natalRootIds,
         notes,
         provenance: evidence.provenance.ruleIds.length > 0 ? {
           evidenceId: `${evidence.id}:CHALLENGING`,
@@ -888,6 +929,7 @@ function mapD10Evidence(
         priority: evidence.weight,
         ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.provenance.natalRootIds,
         provenance: evidence.provenance.ruleIds.length > 0 ? {
           evidenceId: evidence.id,
           ruleId: evidence.provenance.ruleIds[0],

@@ -1,5 +1,10 @@
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
-import type { C11ValidationResult, ContradictoryEvidenceDiagnostic } from './canonicalCareerEvidenceMapper';
+import {
+  validateRootEvidenceLinks,
+  type C11ValidationResult,
+  type ContradictoryEvidenceDiagnostic,
+  type RootEvidenceValidationResult
+} from './canonicalCareerEvidenceMapper';
 import { tryResolveC11SemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from '../interpretation/DomainEvidence';
 
 /**
@@ -24,7 +29,7 @@ export type EvidenceContinuitySeverity = 'ERROR' | 'WARNING' | 'INFO';
 /**
  * Issue codes for evidence continuity validation.
  *
- * All 12 codes from the specification:
+ * Existing continuity codes plus A03 root-link resolution:
  * 1. DUPLICATE_OCCURRENCE_ID: Multiple evidence records share the same occurrence id
  * 2. UNRESOLVED_SEMANTIC_IDENTITY: Evidence has no resolvable semantic identity (empty/whitespace/sentinel identityKey)
  * 3. MISSING_REQUIRED_REFERENCE: C11 references a required evidence ID that is not present in canonical evidence
@@ -37,6 +42,7 @@ export type EvidenceContinuitySeverity = 'ERROR' | 'WARNING' | 'INFO';
  * 10. ORPHANED_EVIDENCE: Evidence is produced but not referenced by C11 (informational)
  * 11. IDENTITY_KEY_COLLISION: Different semantic facts share the same identityKey (semantic conflict)
  * 12. CONTRADICTORY_DASHA_EVIDENCE: Dasha evidence with contradictory direction/effect combinations (C9 contract violation)
+ * 13. UNRESOLVED_ROOT_EVIDENCE_REFERENCE: A derived occurrence references a missing/non-semantic root identity
  */
 export type EvidenceContinuityIssueCode =
   | 'DUPLICATE_OCCURRENCE_ID'
@@ -50,7 +56,9 @@ export type EvidenceContinuityIssueCode =
   | 'DUPLICATE_C11_REFERENCE'
   | 'ORPHANED_EVIDENCE'
   | 'IDENTITY_KEY_COLLISION'
-  | 'CONTRADICTORY_DASHA_EVIDENCE';
+  | 'CONTRADICTORY_DASHA_EVIDENCE'
+  | 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE'
+  | 'ROOT_EVIDENCE_CYCLE';
 
 /**
  * Individual evidence continuity issue.
@@ -123,6 +131,8 @@ export interface EvidenceContinuityValidationInput {
    * direction/effect combinations (C9 contract violation).
    */
   readonly contradictoryEvidence?: readonly ContradictoryEvidenceDiagnostic[];
+  /** Root links must resolve against canonical identityKey values, not occurrence IDs. */
+  readonly rootEvidenceValidation?: RootEvidenceValidationResult;
 }
 
 /**
@@ -135,6 +145,7 @@ export interface EvidenceContinuityValidationInput {
  * - Emits MISSING_REQUIRED_REFERENCE for C11 references not present in canonical evidence
  * - Emits REFERENCE_NAMESPACE_MISMATCH when C11 reference resolves as occurrence ID only
  * - Validates relatedEvidenceIds presence (MISSING_SOURCE_REFERENCE)
+ * - Validates rootEvidenceIds resolve to canonical semantic identity keys
  * - Validates ruleId presence (MISSING_RULE_PROVENANCE)
  * - Detects provenance disagreement across occurrences (PROVENANCE_DISAGREEMENT)
  * - Validates reference uniqueness in requiredC11EvidenceIds (DUPLICATE_C11_REFERENCE)
@@ -148,6 +159,19 @@ export function validateEvidenceContinuity(
 ): EvidenceContinuityReport {
   const { evidence, requiredC11EvidenceIds, c11Validation, contradictoryEvidence } = input;
   const issues: EvidenceContinuityIssue[] = [];
+  const rootEvidenceValidation = input.rootEvidenceValidation ?? validateRootEvidenceLinks(evidence);
+
+  for (const unresolved of rootEvidenceValidation.unresolved) {
+    issues.push({
+      code: unresolved.code === 'ROOT_EVIDENCE_CYCLE'
+        ? 'ROOT_EVIDENCE_CYCLE'
+        : 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE',
+      severity: 'ERROR',
+      evidenceId: unresolved.sourceOccurrenceId,
+      identityKey: unresolved.rootIdentityKey,
+      message: `Occurrence "${unresolved.sourceOccurrenceId}" references unresolved root semantic identity "${unresolved.rootIdentityKey}" (${unresolved.code})`
+    });
+  }
 
   // Emit ERROR issues for contradictory Dasha evidence (C9 contract violation)
   if (contradictoryEvidence && contradictoryEvidence.length > 0) {
@@ -158,6 +182,20 @@ export function validateEvidenceContinuity(
         identityKey: diagnostic.identityKey,
         evidenceId: diagnostic.evidenceId,
         message: `Contradictory Dasha evidence: ${diagnostic.reason} (identityKey: ${diagnostic.identityKey}, evidenceId: ${diagnostic.evidenceId})`
+      });
+    }
+  }
+
+  // Provenance-backed evidence must keep occurrence identity in one namespace:
+  // provenance.evidenceId is an occurrence ID and must equal DomainEvidence.id.
+  for (const item of evidence) {
+    if (item.provenance && item.provenance.evidenceId !== item.id) {
+      issues.push({
+        code: 'PROVENANCE_DISAGREEMENT',
+        severity: 'ERROR',
+        identityKey: tryResolveC11SemanticIdentity(item) ?? undefined,
+        evidenceId: item.id,
+        message: `Evidence occurrence "${item.id}" disagrees with provenance.evidenceId "${item.provenance.evidenceId}" (occurrence/semantic identity namespace mismatch)`
       });
     }
   }
@@ -403,7 +441,7 @@ export function validateEvidenceContinuity(
 
   // Calculate counts
   const provenanceIssueCount = issues.filter(
-    i => i.code === 'MISSING_SOURCE_REFERENCE' || i.code === 'MISSING_RULE_PROVENANCE' || i.code === 'PROVENANCE_DISAGREEMENT'
+    i => i.code === 'MISSING_SOURCE_REFERENCE' || i.code === 'MISSING_RULE_PROVENANCE' || i.code === 'PROVENANCE_DISAGREEMENT' || i.code === 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE' || i.code === 'ROOT_EVIDENCE_CYCLE'
   ).length;
 
   const duplicateCountingRiskCount = issues.filter(

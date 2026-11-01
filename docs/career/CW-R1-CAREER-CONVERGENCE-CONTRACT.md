@@ -347,7 +347,7 @@ WeightedReasoningEvidence[] (with identityKey derived from provenance/ruleId + p
         ↓
 deduplicateReasoningEvidence
         ↓
-CanonicalReasoningEvidence[] (grouped by identityKey, merged, tracked)
+CanonicalReasoningEvidence[] (grouped by identityKey, with representativeOccurrenceId + sourceIds)
 ```
 
 Stage 1: `classifyReasoningEvidence` (reasoningHierarchy.ts)
@@ -359,6 +359,9 @@ Stage 2: `deduplicateReasoningEvidence` (deduplicateEvidence.ts)
 - Groups evidence by identityKey
 - Merges conflicting directions and strengths
 - Tracks occurrenceCount and sourceIds
+- Exposes representativeOccurrenceId as a deterministic real occurrence ID (first sorted source occurrence), never as the semantic identity
+- canonicalToWeighted restores WeightedReasoningEvidence.evidenceId from representativeOccurrenceId while retaining identityKey separately
+- Rejects duplicate occurrence IDs before grouping; occurrenceCount counts valid unique occurrences
 - Returns MAX weight (never sum)
 - Sorts deterministically by identityKey
 
@@ -470,13 +473,17 @@ sourceIds = [occurrenceId(SUPPORT), occurrenceId(CHALLENGE), ...]
 
 The canonical evidence envelope is defined in `src/domain/interpretation/DomainEvidence.ts` and `DomainInterpretationTypes.ts`. The field-by-field contract:
 
-- **id / evidenceId** — Occurrence identifier. Includes effect/strength. Distinct for each occurrence of the same semantic fact.
+- **id / evidenceId** — Occurrence identifier. Includes effect/strength for generated IDs; producer-supplied IDs are preserved. Distinct for each occurrence of the same semantic fact.
+- **provenance.evidenceId** — Must equal DomainEvidence.id for provenance-backed Career/Wealth evidence; it is not identityKey.
 
 - **ruleId** — Canonical rule identifier. Preserved from first occurrence during deduplication. Does not vary across occurrences of the same semantic fact.
 
 - **identityKey** — Derived semantic identity key. Computed by `buildEvidenceIdentityKey` (evidenceIdentity.ts) based on domain, axis, source, ruleId, subjectKey, and objectKey. Excludes effect/strength. Same for all occurrences of the same semantic fact.
 
+- **rootEvidenceIds** — Optional canonical semantic identityKey references to root facts this occurrence depends on. Root links are distinct from relatedEvidenceIds/sourceIds and must resolve to identityKey values in the same domain evidence graph.
+
 - **provenance** — EvidenceProvenance object with fields:
+  - evidenceId: occurrence ID, equal to DomainEvidence.id
   - domain: EvidenceDomain (CAREER/WEALTH)
   - axis: EvidenceAxis (NATAL/DASHA/TIMING)
   - source: EvidenceSource (D1/D2/D10/DASHA/TRANSIT/C4_STRUCTURAL_REASONING)
@@ -538,15 +545,22 @@ Derivation logic (classifyReasoningEvidence):
 
 Subject/object must be deterministic and normalized. The identity key construction uses these subject/object keys to distinguish semantic facts (e.g., JUPITER/HOUSE_10 vs JUPITER/HOUSE_7 are different semantic facts).
 
-### W0.4.5 Root Evidence Link (Forward-Looking)
+### W0.4.5 Root Evidence Link (A03)
 
-Root evidence linkage is a forward-looking (W1) concept. The current repository does NOT implement a rootEvidenceId field:
+A03 implements root-fact dependency links without changing the W0.4 three-level identity contract.
 
-- Verified: zero grep matches for "rootEvidenceId" in the codebase
-- Current linkage field: `relatedEvidenceIds` in DomainEvidence
-- W0.4 does NOT introduce a new root-link mechanism
+- `identityKey` remains the semantic/root identity of the evidence fact.
+- `id` and `provenance.evidenceId` remain occurrence identity and must be equal for provenance-backed Career/Wealth evidence.
+- `relatedEvidenceIds` and aggregated `sourceIds` remain producer/source occurrence provenance.
+- `rootEvidenceIds` is a separate optional array containing canonical semantic `identityKey` references for the root facts that a derived occurrence depends on.
+- Root links must resolve against semantic identity keys in the same domain evidence graph. An occurrence ID or producer source ID is not a valid root reference.
+- Root links are normalized, unique, sorted, immutable and may not point to the occurrence's own semantic identity.
+- Root-link graphs must be acyclic; multi-node dependency cycles are rejected.
+- Missing root links are not fabricated. A root occurrence may legitimately have an empty/absent `rootEvidenceIds` array.
+- The canonical Career mapper validates root links and the Career evidence-continuity gate fails on unresolved root references.
+- The Wealth evidence mapper applies the same root-link validation when a Wealth producer supplies explicit root references.
 
-Future W1 work may establish a root evidence tree structure for evidence dependency tracking, but this is outside the scope of W0.4.
+C9 already produces `natalRootIds`; A03 corrects these to reference natal `identityKey` values rather than natal occurrence `evidenceId` values, and projects them into `DomainEvidence.rootEvidenceIds`. C10 root references are projected when present; the current D10 producer does not fabricate natal links.
 
 ### W0.4.6 Reference to Existing Identity & Dedup Mechanisms
 
@@ -573,7 +587,10 @@ Current behavior from `deduplicateReasoningEvidence` (deduplicateEvidence.ts):
 
 - **ruleId preservation** — Taken from the first occurrence with a ruleId. Not merged or changed.
 
+- **representativeOccurrenceId** — The lexicographically first real occurrence ID in the canonical group. It is used when converting the aggregate back to WeightedReasoningEvidence; it is never set to identityKey.
 - **sourceIds preservation** — All distinct occurrence IDs are accumulated and sorted alphabetically. Provides complete provenance traceability.
+- **rootEvidenceIds preservation** — Canonical root identity references are unioned, sorted, and retained separately from occurrence/source provenance.
+- **Duplicate occurrence guard** — Repeated occurrence IDs fail closed before canonical grouping; they cannot inflate occurrenceCount.
 
 - **role/phase/source preservation** — The current implementation does NOT merge role, phase, or source fields. The canonical record's role/phase/source values come from the selected canonical layer (the highest-precedence occurrence). This is the actual current behavior; W0.4 does not introduce a new merge rule for these fields.
 
@@ -589,7 +606,7 @@ W0.4 establishes the following invariants:
 - [ ] polarity is exactly SUPPORTING/CHALLENGING/NEUTRAL (MIXED/UNAVAILABLE are reasoning-direction only)
 - [ ] weight is MAX-not-SUM (duplicate occurrences do not increase weight)
 - [ ] subject/object identity is deterministic and normalized
-- [ ] rootEvidenceId does not exist in current repo (forward-looking W1 concept)
+- [x] rootEvidenceIds is a separate, validated link to canonical semantic identityKey values (A03)
 - [ ] source/phase/source preservation follows actual deduplicateReasoningEvidence behavior
 - [ ] buildEvidenceIdentityKey is the canonical dedup identity mechanism
 - [ ] getEvidenceIndependenceKey is a separate heuristic (not a competing dedup implementation)
@@ -1423,7 +1440,7 @@ C9 links canonical Dasha evidence to natal root evidence via the `natalRootIds` 
   - `parts[0]` must be `'CW'` (canonical format check)
   - `parts.length` must be `>= 6` (minimum segments for valid format)
   - Non-canonical keys (e.g., raw occurrence-ID fallbacks from `classifyReasoningEvidence` when neither planet nor house is present) are safely ignored rather than mis-parsed
-- Returns the `evidenceId` (semantic identity) of matching natal evidence items
+- Returns the `identityKey` (semantic identity) of matching natal evidence items; occurrence `evidenceId` values are not valid root references
 - If no planet is specified or no matching evidence is found, returns an empty array
 
 **Linkage Rule (11E-C):**

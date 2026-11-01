@@ -27,7 +27,8 @@ const REASONING_LAYER_PRECEDENCE: readonly ReasoningLayer[] = [
  */
 export interface CanonicalReasoningEvidence {
   readonly identityKey: string;
-  readonly evidenceId: string;
+  /** Deterministic representative occurrence ID; sourceIds retains every occurrence. */
+  readonly representativeOccurrenceId: string;
   readonly ruleId?: string;
   readonly layer: ReasoningLayer;
   readonly direction: ReasoningDirection;
@@ -38,6 +39,8 @@ export interface CanonicalReasoningEvidence {
   readonly relatedEvidenceIds: readonly string[];
   readonly occurrenceCount: number;
   readonly sourceIds: readonly string[];
+  /** Canonical root semantic identities referenced by the grouped occurrences. */
+  readonly rootEvidenceIds: readonly string[];
   readonly layers: readonly ReasoningLayer[];
 }
 
@@ -78,7 +81,36 @@ function deriveIdentityKey(evidence: WeightedReasoningEvidence): string {
 export function deduplicateReasoningEvidence(
   evidence: readonly WeightedReasoningEvidence[]
 ): readonly CanonicalReasoningEvidence[] {
-  // Group by identity key
+  // Every sourceId is an original occurrence ID. Validate the complete source
+  // set, not only the representative evidenceId, so canonical round-trips cannot
+  // silently discard occurrences or count one source occurrence twice.
+  const seenOccurrenceIds = new Set<string>();
+  for (const item of evidence) {
+    const occurrenceId = item.evidenceId?.trim();
+    if (!occurrenceId) {
+      throw new Error('WeightedReasoningEvidence occurrence ID must be non-empty');
+    }
+
+    const providedSourceIds = item.sourceIds ?? [];
+    const uniqueProvidedSourceIds = new Set(providedSourceIds);
+    if (uniqueProvidedSourceIds.size !== providedSourceIds.length) {
+      throw new Error(`Duplicate source occurrence ID within WeightedReasoningEvidence: ${occurrenceId}`);
+    }
+
+    const itemOccurrenceIds = new Set([occurrenceId, ...providedSourceIds]);
+    for (const sourceOccurrenceId of itemOccurrenceIds) {
+      const normalizedId = sourceOccurrenceId?.trim();
+      if (!normalizedId) {
+        throw new Error(`WeightedReasoningEvidence source occurrence ID must be non-empty: ${occurrenceId}`);
+      }
+      if (seenOccurrenceIds.has(normalizedId)) {
+        throw new Error(`Duplicate reasoning evidence occurrence ID detected: ${normalizedId}`);
+      }
+      seenOccurrenceIds.add(normalizedId);
+    }
+  }
+
+  // Group by semantic identity key
   const groups = new Map<string, WeightedReasoningEvidence[]>();
 
   for (const item of evidence) {
@@ -106,6 +138,7 @@ export function deduplicateReasoningEvidence(
     let statementEvidenceId = '';
     let statementWeight = 0;
     const relatedEvidenceIds: Set<string> = new Set();
+    const rootEvidenceIds: Set<string> = new Set();
     let ruleId: string | undefined;
 
     for (const item of group) {
@@ -125,8 +158,12 @@ export function deduplicateReasoningEvidence(
         maxPriority = item.priority;
       }
 
-      // Accumulate source IDs (distinct occurrence IDs)
-      sourceIds.add(item.evidenceId);
+      // Accumulate every original occurrence ID. The representative evidenceId
+      // is also included for ordinary, non-aggregated WeightedReasoningEvidence.
+      sourceIds.add(item.evidenceId.trim());
+      for (const sourceOccurrenceId of item.sourceIds ?? []) {
+        sourceIds.add(sourceOccurrenceId.trim());
+      }
 
       // Accumulate layers
       layers.add(item.layer);
@@ -140,9 +177,16 @@ export function deduplicateReasoningEvidence(
         }
       }
 
-      // Accumulate related evidence IDs
+      // Accumulate producer provenance and canonical root links separately.
       for (const relatedId of item.relatedEvidenceIds ?? []) {
         relatedEvidenceIds.add(relatedId);
+      }
+      for (const rootId of item.rootEvidenceIds ?? []) {
+        const normalizedRootId = rootId?.trim();
+        if (!normalizedRootId) {
+          throw new Error(`Invalid empty root evidence reference on occurrence: ${item.evidenceId}`);
+        }
+        rootEvidenceIds.add(normalizedRootId);
       }
 
       // Use the first ruleId if available (preserve from first occurrence with ruleId)
@@ -158,9 +202,10 @@ export function deduplicateReasoningEvidence(
     // layer = deterministically-chosen canonical layer, layers = full set of all occurrence layers
     const primaryLayer = REASONING_LAYER_PRECEDENCE.find(l => layers.has(l)) ?? group[0].layer;
 
+    const sortedSourceIds = Array.from(sourceIds).sort((a, b) => a.localeCompare(b));
     const canonicalItem: CanonicalReasoningEvidence = Object.freeze({
       identityKey,
-      evidenceId: identityKey, // Use identityKey as the canonical ID for determinism
+      representativeOccurrenceId: sortedSourceIds[0],
       ruleId,
       layer: primaryLayer,
       direction: mergedDirection,
@@ -169,9 +214,10 @@ export function deduplicateReasoningEvidence(
       weight: maxWeight,
       statement,
       relatedEvidenceIds: Object.freeze(Array.from(relatedEvidenceIds).sort((a, b) => a.localeCompare(b))),
-      occurrenceCount: group.length,
-      // sourceIds = distinct occurrence IDs; occurrenceCount = total occurrences (including duplicates)
-      sourceIds: Object.freeze(Array.from(sourceIds).sort((a, b) => a.localeCompare(b))),
+      occurrenceCount: sortedSourceIds.length,
+      // sourceIds = all distinct occurrence IDs; occurrenceCount = valid unique occurrences (duplicate IDs were rejected above).
+      sourceIds: Object.freeze(sortedSourceIds),
+      rootEvidenceIds: Object.freeze(Array.from(rootEvidenceIds).sort((a, b) => a.localeCompare(b))),
       layers: Object.freeze(REASONING_LAYER_PRECEDENCE.filter(l => layers.has(l)))
     });
 
@@ -197,7 +243,7 @@ export function canonicalToWeighted(
     canonical.map((item) =>
       Object.freeze({
         identityKey: item.identityKey,
-        evidenceId: item.evidenceId,
+        evidenceId: item.representativeOccurrenceId,
         ruleId: item.ruleId,
         layer: item.layer,
         direction: item.direction,
@@ -206,6 +252,7 @@ export function canonicalToWeighted(
         weight: item.weight,
         statement: item.statement,
         relatedEvidenceIds: item.relatedEvidenceIds,
+        ...(item.rootEvidenceIds.length > 0 ? { rootEvidenceIds: item.rootEvidenceIds } : {}),
         sourceIds: item.sourceIds,
         occurrenceCount: item.occurrenceCount
       })

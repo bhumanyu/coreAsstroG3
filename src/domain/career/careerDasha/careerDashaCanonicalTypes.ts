@@ -90,6 +90,7 @@ export interface CareerDashaCanonicalEvidence {
 export interface CareerDashaCanonicalProvenance {
   readonly source: 'C9_DASHA';
   readonly activationLevel: CareerDashaCanonicalLevel;
+  /** Canonical natal identityKey values; never occurrence IDs or producer source IDs. */
   readonly natalRootIds: readonly string[];
 }
 
@@ -121,6 +122,7 @@ export interface CareerDashaCanonicalAnalysis {
   readonly ad: CareerDashaCanonicalPeriod;
   readonly pd: CareerDashaCanonicalPeriod;
   readonly evidence: readonly CareerDashaCanonicalEvidence[];
+  /** Aggregate canonical natal identityKey references; never occurrence or producer IDs. */
   readonly rootEvidenceIds: readonly string[];
   readonly statement: string;
   readonly hierarchy?: CareerDashaActivationHierarchy;

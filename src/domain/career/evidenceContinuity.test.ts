@@ -59,6 +59,105 @@ describe('validateEvidenceContinuity', () => {
     expect(result.duplicateCountingRiskCount).toBe(0);
   });
 
+  it('rejects provenance.evidenceId when it differs from the occurrence id', () => {
+    const evidence = createMockEvidence({
+      id: 'canonical-occurrence-id',
+      identityKey: 'canonical-semantic-identity',
+      provenance: {
+        evidenceId: 'different-occurrence-id',
+        ruleId: 'RULE_1',
+        domain: 'CAREER',
+        axis: 'NATAL',
+        source: 'C4_STRUCTURAL_REASONING',
+        effect: 'SUPPORT',
+        strength: 'PRIMARY'
+      }
+    });
+
+    const result = validateEvidenceContinuity({
+      evidence: [evidence],
+      requiredC11EvidenceIds: ['canonical-semantic-identity'],
+      c11Validation: createMockC11Validation({ valid: true })
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      code: 'PROVENANCE_DISAGREEMENT',
+      severity: 'ERROR',
+      evidenceId: 'canonical-occurrence-id'
+    }));
+  });
+
+  it('accepts a root link that resolves to a canonical semantic identity', () => {
+    const evidence = [
+      createMockEvidence({ id: 'root-occurrence', identityKey: 'root-semantic-identity' }),
+      createMockEvidence({
+        id: 'derived-occurrence',
+        identityKey: 'derived-semantic-identity',
+        rootEvidenceIds: ['root-semantic-identity']
+      })
+    ];
+
+    const result = validateEvidenceContinuity({
+      evidence,
+      requiredC11EvidenceIds: ['root-semantic-identity', 'derived-semantic-identity'],
+      c11Validation: createMockC11Validation({ valid: true })
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.issues).toHaveLength(0);
+  });
+
+  it('rejects cyclic root evidence dependencies', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'root-a-occurrence',
+        identityKey: 'root-a-semantic',
+        rootEvidenceIds: ['root-b-semantic']
+      }),
+      createMockEvidence({
+        id: 'root-b-occurrence',
+        identityKey: 'root-b-semantic',
+        rootEvidenceIds: ['root-a-semantic']
+      })
+    ];
+
+    const result = validateEvidenceContinuity({
+      evidence,
+      requiredC11EvidenceIds: ['root-a-semantic', 'root-b-semantic'],
+      c11Validation: createMockC11Validation({ valid: true })
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((issue) => issue.code === 'ROOT_EVIDENCE_CYCLE')).toBe(true);
+  });
+
+  it('rejects an occurrence ID used as a root semantic reference', () => {
+    const evidence = [
+      createMockEvidence({ id: 'root-occurrence', identityKey: 'root-semantic-identity' }),
+      createMockEvidence({
+        id: 'derived-occurrence',
+        identityKey: 'derived-semantic-identity',
+        rootEvidenceIds: ['root-occurrence']
+      })
+    ];
+
+    const result = validateEvidenceContinuity({
+      evidence,
+      requiredC11EvidenceIds: ['root-semantic-identity', 'derived-semantic-identity'],
+      c11Validation: createMockC11Validation({ valid: true })
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      code: 'UNRESOLVED_ROOT_EVIDENCE_REFERENCE',
+      severity: 'ERROR',
+      evidenceId: 'derived-occurrence',
+      identityKey: 'root-occurrence'
+    }));
+    expect(result.provenanceIssueCount).toBe(1);
+  });
+
   it('detects DUPLICATE_OCCURRENCE_ID', () => {
     const evidence = [
       createMockEvidence({ id: 'duplicate-id', identityKey: 'identity-1' }),

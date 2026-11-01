@@ -18,7 +18,10 @@ import type {
 import {
   createEvidenceProvenance
 } from './evidenceProvenanceFactory';
-import type { EvidenceIdentityInput } from './evidenceIdentity';
+import {
+  buildEvidenceIdentityKey,
+  type EvidenceIdentityInput
+} from './evidenceIdentity';
 
 /**
  * CareerWealthEvidence is a subtype of DomainEvidence that guarantees a populated provenance.
@@ -55,15 +58,16 @@ export function assertCareerWealthEvidenceContract(evidence: CareerWealthEvidenc
   if (!evidence.ruleId?.trim() || !provenance.ruleId?.trim()) {
     throw new Error('CareerWealthEvidence contract: ruleId must be non-empty');
   }
+  if (evidence.id !== provenance.evidenceId) {
+    throw new Error('CareerWealthEvidence contract: id must equal provenance.evidenceId (occurrence identity)');
+  }
   if (evidence.identityKey !== undefined) {
     if (!evidence.identityKey.trim()) {
       throw new Error('CareerWealthEvidence contract: identityKey must be non-empty when provided');
     }
-    if (evidence.identityKey !== provenance.evidenceId) {
-      throw new Error('CareerWealthEvidence contract: identityKey must equal provenance.evidenceId');
+    if (evidence.identityKey === evidence.id) {
+      throw new Error('CareerWealthEvidence contract: semantic identityKey must differ from occurrence id');
     }
-  } else if (evidence.id !== provenance.evidenceId) {
-    throw new Error('CareerWealthEvidence contract: evidence.id must equal provenance.evidenceId when identityKey is absent');
   }
   if (evidence.ruleId !== provenance.ruleId) {
     throw new Error('CareerWealthEvidence contract: ruleId must equal provenance.ruleId');
@@ -92,6 +96,7 @@ export interface CreateCareerWealthEvidenceInput {
   readonly planet?: Planet;
   readonly house?: number;
   readonly relatedEvidenceIds?: readonly string[];
+  readonly rootEvidenceIds?: readonly string[];
   readonly notes?: string;
   readonly timing?: {
     readonly period: 'MD' | 'AD' | 'PD';
@@ -104,7 +109,8 @@ export interface CreateCareerWealthEvidenceInput {
 
 /**
  * Factory that creates a CareerWealthEvidence instance ensuring:
- * - DomainEvidence.id is the occurrence ID when supplied, otherwise provenance.evidenceId
+ * - DomainEvidence.id and provenance.evidenceId are the same occurrence ID
+ * - DomainEvidence.identityKey is a separate semantic identity, excluding effect/strength
  * - DomainEvidence.ruleId === provenance.ruleId
  * - DomainEvidence.polarity === mapEffectToPolarity(provenance.effect)
  * - DomainEvidence.domain === provenance.domain
@@ -115,11 +121,19 @@ export interface CreateCareerWealthEvidenceInput {
 export function createCareerWealthEvidence(
   input: CreateCareerWealthEvidenceInput
 ): CareerWealthEvidence {
-  const provenance = createEvidenceProvenance(input.identity);
+  const provenance = createEvidenceProvenance(input.identity, input.occurrenceId);
+  const semanticIdentityKey = input.identityKey ?? buildEvidenceIdentityKey({
+    domain: input.identity.domain,
+    axis: input.identity.axis,
+    source: input.identity.source,
+    ruleId: input.identity.ruleId,
+    subjectKey: input.identity.subjectKey,
+    objectKey: input.identity.objectKey
+  });
   const polarity = mapEffectToPolarity(provenance.effect);
 
   const domainEvidence = createDomainEvidence({
-    id: input.occurrenceId ?? provenance.evidenceId,
+    id: provenance.evidenceId,
     sourceType: input.sourceType ?? 'OTHER',
     domain: provenance.domain as DomainId,
     role: input.role,
@@ -131,6 +145,7 @@ export function createCareerWealthEvidence(
     priority: input.priority,
     ruleId: provenance.ruleId,
     relatedEvidenceIds: input.relatedEvidenceIds,
+    rootEvidenceIds: input.rootEvidenceIds,
     notes: input.notes,
     provenance,
     timing: input.timing,
@@ -138,7 +153,7 @@ export function createCareerWealthEvidence(
     dimension: input.dimension,
     planet: input.planet,
     house: input.house,
-    identityKey: input.identityKey ?? (input.occurrenceId ? provenance.evidenceId : undefined)
+    identityKey: semanticIdentityKey
   });
 
   const careerWealthEvidence = domainEvidence as CareerWealthEvidence;

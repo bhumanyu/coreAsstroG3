@@ -73,7 +73,7 @@ describe('careerEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
   });
 
   describe('Concern 12: Migrated producer CAREER_6L_10L_LINK_001 canonical provenance', () => {
-    it('emits evidence.id === evidence.provenance.evidenceId with provenance.ruleId and order-independent id', () => {
+    it('preserves occurrence IDs and derives an order-independent semantic identityKey', () => {
       const rawEvidenceMarsSaturn: ThemeInterpretationEvidence<CareerEvidenceFamily>[] = [
         {
           id: 'raw-link-mars-saturn',
@@ -113,11 +113,71 @@ describe('careerEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
       expect(mappedMarsSaturn.provenance?.ruleId).toBe('CAREER_6L_10L_LINK_001');
       expect(mappedSaturnMars.provenance?.ruleId).toBe('CAREER_6L_10L_LINK_001');
 
-      // 3. Core determinism guarantee: id is identical when input planets array order is reversed
-      expect(mappedMarsSaturn.id).toBe(mappedSaturnMars.id);
-      expect(mappedMarsSaturn.id).toBe(
-        'CW-CAREER-NATAL-D1-CAREER_6L_10L_LINK_001-L6_L10_LINK-SUPPORT-PRIMARY'
+      // 3. Occurrence IDs preserve producer identity; semantic identity is stable across planet order.
+      expect(mappedMarsSaturn.id).toBe('raw-link-mars-saturn');
+      expect(mappedSaturnMars.id).toBe('raw-link-saturn-mars');
+      expect(mappedMarsSaturn.id).not.toBe(mappedSaturnMars.id);
+      expect(mappedMarsSaturn.identityKey).toBe(mappedSaturnMars.identityKey);
+      expect(mappedMarsSaturn.identityKey).toBe(
+        'CW-CAREER-NATAL-D1-CAREER_6L_10L_LINK_001-L6_L10_LINK'
       );
+      expect(mappedMarsSaturn.identityKey).not.toBe(mappedMarsSaturn.id);
+    });
+  });
+
+  describe('A03 — Root and occurrence identity at producer boundary', () => {
+    it('preserves rootEvidenceIds and resolves them against semantic identityKey values', () => {
+      const root: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        id: 'career-root-occurrence',
+        ruleId: 'CAREER_ROOT_FACT',
+        evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
+        statement: 'Career root fact',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [10],
+        identityKey: 'CAREER_ROOT_SEMANTIC'
+      };
+      const derived: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        id: 'career-derived-occurrence',
+        ruleId: 'CAREER_DERIVED_FACT',
+        evidenceFamily: CareerEvidenceFamily.FUNCTIONAL_ROLE,
+        statement: 'Derived Career fact',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'SECONDARY',
+        planets: [Planet.SATURN],
+        identityKey: 'CAREER_DERIVED_SEMANTIC',
+        rootEvidenceIds: ['CAREER_ROOT_SEMANTIC']
+      };
+
+      const [mappedRoot, mappedDerived] = buildCareerEvidence([root, derived]);
+
+      expect(mappedRoot.id).toBe('career-root-occurrence');
+      expect(mappedDerived.id).toBe('career-derived-occurrence');
+      expect(mappedDerived.rootEvidenceIds).toEqual(['CAREER_ROOT_SEMANTIC']);
+    });
+
+    it('rejects duplicate producer occurrence IDs before evidence can be double-counted', () => {
+      const first: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        id: 'duplicate-career-occurrence',
+        ruleId: 'CAREER_RULE_A',
+        evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
+        statement: 'First Career occurrence',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [10],
+        identityKey: 'CAREER_SEMANTIC_A'
+      };
+      const second: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        ...first,
+        ruleId: 'CAREER_RULE_B',
+        identityKey: 'CAREER_SEMANTIC_B'
+      };
+
+      expect(() => buildCareerEvidence([first, second]))
+        .toThrow(/Duplicate DomainEvidence occurrence ID detected: duplicate-career-occurrence/);
     });
   });
 

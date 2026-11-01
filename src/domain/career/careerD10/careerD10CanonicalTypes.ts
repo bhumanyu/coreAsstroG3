@@ -45,6 +45,7 @@ export interface CareerD10CanonicalProvenance {
   readonly source: 'C10_D10';
   readonly ruleIds: readonly string[];
   readonly sourceIds: readonly string[];
+  /** Canonical semantic identityKey references; empty when no natal roots are explicitly linked. */
   readonly natalRootIds: readonly string[];
 }
 
@@ -140,6 +141,7 @@ export interface CareerD10CanonicalAnalysis {
   readonly evidence: readonly CareerD10CanonicalEvidence[];
   readonly conflicts: readonly CareerD10Conflict[];
   readonly expressionQualifications: readonly CareerD10ExpressionQualificationCanonical[];
+  /** Aggregate of explicit canonical root identityKey references from D10 evidence. */
   readonly rootEvidenceIds: readonly string[];
   readonly statement: string;
 }

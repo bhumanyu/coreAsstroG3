@@ -1,4 +1,7 @@
-import type { DomainEvidence } from '../interpretation';
+import {
+  assertUniqueDomainEvidenceOccurrenceIds,
+  type DomainEvidence
+} from '../interpretation/DomainEvidence';
 
 import type {
   LayerSummary,
@@ -102,6 +105,8 @@ export function resolveDirection(
 export function classifyReasoningEvidence(
   evidence: readonly DomainEvidence[]
 ): readonly WeightedReasoningEvidence[] {
+  assertUniqueDomainEvidenceOccurrenceIds(evidence);
+
   return Object.freeze(
     evidence.map((item) => {
       const layer = resolveLayer(item);
@@ -224,6 +229,9 @@ export function classifyReasoningEvidence(
         relatedEvidenceIds: Object.freeze([
           ...(item.relatedEvidenceIds ?? [])
         ]),
+        ...(item.rootEvidenceIds && item.rootEvidenceIds.length > 0
+          ? { rootEvidenceIds: Object.freeze([...item.rootEvidenceIds]) }
+          : {}),
         sourceIds: Object.freeze([item.id]),
         occurrenceCount: 1
       });
@@ -279,7 +287,7 @@ export function summarizeLayers(
         weightedSupport,
         weightedChallenge,
         evidenceIds: Object.freeze(
-          layerEvidence.map((item) => item.evidenceId)
+          layerEvidence.map((item) => item.identityKey)
         )
       });
     })

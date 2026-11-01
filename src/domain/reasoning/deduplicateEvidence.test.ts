@@ -122,11 +122,11 @@ describe('deduplicateReasoningEvidence', () => {
       const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
 
       const inputPrimaryFirst = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-PRIMARY', {
           identityKey,
           layer: 'PRIMARY_PROMISE'
         }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-SECONDARY', {
           identityKey,
           layer: 'SECONDARY_SUPPORT'
         })
@@ -403,7 +403,7 @@ describe('deduplicateReasoningEvidence', () => {
       expect(result1[1].identityKey).toBe('CW-CAREER-NATAL-D1-TEST_RULE-SATURN-SUPPORT-STRONG');
     });
 
-    it('canonical evidenceId is deterministic regardless of occurrence order (SUPPORT-first vs CHALLENGE-first)', () => {
+    it('representativeOccurrenceId is deterministic regardless of occurrence order (SUPPORT-first vs CHALLENGE-first)', () => {
       const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
 
       const inputSupportFirst = [
@@ -435,9 +435,11 @@ describe('deduplicateReasoningEvidence', () => {
 
       // Both should produce identical canonical records
       expect(result1).toEqual(result2);
-      // The canonical evidenceId should be the identityKey, not dependent on input order
-      expect(result1[0].evidenceId).toBe(identityKey);
-      expect(result2[0].evidenceId).toBe(identityKey);
+      // The representative remains a real occurrence ID; semantic identity stays in identityKey.
+      expect(result1[0].representativeOccurrenceId).toBe(result1[0].sourceIds[0]);
+      expect(result2[0].representativeOccurrenceId).toBe(result2[0].sourceIds[0]);
+      expect(result1[0].representativeOccurrenceId).not.toBe(identityKey);
+      expect(result2[0].representativeOccurrenceId).not.toBe(identityKey);
       // Direction should be MIXED regardless of order
       expect(result1[0].direction).toBe('MIXED');
       expect(result2[0].direction).toBe('MIXED');
@@ -551,15 +553,15 @@ describe('deduplicateReasoningEvidence', () => {
       ];
 
       const tripleOccurrence = [
-        createWeightedEvidence('EV_JUPITER_SUPPORT', {
+        createWeightedEvidence('EV_JUPITER_SUPPORT_1', {
           identityKey,
           weight: 7.5
         }),
-        createWeightedEvidence('EV_JUPITER_SUPPORT', {
+        createWeightedEvidence('EV_JUPITER_SUPPORT_2', {
           identityKey,
           weight: 7.5
         }),
-        createWeightedEvidence('EV_JUPITER_SUPPORT', {
+        createWeightedEvidence('EV_JUPITER_SUPPORT_3', {
           identityKey,
           weight: 7.5
         })
@@ -568,9 +570,10 @@ describe('deduplicateReasoningEvidence', () => {
       const resultSingle = deduplicateReasoningEvidence(singleOccurrence);
       const resultTriple = deduplicateReasoningEvidence(tripleOccurrence);
 
-      // Both should have identical canonical fields except occurrenceCount
-      expect(resultSingle[0].evidenceId).toBe(resultTriple[0].evidenceId);
+      // Semantic result is stable; representative occurrence is selected from each group's real IDs.
       expect(resultSingle[0].identityKey).toBe(resultTriple[0].identityKey);
+      expect(resultSingle[0].representativeOccurrenceId).toBe(resultSingle[0].sourceIds[0]);
+      expect(resultTriple[0].representativeOccurrenceId).toBe(resultTriple[0].sourceIds[0]);
       expect(resultSingle[0].weight).toBe(resultTriple[0].weight);
       expect(resultSingle[0].direction).toBe(resultTriple[0].direction);
       expect(resultSingle[0].strength).toBe(resultTriple[0].strength);
@@ -579,11 +582,15 @@ describe('deduplicateReasoningEvidence', () => {
       expect(resultSingle[0].occurrenceCount).toBe(1);
       expect(resultTriple[0].occurrenceCount).toBe(3);
 
-      // sourceIds is the DISTINCT set: single has 1, triple has 1 (all same ID)
+      // Each valid occurrence has its own ID; all are retained in sourceIds.
       expect(resultSingle[0].sourceIds).toHaveLength(1);
-      expect(resultTriple[0].sourceIds).toHaveLength(1);
+      expect(resultTriple[0].sourceIds).toHaveLength(3);
       expect(resultSingle[0].sourceIds).toEqual(['EV_JUPITER_SUPPORT']);
-      expect(resultTriple[0].sourceIds).toEqual(['EV_JUPITER_SUPPORT']);
+      expect(resultTriple[0].sourceIds).toEqual([
+        'EV_JUPITER_SUPPORT_1',
+        'EV_JUPITER_SUPPORT_2',
+        'EV_JUPITER_SUPPORT_3'
+      ]);
 
       // Weight is max single-occurrence weight, never summed
       expect(resultSingle[0].weight).toBe(7.5);
@@ -617,7 +624,7 @@ describe('deduplicateReasoningEvidence', () => {
       expect(result[0].weight).toBe(7.5); // Max single-occurrence weight
     });
 
-    it('cross-layer duplicate identity: PRIMARY_PROMISE + SECONDARY_SUPPORT same identity -> one canonical, evidenceId === identityKey', () => {
+    it('cross-layer duplicate identity retains a representative occurrence and semantic identity separately', () => {
       const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
 
       const input = [
@@ -634,9 +641,9 @@ describe('deduplicateReasoningEvidence', () => {
       const result = deduplicateReasoningEvidence(input);
 
       expect(result).toHaveLength(1);
-      expect(result[0].evidenceId).toBe(identityKey);
+      expect(result[0].representativeOccurrenceId).toBe('EV_JUPITER_PRIMARY');
       expect(result[0].identityKey).toBe(identityKey);
-      expect(result[0].evidenceId).toBe(result[0].identityKey);
+      expect(result[0].representativeOccurrenceId).not.toBe(result[0].identityKey);
       expect(result[0].layers).toContain('PRIMARY_PROMISE');
       expect(result[0].layers).toContain('SECONDARY_SUPPORT');
       expect(result[0].layer).toBe('PRIMARY_PROMISE'); // Deterministic canonical layer

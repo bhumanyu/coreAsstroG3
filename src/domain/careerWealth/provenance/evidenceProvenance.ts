@@ -15,6 +15,7 @@ export type EvidenceEffect = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED';
 export type EvidenceStrength = 'PRIMARY' | 'SECONDARY' | 'TERTIARY';
 
 export interface EvidenceProvenance {
+  /** Unique occurrence ID; it is not the semantic identityKey. */
   readonly evidenceId: string;
   readonly ruleId: string;
   readonly domain: EvidenceDomain;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Planet } from '../../types';
 import { classifyReasoningEvidence } from './reasoningHierarchy';
-import { deduplicateReasoningEvidence } from './deduplicateEvidence';
+import { canonicalToWeighted, deduplicateReasoningEvidence } from './deduplicateEvidence';
 import type { DomainEvidence } from '../interpretation';
 import { createDomainEvidence } from '../interpretation/DomainEvidence';
 import type { EvidenceProvenance } from '../careerWealth/provenance';
@@ -503,6 +503,82 @@ describe('Canonical Evidence Identity & Deduplication Contract (spec §16)', () 
 
       // Should NOT be deduplicated - they are different semantic facts (different subjects)
       expect(canonical).toHaveLength(2);
+    });
+  });
+
+  describe('A03 — Root evidence and occurrence identity', () => {
+    it('preserves root semantic references separately from occurrence/source IDs', () => {
+      const evidence: DomainEvidence[] = [
+        createEvidenceWithProvenance('OCCURRENCE_A', {
+          provenance: createProvenance('OCCURRENCE_A', 'JUPITER_10TH_ASPECT', 'SUPPORT'),
+          planet: 'JUPITER',
+          house: 10,
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          rootEvidenceIds: ['ROOT_B', 'ROOT_A']
+        }),
+        createEvidenceWithProvenance('OCCURRENCE_B', {
+          provenance: createProvenance('OCCURRENCE_B', 'JUPITER_10TH_ASPECT', 'SUPPORT'),
+          planet: 'JUPITER',
+          house: 10,
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          rootEvidenceIds: ['ROOT_C', 'ROOT_A']
+        })
+      ];
+
+      const weighted = classifyReasoningEvidence(evidence);
+      expect(weighted[0].rootEvidenceIds).toEqual(['ROOT_A', 'ROOT_B']);
+
+      const canonical = deduplicateReasoningEvidence(weighted);
+      expect(canonical).toHaveLength(1);
+      expect(canonical[0].rootEvidenceIds).toEqual(['ROOT_A', 'ROOT_B', 'ROOT_C']);
+      expect(canonical[0].sourceIds).toEqual(['OCCURRENCE_A', 'OCCURRENCE_B']);
+
+      const roundTrip = canonicalToWeighted(canonical);
+      expect(roundTrip[0].rootEvidenceIds).toEqual(['ROOT_A', 'ROOT_B', 'ROOT_C']);
+      expect(roundTrip[0].identityKey).toBe(canonical[0].identityKey);
+      expect(roundTrip[0].evidenceId).toBe('OCCURRENCE_A');
+      expect(roundTrip[0].evidenceId).not.toBe(roundTrip[0].identityKey);
+
+      const recanonicalized = deduplicateReasoningEvidence(roundTrip);
+      expect(recanonicalized[0].sourceIds).toEqual(canonical[0].sourceIds);
+      expect(recanonicalized[0].occurrenceCount).toBe(canonical[0].occurrenceCount);
+      expect(recanonicalized[0].representativeOccurrenceId).toBe(canonical[0].representativeOccurrenceId);
+    });
+
+    it('fails closed when DomainEvidence repeats an occurrence ID', () => {
+      const evidence: DomainEvidence[] = [
+        createEvidenceWithProvenance('DUPLICATE_OCCURRENCE', {
+          provenance: createProvenance('DUPLICATE_OCCURRENCE', 'RULE_A', 'SUPPORT'),
+          planet: 'JUPITER'
+        }),
+        createEvidenceWithProvenance('DUPLICATE_OCCURRENCE', {
+          provenance: createProvenance('DUPLICATE_OCCURRENCE', 'RULE_B', 'SUPPORT'),
+          planet: 'SATURN'
+        })
+      ];
+
+      expect(() => classifyReasoningEvidence(evidence))
+        .toThrow(/Duplicate DomainEvidence occurrence ID detected: DUPLICATE_OCCURRENCE/);
+    });
+
+    it('fails closed when WeightedReasoningEvidence repeats an occurrence ID', () => {
+      const duplicate = {
+        identityKey: 'same-semantic-identity',
+        evidenceId: 'same-occurrence-id',
+        layer: 'PRIMARY_PROMISE' as const,
+        direction: 'SUPPORT' as const,
+        strength: 'STRONG' as const,
+        priority: 1,
+        weight: 1,
+        statement: 'Repeated occurrence fixture',
+        relatedEvidenceIds: [],
+        sourceIds: []
+      };
+
+      expect(() => deduplicateReasoningEvidence([duplicate, { ...duplicate, layer: 'SECONDARY_SUPPORT' }]))
+        .toThrow(/Duplicate reasoning evidence occurrence ID detected: same-occurrence-id/);
     });
   });
 });

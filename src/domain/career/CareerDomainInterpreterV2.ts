@@ -840,7 +840,8 @@ export function interpretCareerV2(
     requiredC11EvidenceIds: canonicalC11Result.evidenceIds,
     c11Validation: canonicalEvidenceOutput.c11Validation,
     upstreamSourceIds,
-    contradictoryEvidence: canonicalEvidenceOutput.contradictoryEvidence
+    contradictoryEvidence: canonicalEvidenceOutput.contradictoryEvidence,
+    rootEvidenceValidation: canonicalEvidenceOutput.rootEvidenceValidation
   });
 
   // Enforce continuity validation at acceptance boundary

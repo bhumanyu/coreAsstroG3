@@ -1,7 +1,10 @@
 import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import { createDomainEvidence } from '../interpretation';
+import {
+  createDomainEvidence,
+  validateDomainEvidenceRootLinks
+} from '../interpretation';
 import type {
   DomainEvidence,
   EvidencePhase,
@@ -209,8 +212,7 @@ export function buildWealthEvidence(
     seenIds.add(item.id);
   }
 
-  return Object.freeze(
-    producerEvidence.map((item) => {
+  const mappedEvidence = producerEvidence.map((item) => {
       const role = mapWealthRole(item);
       const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, producerEvidence);
       const period = mapWealthDashaPeriod(item);
@@ -254,6 +256,7 @@ export function buildWealthEvidence(
           planet,
           house,
           relatedEvidenceIds,
+          rootEvidenceIds: item.rootEvidenceIds,
           timing,
           evidenceFamily: item.evidenceFamily,
           dimension
@@ -273,6 +276,7 @@ export function buildWealthEvidence(
         priority: mapWealthPriority(item.priority),
         ruleId: item.ruleId,
         relatedEvidenceIds,
+        rootEvidenceIds: item.rootEvidenceIds,
         timing,
         evidenceFamily: item.evidenceFamily,
         dimension,
@@ -280,8 +284,17 @@ export function buildWealthEvidence(
         house,
         ...(item.identityKey ? { identityKey: item.identityKey } : {})
       });
-    })
-  );
+    });
+
+  const rootLinkValidation = validateDomainEvidenceRootLinks(mappedEvidence);
+  if (!rootLinkValidation.isValid) {
+    const unresolved = rootLinkValidation.unresolved
+      .map((item) => `${item.sourceOccurrenceId} -> ${item.rootIdentityKey} (${item.code})`)
+      .join('; ');
+    throw new Error(`Wealth evidence root-link validation failed: ${unresolved}`);
+  }
+
+  return Object.freeze(mappedEvidence);
 }
 
 export function mapWealthRole(

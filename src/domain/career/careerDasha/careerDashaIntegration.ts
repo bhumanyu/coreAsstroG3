@@ -550,7 +550,8 @@ function buildCanonicalPeriod(
  * We parse the identityKey to extract the subjectKey (planet) and match it against
  * the requested planet.
  *
- * Returns the evidenceId (semantic identity) of matching natal evidence items.
+ * Returns the identityKey (semantic identity) of matching natal evidence items.
+ * Occurrence evidenceId values are deliberately not used as root references.
  * If no planet is specified, returns an empty array.
  * If no matching evidence is found, returns an empty array.
  */
@@ -570,8 +571,8 @@ function resolveNatalRootEvidenceIds(
 
     // Only match if the key is canonical AND the subjectKey matches the planet
     if (parsed && parsed.subjectKey === planet) {
-      // Use evidenceId as the semantic identity (matches identityKey after P0-08)
-      matchingIds.push(evidence.evidenceId);
+      // Root references use the semantic identity namespace, never occurrence IDs.
+      matchingIds.push(evidence.identityKey);
     }
   }
 

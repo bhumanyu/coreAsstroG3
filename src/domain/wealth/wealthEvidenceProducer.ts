@@ -37,6 +37,7 @@ export interface WealthEvidenceProducerRecord {
   readonly timingEvidence?: ThemeTimingEvidence;
   readonly transitEvidence?: ThemeTransitEvidence;
   readonly identityKey?: string;
+  readonly rootEvidenceIds?: readonly string[];
 }
 
 export interface WealthEvidenceProducerOutput {
@@ -83,7 +84,8 @@ export function produceWealthDomainEvidence(
       ...(record.vargaEvidence ? { vargaEvidence: record.vargaEvidence } : {}),
       ...(record.timingEvidence ? { timingEvidence: record.timingEvidence } : {}),
       ...(record.transitEvidence ? { transitEvidence: record.transitEvidence } : {}),
-      ...(record.identityKey ? { identityKey: record.identityKey } : {})
+      ...(record.identityKey ? { identityKey: record.identityKey } : {}),
+      ...(record.rootEvidenceIds ? { rootEvidenceIds: record.rootEvidenceIds } : {})
     }))
   );
   const d2Records = evidence.filter(

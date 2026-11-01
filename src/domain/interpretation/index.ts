@@ -17,13 +17,17 @@ export type {
 
 export {
   createDomainEvidence,
+  assertUniqueDomainEvidenceOccurrenceIds,
+  validateDomainEvidenceRootLinks,
   resolveSemanticIdentity,
   tryResolveSemanticIdentity,
   UNRESOLVED_IDENTITY_SENTINEL
 } from './DomainEvidence';
 
 export type {
-  DomainEvidence
+  DomainEvidence,
+  DomainEvidenceRootLinkDiagnostic,
+  DomainEvidenceRootLinkValidation
 } from './DomainEvidence';
 
 export type {

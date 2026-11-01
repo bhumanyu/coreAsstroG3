@@ -80,7 +80,7 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
       statement: 'Legacy career evidence test',
       ruleId: 'CAREER_10H_STRONG_001',
       provenance: {
-        evidenceId: 'CW-CAREER-NATAL-D1-CAREER_10H_STRONG_001-10TH_HOUSE-SUPPORT-PRIMARY',
+        evidenceId: 'legacy-career-evidence-123',
         ruleId: 'CAREER_10H_STRONG_001',
         domain: 'CAREER',
         axis: 'NATAL',
@@ -92,9 +92,7 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
 
     expect(legacyEvidence.id).toBe('legacy-career-evidence-123');
     expect(legacyEvidence.provenance).toBeDefined();
-    expect(legacyEvidence.provenance?.evidenceId).toBe(
-      'CW-CAREER-NATAL-D1-CAREER_10H_STRONG_001-10TH_HOUSE-SUPPORT-PRIMARY'
-    );
+    expect(legacyEvidence.provenance?.evidenceId).toBe('legacy-career-evidence-123');
     expect(legacyEvidence.provenance?.ruleId).toBe('CAREER_10H_STRONG_001');
   });
 
@@ -121,10 +119,13 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
     const [evA] = buildCareerEvidence([itemA]);
     const [evB] = buildCareerEvidence([itemB]);
 
+    expect(evA.id).toBe('raw-link-a');
+    expect(evB.id).toBe('raw-link-b');
     expect(evA.id).toBe(evA.provenance?.evidenceId);
+    expect(evB.id).toBe(evB.provenance?.evidenceId);
+    expect(evA.identityKey).toBe(evB.identityKey);
+    expect(evA.identityKey).not.toBe(evA.id);
     expect(evA.provenance?.ruleId).toBe('CAREER_6L_10L_LINK_001');
-    expect(evA.id).toBe(evB.id);
-    expect(evA.id).toBe('CW-CAREER-NATAL-D1-CAREER_6L_10L_LINK_001-L6_L10_LINK-SUPPORT-PRIMARY');
   }, 30000);
 
   it('runs buildWealthEvidence on WEALTH_VENUS_KARAKA_001 with order-independent determinism', async () => {
@@ -152,8 +153,10 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
 
     expect(evA.id).toBe('raw-venus-a');
     expect(evB.id).toBe('raw-venus-b');
-    expect(evA.identityKey).toBe(evA.provenance?.evidenceId);
-    expect(evB.identityKey).toBe(evB.provenance?.evidenceId);
+    expect(evA.id).toBe(evA.provenance?.evidenceId);
+    expect(evB.id).toBe(evB.provenance?.evidenceId);
+    expect(evA.identityKey).not.toBe(evA.provenance?.evidenceId);
+    expect(evB.identityKey).not.toBe(evB.provenance?.evidenceId);
     expect(evA.provenance?.ruleId).toBe('WEALTH_VENUS_KARAKA_001');
     expect(evA.identityKey).toBe(evB.identityKey);
   });
