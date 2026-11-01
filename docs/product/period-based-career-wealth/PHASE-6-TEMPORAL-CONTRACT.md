@@ -8,10 +8,17 @@ are converted to the equivalent UTC instant. An omitted `asOf` is supplied by
 the injected `Clock` at the product-analysis boundary; the resulting context is
 resolved once and reused throughout that analysis run.
 
-Invalid explicit inputs preserve the existing error path: context construction
-retains the invalid raw string (or empty string for a non-string invalid value),
-and temporal-state resolution rejects it. This is intentional compatibility
-behavior, not acceptance of an invalid instant.
+Invalid explicit inputs fail during context construction. `createAnalysisContext`
+never returns an `AnalysisContext` containing an invalid, raw, or placeholder
+timestamp. Invalid `Date` instances, empty strings, unparseable timestamps,
+unsupported runtime types, and invalid injected-clock values all throw before
+horoscope calculation or product pipeline execution. No fallback timestamp is
+substituted.
+
+The resulting context is frozen, its methodology is copied and frozen, and its
+`asOf` is a canonical UTC ISO-8601 string. Once constructed, that instant is
+the immutable temporal input reused throughout the analysis run. Historical
+and future valid instants remain accepted and are not clamped.
 
 ## Display timezone
 

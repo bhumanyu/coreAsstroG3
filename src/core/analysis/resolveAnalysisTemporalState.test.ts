@@ -76,18 +76,12 @@ describe('resolveAnalysisTemporalState Unit Test Suite', () => {
     );
   });
 
-  it('throws canonical error when context has empty string or invalid asOf date', () => {
-    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-
-    const emptyContext = createAnalysisContext({ asOf: '', methodology: testMethodology });
-    expect(() => resolveAnalysisTemporalState(horoscope, emptyContext)).toThrow(
-      /\[AnalysisTemporalState\] Invalid asOf timestamp: ""/
-    );
-
-    const invalidContext = createAnalysisContext({ asOf: 'not-a-valid-date', methodology: testMethodology });
-    expect(() => resolveAnalysisTemporalState(horoscope, invalidContext)).toThrow(
-      /\[AnalysisTemporalState\] Invalid asOf timestamp: "not-a-valid-date"/
-    );
+  it('rejects invalid asOf while constructing the context, before temporal resolution', () => {
+    expect(() => createAnalysisContext({ asOf: '', methodology: testMethodology })).toThrow();
+    expect(() => createAnalysisContext({
+      asOf: 'not-a-valid-date',
+      methodology: testMethodology
+    })).toThrow('Invalid asOf timestamp');
   });
 
   it('succeeds and produces a valid ISO string when context asOf is undefined', () => {
