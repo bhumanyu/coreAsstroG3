@@ -43,7 +43,8 @@ export type ReasoningTraceCompletenessDiagnosticCode =
   | 'INVALID_RELATED_EVIDENCE_LINK'
   | 'UNRESOLVED_ROOT_EVIDENCE_LINK'
   | 'MISSING_SEMANTIC_IDENTITY'
-  | 'NO_EVIDENCE_OCCURRENCES';
+  | 'NO_EVIDENCE_OCCURRENCES'
+  | 'NO_SYNTHESIS_EVIDENCE_REFERENCES';
 
 export interface ReasoningTraceCompletenessDiagnostic {
   readonly code: ReasoningTraceCompletenessDiagnosticCode;
@@ -86,6 +87,13 @@ export function buildReasoningTraceCompleteness(params: {
     diagnostics.push(Object.freeze({
       code: 'NO_EVIDENCE_OCCURRENCES',
       message: 'No domain evidence occurrences were supplied for trace validation.'
+    }));
+  }
+
+  if (synthesisEvidenceReferences.length === 0) {
+    diagnostics.push(Object.freeze({
+      code: 'NO_SYNTHESIS_EVIDENCE_REFERENCES',
+      message: 'The canonical synthesis did not expose any evidence references for end-to-end trace validation.'
     }));
   }
 
