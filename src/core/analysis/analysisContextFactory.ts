@@ -21,7 +21,13 @@ export const DEFAULT_METHODOLOGY: ProductMethodology = Object.freeze({
 
 export function normalizeAsOf(asOf?: Date | string | null, clock: Clock = systemClock): string {
   if (asOf === undefined || asOf === null) {
-    return clock.now();
+    const now = clock.now();
+    if (typeof now !== 'string') {
+      throw new Error(`Invalid clock value for asOf: expected string, received ${typeof now}`);
+    }
+    // Re-enter the explicit-string path so injected clocks receive the same
+    // validation and UTC canonicalization as caller-supplied timestamps.
+    return normalizeAsOf(now, clock);
   }
 
   if (asOf instanceof Date) {
@@ -57,12 +63,9 @@ export function createAnalysisContext(
   input?: CreateAnalysisContextInput,
   clock: Clock = systemClock
 ): AnalysisContext {
-  let asOf: string;
-  try {
-    asOf = normalizeAsOf(input?.asOf, clock);
-  } catch {
-    asOf = typeof input?.asOf === 'string' ? input.asOf : '';
-  }
+  // Invalid explicit input must fail at context construction. Never create an
+  // AnalysisContext containing an invalid or placeholder timestamp.
+  const asOf = normalizeAsOf(input?.asOf, clock);
   const methodology = Object.freeze({ ...(input?.methodology ?? DEFAULT_METHODOLOGY) });
   const engineVersion = input?.engineVersion ?? methodology.calculationEngine ?? DEFAULT_ENGINE_VERSION;
   const rulesVersion = input?.rulesVersion ?? methodology.rulesEngine ?? DEFAULT_RULES_VERSION;
