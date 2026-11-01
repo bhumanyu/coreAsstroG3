@@ -80,7 +80,7 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
       statement: 'Legacy career evidence test',
       ruleId: 'CAREER_10H_STRONG_001',
       provenance: {
-        evidenceId: 'CW-CAREER-NATAL-D1-CAREER_10H_STRONG_001-10TH_HOUSE-SUPPORT-PRIMARY',
+        evidenceId: 'legacy-career-evidence-123',
         ruleId: 'CAREER_10H_STRONG_001',
         domain: 'CAREER',
         axis: 'NATAL',
@@ -92,9 +92,7 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
 
     expect(legacyEvidence.id).toBe('legacy-career-evidence-123');
     expect(legacyEvidence.provenance).toBeDefined();
-    expect(legacyEvidence.provenance?.evidenceId).toBe(
-      'CW-CAREER-NATAL-D1-CAREER_10H_STRONG_001-10TH_HOUSE-SUPPORT-PRIMARY'
-    );
+    expect(legacyEvidence.provenance?.evidenceId).toBe('legacy-career-evidence-123');
     expect(legacyEvidence.provenance?.ruleId).toBe('CAREER_10H_STRONG_001');
   });
 
