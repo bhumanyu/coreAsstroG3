@@ -47,6 +47,8 @@ describe('AnalysisContext and AnalysisContextFactory (P0-02A)', () => {
       expect(() => normalizeAsOf('not-a-valid-date')).toThrow('Invalid asOf timestamp');
       expect(() => normalizeAsOf('')).toThrow('empty string');
       expect(() => normalizeAsOf('   ')).toThrow('empty string');
+      expect(() => normalizeAsOf('2024-02-30T12:00:00.000Z')).toThrow('Invalid asOf timestamp');
+      expect(() => normalizeAsOf(123 as unknown as string)).toThrow('Invalid asOf type');
     });
 
     it('assigns the current instant when asOf is omitted or null (Option A)', () => {
@@ -115,6 +117,13 @@ describe('AnalysisContext and AnalysisContextFactory (P0-02A)', () => {
         asOf: new Date(NaN),
         methodology: mockMethodology
       })).toThrow('Invalid asOf Date');
+    });
+
+    it('rejects impossible calendar dates instead of accepting JavaScript date rollover', () => {
+      expect(() => createAnalysisContext({
+        asOf: '2024-02-30T12:00:00.000Z',
+        methodology: mockMethodology
+      })).toThrow('Invalid asOf timestamp');
     });
 
     it('creates an immutable context with frozen methodology and context', () => {
