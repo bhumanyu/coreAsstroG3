@@ -46,6 +46,7 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
     ];
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
+      conclusionNodeId: 'CAREER-C11-FINAL',
       synthesisRuleId: 'C11',
       synthesisEvidenceReferences: refs,
       evidence: [natal, dasha]
@@ -82,6 +83,7 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
     });
     const result = buildReasoningTraceCompleteness({
       domain: 'WEALTH',
+      conclusionNodeId: 'WEALTH-CW05-FINAL',
       synthesisRuleId: 'CW-05-WEALTH-SYNTHESIS',
       synthesisEvidenceReferences: [
         { id: natal.id, namespace: 'OCCURRENCE' },
@@ -97,6 +99,7 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
   it('diagnoses a missing producer/source rule', () => {
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
+      conclusionNodeId: 'CAREER-C11-FINAL',
       synthesisRuleId: 'C11',
       synthesisEvidenceReferences: [{ id: 'CAREER-NATAL-SEM-1', namespace: 'IDENTITY' }],
       evidence: [evidence({ ruleId: undefined })]
@@ -108,6 +111,7 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
   it('diagnoses a missing chart calculation or source-record link', () => {
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
+      conclusionNodeId: 'CAREER-C11-FINAL',
       synthesisRuleId: 'C11',
       synthesisEvidenceReferences: [{ id: 'CAREER-NATAL-SEM-1', namespace: 'IDENTITY' }],
       evidence: [evidence({ planet: undefined, house: undefined, timing: undefined, evidenceFamily: undefined })]
@@ -118,6 +122,7 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
   it('diagnoses invalid related-evidence links without resolving them through semantic aliases', () => {
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
+      conclusionNodeId: 'CAREER-C11-FINAL',
       synthesisRuleId: 'C11',
       synthesisEvidenceReferences: [{ id: 'CAREER-NATAL-SEM-1', namespace: 'IDENTITY' }],
       evidence: [evidence({ relatedEvidenceIds: ['CAREER-NATAL-SEM-1'] })]
@@ -130,6 +135,7 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
     const second = evidence({ id: 'OCCURRENCE-B', identityKey: 'SHARED-SEMANTIC-IDENTITY', ruleId: 'RULE-B' });
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
+      conclusionNodeId: 'CAREER-C11-FINAL',
       synthesisRuleId: 'C11',
       synthesisEvidenceReferences: [{ id: 'SHARED-SEMANTIC-IDENTITY', namespace: 'IDENTITY' }],
       evidence: [first, second]
@@ -142,6 +148,7 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
   it('round-trips the trace report through API-style JSON serialization', () => {
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
+      conclusionNodeId: 'CAREER-C11-FINAL',
       synthesisRuleId: 'C11',
       synthesisEvidenceReferences: [{ id: 'CAREER-NATAL-SEM-1', namespace: 'IDENTITY' }],
       evidence: [evidence()]
