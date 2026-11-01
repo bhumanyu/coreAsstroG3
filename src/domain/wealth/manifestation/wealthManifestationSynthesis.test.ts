@@ -104,41 +104,17 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(speculationResult.natalSupport).toBe('CHALLENGE');
   });
 
-  it('incorporates D2 Hora confirmation and conflict into accumulation and gains synthesis', () => {
-    const accumulationEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
+  it('keeps D2 unavailable despite absent, malformed, single, or conflicting declarations', () => {
+    const evidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
+    const absent = resolveWealthDimensionManifestation('ACCUMULATION', evidence);
+    const single = resolveWealthDimensionManifestation('ACCUMULATION', evidence, undefined, 'CONFIRMS');
+    const malformed = resolveWealthDimensionManifestation('ACCUMULATION', evidence, undefined, 'MALFORMED');
+    const conflicting = resolveWealthDimensionManifestation('ACCUMULATION', evidence, undefined, 'CONFLICTS');
 
-    const resultWithConfirm = resolveWealthDimensionManifestation(
-      'ACCUMULATION',
-      accumulationEvidence,
-      undefined,
-      'CONFIRMS'
-    );
-
-    expect(resultWithConfirm.d2Support).toBe('SUPPORT');
-    const d2Factor = resultWithConfirm.factors.find((f) => f.source === 'D2');
-    expect(d2Factor).toBeDefined();
-    expect(d2Factor?.direction).toBe('SUPPORT');
-    expect(d2Factor?.weight).toBe(1.0);
-
-    const resultWithPartial = resolveWealthDimensionManifestation(
-      'ACCUMULATION',
-      accumulationEvidence,
-      undefined,
-      'PARTIALLY_CONFIRMS'
-    );
-    expect(resultWithPartial.d2Support).toBe('SUPPORT');
-    const d2PartialFactor = resultWithPartial.factors.find((f) => f.source === 'D2');
-    expect(d2PartialFactor?.weight).toBe(0.5);
-
-    const resultWithConflict = resolveWealthDimensionManifestation(
-      'ACCUMULATION',
-      accumulationEvidence,
-      undefined,
-      'CONFLICTS'
-    );
-    expect(resultWithConflict.d2Support).toBe('CHALLENGE');
-    const d2ConflictFactor = resultWithConflict.factors.find((f) => f.source === 'D2');
-    expect(d2ConflictFactor?.direction).toBe('CHALLENGE');
+    for (const result of [absent, single, malformed, conflicting]) {
+      expect(result.d2Support).toBe('UNAVAILABLE');
+      expect(result.factors.some((factor) => factor.source === 'D2')).toBe(false);
+    }
   });
 
   it('attributes only explicit D2 source evidence IDs to the D2 factor', () => {
