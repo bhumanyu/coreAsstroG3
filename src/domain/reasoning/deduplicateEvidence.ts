@@ -160,9 +160,9 @@ export function deduplicateReasoningEvidence(
 
       // Accumulate every original occurrence ID. The representative evidenceId
       // is also included for ordinary, non-aggregated WeightedReasoningEvidence.
-      sourceIds.add(item.evidenceId);
+      sourceIds.add(item.evidenceId.trim());
       for (const sourceOccurrenceId of item.sourceIds ?? []) {
-        sourceIds.add(sourceOccurrenceId);
+        sourceIds.add(sourceOccurrenceId.trim());
       }
 
       // Accumulate layers
