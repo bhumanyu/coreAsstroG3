@@ -590,7 +590,10 @@ describe('C9 Dasha Integration', () => {
         lordRelationships: [],
         direction: 'SUPPORT',
         strength: 'STRONG',
-        evidence: [natalEvidence],
+        evidence: [
+          natalEvidence,
+          { ...natalEvidence, evidenceId: 'natal-saturn-evidence-2' }
+        ],
         conflicts: [],
         reasoningTrace: Object.freeze({
           primaryPromise: [natalEvidence],
@@ -626,7 +629,9 @@ describe('C9 Dasha Integration', () => {
 
       // natalRootIds contains the natal semantic identityKey, not its occurrence ID
       if (saturnEvidence) {
-        expect(saturnEvidence.provenance.natalRootIds).toContain('CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN');
+        expect(saturnEvidence.provenance.natalRootIds).toEqual([
+          'CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN'
+        ]);
       }
     });
 
