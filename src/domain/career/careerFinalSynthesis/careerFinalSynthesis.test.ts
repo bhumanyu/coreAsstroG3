@@ -1021,6 +1021,26 @@ describe('A07 — C11 confidence coverage and provenance policy', () => {
     expect(result.confidenceReasons).toHaveLength(0);
   });
 
+  it('keeps strong natal promise independent when evidence quality is LOW', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, evidenceQuality: 'LOW' });
+    expect(result.finalStrength).toBe('STRONG');
+    expect(result.confidence).toBe('LOW');
+    expect(result.confidenceCoverage.quality).toBe('LOW');
+    expect(result.confidenceReasons.some(reason => reason.code === 'EVIDENCE_QUALITY_LOW')).toBe(true);
+  });
+
+  it('can express a weak natal promise with HIGH confidence when evidence is complete and reliable', () => {
+    const result = synthesizeCareerFinal({
+      ...completeInput,
+      natalDirection: 'CHALLENGE',
+      natalStrength: 'WEAK',
+      evidenceQuality: 'HIGH'
+    });
+    expect(result.finalStrength).toBe('WEAK');
+    expect(result.confidence).toBe('HIGH');
+    expect(result.confidenceCoverage.quality).toBe('HIGH');
+  });
+
   it('caps confidence at LOW when required natal evidence is unavailable', () => {
     const result = synthesizeCareerFinal({
       ...completeInput,
