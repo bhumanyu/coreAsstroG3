@@ -185,6 +185,8 @@ function qualityFromDivisionalStatus(
       return 'LOW';
 
     case 'UNAVAILABLE':
+      return 'NOT_APPLICABLE';
+
     default:
       return 'LOW';
   }
