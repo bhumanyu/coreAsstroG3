@@ -108,6 +108,30 @@ describe('validateEvidenceContinuity', () => {
     expect(result.issues).toHaveLength(0);
   });
 
+  it('rejects cyclic root evidence dependencies', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'root-a-occurrence',
+        identityKey: 'root-a-semantic',
+        rootEvidenceIds: ['root-b-semantic']
+      }),
+      createMockEvidence({
+        id: 'root-b-occurrence',
+        identityKey: 'root-b-semantic',
+        rootEvidenceIds: ['root-a-semantic']
+      })
+    ];
+
+    const result = validateEvidenceContinuity({
+      evidence,
+      requiredC11EvidenceIds: ['root-a-semantic', 'root-b-semantic'],
+      c11Validation: createMockC11Validation({ valid: true })
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((issue) => issue.code === 'ROOT_EVIDENCE_CYCLE')).toBe(true);
+  });
+
   it('rejects an occurrence ID used as a root semantic reference', () => {
     const evidence = [
       createMockEvidence({ id: 'root-occurrence', identityKey: 'root-semantic-identity' }),
