@@ -23,14 +23,10 @@ import type {
 
 export function resolveWealthConclusionStrength(
   natalStrength: DomainStrength,
-  d2Relationship: VargaRelationship,
+  _d2Relationship: VargaRelationship,
   conflicts: readonly DomainConflict[]
 ): DomainStrength {
-  if (d2Relationship === 'CONFLICTS') {
-    if (natalStrength === 'VERY_STRONG') return 'STRONG';
-    if (natalStrength === 'STRONG') return 'MODERATE';
-    if (natalStrength === 'MODERATE') return 'MIXED';
-  }
+  // D2 is not validated and therefore cannot change canonical or legacy Wealth strength.
 
   const hasOnlyTransitConflict =
     conflicts.length > 0 &&
@@ -131,6 +127,7 @@ export function buildWealthConclusionData(params: {
   readonly overallStatus: WealthDimensionStatus;
   readonly dimensions: readonly WealthDimensionInterpretation[];
   readonly d2Relationship: VargaRelationship;
+  readonly d2AvailabilityReason?: string;
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
   readonly evidence: readonly DomainEvidence[];
@@ -141,13 +138,16 @@ export function buildWealthConclusionData(params: {
   const {
     overallStatus,
     dimensions,
-    d2Relationship,
+    d2Relationship: _d2Relationship,
     manifestations,
     evidence,
     periodTimingActivations,
     supportingSourceIds,
     challengingSourceIds
   } = params;
+
+  const d2Relationship: VargaRelationship = 'UNAVAILABLE';
+  const d2AvailabilityReason = 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
 
   const getDim = (dimName: WealthDimension): WealthDimensionInterpretation | undefined =>
     dimensions.find((d) => d.dimension === dimName);
@@ -221,6 +221,7 @@ export function buildWealthConclusionData(params: {
     mainStrengths: Object.freeze(mainStrengths),
     mainChallenges: Object.freeze(mainChallenges),
     d2Relationship,
+    d2AvailabilityReason,
     accumulationDashaEffect,
     gainsDashaEffect,
     fortuneDashaEffect,
