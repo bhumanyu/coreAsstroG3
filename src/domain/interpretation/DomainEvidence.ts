@@ -257,7 +257,7 @@ export function validateDomainEvidenceRootLinks(
     if (!identityKey || identityKey === UNRESOLVED_IDENTITY_SENTINEL) continue;
     const edges = edgesByIdentity.get(identityKey) ?? [];
     for (const rootIdentityKey of item.rootEvidenceIds ?? []) {
-      if (semanticIdentities.has(rootIdentityKey)) {
+      if (rootIdentityKey !== identityKey && semanticIdentities.has(rootIdentityKey)) {
         edges.push({ sourceOccurrenceId: item.id, rootIdentityKey });
       }
     }
