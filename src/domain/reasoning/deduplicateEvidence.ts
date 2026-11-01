@@ -196,7 +196,7 @@ export function deduplicateReasoningEvidence(
       statement,
       relatedEvidenceIds: Object.freeze(Array.from(relatedEvidenceIds).sort((a, b) => a.localeCompare(b))),
       occurrenceCount: group.length,
-      // sourceIds = distinct occurrence IDs; occurrenceCount = total occurrences (including duplicates)
+      // sourceIds = all distinct occurrence IDs; occurrenceCount = valid unique occurrences (duplicate IDs were rejected above).
       sourceIds: Object.freeze(sortedSourceIds),
       rootEvidenceIds: Object.freeze(Array.from(rootEvidenceIds).sort((a, b) => a.localeCompare(b))),
       layers: Object.freeze(REASONING_LAYER_PRECEDENCE.filter(l => layers.has(l)))
