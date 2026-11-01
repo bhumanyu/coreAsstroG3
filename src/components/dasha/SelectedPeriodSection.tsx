@@ -102,29 +102,13 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
   });
 
   const handleSubmit = () => {
-    console.log('handleSubmit called');
-    console.log('isSubmitting:', isSubmitting);
-    console.log('selectedMahadashaId:', selectedMahadashaId);
-    console.log('selectedAntardashaId:', selectedAntardashaId);
-    console.log('viewModel.canSubmit:', viewModel.canSubmit);
-
-    if (isSubmitting || !selectedMahadashaId || !selectedAntardashaId) {
-      console.log('Early return triggered');
-      return;
-    }
-
+    if (isSubmitting || !selectedMahadashaId || !selectedAntardashaId) return;
     const latestValidation = validateSelectedPeriod(dashPeriodOptions, {
       mahadashaId: selectedMahadashaId,
       antardashaId: selectedAntardashaId
     });
-
-    console.log('Validation result:', latestValidation);
-
     if (latestValidation.ok) {
-      console.log('Calling onSelect with:', latestValidation.mahadasha.id, latestValidation.antardasha.id);
       onSelect(latestValidation.mahadasha.id, latestValidation.antardasha.id);
-    } else {
-      console.log('Validation failed:', latestValidation);
     }
   };
   const handleMahadashaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
