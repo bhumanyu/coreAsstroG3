@@ -807,6 +807,7 @@ function mapDashaEvidence(
         strength,
         priority: 1,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.provenance.natalRootIds,
         notes,
         timing: {
           period: evidence.level,
@@ -929,6 +930,7 @@ function mapD10Evidence(
         priority: evidence.weight,
         ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
+        rootEvidenceIds: evidence.provenance.natalRootIds,
         notes,
         provenance: evidence.provenance.ruleIds.length > 0 ? {
           evidenceId: `${evidence.id}:CHALLENGING`,
