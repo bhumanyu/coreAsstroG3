@@ -125,7 +125,6 @@ export function synthesizeWealthFinal(
     timingSynthesis,
     manifestationSynthesis,
     d2Synthesis,
-    d2Relationship: _d2Relationship = 'UNAVAILABLE',
     natalEvidenceIds = [],
     natalRuleIds = []
   } = input;
