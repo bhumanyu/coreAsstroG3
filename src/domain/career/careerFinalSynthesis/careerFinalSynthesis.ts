@@ -413,7 +413,7 @@ function deriveCurrentPressure(
  * Promise strength is intentionally not modified by this function.
  */
 function deriveConfidence(
-  natalStrength: CareerStructuralStrength,
+  suppliedEvidenceQuality: 'HIGH' | 'MEDIUM' | 'LOW' | undefined,
   layers: { readonly natal: boolean; readonly dasha: boolean; readonly d10: boolean; readonly expression: boolean; readonly transit: boolean },
   conflicts: readonly CareerFinalConflict[],
   evidenceIds: readonly string[],
@@ -432,7 +432,7 @@ function deriveConfidence(
   const missingOptionalLayers = layerCoverage.filter(x => x.requirement === 'OPTIONAL' && x.availability === 'UNAVAILABLE').map(x => x.layer);
   const provenanceProvided = evidenceIds.length > 0 || sourceIds.length > 0 || ruleIds.length > 0;
   const provenance: CareerConfidenceCoverage['provenance'] = !provenanceProvided ? 'NOT_PROVIDED' : evidenceIds.length > 0 && sourceIds.length > 0 && ruleIds.length > 0 ? 'COMPLETE' : 'PARTIAL';
-  const evidenceQuality: CareerConfidenceCoverage['quality'] = natalStrength === 'STRONG' || natalStrength === 'VERY_STRONG' ? 'HIGH' : natalStrength === 'MODERATE' || natalStrength === 'MIXED' ? 'MEDIUM' : 'LOW';
+  const evidenceQuality: CareerConfidenceCoverage['quality'] = suppliedEvidenceQuality ?? (provenance === 'COMPLETE' ? 'HIGH' : 'MEDIUM');
   const coverage: CareerConfidenceCoverage = Object.freeze({
     status: missingRequiredLayers.length > 0 ? 'INSUFFICIENT' : missingSupportingLayers.length > 0 ? 'PARTIAL' : 'COMPLETE',
     quality: evidenceQuality,
@@ -449,8 +449,8 @@ function deriveConfidence(
     if (capApplied) caps.push(capApplied);
   };
   let confidence: CareerFinalConfidence = evidenceQuality;
-  if (natalStrength === 'UNDETERMINED' || natalStrength === 'WEAK' || natalStrength === 'VERY_WEAK') addReason('NATAL_QUALITY_LOW', 'Natal foundation quality is weak or undetermined.', 'LOW', 'NATAL');
-  else if (natalStrength === 'MODERATE' || natalStrength === 'MIXED') addReason('NATAL_QUALITY_MODERATE', 'Natal foundation quality is moderate or mixed.', 'MEDIUM', 'NATAL');
+  if (evidenceQuality === 'LOW') addReason('EVIDENCE_QUALITY_LOW', 'The supplied evidence-quality assessment is LOW.', 'LOW');
+  else if (evidenceQuality === 'MEDIUM') addReason('EVIDENCE_QUALITY_MODERATE', 'The supplied evidence-quality assessment is MEDIUM or not independently supplied.', 'MEDIUM');
   for (const layer of missingRequiredLayers) addReason('REQUIRED_LAYER_UNAVAILABLE', 'A required evidence layer is unavailable; confidence is capped at LOW.', 'LOW', layer);
   for (const layer of missingSupportingLayers) {
     const cap: CareerFinalConfidence = missingSupportingLayers.length >= 2 ? 'LOW' : 'MEDIUM';
@@ -625,7 +625,7 @@ export function synthesizeCareerFinal(
   const currentPressure = deriveCurrentPressure(mappedDashaDirection, mappedD10Direction, transitDirection);
 
   // Derive confidence (C11-INV-05: Missing evidence ≠ negative evidence)
-  const confidenceAssessment = deriveConfidence(natalStrength, { natal: mappedNatalDirection !== 'UNAVAILABLE' && mappedNatalStrength !== 'UNDETERMINED', dasha: dashaEffect !== undefined && dashaEffect !== 'INSUFFICIENT_DATA' && mappedDashaDirection !== 'UNAVAILABLE', d10: mappedD10Direction !== 'UNAVAILABLE', expression: mappedExpressionStatus !== 'UNAVAILABLE', transit: transitDirection !== undefined && transitDirection !== 'UNAVAILABLE' }, conflicts, evidenceIds, sourceIds, ruleIds);
+  const confidenceAssessment = deriveConfidence(input.evidenceQuality, { natal: mappedNatalDirection !== 'UNAVAILABLE' && mappedNatalStrength !== 'UNDETERMINED', dasha: dashaEffect !== undefined && dashaEffect !== 'INSUFFICIENT_DATA' && mappedDashaDirection !== 'UNAVAILABLE', d10: mappedD10Direction !== 'UNAVAILABLE', expression: mappedExpressionStatus !== 'UNAVAILABLE', transit: transitDirection !== undefined && transitDirection !== 'UNAVAILABLE' }, conflicts, evidenceIds, sourceIds, ruleIds);
   const confidence = confidenceAssessment.confidence;
 
   // Extract strongest and challenged expressions
