@@ -227,6 +227,7 @@ export interface DivisionalFact {
   readonly status: AiAvailability;
   readonly ascendantSign?: Sign;
   readonly confidence?: AiConfidence;
+  readonly reason?: string;
 }
 
 export interface DivisionalFacts {
