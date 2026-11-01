@@ -211,6 +211,7 @@ export interface LifeAnalysisCareerDetailViewModel {
 export interface LifeAnalysisWealthDetailViewModel {
   readonly natalPromise: DomainStrength | 'UNAVAILABLE';
   readonly d2Relationship: VargaRelationship;
+  readonly d2AvailabilityReason?: string;
   readonly currentDashaEffect?: TimingActivationEffect | 'UNAVAILABLE' | string;
   readonly currentTransitEffect?: TransitTriggerEffect | 'UNAVAILABLE' | string;
   readonly overallStatus: WealthDimensionStatus | 'UNAVAILABLE';
