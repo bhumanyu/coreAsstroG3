@@ -146,6 +146,10 @@ export function buildLifeAnalysisViewModel(
     currentTimingEffect: deriveCareerTimingEffect(careerTiming),
     manifestationSynthesis: careerConclusionData?.careerManifestationSynthesis,
     finalSynthesis: careerConclusionData?.careerFinalSynthesis,
+    canonicalFinalSynthesis: careerConclusionData?.canonicalCareerFinalSynthesis,
+    confidenceCoverage: careerConclusionData?.canonicalCareerFinalSynthesis?.confidenceCoverage,
+    confidenceReasons: careerConclusionData?.canonicalCareerFinalSynthesis?.confidenceReasons,
+    traceCompleteness: careerConclusionData?.reasoningTraceGraph?.traceCompleteness,
     profession: careerConclusionData?.careerProfessionAnalysis,
     ...(careerDashaHierarchy ? { dashaHierarchy: careerDashaHierarchy } : {})
   };
@@ -180,6 +184,7 @@ export function buildLifeAnalysisViewModel(
     currentTimingEffect: deriveWealthTimingEffect(wealthTiming),
     manifestationSynthesis: wealthConclusionData?.wealthManifestationSynthesis,
     finalSynthesis: wealthConclusionData?.wealthFinalSynthesis,
+    traceCompleteness: wealth.conclusionData?.reasoningTraceGraph?.traceCompleteness,
     ...(wealth.diagnostics ? { diagnostics: wealth.diagnostics } : {}),
     ...(wealth.dataCompleteness && 'evidenceProduction' in wealth.dataCompleteness
       ? { evidenceProduction: wealth.dataCompleteness.evidenceProduction }
