@@ -296,10 +296,11 @@ describe('Wealth Reasoning Hierarchy (Golden Scenarios W1-W6 & CW-01 Validation)
     // Dimension evidenceIds should be canonical (identityKey), not occurrence IDs
     // The dimension should have exactly 1 canonical evidence ID (the identityKey)
     expect(result.dimensionResults.ACCUMULATION.evidenceIds).toHaveLength(1);
-    // The canonical evidenceId should match the identityKey from reasoningTrace
+    // Dimension summaries use semantic IDs; the trace's evidenceId remains a representative occurrence.
     const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
-    expect(result.dimensionResults.ACCUMULATION.evidenceIds[0]).toBe(canonicalEvidence.evidenceId);
     expect(result.dimensionResults.ACCUMULATION.evidenceIds[0]).toBe(canonicalEvidence.identityKey);
+    expect(canonicalEvidence.sourceIds).toContain(canonicalEvidence.evidenceId);
+    expect(canonicalEvidence.evidenceId).not.toBe(canonicalEvidence.identityKey);
     // The occurrence IDs should be in sourceIds, not evidenceIds
     expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_WEALTH');
     expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_WEALTH_DUP1');
@@ -365,10 +366,11 @@ describe('Wealth Reasoning Hierarchy (Golden Scenarios W1-W6 & CW-01 Validation)
     // Occurrence-level source IDs should contain all 3 occurrence IDs
     expect(result.primarySourceIds).toHaveLength(3);
 
-    // The canonical evidenceId should match the identityKey from reasoningTrace
+    // Summary IDs are semantic; the trace's evidenceId remains a representative occurrence.
     const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
-    expect(result.primaryEvidenceIds[0]).toBe(canonicalEvidence.evidenceId);
     expect(result.primaryEvidenceIds[0]).toBe(canonicalEvidence.identityKey);
+    expect(canonicalEvidence.sourceIds).toContain(canonicalEvidence.evidenceId);
+    expect(canonicalEvidence.evidenceId).not.toBe(canonicalEvidence.identityKey);
 
     // The source IDs should match the occurrence IDs
     expect(result.primarySourceIds).toEqual(canonicalEvidence.sourceIds);
