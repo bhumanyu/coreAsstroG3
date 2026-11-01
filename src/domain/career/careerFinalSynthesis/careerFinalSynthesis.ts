@@ -432,7 +432,7 @@ function deriveConfidence(
   const missingOptionalLayers = layerCoverage.filter(x => x.requirement === 'OPTIONAL' && x.availability === 'UNAVAILABLE').map(x => x.layer);
   const provenanceProvided = evidenceIds.length > 0 || sourceIds.length > 0 || ruleIds.length > 0;
   const provenance: CareerConfidenceCoverage['provenance'] = !provenanceProvided ? 'NOT_PROVIDED' : evidenceIds.length > 0 && sourceIds.length > 0 && ruleIds.length > 0 ? 'COMPLETE' : 'PARTIAL';
-  const evidenceQuality: CareerConfidenceCoverage['quality'] = natalStrength === 'UNDETERMINED' || natalStrength === 'WEAK' || natalStrength === 'VERY_WEAK' ? 'LOW' : natalStrength === 'MODERATE' ? 'MEDIUM' : 'HIGH';
+  const evidenceQuality: CareerConfidenceCoverage['quality'] = natalStrength === 'STRONG' || natalStrength === 'VERY_STRONG' ? 'HIGH' : natalStrength === 'MODERATE' || natalStrength === 'MIXED' ? 'MEDIUM' : 'LOW';
   const coverage: CareerConfidenceCoverage = Object.freeze({
     status: missingRequiredLayers.length > 0 ? 'INSUFFICIENT' : missingSupportingLayers.length > 0 ? 'PARTIAL' : 'COMPLETE',
     quality: evidenceQuality,
@@ -448,9 +448,9 @@ function deriveConfidence(
     reasons.push(Object.freeze({ code, message, capApplied, ...(layer ? { layer } : {}) }));
     if (capApplied) caps.push(capApplied);
   };
-  let confidence: CareerFinalConfidence = natalStrength === 'UNDETERMINED' || natalStrength === 'WEAK' || natalStrength === 'VERY_WEAK' ? 'LOW' : natalStrength === 'MODERATE' ? 'MEDIUM' : 'HIGH';
+  let confidence: CareerFinalConfidence = evidenceQuality;
   if (natalStrength === 'UNDETERMINED' || natalStrength === 'WEAK' || natalStrength === 'VERY_WEAK') addReason('NATAL_QUALITY_LOW', 'Natal foundation quality is weak or undetermined.', 'LOW', 'NATAL');
-  else if (natalStrength === 'MODERATE') addReason('NATAL_QUALITY_MODERATE', 'Natal foundation quality is moderate.', 'MEDIUM', 'NATAL');
+  else if (natalStrength === 'MODERATE' || natalStrength === 'MIXED') addReason('NATAL_QUALITY_MODERATE', 'Natal foundation quality is moderate or mixed.', 'MEDIUM', 'NATAL');
   for (const layer of missingRequiredLayers) addReason('REQUIRED_LAYER_UNAVAILABLE', 'A required evidence layer is unavailable; confidence is capped at LOW.', 'LOW', layer);
   for (const layer of missingSupportingLayers) {
     const cap: CareerFinalConfidence = missingSupportingLayers.length >= 2 ? 'LOW' : 'MEDIUM';
