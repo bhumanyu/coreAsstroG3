@@ -45,6 +45,7 @@ import type {
 import {
   assertUniqueDomainEvidenceOccurrenceIds,
   createDomainEvidence,
+  validateDomainEvidenceRootLinks,
   type DomainEvidence,
   tryResolveSemanticIdentity,
   tryResolveC11SemanticIdentity,
@@ -243,43 +244,8 @@ export function mapCanonicalCareerEvidence(
 export function validateRootEvidenceLinks(
   evidence: readonly DomainEvidence[]
 ): RootEvidenceValidationResult {
-  const semanticIdentities = new Set(
-    evidence
-      .map((item) => tryResolveC11SemanticIdentity(item))
-      .filter((identity): identity is string => identity !== null)
-  );
-
-  const unresolved: RootEvidenceLinkDiagnostic[] = [];
-  for (const item of evidence) {
-    for (const rootIdentityKey of item.rootEvidenceIds ?? []) {
-      if (rootIdentityKey === item.identityKey) {
-        unresolved.push(Object.freeze({
-          sourceOccurrenceId: item.id,
-          rootIdentityKey,
-          code: 'ROOT_EVIDENCE_SELF_REFERENCE'
-        }));
-      } else if (!semanticIdentities.has(rootIdentityKey)) {
-        unresolved.push(Object.freeze({
-          sourceOccurrenceId: item.id,
-          rootIdentityKey,
-          code: 'ROOT_EVIDENCE_REFERENCE_UNRESOLVED'
-        }));
-      }
-    }
-  }
-
-  const sorted = unresolved.sort((a, b) =>
-    a.sourceOccurrenceId.localeCompare(b.sourceOccurrenceId) ||
-    a.rootIdentityKey.localeCompare(b.rootIdentityKey) ||
-    a.code.localeCompare(b.code)
-  );
-
-  return Object.freeze({
-    isValid: sorted.length === 0,
-    unresolved: Object.freeze(sorted)
-  });
+  return validateDomainEvidenceRootLinks(evidence);
 }
-
 export function validateC11References(
   evidence: readonly DomainEvidence[],
   finalSynthesis: CareerFinalSynthesisResult
