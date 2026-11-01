@@ -139,6 +139,7 @@ describe('CW-05D Final Confidence Model', () => {
     });
 
     expect(resultMedium.final).toBe('MEDIUM');
+    expect(resultMedium.divisionalQuality).toBe('NOT_APPLICABLE');
     expect(resultMedium.dashaConsistency).toBe('INCONSISTENT');
     // Inconsistency existed, but did not reduce confidence level (already MEDIUM)
     expect(resultMedium.consistencyCapApplied).toBe(false);
@@ -166,8 +167,28 @@ describe('CW-05D Final Confidence Model', () => {
     });
 
     expect(resultLow.final).toBe('LOW');
+    expect(resultLow.divisionalQuality).toBe('NOT_APPLICABLE');
     expect(resultLow.dashaConsistency).toBe('INCONSISTENT');
     expect(resultLow.consistencyCapApplied).toBe(false);
+  });
+
+  it('does not treat gated D2 unavailability as LOW-quality evidence', () => {
+    const result = calculateFinalConfidenceV2({
+      natalPromise: 'STRONG',
+      natalEvidenceCount: 2,
+      activationStatus: 'SUPPORT',
+      activationConfidence: 'HIGH',
+      dashaEffectConsistent: true,
+      dashaHierarchyRolesConsistent: true,
+      timingStatus: 'SUPPORT',
+      timingConfidence: 0.9,
+      divisionalStatus: 'UNAVAILABLE',
+      manifestationConfidences: [],
+      manifestationStatuses: [],
+      evidenceSourceCount: 3
+    });
+    expect(result.divisionalQuality).toBe('NOT_APPLICABLE');
+    expect(result.final).toBe('HIGH');
   });
 
   it('correctly classifies partial Dasha consistency states', () => {
