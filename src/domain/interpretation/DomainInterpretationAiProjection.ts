@@ -125,7 +125,12 @@ export function projectDomainInterpretationForAi(
           varga: v.varga,
           relationship: v.varga === 'D2' ? 'UNAVAILABLE' : v.relationship,
           ...(v.varga === 'D2'
-            ? { availability: 'UNAVAILABLE' as const, unavailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.' }
+            ? {
+                availability: 'UNAVAILABLE' as const,
+                unavailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.',
+                strength: 'UNDETERMINED' as const,
+                confidence: 'UNDETERMINED' as const
+              }
             : v.availability ? { availability: v.availability } : {}),
           statement: v.varga === 'D2'
             ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
