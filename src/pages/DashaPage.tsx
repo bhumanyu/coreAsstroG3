@@ -87,14 +87,33 @@ export const DashaPage: React.FC<DashaPageProps> = ({
     [analysis]
   );
 
+  // Log selectedPeriod changes
+  useEffect(() => {
+    console.log('selectedPeriod changed:', selectedPeriod);
+    console.log('selectedPeriod status:', selectedPeriod?.status);
+    if (selectedPeriod && selectedPeriod.status === 'OK') {
+      console.log('selectedPeriod synthesis:', selectedPeriod.synthesis);
+    } else {
+      console.log('selectedPeriod synthesis: not available (status is not OK)');
+    }
+  }, [selectedPeriod]);
+
+  // Log selectionState changes
+  useEffect(() => {
+    console.log('selectionState changed:', selectionState);
+  }, [selectionState]);
+
   // State for period selection
   const [domainToggle, setDomainToggle] = useState<'CAREER' | 'WEALTH' | 'BOTH'>('BOTH');
   const [submittedPeriod, setSubmittedPeriod] = useState<{ mahadashaId: string; antardashaId: string } | null>(null);
 
-  useEffect(() => {
-    // New options identify a new analysis selection context; invalidate its report too.
-    setSubmittedPeriod(null);
-  }, [dashPeriodOptions]);
+  // NOTE: Commented out because it was clearing submittedPeriod when dashPeriodOptions changes
+  // during period selection updates, causing the report to not render.
+  // The handleSelectionChange callback (below) handles clearing when user changes dropdowns.
+  // useEffect(() => {
+  //   // New options identify a new analysis selection context; invalidate its report too.
+  //   setSubmittedPeriod(null);
+  // }, [dashPeriodOptions]);
 
   // isSubmitting is derived from selectionState
   const isSubmitting = selectionStatus === 'SUBMITTING';
@@ -106,12 +125,25 @@ export const DashaPage: React.FC<DashaPageProps> = ({
 
   // Handle period selection
   const handleSelectPeriod = useCallback(async (mahadashaId: string, antardashaId: string) => {
-    if (!onSelectPeriod) return;
+    console.log('handleSelectPeriod called with:', mahadashaId, antardashaId);
+    if (!onSelectPeriod) {
+      console.log('onSelectPeriod is undefined');
+      return;
+    }
 
     setSubmittedPeriod({ mahadashaId, antardashaId });
+    console.log('Calling onSelectPeriod...');
 
     await onSelectPeriod(mahadashaId, antardashaId);
-  }, [onSelectPeriod]);
+    console.log('onSelectPeriod completed');
+    
+    // Check the result after a small delay to let state update
+    setTimeout(() => {
+      console.log('After delay - selectedPeriod:', selectedPeriod);
+      console.log('After delay - selectionStatus:', selectionStatus);
+      console.log('After delay - submittedPeriod:', submittedPeriod);
+    }, 100);
+  }, [onSelectPeriod, selectedPeriod, selectionStatus, submittedPeriod]);
 
   // 1. Error state when no analysis is available
   if (status === 'ERROR' && !analysis) {
