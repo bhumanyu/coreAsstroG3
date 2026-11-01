@@ -119,6 +119,25 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
     expect(result.diagnostics.some(item => item.code === 'MISSING_CHART_CALCULATION_LINK')).toBe(true);
   });
 
+  it('accepts an explicit source record ID when no planet or house reference exists', () => {
+    const sourceRecord = evidence({
+      planet: undefined,
+      house: undefined,
+      timing: undefined,
+      evidenceFamily: undefined,
+      sourceRecordId: 'CHART-CALCULATION-RECORD-17'
+    });
+    const result = buildReasoningTraceCompleteness({
+      domain: 'CAREER',
+      conclusionNodeId: 'CAREER-C11-FINAL',
+      synthesisRuleId: 'C11',
+      synthesisEvidenceReferences: [{ id: 'CAREER-NATAL-SEM-1', namespace: 'IDENTITY' }],
+      evidence: [sourceRecord]
+    });
+    expect(result.diagnostics.some(item => item.code === 'MISSING_CHART_CALCULATION_LINK')).toBe(false);
+    expect(result.links[0].sourceRecordId).toBe('CHART-CALCULATION-RECORD-17');
+  });
+
   it('diagnoses invalid related-evidence links without resolving them through semantic aliases', () => {
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
