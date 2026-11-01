@@ -119,12 +119,11 @@ export function selectTopEvidence(
  * NOTE: This measures "ANALYSIS COMPLETENESS" (availability signals of sub-analyses
  * such as dasha, varga, and transit), NOT astrological truth or certainty.
  *
- * Checks the 5 canonical availability signals:
+ * Checks the 4 validated, confidence-bearing availability signals:
  * 1. career.activation.dasha.status === 'UNAVAILABLE'
  * 2. career.d10.relationship === 'UNAVAILABLE'
  * 3. career.activation.transit.status === 'UNAVAILABLE'
  * 4. wealth.activation.dasha.status === 'UNAVAILABLE'
- * 5. wealth.d2.relationship === 'UNAVAILABLE'
  *
  * 0 unavailable -> 'HIGH'
  * 1-2 unavailable -> 'MEDIUM'
@@ -136,7 +135,7 @@ export function deriveOverallConfidence(analysis: ProductAnalysis): ProductConfi
   if (analysis.career.d10.relationship === 'UNAVAILABLE') unavailableCount++;
   if (analysis.career.activation.transit.status === 'UNAVAILABLE') unavailableCount++;
   if (analysis.wealth.activation.dasha.status === 'UNAVAILABLE') unavailableCount++;
-  if (analysis.wealth.d2.relationship === 'UNAVAILABLE') unavailableCount++;
+  // D2 is intentionally gated as UNAVAILABLE and is not a required confidence layer.
 
   if (unavailableCount === 0) return 'HIGH';
   if (unavailableCount <= 2) return 'MEDIUM';
