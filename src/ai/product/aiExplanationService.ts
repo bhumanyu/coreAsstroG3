@@ -55,6 +55,9 @@ import {
  *    - No ID regeneration or field transformation
  */
 
+export const AI_EXPLANATION_PROMPT_VERSION = 'A06-GROUNDING-1';
+const DEFAULT_AI_PROVIDER_TIMEOUT_MS = 15_000;
+
 export interface RunProductAiExplanationOptions {
   readonly horoscope: Horoscope;
   readonly task: AiTask;
@@ -62,6 +65,8 @@ export interface RunProductAiExplanationOptions {
   readonly lifeAnalysis: LifeAnalysis;
   readonly temporalState: AnalysisTemporalState;
   readonly router?: AiRouter;
+  /** Maximum time allowed for the provider/router execution. */
+  readonly providerTimeoutMs?: number;
   /**
    * Optional selected-period synthesis for SELECTED_PERIOD_ANALYSIS task.
    * When provided, this is projected into AI context as an additive field.
@@ -119,7 +124,8 @@ export async function runAiExplanation(
       context,
       'STRUCTURED',
       requestId,
-      traceabilityIds
+      traceabilityIds,
+      AI_EXPLANATION_PROMPT_VERSION
     );
 
     const router = options.router ?? createDefaultAiRouter();
@@ -130,16 +136,20 @@ export async function runAiExplanation(
      * This proves the complete product path
      * without introducing network dependencies.
      */
-    const routingResult = await router.route(request, {
-      mode: 'LOCAL_ONLY',
-      fallbackPolicy: 'NO_FALLBACK'
-    });
+    const routingResult = await withTimeout(
+      router.route(request, {
+        mode: 'LOCAL_ONLY',
+        fallbackPolicy: 'NO_FALLBACK'
+      }),
+      options.providerTimeoutMs ?? DEFAULT_AI_PROVIDER_TIMEOUT_MS
+    );
 
     return mapRoutingResultToViewModel(
       routingResult,
       context.evidence,
       context.selectedPeriod,
-      options.task
+      options.task,
+      AI_EXPLANATION_PROMPT_VERSION
     );
   } catch (error) {
     // Use the real requestId, not evidence-IDs-as-request-id
@@ -159,7 +169,8 @@ function mapRoutingResultToViewModel(
   result: AiRoutingResult,
   evidence: readonly AiEvidence[],
   selectedPeriod: AiContext['selectedPeriod'],
-  task: AiTask
+  task: AiTask,
+  promptVersion: string
 ): AiExplanationResult {
   const rawStructured = result.response.structuredOutput;
   const structured = extractStructuredOutput(rawStructured);
@@ -229,6 +240,9 @@ function mapRoutingResultToViewModel(
       providerId: result.providerId,
       providerName: result.providerName,
       providerKind: result.providerKind,
+      ...(result.providerVersion ? { providerVersion: result.providerVersion } : {}),
+      ...(typeof result.response.metadata?.model === 'string' ? { model: result.response.metadata.model } : {}),
+      promptVersion,
       routingMode: result.routingMode,
       fallbackUsed: result.fallbackUsed,
       selectionReason: result.selectionReason,
@@ -274,11 +288,29 @@ function mapRoutingResultToViewModel(
     providerId: result.providerId,
     providerName: result.providerName,
     providerKind: result.providerKind,
+    ...(result.providerVersion ? { providerVersion: result.providerVersion } : {}),
+    ...(typeof result.response.metadata?.model === 'string' ? { model: result.response.metadata.model } : {}),
+    promptVersion,
     routingMode: result.routingMode,
     fallbackUsed: result.fallbackUsed,
     selectionReason: result.selectionReason,
     generatedAt: systemClock.now()
   });
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new Error('AI provider timeout must be a positive finite number.');
+  }
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error('AI provider timed out.')), timeoutMs);
+    });
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+  }
 }
 
 function mergeWarnings(
