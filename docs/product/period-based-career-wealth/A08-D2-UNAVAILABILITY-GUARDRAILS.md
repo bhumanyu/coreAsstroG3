@@ -26,3 +26,17 @@ Unvalidated D2 evidence is not counted as an evidence source and cannot increase
 6. The validation suite passes on the release candidate and an explicit domain approval changes this containment policy.
 
 No partial mapper, adapter, producer declaration or UI flag can bypass these gates.
+
+
+## Gate required before D2 can become available
+
+D2 may be promoted only in a separate approved change after all of the following are satisfied:
+
+1. **Calculation validation:** D2 chart construction is independently cross-checked against trusted reference calculations over representative golden birth details, including timezone, ayanamsa and boundary cases.
+2. **Mapping validation:** planetary placements, signs, houses and D2-to-source-chart links are verified, including malformed and incomplete chart inputs.
+3. **Interpretation validation:** the D2 relationship policy is independently reviewed and has deterministic semantics for support, challenge, neutral, partial and conflicting evidence.
+4. **Evidence validation:** every D2 evidence occurrence has stable occurrence identity, producer/source rule provenance, and valid links to its original chart inputs.
+5. **Regression validation:** absent, malformed, single-declaration, multi-conflict, confidence/completeness, AI projection, product UI and export fixtures all pass.
+6. **Explicit approval:** the domain/product owner approves the validation report and a dedicated change updates the canonical availability policy and every downstream adapter together.
+
+Until all gates pass, the only valid canonical and projected D2 state is `UNAVAILABLE`. Raw D2 data may be retained for diagnostics but cannot contribute a relationship, strength, confidence, evidence coverage or wealth conclusion.
