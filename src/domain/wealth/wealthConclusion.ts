@@ -138,7 +138,6 @@ export function buildWealthConclusionData(params: {
   const {
     overallStatus,
     dimensions,
-    d2Relationship: _d2Relationship,
     manifestations,
     evidence,
     periodTimingActivations,
