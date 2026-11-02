@@ -559,7 +559,7 @@ export interface CareerProducerEvidenceProvenance {
   readonly ruleIds: readonly string[];
 }
 
-/** Deterministic per-record provenance quality; never reads natal promise strength. */
+/** Returns true when an identifier collection contains a non-blank value. */
 function hasNonBlankProvenanceIds(ids: readonly string[]): boolean {
   return ids.some(id => typeof id === 'string' && id.trim().length > 0);
 }
