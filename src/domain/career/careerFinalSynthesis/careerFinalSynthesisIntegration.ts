@@ -560,18 +560,25 @@ export interface CareerProducerEvidenceProvenance {
 }
 
 /** Deterministic per-record provenance quality; never reads natal promise strength. */
+function hasNonBlankProvenanceIds(ids: readonly string[]): boolean {
+  return ids.some(id => typeof id === 'string' && id.trim().length > 0);
+}
+
+/** Deterministic per-record provenance quality; never reads natal promise strength. */
 export function deriveCareerProducerEvidenceQuality(
   records: readonly CareerProducerEvidenceProvenance[]
 ): 'HIGH' | 'MEDIUM' | 'LOW' {
+  // No producer records means provenance was not supplied, not that supplied records
+  // were proven to have invalid provenance. C11 reports this as NOT_PROVIDED.
   if (records.length === 0) return 'MEDIUM';
 
   const completeCount = records.filter(
-    item => item.sourceIds.length > 0 && item.ruleIds.length > 0
+    item => hasNonBlankProvenanceIds(item.sourceIds) && hasNonBlankProvenanceIds(item.ruleIds)
   ).length;
   if (completeCount === records.length) return 'HIGH';
 
   const anyProvenance = records.some(
-    item => item.sourceIds.length > 0 || item.ruleIds.length > 0
+    item => hasNonBlankProvenanceIds(item.sourceIds) || hasNonBlankProvenanceIds(item.ruleIds)
   );
   return anyProvenance ? 'MEDIUM' : 'LOW';
 }
