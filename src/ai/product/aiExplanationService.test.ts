@@ -1382,7 +1382,7 @@ describe('A06 — AI execution independence and grounding', () => {
     expect(capturedRequest?.context.career?.canonicalC11).toBeDefined();
     expect(capturedRequest?.context.wealth?.finalSynthesis).toBeDefined();
 
-    const canonicalEvidenceIds = capturedRequest!.context.domainInterpretations
+    const canonicalEvidenceIds = (capturedRequest?.context.domainInterpretations ?? [])
       .flatMap((domain) => domain.evidence.map((evidence) => evidence.id));
     expect(capturedRequest?.traceabilityIds).toEqual(
       expect.arrayContaining(canonicalEvidenceIds)
