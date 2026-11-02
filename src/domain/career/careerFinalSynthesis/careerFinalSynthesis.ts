@@ -430,8 +430,15 @@ function deriveConfidence(
   const missingRequiredLayers = layerCoverage.filter(x => x.requirement === 'REQUIRED' && x.availability === 'UNAVAILABLE').map(x => x.layer);
   const missingSupportingLayers = layerCoverage.filter(x => x.requirement === 'SUPPORTING' && x.availability === 'UNAVAILABLE').map(x => x.layer);
   const missingOptionalLayers = layerCoverage.filter(x => x.requirement === 'OPTIONAL' && x.availability === 'UNAVAILABLE').map(x => x.layer);
-  const provenanceProvided = evidenceIds.length > 0 || sourceIds.length > 0 || ruleIds.length > 0;
-  const provenance: CareerConfidenceCoverage['provenance'] = !provenanceProvided ? 'NOT_PROVIDED' : evidenceIds.length > 0 && sourceIds.length > 0 && ruleIds.length > 0 ? 'COMPLETE' : 'PARTIAL';
+  const hasEvidenceIds = evidenceIds.some(id => id.trim().length > 0);
+  const hasSourceIds = sourceIds.some(id => id.trim().length > 0);
+  const hasRuleIds = ruleIds.some(id => id.trim().length > 0);
+  const provenanceProvided = hasEvidenceIds || hasSourceIds || hasRuleIds;
+  const provenance: CareerConfidenceCoverage['provenance'] = !provenanceProvided
+    ? 'NOT_PROVIDED'
+    : hasEvidenceIds && hasSourceIds && hasRuleIds
+      ? 'COMPLETE'
+      : 'PARTIAL';
   const evidenceQuality: CareerConfidenceCoverage['quality'] = suppliedEvidenceQuality ?? (provenance === 'COMPLETE' ? 'HIGH' : 'MEDIUM');
   const coverage: CareerConfidenceCoverage = Object.freeze({
     status: missingRequiredLayers.length > 0 ? 'INSUFFICIENT' : missingSupportingLayers.length > 0 ? 'PARTIAL' : 'COMPLETE',
