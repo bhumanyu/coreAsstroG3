@@ -2241,6 +2241,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       // C11 has evidenceId that matches identityKey but not occurrence id
       const finalSynthesis: CareerFinalSynthesisResult = {
+        ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -5127,6 +5128,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       };
 
       const finalSynthesis: CareerFinalSynthesisResult = {
+        ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -5606,6 +5608,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       };
 
       const finalSynthesis: CareerFinalSynthesisResult = {
+        ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -6012,6 +6015,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       };
 
       const finalSynthesis: CareerFinalSynthesisResult = {
+        ...createEmptyFinalSynthesis(),
         finalStrength: 'STRONG',
         confidence: 'HIGH',
         natalDirection: 'SUPPORT',
