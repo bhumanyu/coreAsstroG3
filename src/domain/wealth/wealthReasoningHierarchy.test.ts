@@ -378,4 +378,190 @@ describe('Wealth Reasoning Hierarchy (Golden Scenarios W1-W6 & CW-01 Validation)
     expect(result.primarySourceIds).toContain('EV_JUPITER_WEALTH_2');
     expect(result.primarySourceIds).toContain('EV_JUPITER_WEALTH_3');
   });
+
+  it('P0: two occurrences sharing identityKey merge into one canonical record with occurrenceCount=2', () => {
+    const ev1 = createDomainEvidence({
+      id: 'WEALTH_2H_OCCURRENCE_1',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: '2nd house strong - occurrence 1',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'WEALTH_2H_STRONG_001',
+      dimension: 'ACCUMULATION',
+      identityKey: 'WEALTH_2H_SEMANTIC'
+    });
+
+    const ev2 = createDomainEvidence({
+      id: 'WEALTH_2H_OCCURRENCE_2',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: '2nd house strong - occurrence 2',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'WEALTH_2H_STRONG_001',
+      dimension: 'ACCUMULATION',
+      identityKey: 'WEALTH_2H_SEMANTIC'
+    });
+
+    const result = evaluateWealthReasoningHierarchy({
+      evidence: [ev1, ev2]
+    });
+
+    // Canonical evidence IDs should be deduplicated to 1 (the identityKey)
+    expect(result.primaryEvidenceIds).toHaveLength(1);
+    expect(result.primaryEvidenceIds[0]).toBe('WEALTH_2H_SEMANTIC');
+
+    // Occurrence-level source IDs should contain both occurrence IDs
+    expect(result.primarySourceIds).toHaveLength(2);
+    expect(result.primarySourceIds).toContain('WEALTH_2H_OCCURRENCE_1');
+    expect(result.primarySourceIds).toContain('WEALTH_2H_OCCURRENCE_2');
+
+    // Verify the canonical record in the reasoning trace
+    const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
+    expect(canonicalEvidence.identityKey).toBe('WEALTH_2H_SEMANTIC');
+    expect(canonicalEvidence.occurrenceCount).toBe(2);
+    expect(canonicalEvidence.sourceIds).toEqual(['WEALTH_2H_OCCURRENCE_1', 'WEALTH_2H_OCCURRENCE_2']);
+    // representativeOccurrenceId is sorted-first from sourceIds
+    expect(canonicalEvidence.sourceIds[0]).toBe('WEALTH_2H_OCCURRENCE_1');
+  });
+
+  it('P0: mapped relatedEvidenceIds and rootEvidenceIds survive canonicalization end-to-end', () => {
+    const rootEvidence = createDomainEvidence({
+      id: 'WEALTH_ROOT_OCCURRENCE',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Canonical root evidence',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'WEALTH_ROOT_FACT_001',
+      dimension: 'ACCUMULATION',
+      identityKey: 'WEALTH_ROOT_SEMANTIC'
+    });
+
+    const derivedEvidence = createDomainEvidence({
+      id: 'WEALTH_DERIVED_OCCURRENCE',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Derived evidence with root link',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'WEALTH_DERIVED_RULE_001',
+      dimension: 'ACCUMULATION',
+      identityKey: 'WEALTH_DERIVED_SEMANTIC',
+      rootEvidenceIds: ['WEALTH_ROOT_SEMANTIC'],
+      relatedEvidenceIds: ['WEALTH_ROOT_SEMANTIC']
+    });
+
+    const result = evaluateWealthReasoningHierarchy({
+      evidence: [rootEvidence, derivedEvidence]
+    });
+
+    // Both evidence should be present in primaryEvidenceIds
+    expect(result.primaryEvidenceIds).toHaveLength(2);
+    expect(result.primaryEvidenceIds).toContain('WEALTH_ROOT_SEMANTIC');
+    expect(result.primaryEvidenceIds).toContain('WEALTH_DERIVED_SEMANTIC');
+
+    // Verify the canonical derived evidence preserves relatedEvidenceIds and rootEvidenceIds
+    const canonicalDerived = result.reasoningTrace.primaryPromise.find(
+      (e) => e.identityKey === 'WEALTH_DERIVED_SEMANTIC'
+    );
+    expect(canonicalDerived).toBeDefined();
+    expect(canonicalDerived?.rootEvidenceIds).toEqual(['WEALTH_ROOT_SEMANTIC']);
+    expect(canonicalDerived?.relatedEvidenceIds).toEqual(['WEALTH_ROOT_SEMANTIC']);
+  });
+
+  it('P0: multi-occurrence merge into linked roots preserves relationships', () => {
+    const rootEvidence = createDomainEvidence({
+      id: 'WEALTH_ROOT_OCCURRENCE',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Canonical root evidence',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'WEALTH_ROOT_FACT_001',
+      dimension: 'ACCUMULATION',
+      identityKey: 'WEALTH_ROOT_SEMANTIC'
+    });
+
+    const derivedOccurrence1 = createDomainEvidence({
+      id: 'WEALTH_DERIVED_OCCURRENCE_1',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Derived evidence occurrence 1',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'WEALTH_DERIVED_RULE_001',
+      dimension: 'ACCUMULATION',
+      identityKey: 'WEALTH_DERIVED_SEMANTIC',
+      rootEvidenceIds: ['WEALTH_ROOT_SEMANTIC'],
+      relatedEvidenceIds: ['WEALTH_ROOT_SEMANTIC']
+    });
+
+    const derivedOccurrence2 = createDomainEvidence({
+      id: 'WEALTH_DERIVED_OCCURRENCE_2',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Derived evidence occurrence 2',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'WEALTH_DERIVED_RULE_001',
+      dimension: 'ACCUMULATION',
+      identityKey: 'WEALTH_DERIVED_SEMANTIC',
+      rootEvidenceIds: ['WEALTH_ROOT_SEMANTIC'],
+      relatedEvidenceIds: ['WEALTH_ROOT_SEMANTIC']
+    });
+
+    const result = evaluateWealthReasoningHierarchy({
+      evidence: [rootEvidence, derivedOccurrence1, derivedOccurrence2]
+    });
+
+    // Canonical evidence IDs should be deduplicated to 2 (root + derived)
+    expect(result.primaryEvidenceIds).toHaveLength(2);
+    expect(result.primaryEvidenceIds).toContain('WEALTH_ROOT_SEMANTIC');
+    expect(result.primaryEvidenceIds).toContain('WEALTH_DERIVED_SEMANTIC');
+
+    // Occurrence-level source IDs should contain all 3 occurrence IDs
+    expect(result.primarySourceIds).toHaveLength(3);
+    expect(result.primarySourceIds).toContain('WEALTH_ROOT_OCCURRENCE');
+    expect(result.primarySourceIds).toContain('WEALTH_DERIVED_OCCURRENCE_1');
+    expect(result.primarySourceIds).toContain('WEALTH_DERIVED_OCCURRENCE_2');
+
+    // Verify the canonical derived evidence preserves relationships and occurrenceCount
+    const canonicalDerived = result.reasoningTrace.primaryPromise.find(
+      (e) => e.identityKey === 'WEALTH_DERIVED_SEMANTIC'
+    );
+    expect(canonicalDerived).toBeDefined();
+    expect(canonicalDerived?.occurrenceCount).toBe(2);
+    expect(canonicalDerived?.rootEvidenceIds).toEqual(['WEALTH_ROOT_SEMANTIC']);
+    expect(canonicalDerived?.sourceIds).toEqual(['WEALTH_DERIVED_OCCURRENCE_1', 'WEALTH_DERIVED_OCCURRENCE_2']);
+  });
 });

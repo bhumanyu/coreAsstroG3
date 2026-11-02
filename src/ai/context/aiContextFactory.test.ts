@@ -2001,6 +2001,9 @@ describe('normalizeTimingActivationEffect', () => {
     expect(normalizeTimingActivationEffect('PARTIALLY_ACTIVATES')).toBe('PARTIALLY_ACTIVATES');
     expect(normalizeTimingActivationEffect('DOES_NOT_ACTIVATE')).toBe('DOES_NOT_ACTIVATE');
     expect(normalizeTimingActivationEffect('CHALLENGES')).toBe('CHALLENGES');
+    expect(normalizeTimingActivationEffect('STRONGLY_SUPPORTS')).toBe('STRONGLY_SUPPORTS');
+    expect(normalizeTimingActivationEffect('SUPPORTS')).toBe('SUPPORTS');
+    expect(normalizeTimingActivationEffect('CONTRADICTS')).toBe('CONTRADICTS');
     expect(normalizeTimingActivationEffect('UNKNOWN')).toBe('UNKNOWN');
     expect(normalizeTimingActivationEffect('INSUFFICIENT_DATA')).toBe('INSUFFICIENT_DATA');
   });

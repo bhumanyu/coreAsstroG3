@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildCareerFinalAnalysis,
-  deriveCareerProducerEvidenceQuality
+  deriveCareerProducerEvidenceQuality,
+  type CareerProducerEvidenceProvenance
 } from './careerFinalSynthesisIntegration';
 
 import type {
@@ -882,6 +883,49 @@ describe('C11 Final Career Synthesis Integration', () => {
 
     // Should not have conflicts for missing layers
     expect(result.conflicts).toHaveLength(0);
+  });
+
+  describe('C11 confidence policy: four cases', () => {
+    it('no producer records → MEDIUM (provenance not supplied)', () => {
+      const quality = deriveCareerProducerEvidenceQuality([]);
+      expect(quality).toBe('MEDIUM');
+    });
+
+    it('missing provenance (no sourceIds or ruleIds) → LOW per C11 rule', () => {
+      const records: readonly CareerProducerEvidenceProvenance[] = Object.freeze([
+        { sourceIds: [], ruleIds: [] },
+        { sourceIds: [], ruleIds: [] }
+      ]);
+      const quality = deriveCareerProducerEvidenceQuality(records);
+      expect(quality).toBe('LOW');
+    });
+
+    it('partial provenance (some sourceIds or ruleIds present) → MEDIUM', () => {
+      const records: readonly CareerProducerEvidenceProvenance[] = Object.freeze([
+        { sourceIds: ['source-1'], ruleIds: [] }, // Partial: sourceIds only
+        { sourceIds: [], ruleIds: ['rule-1'] } // Partial: ruleIds only
+      ]);
+      const quality = deriveCareerProducerEvidenceQuality(records);
+      expect(quality).toBe('MEDIUM');
+    });
+
+    it('complete provenance (both sourceIds and ruleIds present) → HIGH', () => {
+      const records: readonly CareerProducerEvidenceProvenance[] = Object.freeze([
+        { sourceIds: ['source-1', 'source-2'], ruleIds: ['rule-1', 'rule-2'] },
+        { sourceIds: ['source-3'], ruleIds: ['rule-3'] }
+      ]);
+      const quality = deriveCareerProducerEvidenceQuality(records);
+      expect(quality).toBe('HIGH');
+    });
+
+    it('mixed provenance (some complete, some partial) → MEDIUM', () => {
+      const records: readonly CareerProducerEvidenceProvenance[] = Object.freeze([
+        { sourceIds: ['source-1'], ruleIds: ['rule-1'] }, // Complete
+        { sourceIds: ['source-2'], ruleIds: [] } // Partial
+      ]);
+      const quality = deriveCareerProducerEvidenceQuality(records);
+      expect(quality).toBe('MEDIUM');
+    });
   });
 });
 

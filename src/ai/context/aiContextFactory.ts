@@ -1306,10 +1306,13 @@ export function normalizeTimingActivationEffect(effect: unknown): TimingActivati
     upper === 'PARTIALLY_ACTIVATES' ||
     upper === 'DOES_NOT_ACTIVATE' ||
     upper === 'CHALLENGES' ||
+    upper === 'STRONGLY_SUPPORTS' ||
+    upper === 'SUPPORTS' ||
+    upper === 'CONTRADICTS' ||
     upper === 'UNKNOWN' ||
     upper === 'INSUFFICIENT_DATA'
   ) {
-    return upper;
+    return upper as TimingActivationEffect;
   }
 
   // Fuzzy matching for confident free-form strings

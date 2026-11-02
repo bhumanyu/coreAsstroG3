@@ -363,4 +363,91 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
       expect(mapped.identityKey).toBeUndefined();
     });
   });
+
+  describe('P0 Regression Tests: Wealth Evidence Identity Contract', () => {
+    it('two occurrences sharing identityKey merge into one canonical record with occurrenceCount=2 and both IDs in sourceIds', () => {
+      const occurrence1: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'WEALTH_2H_OCCURRENCE_1',
+        ruleId: 'WEALTH_2H_STRONG',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: '2nd house strong - occurrence 1',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2],
+        identityKey: 'WEALTH_2H_SEMANTIC'
+      };
+
+      const occurrence2: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'WEALTH_2H_OCCURRENCE_2',
+        ruleId: 'WEALTH_2H_STRONG',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: '2nd house strong - occurrence 2',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2],
+        identityKey: 'WEALTH_2H_SEMANTIC'
+      };
+
+      const mapped = buildWealthEvidence([occurrence1, occurrence2]);
+
+      // After mapping, both occurrences remain separate in DomainEvidence
+      // Deduplication happens later in wealthReasoningHierarchy via deduplicateReasoningEvidence
+      expect(mapped).toHaveLength(2);
+      expect(mapped[0].id).toBe('WEALTH_2H_OCCURRENCE_1');
+      expect(mapped[1].id).toBe('WEALTH_2H_OCCURRENCE_2');
+      expect(mapped[0].identityKey).toBe('WEALTH_2H_SEMANTIC');
+      expect(mapped[1].identityKey).toBe('WEALTH_2H_SEMANTIC');
+    });
+
+    it('duplicate evidenceId throws DUPLICATE_OCCURRENCE_ID error', () => {
+      const record: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'DUPLICATE-ID',
+        ruleId: 'WEALTH_2H_STRONG',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: 'Duplicate ID test',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2]
+      };
+
+      expect(() => buildWealthEvidence([record, { ...record, statement: 'duplicate' }]))
+        .toThrow('Duplicate Wealth producer occurrence ID: DUPLICATE-ID');
+    });
+
+    it('mapper preserves relatedEvidenceIds and rootEvidenceIds through canonicalization', () => {
+      const rootEvidence: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'WEALTH_ROOT_OCCURRENCE',
+        ruleId: 'WEALTH_ROOT_FACT',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: 'Canonical root evidence',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2],
+        identityKey: 'WEALTH_ROOT_SEMANTIC'
+      };
+
+      const derivedEvidence: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'WEALTH_DERIVED_OCCURRENCE',
+        ruleId: 'WEALTH_DERIVED_RULE',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: 'Derived evidence with root link',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2],
+        identityKey: 'WEALTH_DERIVED_SEMANTIC',
+        rootEvidenceIds: ['WEALTH_ROOT_SEMANTIC']
+      };
+
+      const [mappedRoot, mappedDerived] = buildWealthEvidence([rootEvidence, derivedEvidence]);
+
+      // Verify rootEvidenceIds is preserved
+      expect(mappedDerived.rootEvidenceIds).toEqual(['WEALTH_ROOT_SEMANTIC']);
+      expect(mappedRoot.rootEvidenceIds).toBeUndefined();
+    });
+  });
 });

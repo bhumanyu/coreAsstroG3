@@ -5,7 +5,8 @@ import {
   selectDedupedEvidence,
   selectUnifiedReasoningViewModel,
   buildEvidenceGroups,
-  mapEvidence
+  mapEvidence,
+  normalizeActivationEffect
 } from '../reasoningViewModel';
 import { createProductAnalysis } from './testHelpers';
 import type {
@@ -912,5 +913,47 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(unified.overview.career.status).toBe('UNAVAILABLE');
     expect(unified.overview.career.headline).toBeUndefined();
     expect(unified.overview.career.statement).toBeUndefined();
+  });
+
+  describe('normalizeActivationEffect', () => {
+    it('normalizes STRONGLY_SUPPORTS', () => {
+      expect(normalizeActivationEffect('STRONGLY_SUPPORTS')).toBe('STRONGLY_SUPPORTS');
+    });
+
+    it('normalizes SUPPORTS', () => {
+      expect(normalizeActivationEffect('SUPPORTS')).toBe('SUPPORTS');
+    });
+
+    it('normalizes CONTRADICTS', () => {
+      expect(normalizeActivationEffect('CONTRADICTS')).toBe('CONTRADICTS');
+    });
+
+    it('normalizes existing ACTIVATES', () => {
+      expect(normalizeActivationEffect('ACTIVATES')).toBe('ACTIVATES');
+    });
+
+    it('normalizes existing PARTIALLY_ACTIVATES', () => {
+      expect(normalizeActivationEffect('PARTIALLY_ACTIVATES')).toBe('PARTIALLY_ACTIVATES');
+    });
+
+    it('normalizes existing DOES_NOT_ACTIVATE', () => {
+      expect(normalizeActivationEffect('DOES_NOT_ACTIVATE')).toBe('DOES_NOT_ACTIVATE');
+    });
+
+    it('normalizes existing CHALLENGES', () => {
+      expect(normalizeActivationEffect('CHALLENGES')).toBe('CHALLENGES');
+    });
+
+    it('returns UNAVAILABLE for unrecognized values', () => {
+      expect(normalizeActivationEffect('UNKNOWN_VALUE')).toBe('UNAVAILABLE');
+    });
+
+    it('returns UNAVAILABLE for undefined', () => {
+      expect(normalizeActivationEffect(undefined)).toBe('UNAVAILABLE');
+    });
+
+    it('returns UNAVAILABLE for empty string', () => {
+      expect(normalizeActivationEffect('')).toBe('UNAVAILABLE');
+    });
   });
 });

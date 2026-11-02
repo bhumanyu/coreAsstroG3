@@ -236,6 +236,9 @@ export function normalizeActivationEffect(effect?: string): ActivationEffect {
     case 'PARTIALLY_ACTIVATES':
     case 'DOES_NOT_ACTIVATE':
     case 'CHALLENGES':
+    case 'STRONGLY_SUPPORTS':
+    case 'SUPPORTS':
+    case 'CONTRADICTS':
     case 'UNKNOWN':
     case 'INSUFFICIENT_DATA':
     case 'UNAVAILABLE':

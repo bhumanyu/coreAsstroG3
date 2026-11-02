@@ -65,6 +65,9 @@ export type TimingActivationEffect =
   | 'PARTIALLY_ACTIVATES'
   | 'CHALLENGES'
   | 'DOES_NOT_ACTIVATE'
+  | 'STRONGLY_SUPPORTS'
+  | 'SUPPORTS'
+  | 'CONTRADICTS'
   | 'UNKNOWN'
   | 'INSUFFICIENT_DATA';
 
