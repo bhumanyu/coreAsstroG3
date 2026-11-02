@@ -9,6 +9,9 @@ import type {
 export interface AiExplanationEvidence {
   readonly evidence: AiEvidence;
   readonly role: 'SUPPORTING' | 'CHALLENGING';
+  /** Original reference supplied by synthesis; identity references remain distinct from occurrence IDs. */
+  readonly referenceId?: string;
+  readonly referenceNamespace?: 'IDENTITY';
 }
 
 export interface AiExplanationViewModel {

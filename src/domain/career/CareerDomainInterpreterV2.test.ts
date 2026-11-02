@@ -2630,7 +2630,7 @@ describe('CareerDomainInterpreterV2', () => {
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());
 
       // Get the C11 final synthesis
-      const finalSynthesis = v2.conclusionData?.careerFinalSynthesis;
+      const finalSynthesis = v2.conclusionData?.canonicalCareerFinalSynthesis;
       expect(finalSynthesis).toBeDefined();
 
       // Get the emitted canonical evidence

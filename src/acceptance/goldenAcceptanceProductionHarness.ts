@@ -80,6 +80,8 @@ export interface GoldenAcceptanceProductionResult {
 
 export interface EvidenceResolverRecord {
   readonly id: string;
+  /** Semantic identity namespace; never treated as an occurrence ID. */
+  readonly identityKey?: string;
   readonly domain?: string;
   readonly source?: string;
   readonly ruleId?: string;
@@ -289,7 +291,8 @@ export function classifySurfaceGateStatus(
 export function resolveEvidenceIds(
   ids: readonly string[],
   namespaces: EvidenceNamespaces,
-  expectedOwner: GoldenAcceptanceDomain
+  expectedOwner: GoldenAcceptanceDomain,
+  referenceNamespace: 'OCCURRENCE' | 'IDENTITY' = 'OCCURRENCE'
 ): Map<string, {
   resolution: EvidenceResolution;
   record?: EvidenceResolverRecord;
@@ -297,20 +300,40 @@ export function resolveEvidenceIds(
   namespaceOwner?: string;
 }> {
   const domainEvidenceById = new Map<string, EvidenceResolverRecord[]>();
+  const domainEvidenceByIdentity = new Map<string, EvidenceResolverRecord[]>();
   const externalEvidenceById = new Map<string, { readonly record: EvidenceResolverRecord; readonly namespaceOwner: string }[]>();
-  const addRecords = (index: Map<string, EvidenceResolverRecord[]>, records: readonly EvidenceResolverRecord[]) => {
+  const externalEvidenceByIdentity = new Map<string, { readonly record: EvidenceResolverRecord; readonly namespaceOwner: string }[]>();
+
+  const addRecords = (
+    index: Map<string, EvidenceResolverRecord[]>,
+    records: readonly EvidenceResolverRecord[],
+    keyOf: (record: EvidenceResolverRecord) => string | undefined
+  ) => {
     for (const record of records) {
-      const existing = index.get(record.id) || [];
+      const key = keyOf(record)?.trim();
+      if (!key) continue;
+      const existing = index.get(key) ?? [];
       existing.push(record);
-      index.set(record.id, existing);
+      index.set(key, existing);
     }
   };
-  addRecords(domainEvidenceById, namespaces.domainUniverse);
+  addRecords(domainEvidenceById, namespaces.domainUniverse, record => record.id);
+  addRecords(domainEvidenceByIdentity, namespaces.domainUniverse, record => record.identityKey);
+
   for (const externalNamespace of namespaces.externalNamespaces ?? []) {
     for (const record of externalNamespace.records) {
-      const existing = externalEvidenceById.get(record.id) ?? [];
-      existing.push({ record, namespaceOwner: externalNamespace.owner });
-      externalEvidenceById.set(record.id, existing);
+      const occurrenceKey = record.id?.trim();
+      if (occurrenceKey) {
+        const existing = externalEvidenceById.get(occurrenceKey) ?? [];
+        existing.push({ record, namespaceOwner: externalNamespace.owner });
+        externalEvidenceById.set(occurrenceKey, existing);
+      }
+      const identityKey = record.identityKey?.trim();
+      if (identityKey) {
+        const existing = externalEvidenceByIdentity.get(identityKey) ?? [];
+        existing.push({ record, namespaceOwner: externalNamespace.owner });
+        externalEvidenceByIdentity.set(identityKey, existing);
+      }
     }
   }
 
@@ -320,17 +343,34 @@ export function resolveEvidenceIds(
     actualOwner?: string;
     namespaceOwner?: string;
   }>();
+
   for (const id of ids) {
-    const domainRecords = domainEvidenceById.get(id) ?? [];
-    // Domain records are authoritative for an ID; external namespaces resolve external-only IDs.
-    const externalRecords = externalEvidenceById.get(id) ?? [];
-    const records = domainRecords.length > 0
+    const domainRecords = referenceNamespace === 'IDENTITY'
+      ? domainEvidenceByIdentity.get(id) ?? []
+      : domainEvidenceById.get(id) ?? [];
+    const externalRecords = referenceNamespace === 'IDENTITY'
+      ? externalEvidenceByIdentity.get(id) ?? []
+      : externalEvidenceById.get(id) ?? [];
+
+    // Multiple occurrences sharing one semantic identity are expected. Resolve to
+    // one deterministic, real representative occurrence; never rewrite its ID.
+    const candidateRecords = domainRecords.length > 0
       ? domainRecords
       : externalRecords.map(entry => entry.record);
+    const distinctOwners = new Set(candidateRecords.map(record => record.domain).filter(Boolean));
+    const records = referenceNamespace === 'IDENTITY' && distinctOwners.size <= 1 && candidateRecords.length > 1
+      ? [ [...candidateRecords].sort((a, b) => {
+          const provenanceScore = (record: EvidenceResolverRecord) =>
+            Number(Boolean(record.provenance?.source || record.source)) +
+            Number(Boolean(record.provenance?.ruleId || record.ruleId));
+          return provenanceScore(b) - provenanceScore(a) || a.id.localeCompare(b.id);
+        })[0] ]
+      : candidateRecords;
     const external = domainRecords.length === 0 && records.length > 0;
+
     if (records.length === 0) {
       resolutionMap.set(id, { resolution: 'DANGLING' });
-    } else if (records.length > 1) {
+    } else if (records.length > 1 || distinctOwners.size > 1) {
       resolutionMap.set(id, { resolution: 'AMBIGUOUS' });
     } else {
       const record = records[0];
@@ -339,7 +379,7 @@ export function resolveEvidenceIds(
           resolution: 'EXTERNAL',
           record,
           actualOwner: record.domain,
-          namespaceOwner: externalRecords[0].namespaceOwner
+          namespaceOwner: externalRecords.find(entry => entry.record.id === record.id)?.namespaceOwner
         });
       } else if (record.domain !== expectedOwner) {
         resolutionMap.set(id, { resolution: 'OWNER_MISMATCH', record, actualOwner: record.domain });
@@ -483,9 +523,12 @@ function canonicalProjection(
     ? interpretation.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult | undefined
     : interpretation.conclusionData?.wealthFinalSynthesis as WealthConclusionData['wealthFinalSynthesis'];
   if (!synthesis) return undefined;
-  const resolutionMap = resolveEvidenceIds(synthesis.evidenceIds, {
-    domainUniverse: interpretation.evidence
-  }, domain);
+  const resolutionMap = resolveEvidenceIds(
+    synthesis.evidenceIds,
+    { domainUniverse: interpretation.evidence },
+    domain,
+    domain === 'CAREER' ? 'IDENTITY' : 'OCCURRENCE'
+  );
   return {
     domain,
     scope: 'LIFETIME',
@@ -581,10 +624,15 @@ function aiConclusionFromContext(
   // Resolve evidence against the AI context's evidence universe
   const aiEvidenceUniverse = result.aiContext.evidence || [];
   const evidenceIds = careerC11?.canonicalEvidenceIds ?? finalSynthesis?.evidenceIds ?? [];
-  const resolutionMap = resolveEvidenceIds(evidenceIds, {
-    domainUniverse: interpretation.evidence,
-    externalNamespaces: [{ owner: domain, records: aiEvidenceUniverse }]
-  }, domain);
+  const resolutionMap = resolveEvidenceIds(
+    evidenceIds,
+    {
+      domainUniverse: interpretation.evidence,
+      externalNamespaces: [{ owner: domain, records: aiEvidenceUniverse }]
+    },
+    domain,
+    domain === 'CAREER' ? 'IDENTITY' : 'OCCURRENCE'
+  );
 
   return {
     domain,
@@ -622,10 +670,15 @@ function productAiConclusionFromContext(
   // Resolve evidence against the product AI context's evidence universe
   const productAiEvidenceUniverse = result.productAiContext.evidence || [];
   const evidenceIds = careerC11?.canonicalEvidenceIds ?? finalSynthesis?.evidenceIds ?? [];
-  const resolutionMap = resolveEvidenceIds(evidenceIds, {
-    domainUniverse: interpretation.evidence,
-    externalNamespaces: [{ owner: domain, records: productAiEvidenceUniverse }]
-  }, domain);
+  const resolutionMap = resolveEvidenceIds(
+    evidenceIds,
+    {
+      domainUniverse: interpretation.evidence,
+      externalNamespaces: [{ owner: domain, records: productAiEvidenceUniverse }]
+    },
+    domain,
+    domain === 'CAREER' ? 'IDENTITY' : 'OCCURRENCE'
+  );
 
   return {
     domain,

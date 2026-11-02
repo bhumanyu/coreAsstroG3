@@ -204,6 +204,54 @@ describe('PR-8 golden acceptance contract', () => {
     ]));
   });
 
+  it('resolves Career C11 semantic identities without conflating occurrence IDs', () => {
+    const firstOccurrence = {
+      id: 'CAREER-OCC-A',
+      identityKey: 'CAREER-FACT-10H',
+      domain: 'CAREER',
+      provenance: { source: 'D1', ruleId: 'CAREER_RULE_A' }
+    };
+    const secondOccurrence = {
+      id: 'CAREER-OCC-B',
+      identityKey: 'CAREER-FACT-10H',
+      domain: 'CAREER',
+      provenance: { source: 'D10', ruleId: 'CAREER_RULE_B' }
+    };
+
+    const semanticResolution = resolveEvidenceIds(
+      ['CAREER-FACT-10H'],
+      { domainUniverse: [secondOccurrence, firstOccurrence] },
+      'CAREER',
+      'IDENTITY'
+    );
+    expect(semanticResolution.get('CAREER-FACT-10H')).toEqual({
+      resolution: 'RESOLVED',
+      record: firstOccurrence
+    });
+
+    // The same string must not resolve as an occurrence reference.
+    const occurrenceNamespaceResolution = resolveEvidenceIds(
+      ['CAREER-FACT-10H'],
+      { domainUniverse: [secondOccurrence, firstOccurrence] },
+      'CAREER',
+      'OCCURRENCE'
+    );
+    expect(occurrenceNamespaceResolution.get('CAREER-FACT-10H')).toEqual({
+      resolution: 'DANGLING'
+    });
+
+    // Occurrence references continue to resolve only by their exact occurrence ID.
+    const exactOccurrenceResolution = resolveEvidenceIds(
+      ['CAREER-OCC-B'],
+      { domainUniverse: [secondOccurrence, firstOccurrence] },
+      'CAREER'
+    );
+    expect(exactOccurrenceResolution.get('CAREER-OCC-B')).toEqual({
+      resolution: 'RESOLVED',
+      record: secondOccurrence
+    });
+  });
+
   it('uses explicit namespace precedence and ambiguity rules for collisions', () => {
     const domainRecord = { id: 'SHARED', domain: 'CAREER', source: 'DOMAIN' };
     const wrongDomainRecord = { id: 'SHARED-WRONG', domain: 'WEALTH', source: 'DOMAIN' };
@@ -555,18 +603,23 @@ describe('PR-8 golden acceptance contract', () => {
     for (const surfaceName of ['ai-context', 'product-ai-context']) {
       const conclusion = projectionAt(projections, surfaceName) as AcceptanceConclusion;
       const evidence = conclusion.evidence.find(item => {
-        const record = result.career.evidence.find(candidate => candidate.id === item.id);
+        const occurrenceId = item.resolvedProvenance?.occurrence;
+        const record = result.career.evidence.find(candidate => candidate.id === occurrenceId);
         return item.resolution === 'RESOLVED'
           && record?.provenance?.source !== undefined
           && record.provenance.ruleId !== undefined;
       });
       expect(evidence, surfaceName).toBeDefined();
       if (!evidence) throw new Error(`${surfaceName} emitted no resolved provenance-complete evidence.`);
-      const record = result.career.evidence.find(item => item.id === evidence.id);
-      if (!record) throw new Error(`${surfaceName} evidence did not resolve back to the domain universe.`);
-      expect(conclusion.provenance.find(item => item.evidenceId === evidence.id)).toEqual(
-        projectDomainEvidenceToAcceptanceProvenance(record, record.domain)
-      );
+      const occurrenceId = evidence.resolvedProvenance?.occurrence;
+      const record = result.career.evidence.find(item => item.id === occurrenceId);
+      if (!record) throw new Error(`${surfaceName} semantic identity did not resolve to a real domain occurrence.`);
+      expect(conclusion.provenance.find(item => item.evidenceId === evidence.id)).toEqual({
+        ...projectDomainEvidenceToAcceptanceProvenance(record, record.domain),
+        // The conclusion references the semantic identity; occurrence remains the
+        // concrete source record selected by the resolver.
+        evidenceId: evidence.id
+      });
 
       for (const item of conclusion.evidence.filter(candidate => candidate.resolution === 'DANGLING' || candidate.resolution === 'EXTERNAL')) {
         expect(item).not.toHaveProperty('owner');

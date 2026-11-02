@@ -149,7 +149,8 @@ export async function runAiExplanation(
       context.evidence,
       context.selectedPeriod,
       options.task,
-      AI_EXPLANATION_PROMPT_VERSION
+      AI_EXPLANATION_PROMPT_VERSION,
+      new Set(context.career?.canonicalC11?.canonicalEvidenceIds ?? [])
     );
   } catch (error) {
     // Use the real requestId, not evidence-IDs-as-request-id
@@ -170,7 +171,8 @@ function mapRoutingResultToViewModel(
   evidence: readonly AiEvidence[],
   selectedPeriod: AiContext['selectedPeriod'],
   task: AiTask,
-  promptVersion: string
+  promptVersion: string,
+  canonicalIdentityIds: ReadonlySet<string> = new Set()
 ): AiExplanationResult {
   const rawStructured = result.response.structuredOutput;
   const structured = extractStructuredOutput(rawStructured);
@@ -204,14 +206,16 @@ function mapRoutingResultToViewModel(
       evidence,
       selectedPeriod,
       task,
-      'SUPPORTING'
+      'SUPPORTING',
+      canonicalIdentityIds
     );
     const resolvedChallenging = resolveEvidence(
       structured.challengingEvidenceIds,
       evidence,
       selectedPeriod,
       task,
-      'CHALLENGING'
+      'CHALLENGING',
+      canonicalIdentityIds
     );
 
     // Add unresolved IDs to unresolvedQuestions
@@ -350,11 +354,20 @@ function resolveEvidence(
   evidence: readonly AiEvidence[],
   selectedPeriod: AiContext['selectedPeriod'],
   task: AiTask,
-  role: 'SUPPORTING' | 'CHALLENGING'
+  role: 'SUPPORTING' | 'CHALLENGING',
+  canonicalIdentityIds: ReadonlySet<string>
 ): { evidence: readonly AiExplanationEvidence[]; unresolvedIds: readonly string[] } {
   const evidenceById = new Map(
     evidence.map((item) => [item.id, item])
   );
+  const evidenceByIdentityKey = new Map<string, AiEvidence[]>();
+  for (const item of evidence) {
+    const identityKey = item.identityKey?.trim();
+    if (!identityKey) continue;
+    const matches = evidenceByIdentityKey.get(identityKey) ?? [];
+    matches.push(item);
+    evidenceByIdentityKey.set(identityKey, matches);
+  }
 
   // Build selected-period evidence index for SELECTED_PERIOD_ANALYSIS task
   // This index maps evidence IDs to actual AiEvidence objects from both
@@ -375,21 +388,40 @@ function resolveEvidence(
 
     // For SELECTED_PERIOD_ANALYSIS, look up in selectedPeriodEvidenceIndex first
     // For other tasks, validate against context.evidence
+    const isCanonicalIdentityReference =
+      task !== 'SELECTED_PERIOD_ANALYSIS' && canonicalIdentityIds.has(id);
     const item = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceResult
       ? selectedPeriodEvidenceResult.index.get(id)
-      : evidenceById.get(id);
+      : isCanonicalIdentityReference
+        ? undefined
+        : evidenceById.get(id);
 
-    if (!item) {
+    if (item) {
+      resolved.push(Object.freeze({ evidence: item, role }));
+      continue;
+    }
+
+    // C11 references are explicitly tagged by the canonical C11 reference set.
+    // Resolve them only in the semantic identity namespace, even if the same
+    // string happens to collide with an unrelated occurrence ID.
+    if (isCanonicalIdentityReference) {
+      const identityMatches = evidenceByIdentityKey.get(id) ?? [];
+      if (identityMatches.length > 0) {
+        for (const identityMatch of identityMatches) {
+          resolved.push(Object.freeze({
+            evidence: identityMatch,
+            role,
+            referenceId: id,
+            referenceNamespace: 'IDENTITY' as const
+          }));
+        }
+        continue;
+      }
       unresolvedIds.push(id);
       continue;
     }
 
-    resolved.push(
-      Object.freeze({
-        evidence: item,
-        role
-      })
-    );
+    unresolvedIds.push(id);
   }
 
   return {
@@ -421,6 +453,19 @@ function extractTraceabilityIds(context: AiContext): readonly string[] {
         ids.add(evidence.id);
       }
     }
+  }
+
+  // C11 evidenceIds are semantic identities, not DomainEvidence occurrence IDs.
+  // Source and rule IDs are separate trace namespaces; preserve all three explicitly.
+  const canonicalC11 = context.career?.canonicalC11;
+  for (const id of canonicalC11?.canonicalEvidenceIds ?? []) {
+    if (id) ids.add(id);
+  }
+  for (const id of canonicalC11?.canonicalSourceIds ?? []) {
+    if (id) ids.add(id);
+  }
+  for (const id of canonicalC11?.canonicalRuleIds ?? []) {
+    if (id) ids.add(id);
   }
 
   // Extract from selectedPeriod context if present
