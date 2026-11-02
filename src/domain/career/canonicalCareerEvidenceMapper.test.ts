@@ -2128,6 +2128,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       // C11 has evidenceIds that don't match mapper output
       const finalSynthesis: CareerFinalSynthesisResult = {
+        ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -4673,6 +4674,16 @@ function createEmptyFinalSynthesis(): CareerFinalSynthesisResult {
     finalDirection: 'UNAVAILABLE',
     finalStrength: 'UNDETERMINED',
     confidence: 'LOW',
+    confidenceCoverage: {
+      status: 'INSUFFICIENT',
+      quality: 'LOW',
+      layers: [],
+      missingRequiredLayers: ['NATAL'],
+      missingSupportingLayers: ['DASHA', 'D10', 'EXPRESSION'],
+      missingOptionalLayers: ['TRANSIT'],
+      provenance: 'NOT_PROVIDED'
+    },
+    confidenceReasons: [],
     natalDirection: 'UNAVAILABLE',
     natalStrength: 'UNDETERMINED',
     expressionStatus: 'UNAVAILABLE',
@@ -4759,6 +4770,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
     // C11 result built WITH timing (simulating final C11 after two-pass build)
     const finalSynthesisWithTiming: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
       reasoningVersion: 'C11',
       domain: 'CAREER',
       finalStatus: 'SUPPORTED',
@@ -4868,6 +4880,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
     // C11 does NOT reference natal-semantic-1 (e.g., C11 has different scope)
     const finalSynthesisWithoutReference: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
       reasoningVersion: 'C11',
       domain: 'CAREER',
       finalStatus: 'SUPPORTED',
@@ -4926,6 +4939,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
     // C11 references an ID not produced by mapper (e.g., evidence from other source)
     const finalSynthesisWithMissingReference: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
       reasoningVersion: 'C11',
       domain: 'CAREER',
       finalStatus: 'SUPPORTED',
@@ -5175,6 +5189,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       // C11 with malformed evidenceIds containing the sentinel
       const finalSynthesisWithSentinel: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -5235,6 +5250,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       // C11 with malformed evidenceIds containing empty string
       const finalSynthesisWithEmpty: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -5294,6 +5310,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       // C11 with malformed evidenceIds containing whitespace
       const finalSynthesisWithWhitespace: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -5353,6 +5370,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       // C11 with malformed evidenceIds containing whitespace-padded sentinel
       const finalSynthesisWithPaddedSentinel: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -5415,6 +5433,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       // C11 with evidenceTrace.evidenceIds populated differently from top-level evidenceIds
       // (simulating a C11 contract violation)
       const finalSynthesisWithMismatchedTrace: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
@@ -5480,6 +5499,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       // C11 references the occurrence ID instead of the semantic identity
       const finalSynthesisWithOccurrenceRef: CareerFinalSynthesisResult = {
+      ...createEmptyFinalSynthesis(),
         reasoningVersion: 'C11',
         domain: 'CAREER',
         finalStatus: 'SUPPORTED',
