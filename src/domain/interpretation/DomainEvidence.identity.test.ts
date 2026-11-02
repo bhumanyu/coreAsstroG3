@@ -66,7 +66,10 @@ describe('DomainEvidence root and occurrence identity contract (A03)', () => {
     });
 
     expect(() => assertUniqueDomainEvidenceOccurrenceIds([first, second]))
-      .toThrow(/Duplicate DomainEvidence occurrence ID detect  it('rejects a root key that collides with any occurrence ID in the graph', () => {
+      .toThrow(/Duplicate DomainEvidence occurrence ID detected: duplicate-occurrence/);
+  });
+
+  it('rejects a root key that collides with any occurrence ID in the graph', () => {
     const root = createDomainEvidence({
       ...base,
       id: 'same-string-occurrence',
@@ -107,9 +110,6 @@ describe('DomainEvidence root and occurrence identity contract (A03)', () => {
     expect(validation.unresolved).toContainEqual(expect.objectContaining({
       code: 'ROOT_EVIDENCE_CYCLE'
     }));
-  });
-
-ed: duplicate-occurrence/);
   });
 
   it('rejects empty, duplicate, sentinel, and self-referential root links', () => {
