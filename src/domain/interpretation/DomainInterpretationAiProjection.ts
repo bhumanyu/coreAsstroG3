@@ -133,7 +133,6 @@ export function projectDomainInterpretationForAi(
             ? {
                 availability: 'UNAVAILABLE' as const,
                 unavailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.',
-                strength: 'UNDETERMINED' as const,
                 confidence: 'UNDETERMINED' as const
               }
             : v.availability ? { availability: v.availability } : {}),

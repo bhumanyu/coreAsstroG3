@@ -650,8 +650,24 @@ export function buildCareerFinalAnalysis(
 
   const expressionEvidenceIds = collectExpressionEvidenceIds(expression);
 
-  // Producer quality is evaluated per evidence record, not inferred from promise strength.
-  const producerEvidenceRecords = [...natal.evidence, ...dasha.evidence, ...d10.evidence];
+  // Producer contracts expose provenance with different field names. Normalize at this
+  // adapter boundary so quality is evaluated per record without widening upstream types.
+  const toProducerProvenance = (record: object): CareerProducerEvidenceProvenance => {
+    const candidate = record as {
+      readonly sourceIds?: readonly string[];
+      readonly ruleIds?: readonly string[];
+      readonly ruleId?: string;
+    };
+    return {
+      sourceIds: candidate.sourceIds ?? [],
+      ruleIds: candidate.ruleIds ?? (candidate.ruleId ? [candidate.ruleId] : [])
+    };
+  };
+  const producerEvidenceRecords: CareerProducerEvidenceProvenance[] = [
+    ...natal.evidence.map(toProducerProvenance),
+    ...dasha.evidence.map(toProducerProvenance),
+    ...d10.evidence.map(toProducerProvenance)
+  ];
   const evidenceQuality = deriveCareerProducerEvidenceQuality(producerEvidenceRecords);
 
   // Merge all evidence IDs, source IDs, and rule IDs deterministically

@@ -36,6 +36,16 @@ function createC11Fixture(
     finalDirection: 'UNAVAILABLE',
     finalStrength: 'UNDETERMINED',
     confidence: 'LOW',
+    confidenceCoverage: {
+      status: 'INSUFFICIENT',
+      quality: 'LOW',
+      layers: [],
+      missingRequiredLayers: ['NATAL'],
+      missingSupportingLayers: ['DASHA', 'D10', 'EXPRESSION'],
+      missingOptionalLayers: ['TRANSIT'],
+      provenance: 'NOT_PROVIDED'
+    },
+    confidenceReasons: [],
     natalDirection: 'UNAVAILABLE',
     natalStrength: 'UNDETERMINED',
     expressionStatus: 'UNAVAILABLE',

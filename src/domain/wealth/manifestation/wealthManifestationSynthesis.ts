@@ -135,12 +135,9 @@ export function resolveWealthDimensionManifestation(
     // Natal is SUPPORT
     const hasSecondaryChallenge =
       dashaSupport === 'CHALLENGE' ||
-      transitSupport === 'CHALLENGE' ||
-      d2Support === 'CHALLENGE';
+      transitSupport === 'CHALLENGE';
 
-    const hasStructuralSecondarySupport =
-      dashaSupport === 'SUPPORT' ||
-      d2Support === 'SUPPORT';
+    const hasStructuralSecondarySupport = dashaSupport === 'SUPPORT';
 
     const hasTransitSupport = transitSupport === 'SUPPORT';
 

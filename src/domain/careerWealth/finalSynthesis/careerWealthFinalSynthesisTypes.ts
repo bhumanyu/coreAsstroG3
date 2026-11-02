@@ -61,13 +61,15 @@ export interface FinalSynthesisActivationHierarchy {
   };
 }
 
+export type FinalConfidenceEvidenceQuality = 'HIGH' | 'MEDIUM' | 'LOW' | 'NOT_APPLICABLE';
+
 export interface FinalConfidenceBreakdownSummary {
   readonly final: FinalDomainConfidence;
-  readonly natalEvidenceQuality: 'HIGH' | 'MEDIUM' | 'LOW';
-  readonly activationQuality: 'HIGH' | 'MEDIUM' | 'LOW';
-  readonly timingQuality: 'HIGH' | 'MEDIUM' | 'LOW';
-  readonly divisionalQuality: 'HIGH' | 'MEDIUM' | 'LOW';
-  readonly manifestationQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly natalEvidenceQuality: FinalConfidenceEvidenceQuality;
+  readonly activationQuality: FinalConfidenceEvidenceQuality;
+  readonly timingQuality: FinalConfidenceEvidenceQuality;
+  readonly divisionalQuality: FinalConfidenceEvidenceQuality;
+  readonly manifestationQuality: FinalConfidenceEvidenceQuality;
   readonly evidenceCoverage: 'HIGH' | 'MEDIUM' | 'LOW';
   readonly contradictionLevel: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
   readonly dashaConsistency: 'CONSISTENT' | 'INCONSISTENT' | 'UNAVAILABLE';
