@@ -779,8 +779,11 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       expect(result.reasoningTrace.primaryPromise).toBeDefined();
       expect(result.reasoningTrace.primaryPromise.length).toBeGreaterThan(0);
       const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
-      // evidenceId should be the canonical identityKey, not an occurrence ID
-      expect(canonicalEvidence.evidenceId).toBe(canonicalEvidence.identityKey);
+      // Weighted trace evidence retains a real representative occurrence ID.
+      // identityKey remains the separate semantic identity namespace.
+      expect(canonicalEvidence.sourceIds).toContain(canonicalEvidence.evidenceId);
+      expect(canonicalEvidence.identityKey).toBeTruthy();
+      expect(canonicalEvidence.evidenceId).not.toBe(canonicalEvidence.identityKey);
       // sourceIds should contain the distinct occurrence IDs
       expect(canonicalEvidence.sourceIds).toBeDefined();
       expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT');
@@ -828,8 +831,11 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       expect(result.reasoningTrace.primaryPromise).toBeDefined();
       expect(result.reasoningTrace.primaryPromise.length).toBeGreaterThan(0);
       const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
-      // evidenceId should be the canonical identityKey, not an occurrence ID
-      expect(canonicalEvidence.evidenceId).toBe(canonicalEvidence.identityKey);
+      // Weighted trace evidence retains a real representative occurrence ID.
+      // identityKey remains the separate semantic identity namespace.
+      expect(canonicalEvidence.sourceIds).toContain(canonicalEvidence.evidenceId);
+      expect(canonicalEvidence.identityKey).toBeTruthy();
+      expect(canonicalEvidence.evidenceId).not.toBe(canonicalEvidence.identityKey);
       // sourceIds should contain the distinct occurrence IDs
       expect(canonicalEvidence.sourceIds).toBeDefined();
       expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT');
