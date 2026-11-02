@@ -355,6 +355,14 @@ function resolveEvidence(
   const evidenceById = new Map(
     evidence.map((item) => [item.id, item])
   );
+  const evidenceByIdentityKey = new Map<string, AiEvidence[]>();
+  for (const item of evidence) {
+    const identityKey = item.identityKey?.trim();
+    if (!identityKey) continue;
+    const matches = evidenceByIdentityKey.get(identityKey) ?? [];
+    matches.push(item);
+    evidenceByIdentityKey.set(identityKey, matches);
+  }
 
   // Build selected-period evidence index for SELECTED_PERIOD_ANALYSIS task
   // This index maps evidence IDs to actual AiEvidence objects from both
@@ -379,17 +387,29 @@ function resolveEvidence(
       ? selectedPeriodEvidenceResult.index.get(id)
       : evidenceById.get(id);
 
-    if (!item) {
-      unresolvedIds.push(id);
+    if (item) {
+      resolved.push(Object.freeze({ evidence: item, role }));
       continue;
     }
 
-    resolved.push(
-      Object.freeze({
-        evidence: item,
-        role
-      })
-    );
+    // C11 references semantic identity keys; resolve them to the real evidence
+    // occurrences without rewriting an occurrence ID to look like an identity.
+    if (task !== 'SELECTED_PERIOD_ANALYSIS') {
+      const identityMatches = evidenceByIdentityKey.get(id) ?? [];
+      if (identityMatches.length > 0) {
+        for (const identityMatch of identityMatches) {
+          resolved.push(Object.freeze({
+            evidence: identityMatch,
+            role,
+            referenceId: id,
+            referenceNamespace: 'IDENTITY' as const
+          }));
+        }
+        continue;
+      }
+    }
+
+    unresolvedIds.push(id);
   }
 
   return {
@@ -421,6 +441,12 @@ function extractTraceabilityIds(context: AiContext): readonly string[] {
         ids.add(evidence.id);
       }
     }
+  }
+
+  // C11 evidenceIds are semantic identities, not DomainEvidence occurrence IDs.
+  // Preserve them in the request audit list under their canonical identity namespace.
+  for (const id of context.career?.canonicalC11?.canonicalEvidenceIds ?? []) {
+    if (id) ids.add(id);
   }
 
   // Extract from selectedPeriod context if present
