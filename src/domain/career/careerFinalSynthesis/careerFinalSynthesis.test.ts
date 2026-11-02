@@ -1109,6 +1109,17 @@ describe('A07 — C11 confidence coverage and provenance policy', () => {
     expect(result.confidenceReasons.some(reason => reason.code === 'PROVENANCE_PARTIAL')).toBe(true);
   });
 
+  it('does not treat whitespace-only trace identifiers as supplied provenance', () => {
+    const result = synthesizeCareerFinal({
+      ...completeInput,
+      evidenceIds: ['  '],
+      sourceIds: [''],
+      ruleIds: ['\\t']
+    });
+    expect(result.confidenceCoverage.provenance).toBe('NOT_PROVIDED');
+    expect(result.confidenceReasons.some(reason => reason.code === 'PROVENANCE_NOT_PROVIDED')).toBe(true);
+  });
+
   it('is deterministic for identical inputs', () => {
     const first = synthesizeCareerFinal(completeInput);
     const second = synthesizeCareerFinal(completeInput);
