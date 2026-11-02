@@ -603,18 +603,23 @@ describe('PR-8 golden acceptance contract', () => {
     for (const surfaceName of ['ai-context', 'product-ai-context']) {
       const conclusion = projectionAt(projections, surfaceName) as AcceptanceConclusion;
       const evidence = conclusion.evidence.find(item => {
-        const record = result.career.evidence.find(candidate => candidate.id === item.id);
+        const occurrenceId = item.resolvedProvenance?.occurrence;
+        const record = result.career.evidence.find(candidate => candidate.id === occurrenceId);
         return item.resolution === 'RESOLVED'
           && record?.provenance?.source !== undefined
           && record.provenance.ruleId !== undefined;
       });
       expect(evidence, surfaceName).toBeDefined();
       if (!evidence) throw new Error(`${surfaceName} emitted no resolved provenance-complete evidence.`);
-      const record = result.career.evidence.find(item => item.id === evidence.id);
-      if (!record) throw new Error(`${surfaceName} evidence did not resolve back to the domain universe.`);
-      expect(conclusion.provenance.find(item => item.evidenceId === evidence.id)).toEqual(
-        projectDomainEvidenceToAcceptanceProvenance(record, record.domain)
-      );
+      const occurrenceId = evidence.resolvedProvenance?.occurrence;
+      const record = result.career.evidence.find(item => item.id === occurrenceId);
+      if (!record) throw new Error(`${surfaceName} semantic identity did not resolve to a real domain occurrence.`);
+      expect(conclusion.provenance.find(item => item.evidenceId === evidence.id)).toEqual({
+        ...projectDomainEvidenceToAcceptanceProvenance(record, record.domain),
+        // The conclusion references the semantic identity; occurrence remains the
+        // concrete source record selected by the resolver.
+        evidenceId: evidence.id
+      });
 
       for (const item of conclusion.evidence.filter(candidate => candidate.resolution === 'DANGLING' || candidate.resolution === 'EXTERNAL')) {
         expect(item).not.toHaveProperty('owner');
