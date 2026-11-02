@@ -790,7 +790,7 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_CHALLENGE');
     });
 
-    it('Test T: Reasoning-trace identity - deduplicated evidence carries canonical evidenceId in reasoningTrace', () => {
+    it('Test T: Reasoning-trace identity - semantic identity remains separate from representative occurrence', () => {
       const ev1 = createDomainEvidence({
         id: 'EV_JUPITER_SUPPORT',
         sourceType: 'HOUSE',
