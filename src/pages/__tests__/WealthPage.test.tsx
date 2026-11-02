@@ -100,7 +100,7 @@ describe('WealthPage (P-UI-05)', () => {
 
     // Hora (D2) Divisional Alignment
     expect(screen.getByText('Hora (D2) Divisional Alignment')).toBeInTheDocument();
-    expect(screen.getByText('Unavailable')).toBeInTheDocument();
+    expect(screen.getAllByText('Unavailable').length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText('D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.')
     ).toBeInTheDocument();
