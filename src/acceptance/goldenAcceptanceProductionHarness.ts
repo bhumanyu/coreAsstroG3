@@ -523,9 +523,12 @@ function canonicalProjection(
     ? interpretation.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult | undefined
     : interpretation.conclusionData?.wealthFinalSynthesis as WealthConclusionData['wealthFinalSynthesis'];
   if (!synthesis) return undefined;
-  const resolutionMap = resolveEvidenceIds(synthesis.evidenceIds, {
-    domainUniverse: interpretation.evidence
-  }, domain);
+  const resolutionMap = resolveEvidenceIds(
+    synthesis.evidenceIds,
+    { domainUniverse: interpretation.evidence },
+    domain,
+    domain === 'CAREER' ? 'IDENTITY' : 'OCCURRENCE'
+  );
   return {
     domain,
     scope: 'LIFETIME',
@@ -621,10 +624,15 @@ function aiConclusionFromContext(
   // Resolve evidence against the AI context's evidence universe
   const aiEvidenceUniverse = result.aiContext.evidence || [];
   const evidenceIds = careerC11?.canonicalEvidenceIds ?? finalSynthesis?.evidenceIds ?? [];
-  const resolutionMap = resolveEvidenceIds(evidenceIds, {
-    domainUniverse: interpretation.evidence,
-    externalNamespaces: [{ owner: domain, records: aiEvidenceUniverse }]
-  }, domain);
+  const resolutionMap = resolveEvidenceIds(
+    evidenceIds,
+    {
+      domainUniverse: interpretation.evidence,
+      externalNamespaces: [{ owner: domain, records: aiEvidenceUniverse }]
+    },
+    domain,
+    domain === 'CAREER' ? 'IDENTITY' : 'OCCURRENCE'
+  );
 
   return {
     domain,
@@ -662,10 +670,15 @@ function productAiConclusionFromContext(
   // Resolve evidence against the product AI context's evidence universe
   const productAiEvidenceUniverse = result.productAiContext.evidence || [];
   const evidenceIds = careerC11?.canonicalEvidenceIds ?? finalSynthesis?.evidenceIds ?? [];
-  const resolutionMap = resolveEvidenceIds(evidenceIds, {
-    domainUniverse: interpretation.evidence,
-    externalNamespaces: [{ owner: domain, records: productAiEvidenceUniverse }]
-  }, domain);
+  const resolutionMap = resolveEvidenceIds(
+    evidenceIds,
+    {
+      domainUniverse: interpretation.evidence,
+      externalNamespaces: [{ owner: domain, records: productAiEvidenceUniverse }]
+    },
+    domain,
+    domain === 'CAREER' ? 'IDENTITY' : 'OCCURRENCE'
+  );
 
   return {
     domain,
