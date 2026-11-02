@@ -1601,7 +1601,9 @@ describe('A07 producer evidence quality', () => {
 
   it('returns MEDIUM when no producer records are supplied', () => {
     expect(deriveCareerProducerEvidenceQuality([])).toBe('MEDIUM');
-    it('treats whitespace-only provenance identifiers as absent', () => {
+  });
+
+  it('treats whitespace-only provenance identifiers as absent', () => {
     expect(deriveCareerProducerEvidenceQuality([
       { sourceIds: ['  '], ruleIds: ['  '] }
     ])).toBe('LOW');
@@ -1610,5 +1612,4 @@ describe('A07 producer evidence quality', () => {
       { sourceIds: ['  '], ruleIds: ['  '] }
     ])).toBe('MEDIUM');
   });
-});
 });
