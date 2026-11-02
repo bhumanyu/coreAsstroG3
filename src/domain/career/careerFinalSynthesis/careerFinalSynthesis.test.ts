@@ -1114,7 +1114,7 @@ describe('A07 — C11 confidence coverage and provenance policy', () => {
       ...completeInput,
       evidenceIds: ['  '],
       sourceIds: [''],
-      ruleIds: ['\\t']
+      ruleIds: ['  ']
     });
     expect(result.confidenceCoverage.provenance).toBe('NOT_PROVIDED');
     expect(result.confidenceReasons.some(reason => reason.code === 'PROVENANCE_NOT_PROVIDED')).toBe(true);
