@@ -444,8 +444,15 @@ function extractTraceabilityIds(context: AiContext): readonly string[] {
   }
 
   // C11 evidenceIds are semantic identities, not DomainEvidence occurrence IDs.
-  // Preserve them in the request audit list under their canonical identity namespace.
-  for (const id of context.career?.canonicalC11?.canonicalEvidenceIds ?? []) {
+  // Source and rule IDs are separate trace namespaces; preserve all three explicitly.
+  const canonicalC11 = context.career?.canonicalC11;
+  for (const id of canonicalC11?.canonicalEvidenceIds ?? []) {
+    if (id) ids.add(id);
+  }
+  for (const id of canonicalC11?.canonicalSourceIds ?? []) {
+    if (id) ids.add(id);
+  }
+  for (const id of canonicalC11?.canonicalRuleIds ?? []) {
     if (id) ids.add(id);
   }
 
