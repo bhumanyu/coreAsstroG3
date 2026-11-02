@@ -9,7 +9,8 @@ export function createAiRequest(
   requestId: string = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-  traceabilityIds?: readonly string[]
+  traceabilityIds?: readonly string[],
+  promptVersion?: string
 ): AiRequest {
   const request: AiRequest = {
     requestId,
@@ -17,7 +18,8 @@ export function createAiRequest(
     task,
     context,
     responseFormat,
-    ...(traceabilityIds ? { traceabilityIds } : {})
+    ...(traceabilityIds ? { traceabilityIds } : {}),
+    ...(promptVersion ? { promptVersion } : {})
   };
 
   return deepFreeze(request);

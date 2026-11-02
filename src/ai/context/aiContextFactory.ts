@@ -64,7 +64,6 @@ import type {
   SynthesisEvidenceReference,
   SynthesisDiagnostic
 } from '../../domain/synthesis/selectedPeriodSynthesis';
-import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
 import type {
   ActiveDashaInterpretation,
@@ -776,28 +775,6 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
   };
 }
 
-function mapThemeEffectToStatus(
-  effect: string | undefined
-):
-  | 'STRONGLY_SUPPORTED'
-  | 'SUPPORTED'
-  | 'NEUTRAL'
-  | 'MIXED'
-  | 'CHALLENGED'
-  | 'LIMITED_EVIDENCE' {
-  switch (effect) {
-    case 'SUPPORT':
-      return 'SUPPORTED';
-    case 'CHALLENGE':
-      return 'CHALLENGED';
-    case 'MIXED':
-      return 'MIXED';
-    case 'NEUTRAL':
-      return 'NEUTRAL';
-    default:
-      return 'LIMITED_EVIDENCE';
-  }
-}
 
 function buildCareerFact(
   horoscope: Horoscope,
@@ -805,7 +782,6 @@ function buildCareerFact(
   asOf?: string,
   careerProfessionAnalysis?: CareerProfessionAnalysis
 ): CareerFact | undefined {
-  const career = horoscope.themeInterpretationV2?.career;
   const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
 
   let hierarchy: CareerHierarchyFact | undefined;
@@ -1025,23 +1001,6 @@ function buildCareerFact(
     }
     : undefined;
 
-  if (career) {
-    return {
-      status: career.conclusion.status,
-      confidence: career.conclusion.confidence as AiConfidence,
-      natalPromise: career.careerNatalPromise.status,
-      d10Relationship: career.metadata.vargaConfirmationStatus,
-      supportingFactors: [...career.conclusion.keySupportingFactors],
-      challengingFactors: [...career.conclusion.keyChallengingFactors],
-      conditionalFactors: [...career.conclusion.keyConditionalFactors],
-      ...(enrichedTiming ? { timing: enrichedTiming } : {}),
-      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
-      ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {}),
-      ...(careerFinalSynthesisFact ? { finalSynthesis: careerFinalSynthesisFact } : {}),
-      ...(canonicalC11 ? { canonicalC11 } : {}),
-      profession
-    };
-  }
 
   if (careerInterpretation) {
     const d10 = careerInterpretation.vargaConfirmations.find((v) => v.varga === 'D10');
@@ -1070,7 +1029,6 @@ function buildWealthFact(
   wealthInterpretation?: DomainInterpretation,
   asOf?: string
 ): WealthFact | undefined {
-  const wealth = horoscope.themeInterpretationV2?.wealth;
   const timing = buildNormalizedWealthTiming(wealthInterpretation, asOf) as WealthTimingFact | undefined;
 
   let hierarchy: WealthHierarchyFact | undefined;
@@ -1216,47 +1174,10 @@ function buildWealthFact(
     }
     : undefined;
 
-  const subthemeKeys: readonly WealthSubthemeKey[] = [
-    'ACCUMULATION',
-    'GAINS',
-    'FORTUNE',
-    'SPECULATION'
-  ];
-  const subthemes: WealthSubthemeFact[] = [];
-
-  if (wealth?.subthemes) {
-    for (const key of subthemeKeys) {
-      const summary = wealth.subthemes[key];
-      if (summary) {
-        subthemes.push({
-          subtheme: summary.key || key,
-          house: summary.houseNumber,
-          status: mapThemeEffectToStatus(summary.status),
-          primaryFamily: String(summary.primaryFamily),
-          supportingCount: summary.supportingEvidenceCount,
-          challengingCount: summary.challengingEvidenceCount,
-          summary: summary.summaryStatement
-        });
-      }
-    }
-  }
 
   const wealthFinalSynthesis = wealthInterpretation?.conclusionData?.wealthFinalSynthesis;
   const wealthFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(wealthFinalSynthesis);
 
-  if (wealth) {
-    return {
-      status: wealth.conclusion.status,
-      confidence: wealth.conclusion.confidence as AiConfidence,
-      subthemes,
-      supportingFactors: [...wealth.conclusion.keySupportingFactors],
-      challengingFactors: [...wealth.conclusion.keyChallengingFactors],
-      conditionalFactors: [...wealth.conclusion.keyConditionalFactors],
-      ...(enrichedTiming ? { timing: enrichedTiming } : {}),
-      ...(wealthManifestationSynthesisFact ? { manifestationSynthesis: wealthManifestationSynthesisFact } : {}),
-      ...(wealthFinalSynthesisFact ? { finalSynthesis: wealthFinalSynthesisFact } : {})
-    };
-  }
 
   if (wealthInterpretation) {
     return {

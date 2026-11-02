@@ -10,6 +10,11 @@ import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { buildLifeAnalysis } from '../../domain/synthesis';
 import { buildProductAiContext } from '../context/aiContextFactory';
+import { AiProviderRegistry } from '../routing/AiProviderRegistry';
+import { AiRouter } from '../routing/AiRouter';
+import type { AiProvider } from '../types/aiProviderTypes';
+import type { AiRequest } from '../types/aiRequestTypes';
+import type { AiResponse } from '../types/aiResponseTypes';
 
 function createTestOptions(
   overrides: Partial<RunProductAiExplanationOptions> = {}
@@ -1316,5 +1321,201 @@ describe('runAiExplanation', () => {
       expect(resultPromisePresent.unresolvedQuestions).not.toContain('Selected period does not activate any wealth dimension.');
       // The SP-02 statement is embedded in the full conclusion; we verify via triggeredRuleIds and unresolvedQuestions
     }
+  });
+});
+
+
+function createA06Router(
+  generate: (request: AiRequest) => Promise<AiResponse>,
+  availability: 'AVAILABLE' | 'UNAVAILABLE' = 'AVAILABLE'
+): AiRouter {
+  const provider: AiProvider = {
+    identity: {
+      id: 'a06-deterministic-fake',
+      name: 'A06 Deterministic Fake',
+      kind: 'LOCAL_RULES',
+      version: 'fake-provider-v1'
+    },
+    capabilities: ['STRUCTURED_OUTPUT', 'OFFLINE', 'LIFE_ANALYSIS'],
+    getStatus: () => ({ availability }),
+    generate
+  };
+  return new AiRouter(new AiProviderRegistry([provider]));
+}
+
+function createA06Response(request: AiRequest, model = 'fake-model-v1'): AiResponse {
+  const evidenceId = request.context.career?.canonicalC11?.canonicalEvidenceIds[0]
+    ?? request.context.wealth?.finalSynthesis?.evidenceIds[0]
+    ?? request.traceabilityIds?.[0];
+  return Object.freeze({
+    requestId: request.requestId,
+    format: 'STRUCTURED',
+    content: 'Grounded deterministic test explanation.',
+    structuredOutput: Object.freeze({
+      status: 'SUCCESS',
+      conclusion: 'Explanation of the supplied canonical conclusions only.',
+      supportingEvidenceIds: Object.freeze(evidenceId ? [evidenceId] : []),
+      challengingEvidenceIds: Object.freeze([]),
+      unresolvedQuestions: Object.freeze([]),
+      warnings: Object.freeze([])
+    }),
+    warnings: Object.freeze([]),
+    metadata: Object.freeze({ model })
+  });
+}
+
+describe('A06 — AI execution independence and grounding', () => {
+  it('executes the real provider boundary with canonical C11/CW-05 and traceable evidence', async () => {
+    const options = createTestOptions({ task: 'LIFE_ANALYSIS_EXPLANATION' });
+    let capturedRequest: AiRequest | undefined;
+    const router = createA06Router(async (request) => {
+      capturedRequest = request;
+      return createA06Response(request);
+    });
+
+    const result = await runAiExplanation({ ...options, router });
+
+    expect(result.kind).toBe('SUCCESS');
+    expect(capturedRequest).toBeDefined();
+    expect(capturedRequest?.task).toBe('LIFE_ANALYSIS_EXPLANATION');
+    expect(capturedRequest?.promptVersion).toBe('A06-GROUNDING-1');
+    expect(capturedRequest?.context.career?.canonicalC11).toBeDefined();
+    expect(capturedRequest?.context.wealth?.finalSynthesis).toBeDefined();
+
+    const canonicalEvidenceIds = capturedRequest!.context.domainInterpretations
+      .flatMap((domain) => domain.evidence.map((evidence) => evidence.id));
+    expect(capturedRequest?.traceabilityIds).toEqual(
+      expect.arrayContaining(canonicalEvidenceIds)
+    );
+    const c11EvidenceId = capturedRequest?.context.career?.canonicalC11?.canonicalEvidenceIds[0];
+    if (c11EvidenceId) {
+      expect(capturedRequest?.traceabilityIds).toContain(c11EvidenceId);
+    }
+
+    if (result.kind === 'SUCCESS') {
+      if (c11EvidenceId) {
+        expect(result.supportingEvidence.map((item) => item.evidence.id)).toContain(c11EvidenceId);
+      }
+      expect(result.providerId).toBe('a06-deterministic-fake');
+      expect(result.providerVersion).toBe('fake-provider-v1');
+      expect(result.model).toBe('fake-model-v1');
+      expect(result.promptVersion).toBe('A06-GROUNDING-1');
+    }
+  });
+
+  it('does not read legacy theme output even when its getter throws', async () => {
+    const options = createTestOptions({ task: 'LIFE_ANALYSIS_EXPLANATION' });
+    const throwingHoroscope = { ...options.horoscope } as Horoscope;
+    Object.defineProperty(throwingHoroscope, 'themeInterpretationV2', {
+      configurable: true,
+      get: () => { throw new Error('legacy theme output must not be read by A06'); }
+    });
+
+    let capturedRequest: AiRequest | undefined;
+    const router = createA06Router(async (request) => {
+      capturedRequest = request;
+      return createA06Response(request);
+    });
+
+    const result = await runAiExplanation({
+      ...options,
+      horoscope: throwingHoroscope,
+      router
+    });
+
+    expect(result.kind).toBe('SUCCESS');
+    expect(capturedRequest?.context.career?.canonicalC11).toBeDefined();
+    expect(capturedRequest?.context.wealth?.finalSynthesis).toBeDefined();
+  });
+
+  it('legacy theme perturbations cannot change the actual provider context', async () => {
+    const options = createTestOptions({ task: 'LIFE_ANALYSIS_EXPLANATION' });
+    const baseline = { ...options.horoscope } as Horoscope;
+    const perturbed = { ...options.horoscope } as Horoscope;
+    Object.defineProperty(perturbed, 'themeInterpretationV2', {
+      configurable: true,
+      value: Object.freeze({
+        career: Object.freeze({ status: 'FABRICATED_LEGACY_CAREER_STATUS', evidence: [] }),
+        wealth: Object.freeze({ status: 'FABRICATED_LEGACY_WEALTH_STATUS', evidence: [] })
+      })
+    });
+
+    let baselineContext: unknown;
+    let perturbedContext: unknown;
+    const baselineRouter = createA06Router(async (request) => {
+      baselineContext = request.context;
+      return createA06Response(request);
+    });
+    const perturbedRouter = createA06Router(async (request) => {
+      perturbedContext = request.context;
+      return createA06Response(request);
+    });
+
+    const baselineResult = await runAiExplanation({ ...options, horoscope: baseline, router: baselineRouter });
+    const perturbedResult = await runAiExplanation({ ...options, horoscope: perturbed, router: perturbedRouter });
+
+    expect(baselineResult.kind).toBe('SUCCESS');
+    expect(perturbedResult.kind).toBe('SUCCESS');
+    expect(perturbedContext).toEqual(baselineContext);
+  });
+
+  it('AI execution cannot mutate canonical Career, Wealth, or LifeAnalysis inputs', async () => {
+    const options = createTestOptions({ task: 'LIFE_ANALYSIS_EXPLANATION' });
+    const before = JSON.stringify({
+      domainInterpretations: options.domainInterpretations,
+      lifeAnalysis: options.lifeAnalysis
+    });
+    const router = createA06Router(async (request) => createA06Response(request));
+
+    await runAiExplanation({ ...options, router });
+
+    expect(JSON.stringify({
+      domainInterpretations: options.domainInterpretations,
+      lifeAnalysis: options.lifeAnalysis
+    })).toBe(before);
+  });
+
+  it('isolates provider errors and timeouts as explanation errors', async () => {
+    const options = createTestOptions({ task: 'LIFE_ANALYSIS_EXPLANATION' });
+    const throwingRouter = createA06Router(async () => {
+      throw new Error('simulated provider failure');
+    });
+    const failed = await runAiExplanation({ ...options, router: throwingRouter });
+    expect(failed.kind).toBe('ERROR');
+
+    const hangingRouter = createA06Router(() => new Promise<AiResponse>(() => undefined));
+    const timedOut = await runAiExplanation({
+      ...options,
+      router: hangingRouter,
+      providerTimeoutMs: 5
+    });
+    expect(timedOut.kind).toBe('ERROR');
+  });
+
+  it('returns an error when the only provider is unavailable', async () => {
+    const options = createTestOptions({ task: 'LIFE_ANALYSIS_EXPLANATION' });
+    const router = createA06Router(async (request) => createA06Response(request), 'UNAVAILABLE');
+    const result = await runAiExplanation({ ...options, router });
+    expect(result.kind).toBe('ERROR');
+  });
+
+  it('rejects malformed structured output instead of accepting it as a structured conclusion', async () => {
+    const options = createTestOptions({ task: 'LIFE_ANALYSIS_EXPLANATION' });
+    const router = createA06Router(async (request) => Object.freeze({
+      requestId: request.requestId,
+      format: 'STRUCTURED',
+      content: '',
+      structuredOutput: Object.freeze({
+        status: 'SUCCESS',
+        conclusion: 42,
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        unresolvedQuestions: [],
+        warnings: []
+      }),
+      warnings: Object.freeze([])
+    }));
+    const result = await runAiExplanation({ ...options, router });
+    expect(result.kind).toBe('ERROR');
   });
 });

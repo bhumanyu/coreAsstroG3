@@ -78,6 +78,7 @@ export class AiRouter {
           providerId: provider.identity.id,
           providerName: provider.identity.name,
           providerKind: provider.identity.kind,
+          ...(provider.identity.version ? { providerVersion: provider.identity.version } : {}),
           routingMode: mode,
           fallbackUsed,
           selectionReason,
