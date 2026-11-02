@@ -13,7 +13,7 @@ C11 remains the sole final Career synthesis authority. `finalStrength` and `fina
 | Transit | Optional | Transit direction is not `UNAVAILABLE` |
 
 ## Deterministic confidence policy
-- Base confidence is derived from an independent evidence-quality assessment when supplied. If none is supplied, the C11 integration derives quality from producer evidence records: all records with source and rule IDs → HIGH; partial provenance → MEDIUM; no producer provenance → LOW. The synthesis-level fallback uses complete provenance → HIGH and partial/unknown → MEDIUM. Natal promise strength is not used as confidence quality.
+- Base confidence is derived from an independent evidence-quality assessment when supplied. If none is supplied, the C11 integration derives quality from producer evidence records: all records with non-blank source and rule IDs → HIGH; partial provenance → MEDIUM; producer records exist but contain no non-blank provenance → LOW. If no producer records are supplied at all, provenance is NOT_PROVIDED and the base quality remains MEDIUM rather than treating unknown provenance as proven-bad evidence. The synthesis-level fallback uses complete provenance → HIGH and partial/unknown → MEDIUM. Natal promise strength is not used as confidence quality.
 - Missing required natal evidence caps confidence at LOW.
 - One missing supporting layer caps confidence at MEDIUM. Two or more missing supporting layers cap it at LOW.
 - Missing optional transit evidence is reported but does not cap confidence.
