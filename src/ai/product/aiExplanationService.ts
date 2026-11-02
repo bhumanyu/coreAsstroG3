@@ -149,7 +149,8 @@ export async function runAiExplanation(
       context.evidence,
       context.selectedPeriod,
       options.task,
-      AI_EXPLANATION_PROMPT_VERSION
+      AI_EXPLANATION_PROMPT_VERSION,
+      new Set(context.career?.canonicalC11?.canonicalEvidenceIds ?? [])
     );
   } catch (error) {
     // Use the real requestId, not evidence-IDs-as-request-id
@@ -170,7 +171,8 @@ function mapRoutingResultToViewModel(
   evidence: readonly AiEvidence[],
   selectedPeriod: AiContext['selectedPeriod'],
   task: AiTask,
-  promptVersion: string
+  promptVersion: string,
+  canonicalIdentityIds: ReadonlySet<string> = new Set()
 ): AiExplanationResult {
   const rawStructured = result.response.structuredOutput;
   const structured = extractStructuredOutput(rawStructured);
@@ -204,14 +206,16 @@ function mapRoutingResultToViewModel(
       evidence,
       selectedPeriod,
       task,
-      'SUPPORTING'
+      'SUPPORTING',
+      canonicalIdentityIds
     );
     const resolvedChallenging = resolveEvidence(
       structured.challengingEvidenceIds,
       evidence,
       selectedPeriod,
       task,
-      'CHALLENGING'
+      'CHALLENGING',
+      canonicalIdentityIds
     );
 
     // Add unresolved IDs to unresolvedQuestions
@@ -350,7 +354,8 @@ function resolveEvidence(
   evidence: readonly AiEvidence[],
   selectedPeriod: AiContext['selectedPeriod'],
   task: AiTask,
-  role: 'SUPPORTING' | 'CHALLENGING'
+  role: 'SUPPORTING' | 'CHALLENGING',
+  canonicalIdentityIds: ReadonlySet<string>
 ): { evidence: readonly AiExplanationEvidence[]; unresolvedIds: readonly string[] } {
   const evidenceById = new Map(
     evidence.map((item) => [item.id, item])
@@ -383,18 +388,23 @@ function resolveEvidence(
 
     // For SELECTED_PERIOD_ANALYSIS, look up in selectedPeriodEvidenceIndex first
     // For other tasks, validate against context.evidence
+    const isCanonicalIdentityReference =
+      task !== 'SELECTED_PERIOD_ANALYSIS' && canonicalIdentityIds.has(id);
     const item = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceResult
       ? selectedPeriodEvidenceResult.index.get(id)
-      : evidenceById.get(id);
+      : isCanonicalIdentityReference
+        ? undefined
+        : evidenceById.get(id);
 
     if (item) {
       resolved.push(Object.freeze({ evidence: item, role }));
       continue;
     }
 
-    // C11 references semantic identity keys; resolve them to the real evidence
-    // occurrences without rewriting an occurrence ID to look like an identity.
-    if (task !== 'SELECTED_PERIOD_ANALYSIS') {
+    // C11 references are explicitly tagged by the canonical C11 reference set.
+    // Resolve them only in the semantic identity namespace, even if the same
+    // string happens to collide with an unrelated occurrence ID.
+    if (isCanonicalIdentityReference) {
       const identityMatches = evidenceByIdentityKey.get(id) ?? [];
       if (identityMatches.length > 0) {
         for (const identityMatch of identityMatches) {
@@ -407,6 +417,8 @@ function resolveEvidence(
         }
         continue;
       }
+      unresolvedIds.push(id);
+      continue;
     }
 
     unresolvedIds.push(id);
