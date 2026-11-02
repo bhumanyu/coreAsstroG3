@@ -95,6 +95,16 @@ describe('localVedicRulesEngine', () => {
           finalDirection: 'SUPPORT',
           finalStrength: 'STRONG',
           confidence: 'HIGH',
+          confidenceCoverage: {
+            status: 'COMPLETE',
+            quality: 'HIGH',
+            layers: [],
+            missingRequiredLayers: [],
+            missingSupportingLayers: [],
+            missingOptionalLayers: [],
+            provenance: 'COMPLETE'
+          },
+          confidenceReasons: [],
           natalDirection: 'SUPPORT',
           natalStrength: 'STRONG',
           expressionStatus: 'SUPPORT',
