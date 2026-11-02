@@ -592,7 +592,7 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
   });
 
   describe('ReasoningDivisionalComparison', () => {
-    it('renders D10 and D2 divisional confirmations side by side', () => {
+    it('renders D10 confirmation alongside explicitly unavailable D2 status', () => {
       const d10: ReasoningVargaViewModel = {
         chart: 'D10',
         relationship: 'CONFIRMS',
@@ -608,7 +608,8 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
 
       expect(screen.getByText('Divisional Confirmation')).toBeInTheDocument();
       expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
-      expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
+      expect(screen.getByText('Hora (D2) Availability')).toBeInTheDocument();
+      expect(screen.getByText('Unavailable')).toBeInTheDocument();
       expect(screen.getByText('D10 Mars strongly confirms vocational promise.')).toBeInTheDocument();
       expect(screen.getByText(/D2 calculation and interpretation have not passed independent validation/)).toBeInTheDocument();
       expect(screen.getByText('Confirms')).toBeInTheDocument();

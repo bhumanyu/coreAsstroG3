@@ -72,7 +72,7 @@ describe('LifeAnalysisPage', () => {
     },
     wealthDetail: {
       natalPromise: 'MODERATE',
-      d2Relationship: 'CONFIRMS',
+      d2Relationship: 'UNAVAILABLE',
       currentDashaEffect: 'ACTIVATES',
       currentTransitEffect: 'MODIFIER',
       overallStatus: 'SUPPORTED',
@@ -528,7 +528,7 @@ describe('LifeAnalysisPage', () => {
     expect(screen.getByText('Executive Leadership & Strategic Endeavors')).toBeInTheDocument();
 
     // Wealth Card
-    expect(screen.getByText('Wealth & Prosperity Domain (D2 / 2nd & 11th Houses)')).toBeInTheDocument();
+    expect(screen.getByText('Wealth & Prosperity Domain (2nd & 11th Houses)')).toBeInTheDocument();
     expect(screen.getByText('Sustainable Capital Growth via Long-Term Holdings')).toBeInTheDocument();
   });
 
