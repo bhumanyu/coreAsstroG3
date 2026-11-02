@@ -204,6 +204,54 @@ describe('PR-8 golden acceptance contract', () => {
     ]));
   });
 
+  it('resolves Career C11 semantic identities without conflating occurrence IDs', () => {
+    const firstOccurrence = {
+      id: 'CAREER-OCC-A',
+      identityKey: 'CAREER-FACT-10H',
+      domain: 'CAREER',
+      provenance: { source: 'D1', ruleId: 'CAREER_RULE_A' }
+    };
+    const secondOccurrence = {
+      id: 'CAREER-OCC-B',
+      identityKey: 'CAREER-FACT-10H',
+      domain: 'CAREER',
+      provenance: { source: 'D10', ruleId: 'CAREER_RULE_B' }
+    };
+
+    const semanticResolution = resolveEvidenceIds(
+      ['CAREER-FACT-10H'],
+      { domainUniverse: [secondOccurrence, firstOccurrence] },
+      'CAREER',
+      'IDENTITY'
+    );
+    expect(semanticResolution.get('CAREER-FACT-10H')).toEqual({
+      resolution: 'RESOLVED',
+      record: firstOccurrence
+    });
+
+    // The same string must not resolve as an occurrence reference.
+    const occurrenceNamespaceResolution = resolveEvidenceIds(
+      ['CAREER-FACT-10H'],
+      { domainUniverse: [secondOccurrence, firstOccurrence] },
+      'CAREER',
+      'OCCURRENCE'
+    );
+    expect(occurrenceNamespaceResolution.get('CAREER-FACT-10H')).toEqual({
+      resolution: 'DANGLING'
+    });
+
+    // Occurrence references continue to resolve only by their exact occurrence ID.
+    const exactOccurrenceResolution = resolveEvidenceIds(
+      ['CAREER-OCC-B'],
+      { domainUniverse: [secondOccurrence, firstOccurrence] },
+      'CAREER'
+    );
+    expect(exactOccurrenceResolution.get('CAREER-OCC-B')).toEqual({
+      resolution: 'RESOLVED',
+      record: secondOccurrence
+    });
+  });
+
   it('uses explicit namespace precedence and ambiguity rules for collisions', () => {
     const domainRecord = { id: 'SHARED', domain: 'CAREER', source: 'DOMAIN' };
     const wrongDomainRecord = { id: 'SHARED-WRONG', domain: 'WEALTH', source: 'DOMAIN' };
