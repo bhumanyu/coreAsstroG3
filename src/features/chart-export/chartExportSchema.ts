@@ -453,11 +453,12 @@ function isCareerInterpretation(value: unknown): value is ExportedCareerInterpre
 
 function isWealthInterpretation(value: unknown): value is ExportedWealthInterpretationV1 {
   if (!isRecord(value) || !onlyKeys(value, [
-    'status', 'promise', 'confidence', 'headline', 'statement', 'd2Relationship', 'evidence'
+    'status', 'promise', 'confidence', 'headline', 'statement', 'd2Relationship', 'd2AvailabilityReason', 'evidence'
   ])) return false;
   return isString(value.status) && isString(value.promise) && isString(value.confidence)
     && isOptionalString(value.headline) && isOptionalString(value.statement)
-    && isString(value.d2Relationship) && Array.isArray(value.evidence) && value.evidence.every(isEvidence);
+    && isString(value.d2Relationship) && isOptionalString(value.d2AvailabilityReason)
+    && Array.isArray(value.evidence) && value.evidence.every(isEvidence);
 }
 
 function isInterpretation(value: unknown): value is ExportedInterpretationV1 {
