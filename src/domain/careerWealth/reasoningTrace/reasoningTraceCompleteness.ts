@@ -99,22 +99,27 @@ export function buildReasoningTraceCompleteness(params: {
   }
 
   for (const reference of synthesisEvidenceReferences) {
+    const referenceId = reference.id.trim();
+    const normalizedReference: ReasoningTraceEvidenceReference = Object.freeze({
+      id: referenceId,
+      namespace: reference.namespace
+    });
     const matches = reference.namespace === 'IDENTITY'
-      ? evidence.filter(item => item.identityKey === reference.id)
-      : evidence.filter(item => item.id === reference.id);
+      ? evidence.filter(item => item.identityKey?.trim() === referenceId)
+      : evidence.filter(item => item.id.trim() === referenceId);
 
     if (matches.length === 0) {
       diagnostics.push(Object.freeze({
         code: 'MISSING_EVIDENCE_OCCURRENCE',
-        reference: reference.id,
-        message: 'Synthesis evidence reference ' + reference.id + ' did not resolve in the declared ' + reference.namespace + ' namespace.'
+        reference: referenceId,
+        message: 'Synthesis evidence reference ' + referenceId + ' did not resolve in the declared ' + reference.namespace + ' namespace.'
       }));
       continue;
     }
 
     for (const item of matches) {
       includedOccurrenceIds.add(item.id);
-      synthesisReferenceByOccurrence.set(item.id, reference);
+      synthesisReferenceByOccurrence.set(item.id, normalizedReference);
     }
   }
 
