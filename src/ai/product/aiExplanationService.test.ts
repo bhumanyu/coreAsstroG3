@@ -1387,10 +1387,17 @@ describe('A06 — AI execution independence and grounding', () => {
     expect(capturedRequest?.traceabilityIds).toEqual(
       expect.arrayContaining(canonicalEvidenceIds)
     );
-    const c11EvidenceId = capturedRequest?.context.career?.canonicalC11?.canonicalEvidenceIds[0];
+    const canonicalC11 = capturedRequest?.context.career?.canonicalC11;
+    const c11EvidenceId = canonicalC11?.canonicalEvidenceIds[0];
     if (c11EvidenceId) {
       expect(capturedRequest?.traceabilityIds).toContain(c11EvidenceId);
     }
+    expect(capturedRequest?.traceabilityIds).toEqual(
+      expect.arrayContaining([
+        ...(canonicalC11?.canonicalSourceIds ?? []),
+        ...(canonicalC11?.canonicalRuleIds ?? [])
+      ])
+    );
 
     if (result.kind === 'SUCCESS') {
       if (c11EvidenceId) {
