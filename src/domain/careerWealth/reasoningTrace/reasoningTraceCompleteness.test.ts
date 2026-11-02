@@ -97,6 +97,20 @@ describe('A09 — end-to-end reasoning trace completeness', () => {
     expect(result.links.map(link => link.evidenceOccurrenceId)).toContain('WEALTH-NATAL-OCC-1');
   });
 
+  it('resolves semantic identities using the canonical trimmed identity convention', () => {
+    const paddedIdentity = evidence({ identityKey: '  CAREER-NATAL-SEM-1  ' });
+    const result = buildReasoningTraceCompleteness({
+      domain: 'CAREER',
+      conclusionNodeId: 'CAREER-C11-FINAL',
+      synthesisRuleId: 'C11',
+      synthesisEvidenceReferences: [{ id: ' CAREER-NATAL-SEM-1 ', namespace: 'IDENTITY' }],
+      evidence: [paddedIdentity]
+    });
+    expect(result.status).toBe('COMPLETE');
+    expect(result.resolvedEvidenceOccurrenceCount).toBe(1);
+    expect(result.links[0].synthesisEvidenceReference).toBe('CAREER-NATAL-SEM-1');
+  });
+
   it('diagnoses a missing producer/source rule', () => {
     const result = buildReasoningTraceCompleteness({
       domain: 'CAREER',
