@@ -71,6 +71,7 @@ describe('ReasoningPage (P-UI-06)', () => {
     expect(screen.getByText('Divisional Confirmation')).toBeInTheDocument();
     expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
     expect(screen.getByText('Hora (D2) Availability')).toBeInTheDocument();
+    expect(screen.getByText(/D2 calculation and interpretation have not passed independent validation/i)).toBeInTheDocument();
 
     // Side-by-side Transit Timing
     expect(screen.getByText('Transit Timing')).toBeInTheDocument();
