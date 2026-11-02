@@ -218,7 +218,8 @@ describe('AI Context Factory', () => {
     expect(context.divisional.d9.status).toBe('AVAILABLE');
     expect(context.divisional.d10).toBeDefined();
     expect(context.divisional.d10.status).toBe('AVAILABLE');
-    expect(context.divisional.d2).toBeUndefined();
+    expect(context.divisional.d2?.status).toBe('UNAVAILABLE');
+    expect(context.divisional.d2?.reason).toContain('independent validation');
   });
 
   it('should project vimshottari dasha facts with periods', () => {
@@ -1440,7 +1441,7 @@ describe('AI Context Factory', () => {
 
       expect(dims?.ACCUMULATION?.status).toBe('STRONGLY_SUPPORTED');
       expect(dims?.ACCUMULATION?.natalSupport).toBe('SUPPORT');
-      expect(dims?.ACCUMULATION?.d2Support).toBe('SUPPORT');
+      expect(dims?.ACCUMULATION?.d2Support).toBe('UNAVAILABLE');
       expect(dims?.ACCUMULATION?.factors[0].evidenceIds).toEqual(['EV_W_2']);
 
       expect(dims?.GAINS?.status).toBe('SUPPORTED');

@@ -149,7 +149,7 @@ export const STAGE1_GOLDEN_EXPECTATION: Stage1GoldenExpectation = Object.freeze(
 
 /**
  * Constructs a deterministic Wealth scenario where Accumulation and Gains are STRONGLY_SUPPORTED,
- * Fortune is SUPPORTED, D2 CONFIRMS, but Speculation (5th house) is CHALLENGED.
+ * Fortune is SUPPORTED, D2 remains UNAVAILABLE pending validation, and Speculation (5th house) is CHALLENGED.
  * Proves speculation dimension separation survives through AI projection and UI ViewModel.
  */
 export function buildSpeculationChallengedWealthInterpretation(): DomainInterpretation {

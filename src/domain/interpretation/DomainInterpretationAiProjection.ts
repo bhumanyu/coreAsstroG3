@@ -1,4 +1,5 @@
 import type { DomainInterpretation } from './DomainInterpretation';
+import type { DomainEvidence } from './DomainEvidence';
 import type {
   ConfidenceLevel,
   ConflictTier,
@@ -14,7 +15,17 @@ import type {
 import type { EvidenceSourceType } from '../evidence/evidenceSourceTypes';
 
 export interface DomainEvidenceAiProjection {
+  /** Exact evidence occurrence identity. */
   readonly id: string;
+  /** Semantic identity is preserved separately from the occurrence ID. */
+  readonly identityKey?: string;
+  readonly sourceRecordId?: string;
+  readonly relatedEvidenceIds: readonly string[];
+  readonly rootEvidenceIds: readonly string[];
+  readonly source: DomainEvidence['source'];
+  readonly planet?: DomainEvidence['planet'];
+  readonly house?: DomainEvidence['house'];
+  readonly timing?: DomainEvidence['timing'];
   readonly statement: string;
   readonly sourceType: EvidenceSourceType;
   readonly role: EvidenceRole;
@@ -54,6 +65,10 @@ export interface DomainInterpretationAiProjection {
   readonly vargaConfirmations: readonly {
     readonly varga: EvidenceSource;
     readonly relationship: VargaRelationship;
+    readonly availability?: 'AVAILABLE' | 'UNAVAILABLE';
+    readonly unavailabilityReason?: string;
+    readonly strength?: EvidenceStrength;
+    readonly confidence?: ConfidenceLevel;
     readonly statement: string;
   }[];
 
@@ -69,7 +84,10 @@ export interface DomainInterpretationAiProjection {
     readonly statement: string;
   }[];
 
+  /** Legacy primary evidence IDs; use the explicit occurrence/identity collections below for trace joins. */
   readonly evidenceIds: readonly string[];
+  readonly evidenceOccurrenceIds: readonly string[];
+  readonly evidenceIdentityKeys: readonly string[];
 
   readonly evidence: readonly DomainEvidenceAiProjection[];
 }
@@ -110,8 +128,18 @@ export function projectDomainInterpretationForAi(
       interpretation.vargaConfirmations.map((v) =>
         Object.freeze({
           varga: v.varga,
-          relationship: v.relationship,
-          statement: v.statement
+          relationship: v.varga === 'D2' ? 'UNAVAILABLE' : v.relationship,
+          ...(v.varga === 'D2'
+            ? {
+                availability: 'UNAVAILABLE' as const,
+                unavailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.',
+                strength: 'UNDETERMINED' as const,
+                confidence: 'UNDETERMINED' as const
+              }
+            : v.availability ? { availability: v.availability } : {}),
+          statement: v.varga === 'D2'
+            ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+            : v.statement
         })
       )
     ),
@@ -139,11 +167,21 @@ export function projectDomainInterpretationForAi(
     evidenceIds: Object.freeze(
       [...interpretation.conclusion.primaryEvidenceIds]
     ),
+    evidenceOccurrenceIds: Object.freeze(interpretation.evidence.map(e => e.id)),
+    evidenceIdentityKeys: Object.freeze(interpretation.evidence.flatMap(e => e.identityKey ? [e.identityKey] : [])),
 
     evidence: Object.freeze(
       interpretation.evidence.map((e) =>
         Object.freeze({
           id: e.id,
+          ...(e.identityKey ? { identityKey: e.identityKey } : {}),
+          ...(e.sourceRecordId ? { sourceRecordId: e.sourceRecordId } : {}),
+          relatedEvidenceIds: Object.freeze([...e.relatedEvidenceIds]),
+          rootEvidenceIds: Object.freeze([...(e.rootEvidenceIds ?? [])]),
+          source: e.source,
+          ...(e.planet ? { planet: e.planet } : {}),
+          ...(e.house !== undefined ? { house: e.house } : {}),
+          ...(e.timing ? { timing: Object.freeze({ ...e.timing }) } : {}),
           statement: e.statement,
           sourceType: e.sourceType,
           role: e.role,

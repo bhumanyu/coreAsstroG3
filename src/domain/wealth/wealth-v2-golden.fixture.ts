@@ -151,13 +151,13 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
     dimension: 'FORTUNE'
   }),
   createDomainEvidence({
-    id: 'GOLDEN_WEALTH_D2_CONFIRMS',
+    id: 'GOLDEN_WEALTH_D2_UNVALIDATED',
     sourceType: 'VARGA',
     domain: 'WEALTH',
     role: 'CONFIRMATION',
     phase: 'VARGA_CONFIRMATION',
     source: 'D2',
-    statement: 'D2 Hora confirms strong wealth retention, liquid wealth capability, and balanced asset accumulation',
+    statement: 'Unvalidated D2 evidence retained for diagnostics only; no canonical relationship is inferred.',
     polarity: 'SUPPORTING',
     strength: 'STRONG',
     priority: 50,

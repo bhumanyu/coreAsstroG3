@@ -6,6 +6,8 @@ import type { CareerFactorCategory } from '../../domain/career/careerDasha/caree
 import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
 import type { TimingEffect, TimingSourceCategory } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationMode } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
+import type { CareerConfidenceCoverage, CareerConfidenceReason } from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
+import type { ReasoningTraceCompleteness } from '../../domain/careerWealth/reasoningTrace/reasoningTraceCompleteness';
 import type { WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { WealthDimension } from '../../domain/wealth/wealthTypes';
 import type {
@@ -225,6 +227,7 @@ export interface DivisionalFact {
   readonly status: AiAvailability;
   readonly ascendantSign?: Sign;
   readonly confidence?: AiConfidence;
+  readonly reason?: string;
 }
 
 export interface DivisionalFacts {
@@ -405,6 +408,7 @@ export interface CareerWealthFinalSynthesisFact {
   readonly activationHierarchy?: FinalSynthesisActivationHierarchy;
   readonly timingStatus?: SynthesisAxisStatus;
   readonly divisionalStatus?: VargaRelationship;
+  readonly d2AvailabilityReason?: string;
   readonly manifestationStatus?: FinalDomainStatus;
   readonly confidence: FinalDomainConfidence;
   readonly primaryPromise: DomainStrength | string;
@@ -467,6 +471,9 @@ export interface AiCareerCanonicalC11Fact {
   readonly finalDirection: string;
   readonly finalStrength: string;
   readonly confidence: string;
+  readonly confidenceCoverage: CareerConfidenceCoverage;
+  readonly confidenceReasons: readonly CareerConfidenceReason[];
+  readonly traceCompleteness?: ReasoningTraceCompleteness;
   readonly natalDirection: string;
   readonly natalStrength: string;
   readonly expressionStatus: string;
@@ -680,7 +687,7 @@ export interface WealthDimensionManifestationSynthesisFact {
   readonly natalSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly dashaSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly transitSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
-  readonly d2Support: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly d2Support: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'UNAVAILABLE';
   readonly factors: readonly WealthManifestationFactorFact[];
   readonly summary: string;
 }

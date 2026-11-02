@@ -145,24 +145,23 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
     });
   });
 
-  describe('WealthD2Section', () => {
-    it.each([
-      ['CONFIRMS', 'Confirms'],
-      ['PARTIALLY_CONFIRMS', 'Partially Confirms'],
-      ['MODIFIES', 'Modifies'],
-      ['CONFLICTS', 'Conflicts'],
-      ['UNAVAILABLE', 'Unavailable']
-    ])('renders D2 relationship "%s" as "%s"', (relValue, expectedText) => {
-      const d2: WealthD2ViewModel = {
-        relationship: relValue,
-        statement: `D2 relationship test for ${relValue}`
-      };
+  describe('WealthD2Section — A08 containment', () => {
+    it.each(['CONFIRMS', 'PARTIALLY_CONFIRMS', 'MODIFIES', 'CONFLICTS', 'UNAVAILABLE'])(
+      'never renders an incoming %s declaration as available',
+      (relValue) => {
+        const d2: WealthD2ViewModel = {
+          relationship: relValue,
+          statement: 'D2 calculation and interpretation have not passed independent validation.'
+        };
 
-      const { unmount } = render(<WealthD2Section d2={d2} />);
-      expect(screen.getByText('Hora (D2) Divisional Alignment')).toBeInTheDocument();
-      expect(screen.getByText(expectedText)).toBeInTheDocument();
-      unmount();
-    });
+        render(<WealthD2Section d2={d2} />);
+        expect(screen.getByText('Hora (D2) Divisional Alignment')).toBeInTheDocument();
+        expect(screen.getByText('Unavailable')).toBeInTheDocument();
+        expect(screen.getByText(/independent validation/)).toBeInTheDocument();
+        expect(screen.queryByText('Confirms')).not.toBeInTheDocument();
+        expect(screen.queryByText('Conflicts')).not.toBeInTheDocument();
+      }
+    );
   });
 
   describe('WealthDashaSection', () => {

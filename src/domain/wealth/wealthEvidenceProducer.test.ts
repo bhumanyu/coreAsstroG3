@@ -191,48 +191,35 @@ describe('Wealth evidence producer adapter contract', () => {
   });
 });
 
-describe('resolveD2ProducerRelationship', () => {
-  const d2Record = (
-    effect: WealthEvidenceProducerRecord['effect'],
-    relationship?: VargaRelationship
-  ): WealthEvidenceProducerRecord => ({
-    id: `D2-${effect}-${relationship ?? 'UNDECLARED'}`,
+describe('resolveD2ProducerRelationship — A08 containment', () => {
+  const d2Record = (effect: WealthEvidenceProducerRecord['effect'], relationship?: VargaRelationship): WealthEvidenceProducerRecord => ({
+    id: 'D2-' + effect + '-' + (relationship ?? 'UNDECLARED'),
     ruleId: 'WEALTH_D2_RELATIONSHIP_TEST',
     evidenceFamily: WealthEvidenceFamily.D2,
     priority: 'CONFIRMATORY',
     strength: 'MODERATE',
     effect,
-    statement: 'D2 relationship contract test',
-    ...(relationship
-      ? {
-          vargaEvidence: {
-            varga: 'D2',
-            relationship,
-            statement: 'Declared D2 relationship',
-            effect
-          }
-        }
-      : {})
+    statement: 'D2 relationship containment test',
+    ...(relationship ? { vargaEvidence: { varga: 'D2', relationship, statement: 'Declared D2 relationship', effect } } : {})
   });
 
-  it('returns UNAVAILABLE for conflicting declared relationships', () => {
-    expect(resolveD2ProducerRelationship([
-      d2Record('SUPPORT', 'CONFIRMS'),
-      d2Record('CHALLENGE', 'CONFLICTS')
-    ])).toBe('UNAVAILABLE');
+  it('keeps D2 unavailable when absent', () => {
+    expect(resolveD2ProducerRelationship([])).toBe('UNAVAILABLE');
   });
 
-  it('uses the single declared relationship when other evidence is undeclared', () => {
-    expect(resolveD2ProducerRelationship([
-      d2Record('SUPPORT', 'CONFIRMS'),
-      d2Record('CHALLENGE')
-    ])).toBe('CONFIRMS');
+  it('keeps D2 unavailable when a single relationship is declared', () => {
+    expect(resolveD2ProducerRelationship([d2Record('SUPPORT', 'CONFIRMS')])).toBe('UNAVAILABLE');
   });
 
-  it('derives PARTIALLY_CONFIRMS from mixed effects only when none are declared', () => {
-    expect(resolveD2ProducerRelationship([
-      d2Record('SUPPORT'),
-      d2Record('CHALLENGE')
-    ])).toBe('PARTIALLY_CONFIRMS');
+  it('keeps D2 unavailable when declarations conflict', () => {
+    expect(resolveD2ProducerRelationship([d2Record('SUPPORT', 'CONFIRMS'), d2Record('CHALLENGE', 'CONFLICTS')])).toBe('UNAVAILABLE');
+  });
+
+  it('keeps D2 unavailable when relationship metadata is malformed', () => {
+    expect(resolveD2ProducerRelationship([d2Record('SUPPORT', 'MALFORMED' as VargaRelationship)])).toBe('UNAVAILABLE');
+  });
+
+  it('does not infer a relationship from supporting and challenging polarity', () => {
+    expect(resolveD2ProducerRelationship([d2Record('SUPPORT'), d2Record('CHALLENGE')])).toBe('UNAVAILABLE');
   });
 });

@@ -189,7 +189,9 @@ import {
   mapManifestationStatusToEdgeType,
   mapPromiseStatusToEdgeType,
   type ReasoningEdgeType,
-  type ReasoningTraceGraph
+  type ReasoningTraceGraph,
+  buildReasoningTraceCompleteness,
+  type ReasoningTraceEvidenceReference
 } from '../careerWealth/reasoningTrace';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
@@ -1127,6 +1129,8 @@ export function interpretCareerV2(
     careerTimingSynthesis,
     d10Relationship,
     careerManifestationSynthesis,
+    synthesisRuleId: 'C11',
+    synthesisEvidenceReferences: canonicalC11Result.evidenceIds.map((id): ReasoningTraceEvidenceReference => ({ id, namespace: 'IDENTITY' })),
     careerFinalSynthesis: legacyShapeForTraceGraph as CareerWealthFinalSynthesis // P2-08D: Use C11-derived shape for trace graph (typed as C11TraceGraphShape, asserted to full type for function signature compatibility)
   });
 
@@ -1214,6 +1218,8 @@ export function buildCareerReasoningTraceGraph(params: {
   readonly careerTimingSynthesis?: CareerTimingSynthesis;
   readonly d10Relationship?: VargaRelationship;
   readonly careerManifestationSynthesis?: readonly CareerManifestationSynthesis[];
+  readonly synthesisRuleId?: string;
+  readonly synthesisEvidenceReferences?: readonly ReasoningTraceEvidenceReference[];
   readonly careerFinalSynthesis: CareerWealthFinalSynthesis;
 }): ReasoningTraceGraph {
   const traceBuilder = new ReasoningTraceBuilder('CAREER');
@@ -1255,7 +1261,9 @@ export function buildCareerReasoningTraceGraph(params: {
       const evNodeId = traceBuilder.addEvidenceNode({
         provenance: e.provenance,
         label: e.statement,
-        subjectKey: e.provenance.ruleId
+        subjectKey: e.provenance.ruleId,
+        occurrenceId: e.id,
+        identityKey: e.identityKey
       });
       const targetNodeId =
         e.provenance.axis === 'NATAL'
@@ -1358,7 +1366,17 @@ export function buildCareerReasoningTraceGraph(params: {
   const graph = traceBuilder.build();
   validateReasoningTrace(graph);
   validateEvidenceNodes(graph, new Set(params.evidence.map((e) => e.id)));
-  return graph;
+  if (!params.synthesisRuleId || !params.synthesisEvidenceReferences) return graph;
+  return Object.freeze({
+    ...graph,
+    traceCompleteness: buildReasoningTraceCompleteness({
+      domain: 'CAREER',
+      conclusionNodeId: finalNodeId,
+      synthesisRuleId: params.synthesisRuleId,
+      synthesisEvidenceReferences: params.synthesisEvidenceReferences,
+      evidence: params.evidence
+    })
+  });
 }
 
 export function buildCareerTimingStatement(

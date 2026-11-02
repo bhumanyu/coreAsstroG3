@@ -23,14 +23,10 @@ import type {
 
 export function resolveWealthConclusionStrength(
   natalStrength: DomainStrength,
-  d2Relationship: VargaRelationship,
+  _d2Relationship: VargaRelationship,
   conflicts: readonly DomainConflict[]
 ): DomainStrength {
-  if (d2Relationship === 'CONFLICTS') {
-    if (natalStrength === 'VERY_STRONG') return 'STRONG';
-    if (natalStrength === 'STRONG') return 'MODERATE';
-    if (natalStrength === 'MODERATE') return 'MIXED';
-  }
+  // D2 is not validated and therefore cannot change canonical or legacy Wealth strength.
 
   const hasOnlyTransitConflict =
     conflicts.length > 0 &&
@@ -141,13 +137,15 @@ export function buildWealthConclusionData(params: {
   const {
     overallStatus,
     dimensions,
-    d2Relationship,
     manifestations,
     evidence,
     periodTimingActivations,
     supportingSourceIds,
     challengingSourceIds
   } = params;
+
+  const d2Relationship: VargaRelationship = 'UNAVAILABLE';
+  const d2AvailabilityReason = 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
 
   const getDim = (dimName: WealthDimension): WealthDimensionInterpretation | undefined =>
     dimensions.find((d) => d.dimension === dimName);
@@ -190,10 +188,6 @@ export function buildWealthConclusionData(params: {
   if (accumulationStatus === 'CHALLENGED') {
     mainChallenges.push('Accumulation requires strict expenditure control');
   }
-  if (d2Relationship === 'CONFLICTS') {
-    mainChallenges.push('D2 Hora indicates execution friction in asset retention');
-  }
-
   const highManifestations = manifestations
     .filter((m) => m.confidence === 'VERY_HIGH' || m.confidence === 'HIGH')
     .map((m) => m.mode as WealthManifestationMode);
@@ -221,6 +215,7 @@ export function buildWealthConclusionData(params: {
     mainStrengths: Object.freeze(mainStrengths),
     mainChallenges: Object.freeze(mainChallenges),
     d2Relationship,
+    d2AvailabilityReason,
     accumulationDashaEffect,
     gainsDashaEffect,
     fortuneDashaEffect,
@@ -305,22 +300,10 @@ export function buildWealthTransitStatement(
 }
 
 export function buildD2Statement(
-  d2Evidence: readonly DomainEvidence[],
-  relationship: VargaRelationship
+  _evidence: readonly DomainEvidence[],
+  _d2Relationship: VargaRelationship
 ): string {
-  if (relationship === 'UNAVAILABLE' || d2Evidence.length === 0) {
-    return 'D2 Hora divisional analysis unavailable or neutral.';
-  }
-  if (relationship === 'CONFIRMS') {
-    return 'D2 Hora confirms liquid wealth potential and resource accumulation.';
-  }
-  if (relationship === 'CONFLICTS') {
-    return 'D2 Hora diverges from natal promise, indicating financial caution in asset preservation.';
-  }
-  if (relationship === 'MODIFIES') {
-    return 'D2 Hora modifies the financial expression toward specialized asset structures.';
-  }
-  return 'D2 Hora partially confirms financial accumulation.';
+  return 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
 }
 
 export function buildWealthConclusion(

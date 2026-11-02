@@ -151,6 +151,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       fortuneStatus: 'STRONGLY_SUPPORTED',
       speculationStatus: 'SUPPORTED',
       d2Relationship: 'CONFIRMS',
+      d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.',
       currentDashaEffect: 'ACTIVATES',
       currentTransitEffect: 'NO_MATERIAL_TRIGGER',
       promiseHeadline: 'Stable Accumulation',
@@ -218,6 +219,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(mappedEvidence.source).toBe('CAREER_ENGINE');
     expect(mappedEvidence.ruleId).toBe('RULE_RUCHAKA_YOGA_10TH');
     expect(mappedEvidence.derivedFromIds).toEqual(['ev_astronomy_mars_capricorn', 'ev_house_1_kendra']);
+    expect(analysis.wealth.d2.relationship).toBe('UNAVAILABLE');
+    expect(analysis.wealth.d2.statement).toContain('independent validation');
   });
 
   it('2. D10 relationship mapping preserves semantics and never returns percentage', () => {
@@ -239,8 +242,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   });
 
   it('3. D2 relationship and speculative risk mapping', () => {
-    expect(mapD2Relationship('CONFIRMS')).toBe('CONFIRMS');
-    expect(mapD2Relationship('MODIFIES')).toBe('MODIFIES');
+    expect(mapD2Relationship('CONFIRMS')).toBe('UNAVAILABLE');
+    expect(mapD2Relationship('MODIFIES')).toBe('UNAVAILABLE');
     expect(mapD2Relationship(undefined)).toBe('UNAVAILABLE');
 
     expect(mapSpeculativeRisk('EXTREME')).toBe('EXTREME');

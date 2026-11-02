@@ -146,13 +146,16 @@ export function buildLifeAnalysisViewModel(
     currentTimingEffect: deriveCareerTimingEffect(careerTiming),
     manifestationSynthesis: careerConclusionData?.careerManifestationSynthesis,
     finalSynthesis: careerConclusionData?.careerFinalSynthesis,
+    canonicalFinalSynthesis: careerConclusionData?.canonicalCareerFinalSynthesis,
+    confidenceCoverage: careerConclusionData?.canonicalCareerFinalSynthesis?.confidenceCoverage,
+    confidenceReasons: careerConclusionData?.canonicalCareerFinalSynthesis?.confidenceReasons,
+    traceCompleteness: careerConclusionData?.reasoningTraceGraph?.traceCompleteness,
     profession: careerConclusionData?.careerProfessionAnalysis,
     ...(careerDashaHierarchy ? { dashaHierarchy: careerDashaHierarchy } : {})
   };
 
   // Extract typed Wealth conclusion data
   const wealthConclusionData = getWealthConclusionData(wealth);
-  const wealthD2Varga = wealth.vargaConfirmations.find((v) => v.varga === 'D2');
   const wealthTiming = buildNormalizedWealthTiming(wealth, activeDasha?.at ?? wealth.asOf ?? wealth.generatedAt);
   const wealthActivations = getWealthPeriodTimingActivations(wealth);
   const { md: mdWealth, ad: adWealth, pd: pdWealth } = indexDashaPeriodActivations(wealthActivations);
@@ -163,10 +166,8 @@ export function buildLifeAnalysisViewModel(
 
   const wealthDetail: LifeAnalysisWealthDetailViewModel = {
     natalPromise: wealth.natalPromise.strength,
-    d2Relationship:
-      wealthConclusionData?.d2Relationship ??
-      wealthD2Varga?.relationship ??
-      'UNAVAILABLE',
+    d2Relationship: 'UNAVAILABLE',
+    d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.',
     currentDashaEffect: wealth.dashaActivation.effect,
     currentTransitEffect: wealth.transitTrigger.effect,
     overallStatus: wealthConclusionData?.overallStatus ?? 'UNAVAILABLE',
@@ -183,6 +184,7 @@ export function buildLifeAnalysisViewModel(
     currentTimingEffect: deriveWealthTimingEffect(wealthTiming),
     manifestationSynthesis: wealthConclusionData?.wealthManifestationSynthesis,
     finalSynthesis: wealthConclusionData?.wealthFinalSynthesis,
+    traceCompleteness: wealth.conclusionData?.reasoningTraceGraph?.traceCompleteness,
     ...(wealth.diagnostics ? { diagnostics: wealth.diagnostics } : {}),
     ...(wealth.dataCompleteness && 'evidenceProduction' in wealth.dataCompleteness
       ? { evidenceProduction: wealth.dataCompleteness.evidenceProduction }

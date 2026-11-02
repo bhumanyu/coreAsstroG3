@@ -6,7 +6,10 @@ import type {
   CareerFinalStatus,
   CareerFinalTimingStatus,
   CareerFinalConfidence,
-  CareerFinalConflict
+  CareerFinalConflict,
+  CareerConfidenceCoverage,
+  CareerConfidenceReason,
+  CareerConfidenceLayerCoverage
 } from './careerFinalSynthesisTypes';
 import type {
   CareerStructuralDirection,
@@ -406,53 +409,68 @@ function deriveCurrentPressure(
 }
 
 /**
- * Derive Confidence
- *
- * C11-INV-05: Missing evidence ≠ negative evidence
- * Confidence derived from natal evidence quality + layer consistency + conflicts
+ * Derive confidence from explicit evidence coverage, provenance and conflict policy.
+ * Promise strength is intentionally not modified by this function.
  */
 function deriveConfidence(
-  natalStrength: CareerStructuralStrength,
-  hasDasha: boolean,
-  hasD10: boolean,
-  hasExpression: boolean,
-  hasTransit: boolean,
-  conflicts: readonly CareerFinalConflict[]
-): CareerFinalConfidence {
-  // C11-INV-05: Missing evidence ≠ negative evidence
-  // Low confidence only if natal is weak/undetermined
-  if (natalStrength === 'UNDETERMINED' || natalStrength === 'WEAK' || natalStrength === 'VERY_WEAK') {
-    return 'LOW';
+  suppliedEvidenceQuality: 'HIGH' | 'MEDIUM' | 'LOW' | undefined,
+  layers: { readonly natal: boolean; readonly dasha: boolean; readonly d10: boolean; readonly expression: boolean; readonly transit: boolean },
+  conflicts: readonly CareerFinalConflict[],
+  evidenceIds: readonly string[],
+  sourceIds: readonly string[],
+  ruleIds: readonly string[]
+): { readonly confidence: CareerFinalConfidence; readonly coverage: CareerConfidenceCoverage; readonly reasons: readonly CareerConfidenceReason[] } {
+  const layerCoverage: readonly CareerConfidenceLayerCoverage[] = Object.freeze([
+    Object.freeze({ layer: 'NATAL' as const, requirement: 'REQUIRED' as const, availability: layers.natal ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }),
+    Object.freeze({ layer: 'DASHA' as const, requirement: 'SUPPORTING' as const, availability: layers.dasha ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }),
+    Object.freeze({ layer: 'D10' as const, requirement: 'SUPPORTING' as const, availability: layers.d10 ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }),
+    Object.freeze({ layer: 'EXPRESSION' as const, requirement: 'SUPPORTING' as const, availability: layers.expression ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }),
+    Object.freeze({ layer: 'TRANSIT' as const, requirement: 'OPTIONAL' as const, availability: layers.transit ? 'AVAILABLE' as const : 'UNAVAILABLE' as const })
+  ]);
+  const missingRequiredLayers = layerCoverage.filter(x => x.requirement === 'REQUIRED' && x.availability === 'UNAVAILABLE').map(x => x.layer);
+  const missingSupportingLayers = layerCoverage.filter(x => x.requirement === 'SUPPORTING' && x.availability === 'UNAVAILABLE').map(x => x.layer);
+  const missingOptionalLayers = layerCoverage.filter(x => x.requirement === 'OPTIONAL' && x.availability === 'UNAVAILABLE').map(x => x.layer);
+  const hasEvidenceIds = evidenceIds.some(id => id.trim().length > 0);
+  const hasSourceIds = sourceIds.some(id => id.trim().length > 0);
+  const hasRuleIds = ruleIds.some(id => id.trim().length > 0);
+  const provenanceProvided = hasEvidenceIds || hasSourceIds || hasRuleIds;
+  const provenance: CareerConfidenceCoverage['provenance'] = !provenanceProvided
+    ? 'NOT_PROVIDED'
+    : hasEvidenceIds && hasSourceIds && hasRuleIds
+      ? 'COMPLETE'
+      : 'PARTIAL';
+  const evidenceQuality: CareerConfidenceCoverage['quality'] = suppliedEvidenceQuality ?? (provenance === 'COMPLETE' ? 'HIGH' : 'MEDIUM');
+  const coverage: CareerConfidenceCoverage = Object.freeze({
+    status: missingRequiredLayers.length > 0 ? 'INSUFFICIENT' : missingSupportingLayers.length > 0 ? 'PARTIAL' : 'COMPLETE',
+    quality: evidenceQuality,
+    layers: layerCoverage,
+    missingRequiredLayers: Object.freeze(missingRequiredLayers),
+    missingSupportingLayers: Object.freeze(missingSupportingLayers),
+    missingOptionalLayers: Object.freeze(missingOptionalLayers),
+    provenance
+  });
+  const reasons: CareerConfidenceReason[] = [];
+  const caps: CareerFinalConfidence[] = [];
+  const addReason = (code: CareerConfidenceReason['code'], message: string, capApplied: CareerFinalConfidence | null, layer?: CareerConfidenceReason['layer']) => {
+    reasons.push(Object.freeze({ code, message, capApplied, ...(layer ? { layer } : {}) }));
+    if (capApplied) caps.push(capApplied);
+  };
+  let confidence: CareerFinalConfidence = evidenceQuality;
+  if (evidenceQuality === 'LOW') addReason('EVIDENCE_QUALITY_LOW', 'The supplied evidence-quality assessment is LOW.', 'LOW');
+  else if (evidenceQuality === 'MEDIUM') addReason('EVIDENCE_QUALITY_MODERATE', 'The supplied evidence-quality assessment is MEDIUM or not independently supplied.', 'MEDIUM');
+  for (const layer of missingRequiredLayers) addReason('REQUIRED_LAYER_UNAVAILABLE', 'A required evidence layer is unavailable; confidence is capped at LOW.', 'LOW', layer);
+  for (const layer of missingSupportingLayers) {
+    const cap: CareerFinalConfidence = missingSupportingLayers.length >= 2 ? 'LOW' : 'MEDIUM';
+    addReason('SUPPORTING_LAYER_UNAVAILABLE', 'Supporting evidence layer ' + layer + ' is unavailable; confidence is capped at ' + cap + ' under the C11 coverage policy.', cap, layer);
   }
-
-  // Check for conflicts - contradictory layers reduce confidence
-  const hasHighSeverityConflicts = conflicts.some(c => c.severity === 'HIGH');
-  const hasModerateSeverityConflicts = conflicts.some(c => c.severity === 'MODERATE');
-
-  // High confidence with strong natal + consistency
-  if (natalStrength === 'VERY_STRONG' || natalStrength === 'STRONG') {
-    if (hasHighSeverityConflicts) {
-      return 'MEDIUM';
-    }
-    if (hasModerateSeverityConflicts) {
-      return 'MEDIUM';
-    }
-    // Strong natal with no conflicts = HIGH confidence regardless of layer count
-    return 'HIGH';
-  }
-
-  // Moderate natal
-  if (natalStrength === 'MODERATE') {
-    if (hasHighSeverityConflicts) {
-      return 'LOW';
-    }
-    if (hasModerateSeverityConflicts) {
-      return 'MEDIUM';
-    }
-    return 'MEDIUM';
-  }
-
-  return 'LOW';
+  for (const layer of missingOptionalLayers) addReason('OPTIONAL_LAYER_UNAVAILABLE', 'Optional evidence layer ' + layer + ' is unavailable and does not reduce confidence.', null, layer);
+  if (conflicts.some(c => c.severity === 'HIGH')) addReason('CONFLICT_HIGH_SEVERITY', 'At least one HIGH-severity contradiction is present; confidence is capped at LOW.', 'LOW');
+  else if (conflicts.some(c => c.severity === 'MODERATE')) addReason('CONFLICT_MODERATE_SEVERITY', 'At least one MODERATE-severity contradiction is present; confidence is capped at MEDIUM.', 'MEDIUM');
+  if (provenance === 'PARTIAL') addReason('PROVENANCE_PARTIAL', 'Evidence, source and rule provenance are only partially populated; confidence is capped at MEDIUM.', 'MEDIUM');
+  else if (provenance === 'NOT_PROVIDED') addReason('PROVENANCE_NOT_PROVIDED', 'No traceability arrays were supplied; provenance quality is unknown and is not silently treated as complete.', null);
+  const rank: Record<CareerFinalConfidence, number> = { LOW: 0, MEDIUM: 1, HIGH: 2 };
+  for (const cap of caps) if (rank[cap] < rank[confidence]) confidence = cap;
+  return Object.freeze({ confidence, coverage, reasons: Object.freeze(reasons) });
 }
 
 /**
@@ -614,11 +632,8 @@ export function synthesizeCareerFinal(
   const currentPressure = deriveCurrentPressure(mappedDashaDirection, mappedD10Direction, transitDirection);
 
   // Derive confidence (C11-INV-05: Missing evidence ≠ negative evidence)
-  const hasDasha = dashaEffect !== undefined && dashaEffect !== 'INSUFFICIENT_DATA';
-  const hasD10 = d10Direction !== undefined;
-  const hasExpression = expressionStrength !== undefined;
-  const hasTransit = transitDirection !== undefined;
-  const confidence = deriveConfidence(natalStrength, hasDasha, hasD10, hasExpression, hasTransit, conflicts);
+  const confidenceAssessment = deriveConfidence(input.evidenceQuality, { natal: mappedNatalDirection !== 'UNAVAILABLE' && mappedNatalStrength !== 'UNDETERMINED', dasha: dashaEffect !== undefined && dashaEffect !== 'INSUFFICIENT_DATA' && mappedDashaDirection !== 'UNAVAILABLE', d10: mappedD10Direction !== 'UNAVAILABLE', expression: mappedExpressionStatus !== 'UNAVAILABLE', transit: transitDirection !== undefined && transitDirection !== 'UNAVAILABLE' }, conflicts, evidenceIds, sourceIds, ruleIds);
+  const confidence = confidenceAssessment.confidence;
 
   // Extract strongest and challenged expressions
   const strongestExpressions = Object.freeze(
@@ -656,6 +671,8 @@ export function synthesizeCareerFinal(
     finalDirection,
     finalStrength,
     confidence,
+    confidenceCoverage: confidenceAssessment.coverage,
+    confidenceReasons: confidenceAssessment.reasons,
     natalDirection: mappedNatalDirection,
     natalStrength: mappedNatalStrength,
     expressionStatus: mappedExpressionStatus,

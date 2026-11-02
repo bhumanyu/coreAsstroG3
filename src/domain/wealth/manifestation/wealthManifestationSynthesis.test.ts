@@ -104,44 +104,20 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(speculationResult.natalSupport).toBe('CHALLENGE');
   });
 
-  it('incorporates D2 Hora confirmation and conflict into accumulation and gains synthesis', () => {
-    const accumulationEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
+  it('keeps D2 unavailable despite absent, malformed, single, or conflicting declarations', () => {
+    const evidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
+    const absent = resolveWealthDimensionManifestation('ACCUMULATION', evidence);
+    const single = resolveWealthDimensionManifestation('ACCUMULATION', evidence, undefined, 'CONFIRMS');
+    const malformed = resolveWealthDimensionManifestation('ACCUMULATION', evidence, undefined, 'MALFORMED');
+    const conflicting = resolveWealthDimensionManifestation('ACCUMULATION', evidence, undefined, 'CONFLICTS');
 
-    const resultWithConfirm = resolveWealthDimensionManifestation(
-      'ACCUMULATION',
-      accumulationEvidence,
-      undefined,
-      'CONFIRMS'
-    );
-
-    expect(resultWithConfirm.d2Support).toBe('SUPPORT');
-    const d2Factor = resultWithConfirm.factors.find((f) => f.source === 'D2');
-    expect(d2Factor).toBeDefined();
-    expect(d2Factor?.direction).toBe('SUPPORT');
-    expect(d2Factor?.weight).toBe(1.0);
-
-    const resultWithPartial = resolveWealthDimensionManifestation(
-      'ACCUMULATION',
-      accumulationEvidence,
-      undefined,
-      'PARTIALLY_CONFIRMS'
-    );
-    expect(resultWithPartial.d2Support).toBe('SUPPORT');
-    const d2PartialFactor = resultWithPartial.factors.find((f) => f.source === 'D2');
-    expect(d2PartialFactor?.weight).toBe(0.5);
-
-    const resultWithConflict = resolveWealthDimensionManifestation(
-      'ACCUMULATION',
-      accumulationEvidence,
-      undefined,
-      'CONFLICTS'
-    );
-    expect(resultWithConflict.d2Support).toBe('CHALLENGE');
-    const d2ConflictFactor = resultWithConflict.factors.find((f) => f.source === 'D2');
-    expect(d2ConflictFactor?.direction).toBe('CHALLENGE');
+    for (const result of [absent, single, malformed, conflicting]) {
+      expect(result.d2Support).toBe('UNAVAILABLE');
+      expect(result.factors.some((factor) => factor.source === 'D2')).toBe(false);
+    }
   });
 
-  it('attributes only explicit D2 source evidence IDs to the D2 factor', () => {
+  it('does not emit a D2 factor even when raw D2 evidence is present', () => {
     const evidence = [
       createDomainEvidence({
         id: 'WEALTH_EXPLICIT_D2_EVIDENCE',
@@ -149,35 +125,15 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
         domain: 'WEALTH',
         phase: 'VARGA_CONFIRMATION',
         source: 'D2',
-        statement: 'Explicit D2 evidence',
+        statement: 'Unvalidated D2 evidence',
         polarity: 'SUPPORTING',
         strength: 'STRONG',
         ruleId: 'WEALTH_D2_CONFIRMATION'
-      }),
-      createDomainEvidence({
-        id: 'WEALTH_NON_D2_VARGA_EVIDENCE',
-        sourceType: 'VARGA',
-        domain: 'WEALTH',
-        phase: 'VARGA_CONFIRMATION',
-        source: 'D1',
-        statement: 'Varga-classified evidence with non-D2 source provenance',
-        polarity: 'SUPPORTING',
-        strength: 'MODERATE',
-        ruleId: 'WEALTH_NON_D2_VARGA'
       })
     ];
-
-    const result = resolveWealthDimensionManifestation(
-      'ACCUMULATION',
-      evidence,
-      undefined,
-      'CONFIRMS'
-    );
-    const d2Factor = result.factors.find((factor) => factor.source === 'D2');
-
-    expect(d2Factor).toBeDefined();
-    expect(d2Factor?.evidenceIds).toContain('WEALTH_EXPLICIT_D2_EVIDENCE');
-    expect(d2Factor?.evidenceIds).not.toContain('WEALTH_NON_D2_VARGA_EVIDENCE');
+    const result = resolveWealthDimensionManifestation('ACCUMULATION', evidence, undefined, 'CONFIRMS');
+    expect(result.d2Support).toBe('UNAVAILABLE');
+    expect(result.factors.some(factor => factor.source === 'D2')).toBe(false);
   });
 
   it('synthesizes all 4 classical wealth dimensions via synthesizeWealthManifestations', () => {
@@ -289,12 +245,12 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(result.natalSupport).toBe('SUPPORT');
     expect(result.dashaSupport).toBe('CHALLENGE');
     expect(result.transitSupport).toBe('SUPPORT');
-    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.d2Support).toBe('UNAVAILABLE');
     expect(result.status).toBe('MIXED');
     expect(result.confidence).toBe('MEDIUM');
   });
 
-  it('Test D: resolves to STRONGLY_SUPPORTED when natal SUPPORT + structural secondary SUPPORT (dasha + D2) without transit (transit NEUTRAL)', () => {
+  it('Test D: resolves to STRONGLY_SUPPORTED from natal and Dasha support without validated D2', () => {
     const natalEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
 
     const mockWealthTiming = createMockWealthTiming({
@@ -315,13 +271,13 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(result.dimension).toBe('ACCUMULATION');
     expect(result.natalSupport).toBe('SUPPORT');
     expect(result.dashaSupport).toBe('SUPPORT');
-    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.d2Support).toBe('UNAVAILABLE');
     expect(result.transitSupport).toBe('NEUTRAL');
     expect(result.status).toBe('STRONGLY_SUPPORTED');
     expect(result.confidence).toBe('HIGH');
   });
 
-  it('Test 5: resolves to INSUFFICIENT_DATA when natal evidence for dimension is missing even with strong dasha + transit + D2 support', () => {
+  it('Test 5: resolves to INSUFFICIENT_DATA when natal evidence is missing despite Dasha and transit support', () => {
     const emptyNatalEvidence: DomainEvidence[] = [];
 
     const mockWealthTiming = createMockWealthTiming({
@@ -354,7 +310,7 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(result.natalSupport).toBe('NEUTRAL');
     expect(result.dashaSupport).toBe('SUPPORT');
     expect(result.transitSupport).toBe('SUPPORT');
-    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.d2Support).toBe('UNAVAILABLE');
     expect(result.status).toBe('INSUFFICIENT_DATA');
     expect(result.confidence).toBe('LOW');
   });
@@ -395,13 +351,13 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(synthesis.dimensions.ACCUMULATION.natalSupport).toBe('SUPPORT');
     expect(synthesis.dimensions.ACCUMULATION.dashaSupport).toBe('SUPPORT');
     expect(synthesis.dimensions.ACCUMULATION.transitSupport).toBe('SUPPORT');
-    expect(synthesis.dimensions.ACCUMULATION.d2Support).toBe('SUPPORT');
+    expect(synthesis.dimensions.ACCUMULATION.d2Support).toBe('UNAVAILABLE');
 
     // SPECULATION has natal CHALLENGE + secondary SUPPORT everywhere -> strictly CHALLENGED (natal ceiling)
     expect(synthesis.dimensions.SPECULATION.status).toBe('CHALLENGED');
     expect(synthesis.dimensions.SPECULATION.natalSupport).toBe('CHALLENGE');
     expect(synthesis.dimensions.SPECULATION.dashaSupport).toBe('SUPPORT');
     expect(synthesis.dimensions.SPECULATION.transitSupport).toBe('SUPPORT');
-    expect(synthesis.dimensions.SPECULATION.d2Support).toBe('SUPPORT');
+    expect(synthesis.dimensions.SPECULATION.d2Support).toBe('UNAVAILABLE');
   });
 });

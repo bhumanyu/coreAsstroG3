@@ -303,39 +303,49 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     expect(quals[1].severity).toBe('MEDIUM');
   });
 
-  it('deriveOverallConfidence handles 0, 1-2, and 3+ unavailable counts', () => {
+  it('deriveOverallConfidence excludes intentionally unavailable D2 from the confidence-bearing layer count', () => {
     const base = createProductAnalysis();
-
-    // 0 unavailable -> HIGH
-    expect(deriveOverallConfidence(base)).toBe('HIGH');
-
-    // 1 unavailable -> MEDIUM
-    const oneUnavail: ProductAnalysis = {
+    const d2Unavailable: ProductAnalysis = {
       ...base,
+      wealth: {
+        ...base.wealth,
+        d2: { relationship: 'UNAVAILABLE' }
+      }
+    };
+
+    // D2 is optional/unvalidated and does not reduce confidence.
+    expect(deriveOverallConfidence(d2Unavailable)).toBe('HIGH');
+
+    // One validated layer unavailable -> MEDIUM.
+    const oneUnavail: ProductAnalysis = {
+      ...d2Unavailable,
       career: {
-        ...base.career,
+        ...d2Unavailable.career,
         d10: { relationship: 'UNAVAILABLE' }
       }
     };
     expect(deriveOverallConfidence(oneUnavail)).toBe('MEDIUM');
 
-    // 2 unavailable -> MEDIUM
+    // Two validated layers unavailable -> MEDIUM.
     const twoUnavail: ProductAnalysis = {
       ...oneUnavail,
-      wealth: {
-        ...oneUnavail.wealth,
-        d2: { relationship: 'UNAVAILABLE' }
+      career: {
+        ...oneUnavail.career,
+        activation: {
+          ...oneUnavail.career.activation,
+          dasha: { status: 'UNAVAILABLE', periods: [] }
+        }
       }
     };
     expect(deriveOverallConfidence(twoUnavail)).toBe('MEDIUM');
 
-    // 3 unavailable -> LOW
+    // Three validated layers unavailable -> LOW.
     const threeUnavail: ProductAnalysis = {
       ...twoUnavail,
-      career: {
-        ...twoUnavail.career,
+      wealth: {
+        ...twoUnavail.wealth,
         activation: {
-          ...twoUnavail.career.activation,
+          ...twoUnavail.wealth.activation,
           dasha: { status: 'UNAVAILABLE', periods: [] }
         }
       }

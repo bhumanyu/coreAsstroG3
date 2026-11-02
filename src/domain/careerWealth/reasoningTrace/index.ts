@@ -5,3 +5,5 @@ export * from './reasoningTraceIdentity';
 export * from './reasoningTraceBuilder';
 export * from './reasoningTraceValidator';
 export * from './finalSynthesisEdgeMapping';
+
+export * from './reasoningTraceCompleteness';

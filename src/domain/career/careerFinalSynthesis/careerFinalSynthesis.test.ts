@@ -257,7 +257,7 @@ describe('C11 Final Synthesis', () => {
       expect(result.finalDirection).toBe('SUPPORT');
     });
 
-    it('should derive LOW confidence for weak natal regardless of missing secondary evidence', () => {
+    it('does not infer LOW confidence from weak promise strength when evidence quality is unknown', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'WEAK'
@@ -265,7 +265,7 @@ describe('C11 Final Synthesis', () => {
 
       const result = synthesizeCareerFinal(input);
 
-      expect(result.confidence).toBe('LOW');
+      expect(result.confidence).toBe('MEDIUM');
     });
   });
 
@@ -630,7 +630,7 @@ describe('C11 Final Synthesis', () => {
   });
 
   describe('P2-08D-02: Confidence policy pinning', () => {
-    it('should return HIGH confidence for strong natal alone with no conflicts', () => {
+    it('returns MEDIUM confidence for strong natal when producer provenance is not supplied', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -640,11 +640,11 @@ describe('C11 Final Synthesis', () => {
 
       const result = synthesizeCareerFinal(input);
 
-      // Strong natal with no conflicts = HIGH confidence regardless of layer count
-      expect(result.confidence).toBe('HIGH');
+      // Promise strength is not confidence; provenance is unknown.
+      expect(result.confidence).toBe('MEDIUM');
     });
 
-    it('should return HIGH confidence for VERY_STRONG natal alone with no conflicts', () => {
+    it('returns MEDIUM confidence for VERY_STRONG natal when producer provenance is not supplied', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'VERY_STRONG',
@@ -654,7 +654,7 @@ describe('C11 Final Synthesis', () => {
 
       const result = synthesizeCareerFinal(input);
 
-      expect(result.confidence).toBe('HIGH');
+      expect(result.confidence).toBe('MEDIUM');
     });
 
     it('should return MEDIUM confidence for strong natal with moderate conflicts', () => {
@@ -694,7 +694,7 @@ describe('C11 Final Synthesis', () => {
 
       const result = synthesizeCareerFinal(input);
 
-      expect(result.confidence).toBe('MEDIUM');
+      expect(result.confidence).toBe('LOW');
     });
   });
 
@@ -936,8 +936,8 @@ describe('C11 Final Synthesis', () => {
       const contradictoryResult = synthesizeCareerFinal(contradictoryInput);
 
       // Consistent case should have equal or higher confidence
-      expect(consistentResult.confidence).toBe('HIGH');
-      expect(contradictoryResult.confidence).toBe('MEDIUM');
+      expect(consistentResult.confidence).toBe('MEDIUM');
+      expect(contradictoryResult.confidence).toBe('LOW');
       // Consistent case should be SUPPORTED
       expect(consistentResult.finalStatus).toBe('SUPPORTED');
       // Contradictory case should be downgraded
@@ -993,5 +993,138 @@ describe('C11 Final Synthesis', () => {
       expect(d10ChallengeResult.d10Direction).toBe('CHALLENGE');
       expect(dashaChallengeResult.d10Direction).toBe('UNAVAILABLE');
     });
+  });
+});
+
+
+describe('A07 — C11 confidence coverage and provenance policy', () => {
+  const completeInput: CareerFinalSynthesisInput = {
+    natalDirection: 'SUPPORT',
+    natalStrength: 'STRONG',
+    dashaEffect: 'ACTIVATES',
+    dashaDirection: 'SUPPORT',
+    d10Direction: 'SUPPORT',
+    d10Strength: 'STRONG',
+    expressionDirection: 'SUPPORTED',
+    expressionStrength: 'STRONG',
+    transitDirection: 'SUPPORT',
+    evidenceIds: ['natal-semantic-1'],
+    sourceIds: ['natal-occurrence-1'],
+    ruleIds: ['RULE-NATAL-1']
+  };
+
+  it('returns HIGH confidence for complete required and supporting coverage with complete provenance', () => {
+    const result = synthesizeCareerFinal(completeInput);
+    expect(result.confidence).toBe('HIGH');
+    expect(result.confidenceCoverage.status).toBe('COMPLETE');
+    expect(result.confidenceCoverage.provenance).toBe('COMPLETE');
+    expect(result.confidenceReasons).toHaveLength(0);
+  });
+
+  it('keeps strong natal promise independent when evidence quality is LOW', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, evidenceQuality: 'LOW' });
+    expect(result.finalStrength).toBe('STRONG');
+    expect(result.confidence).toBe('LOW');
+    expect(result.confidenceCoverage.quality).toBe('LOW');
+    expect(result.confidenceReasons.some(reason => reason.code === 'EVIDENCE_QUALITY_LOW')).toBe(true);
+  });
+
+  it('can express a weak natal promise with HIGH confidence when evidence is complete and reliable', () => {
+    const result = synthesizeCareerFinal({
+      ...completeInput,
+      natalDirection: 'CHALLENGE',
+      natalStrength: 'WEAK',
+      dashaDirection: 'CHALLENGE',
+      d10Direction: 'CHALLENGE',
+      expressionDirection: 'NEUTRAL',
+      transitDirection: 'CHALLENGE',
+      evidenceQuality: 'HIGH'
+    });
+    expect(result.finalStrength).toBe('WEAK');
+    expect(result.confidence).toBe('HIGH');
+    expect(result.confidenceCoverage.quality).toBe('HIGH');
+  });
+
+  it('caps confidence at LOW when required natal evidence is unavailable', () => {
+    const result = synthesizeCareerFinal({
+      ...completeInput,
+      natalStrength: 'UNDETERMINED'
+    });
+    expect(result.confidence).toBe('LOW');
+    expect(result.confidenceCoverage.status).toBe('INSUFFICIENT');
+    expect(result.confidenceCoverage.missingRequiredLayers).toContain('NATAL');
+    expect(result.confidenceReasons.some(reason => reason.code === 'REQUIRED_LAYER_UNAVAILABLE' && reason.layer === 'NATAL' && reason.capApplied === 'LOW')).toBe(true);
+  });
+
+  it('caps confidence when Dasha is missing while preserving strong natal promise', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, dashaEffect: undefined, dashaDirection: undefined });
+    expect(result.finalStrength).toBe('STRONG');
+    expect(result.natalStrength).toBe('STRONG');
+    expect(result.confidence).toBe('MEDIUM');
+    expect(result.confidenceCoverage.missingSupportingLayers).toContain('DASHA');
+    expect(result.confidenceReasons.some(reason => reason.code === 'SUPPORTING_LAYER_UNAVAILABLE' && reason.layer === 'DASHA' && reason.capApplied === 'MEDIUM')).toBe(true);
+  });
+
+  it('caps confidence when D10 is missing while preserving strong natal promise', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, d10Direction: 'UNAVAILABLE', d10Strength: undefined });
+    expect(result.finalStrength).toBe('STRONG');
+    expect(result.confidence).toBe('MEDIUM');
+    expect(result.confidenceCoverage.missingSupportingLayers).toContain('D10');
+  });
+
+  it('reports missing expression as supporting coverage, not as a challenge', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, expressionDirection: 'UNAVAILABLE', expressionStrength: undefined });
+    expect(result.expressionStatus).toBe('UNAVAILABLE');
+    expect(result.finalStrength).toBe('STRONG');
+    expect(result.confidence).toBe('MEDIUM');
+    expect(result.confidenceCoverage.missingSupportingLayers).toContain('EXPRESSION');
+  });
+
+  it('does not reduce confidence solely because optional transit evidence is absent', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, transitDirection: 'UNAVAILABLE' });
+    expect(result.confidence).toBe('HIGH');
+    expect(result.confidenceCoverage.missingOptionalLayers).toContain('TRANSIT');
+    expect(result.confidenceReasons.some(reason => reason.code === 'OPTIONAL_LAYER_UNAVAILABLE' && reason.capApplied === null)).toBe(true);
+  });
+
+  it('applies explicit conflict caps and exposes the reason', () => {
+    const result = synthesizeCareerFinal({
+      ...completeInput,
+      conflicts: [{
+        source: 'D10',
+        direction: 'CHALLENGE',
+        severity: 'HIGH',
+        evidenceIds: ['d10-conflict-1'],
+        statement: 'Conflicting D10 evidence'
+      }]
+    });
+    expect(result.confidence).toBe('LOW');
+    expect(result.confidenceReasons.some(reason => reason.code === 'CONFLICT_HIGH_SEVERITY' && reason.capApplied === 'LOW')).toBe(true);
+  });
+
+  it('reports partial producer provenance and applies the documented MEDIUM cap', () => {
+    const result = synthesizeCareerFinal({ ...completeInput, sourceIds: [], ruleIds: [] });
+    expect(result.confidence).toBe('MEDIUM');
+    expect(result.confidenceCoverage.provenance).toBe('PARTIAL');
+    expect(result.confidenceReasons.some(reason => reason.code === 'PROVENANCE_PARTIAL')).toBe(true);
+  });
+
+  it('does not treat whitespace-only trace identifiers as supplied provenance', () => {
+    const result = synthesizeCareerFinal({
+      ...completeInput,
+      evidenceIds: ['  '],
+      sourceIds: [''],
+      ruleIds: ['  ']
+    });
+    expect(result.confidenceCoverage.provenance).toBe('NOT_PROVIDED');
+    expect(result.confidenceReasons.some(reason => reason.code === 'PROVENANCE_NOT_PROVIDED')).toBe(true);
+  });
+
+  it('is deterministic for identical inputs', () => {
+    const first = synthesizeCareerFinal(completeInput);
+    const second = synthesizeCareerFinal(completeInput);
+    expect(second.confidence).toBe(first.confidence);
+    expect(second.confidenceCoverage).toEqual(first.confidenceCoverage);
+    expect(second.confidenceReasons).toEqual(first.confidenceReasons);
   });
 });

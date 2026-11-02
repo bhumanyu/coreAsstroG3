@@ -46,6 +46,8 @@ export interface DomainEvidence {
   readonly strength: EvidenceStrength;
   readonly priority: number;
   readonly ruleId?: string;
+  /** Exact upstream chart/source record reference when supplied by the producer. */
+  readonly sourceRecordId?: string;
   readonly relatedEvidenceIds: readonly string[];
   /**
    * Canonical semantic identities of root facts this occurrence depends on.
@@ -348,6 +350,10 @@ export function createDomainEvidence(
 
   // Validate identityKey if present (reject sentinel and empty/whitespace)
   const trimmedIdentityKey = evidence.identityKey?.trim();
+  const trimmedSourceRecordId = evidence.sourceRecordId?.trim();
+  if (evidence.sourceRecordId !== undefined && !trimmedSourceRecordId) {
+    throw new Error('createDomainEvidence: sourceRecordId must be non-empty when provided');
+  }
   if (trimmedIdentityKey === UNRESOLVED_IDENTITY_SENTINEL) {
     throw new Error(`createDomainEvidence: identityKey cannot be the sentinel "${UNRESOLVED_IDENTITY_SENTINEL}" (reserved)`);
   }
@@ -373,6 +379,7 @@ export function createDomainEvidence(
     ]),
     ...(rootEvidenceIds.length > 0 ? { rootEvidenceIds } : {}),
     ...(evidence.ruleId ? { ruleId: evidence.ruleId } : {}),
+    ...(trimmedSourceRecordId ? { sourceRecordId: trimmedSourceRecordId } : {}),
     ...(evidence.notes ? { notes: evidence.notes } : {}),
     ...(evidence.provenance ? { provenance: Object.freeze(evidence.provenance) } : {}),
     ...(evidence.timing ? { timing: Object.freeze({ ...evidence.timing }) } : {}),

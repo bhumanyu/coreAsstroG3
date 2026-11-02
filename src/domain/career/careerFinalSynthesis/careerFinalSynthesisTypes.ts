@@ -107,6 +107,41 @@ export interface CareerFinalConflict {
   readonly statement: string;
 }
 
+export type CareerConfidenceLayerRequirement = 'REQUIRED' | 'SUPPORTING' | 'OPTIONAL';
+export type CareerConfidenceLayerAvailability = 'AVAILABLE' | 'UNAVAILABLE';
+
+export interface CareerConfidenceLayerCoverage {
+  readonly layer: 'NATAL' | 'DASHA' | 'D10' | 'EXPRESSION' | 'TRANSIT';
+  readonly requirement: CareerConfidenceLayerRequirement;
+  readonly availability: CareerConfidenceLayerAvailability;
+}
+
+export interface CareerConfidenceCoverage {
+  readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT';
+  readonly quality: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly layers: readonly CareerConfidenceLayerCoverage[];
+  readonly missingRequiredLayers: readonly string[];
+  readonly missingSupportingLayers: readonly string[];
+  readonly missingOptionalLayers: readonly string[];
+  readonly provenance: 'COMPLETE' | 'PARTIAL' | 'NOT_PROVIDED';
+}
+
+export interface CareerConfidenceReason {
+  readonly code:
+    | 'REQUIRED_LAYER_UNAVAILABLE'
+    | 'SUPPORTING_LAYER_UNAVAILABLE'
+    | 'OPTIONAL_LAYER_UNAVAILABLE'
+    | 'EVIDENCE_QUALITY_LOW'
+    | 'EVIDENCE_QUALITY_MODERATE'
+    | 'CONFLICT_HIGH_SEVERITY'
+    | 'CONFLICT_MODERATE_SEVERITY'
+    | 'PROVENANCE_PARTIAL'
+    | 'PROVENANCE_NOT_PROVIDED';
+  readonly layer?: 'NATAL' | 'DASHA' | 'D10' | 'EXPRESSION' | 'TRANSIT';
+  readonly message: string;
+  readonly capApplied: CareerFinalConfidence | null;
+}
+
 export interface CareerFinalEvidenceTrace {
   readonly evidenceIds: readonly string[];
   readonly sourceIds: readonly string[];
@@ -223,6 +258,9 @@ export interface CareerFinalSynthesisInput {
    */
   readonly conflicts?: readonly CareerFinalConflict[];
 
+  /** Independent evidence-quality assessment; never inferred from Career promise strength. */
+  readonly evidenceQuality?: 'HIGH' | 'MEDIUM' | 'LOW';
+
   /**
    * Evidence traceability: canonical identity of evidence items (deduplicated).
    * See C11-INV-06 for traceability contract.
@@ -289,6 +327,10 @@ export interface CareerFinalSynthesisResult {
   readonly finalStrength: CareerFinalStrength;
 
   readonly confidence: CareerFinalConfidence;
+
+  readonly confidenceCoverage: CareerConfidenceCoverage;
+
+  readonly confidenceReasons: readonly CareerConfidenceReason[];
 
   readonly natalDirection: CareerFinalDirection;
 

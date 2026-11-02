@@ -47,6 +47,29 @@ describe('ReasoningTraceBuilder (CW-06B)', () => {
     expect(graph.nodes).toHaveLength(1);
   });
 
+  it('preserves distinct occurrence IDs that share one semantic identity key', () => {
+    const builder = new ReasoningTraceBuilder('CAREER');
+    const first = builder.addEvidenceNode({
+      provenance: sampleProvenance,
+      label: 'First producer occurrence',
+      subjectKey: 'L6_L10_LINK',
+      occurrenceId: 'OCCURRENCE-A',
+      identityKey: 'SHARED-SEMANTIC-KEY'
+    });
+    const second = builder.addEvidenceNode({
+      provenance: sampleProvenance,
+      label: 'Second producer occurrence',
+      subjectKey: 'L6_L10_LINK',
+      occurrenceId: 'OCCURRENCE-B',
+      identityKey: 'SHARED-SEMANTIC-KEY'
+    });
+    const graph = builder.build();
+    expect(first).not.toBe(second);
+    expect(graph.nodes).toHaveLength(2);
+    expect(graph.nodes.map(node => node.evidenceId).sort()).toEqual(['OCCURRENCE-A', 'OCCURRENCE-B']);
+    expect(graph.nodes.every(node => node.identityKey === 'SHARED-SEMANTIC-KEY')).toBe(true);
+  });
+
   it('creates valid edges between existing nodes', () => {
     const builder = new ReasoningTraceBuilder('CAREER');
     const evNodeId = builder.addEvidenceNode({

@@ -12,12 +12,14 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
   d10,
   d2
 }) => {
+  void d2; // Incoming D2 declarations are ignored while the validation gate is closed.
   const d10Rel = d10?.relationship ?? 'UNAVAILABLE';
   const isD10Available = d10Rel !== 'UNAVAILABLE';
   const d10BadgeClass = getVargaRelationshipBadgeClass(d10Rel);
 
-  const d2Rel = d2?.relationship ?? 'UNAVAILABLE';
-  const isD2Available = d2Rel !== 'UNAVAILABLE';
+  const d2Rel = 'UNAVAILABLE';
+  const isD2Available = false;
+  const d2Statement = 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
   const d2BadgeClass = getVargaRelationshipBadgeClass(d2Rel);
 
   return (
@@ -111,7 +113,7 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
                 <Coins className="w-4 h-4 text-amber-400" aria-hidden="true" />
                 <div>
                   <h3 className="text-sm font-semibold text-slate-100">
-                    Hora (D2) Divisional Confirmation
+                    Hora (D2) Availability
                   </h3>
                   <span className="text-[11px] font-mono-code text-slate-400 block">
                     Wealth & Liquid Asset Concordance
@@ -128,9 +130,9 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
 
             {isD2Available ? (
               <div className="space-y-2.5">
-                {d2?.statement ? (
+                {d2Statement ? (
                   <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                    {d2.statement}
+                    {d2Statement}
                   </p>
                 ) : (
                   <p className="text-xs text-slate-400 italic">
@@ -148,7 +150,7 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
               <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/60 p-3 rounded-lg border border-slate-800/60">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
                 <span>
-                  {d2?.statement || 'Unavailable: Hora (D2) harmonic data is unavailable for this calculation.'}
+                  {d2Statement}
                 </span>
               </div>
             )}

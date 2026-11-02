@@ -63,7 +63,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.chain[0].direction).toBeUndefined();
 
     expect(vm.chain[1].type).toBe('VARGA');
-    expect(vm.chain[1].vargaRelationship).toBe('CONFIRMS');
+    expect(vm.chain[1].vargaRelationship).toBe('UNAVAILABLE');
     expect(vm.chain[1].direction).toBeUndefined();
 
     expect(vm.chain[2].type).toBe('ACTIVATION');
@@ -90,8 +90,8 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
 
     // D2 varga
     expect(vm.varga.chart).toBe('D2');
-    expect(vm.varga.relationship).toBe('CONFIRMS');
-    expect(vm.varga.statement).toBe('Hora D2 confirms liquid capital accumulation.');
+    expect(vm.varga.relationship).toBe('UNAVAILABLE');
+    expect(vm.varga.statement).toContain('independent validation');
 
     // Wealth evidence is used
     expect(vm.allEvidence.map((e) => e.id)).toEqual(['ev_wealth_1']);

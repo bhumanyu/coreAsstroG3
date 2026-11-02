@@ -110,13 +110,6 @@ function calculateWealthEvidenceSourceCount(input: {
     count += 1;
   }
 
-  if (
-    input.d2Synthesis &&
-    input.d2Synthesis.length > 0
-  ) {
-    count += 1;
-  }
-
   if (input.dimManifestation) {
     count += 1;
   }
@@ -132,12 +125,12 @@ export function synthesizeWealthFinal(
     timingSynthesis,
     manifestationSynthesis,
     d2Synthesis,
-    d2Relationship = 'UNAVAILABLE',
     natalEvidenceIds = [],
     natalRuleIds = []
   } = input;
 
-  const isD2Confirmed = d2Relationship === 'CONFIRMS' || d2Relationship === 'PARTIALLY_CONFIRMS';
+  // Canonical Wealth containment: external D2 declarations cannot upgrade availability.
+  const d2Relationship: VargaRelationship = 'UNAVAILABLE';
   const dimensionSyntheses: Partial<Record<WealthDimension, WealthDimensionFinalSynthesis>> = {};
   const manifestationSummaryList: ManifestationSummary[] = [];
   const strongestAreas: string[] = [];
@@ -165,7 +158,7 @@ export function synthesizeWealthFinal(
 
     const dashaEffect = dimTiming?.dashaEffect ?? (dimManifestation?.dashaSupport === 'SUPPORT' ? 'SUPPORTS' : dimManifestation?.dashaSupport === 'CHALLENGE' ? 'CHALLENGES' : 'INSUFFICIENT_DATA');
     const timingEffect = dimTiming?.overallEffect ?? (dimManifestation?.transitSupport === 'SUPPORT' ? 'SUPPORTS' : dimManifestation?.transitSupport === 'CHALLENGE' ? 'CHALLENGES' : 'INSUFFICIENT_DATA');
-    const divisionalEffect: VargaRelationship = d2Relationship !== 'UNAVAILABLE' ? d2Relationship : (dimManifestation?.d2Support === 'SUPPORT' ? 'CONFIRMS' : dimManifestation?.d2Support === 'CHALLENGE' ? 'CONFLICTS' : 'UNAVAILABLE');
+    const divisionalEffect: VargaRelationship = 'UNAVAILABLE';
 
     const promiseStatus = mapStrengthToPromiseStatus(dimNatal);
     const activationStatus = deriveAxisStatus(dashaEffect);
@@ -197,16 +190,7 @@ export function synthesizeWealthFinal(
       candidate = 'INSUFFICIENT_DATA';
     }
 
-    // D2 structural layer (Divisional Layer: D2 conflict downgrades candidate by 1 notch)
-    if (divisionalStatus === 'CONFLICTS') {
-      if (candidate === 'VERY_STRONG') {
-        candidate = 'STRONG';
-      } else if (candidate === 'STRONG') {
-        candidate = 'MODERATE';
-      } else if (candidate === 'MODERATE') {
-        candidate = 'MIXED';
-      }
-    }
+    // D2 is unavailable and therefore does not alter promise strength or confidence.
 
     // Dasha timing impact (Activation Layer: genuine CHALLENGE downgrades candidate by 1 notch)
     if (activationStatus === 'CHALLENGE') {
@@ -329,12 +313,8 @@ export function synthesizeWealthFinal(
     });
   }
 
-  if (d2Synthesis) {
-    for (const item of d2Synthesis) {
-      evidenceIdSet.add(item.id);
-      if (item.ruleId) ruleIdSet.add(item.ruleId);
-    }
-  }
+  // Unvalidated D2 occurrences are retained only in the diagnostic d2Evidence field below.
+  // They do not enter canonical evidence IDs, confidence coverage, or synthesis weights.
 
   // Guarantee strict dimension isolation
   const isolatedDimensions = enforceWealthDimensionIsolation(dimensionSyntheses);
@@ -424,7 +404,8 @@ export function synthesizeWealthFinal(
     promiseStatus: isolatedDimensions.ACCUMULATION.promiseStatus,
     activationStatus: isolatedDimensions.ACCUMULATION.activationStatus,
     timingStatus: isolatedDimensions.ACCUMULATION.timingStatus,
-    divisionalStatus: d2Relationship,
+    divisionalStatus: 'UNAVAILABLE',
+    d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; canonical Wealth reasoning keeps D2 UNAVAILABLE.',
     manifestationStatus: isolatedDimensions.ACCUMULATION.manifestationStatus,
     confidence: overallConfidence,
     primaryPromise: natalPromise.ACCUMULATION ?? 'UNDETERMINED',

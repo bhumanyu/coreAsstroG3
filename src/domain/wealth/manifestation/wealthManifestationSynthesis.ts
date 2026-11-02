@@ -23,8 +23,9 @@ export function resolveWealthDimensionManifestation(
   dimension: WealthManifestationDimension,
   natalEvidence: readonly DomainEvidence[],
   wealthTimingSynthesis?: WealthTimingSynthesis,
-  d2Relationship?: VargaRelationship | string
+  _d2Relationship?: VargaRelationship | string
 ): WealthDimensionManifestationSynthesis {
+  // D2 is explicitly unavailable until independent validation gates are approved.
   const factors: WealthManifestationFactor[] = [];
   const ruleSet = getWealthDimensionRuleSet(dimension);
   const house = WEALTH_DIMENSION_HOUSES[dimension];
@@ -78,38 +79,8 @@ export function resolveWealthDimensionManifestation(
     natalSupport = natalChallengeCount >= natalSupportCount ? 'CHALLENGE' : 'SUPPORT';
   }
 
-  // 2. D2 VARGA FACTORS (Canonical VargaRelationship: 'CONFIRMS' | 'CONFLICTS' | 'PARTIALLY_CONFIRMS' | 'MODIFIES' | 'UNAVAILABLE')
-  const d2EvidenceIds = natalEvidence
-    .filter((item) => item.source === 'D2')
-    .map((item) => item.id);
-
-  let d2Support: WealthManifestationDirection = 'NEUTRAL';
-  if (d2Relationship === 'CONFIRMS' || d2Relationship === 'PARTIALLY_CONFIRMS') {
-    d2Support = 'SUPPORT';
-    const isPartial = d2Relationship === 'PARTIALLY_CONFIRMS';
-    factors.push({
-      id: `D2_${dimension}_${d2Relationship}`,
-      dimension,
-      direction: 'SUPPORT',
-      weight: isPartial ? 0.5 : 1.0,
-      source: 'D2',
-      statement: isPartial
-        ? `D2 Hora partially confirms wealth capacity for ${dimension.toLowerCase()}.`
-        : `D2 Hora confirms wealth capacity for ${dimension.toLowerCase()}.`,
-      ...(d2EvidenceIds.length > 0 ? { evidenceIds: d2EvidenceIds } : {})
-    });
-  } else if (d2Relationship === 'CONFLICTS') {
-    d2Support = 'CHALLENGE';
-    factors.push({
-      id: `D2_${dimension}_CONFLICTS`,
-      dimension,
-      direction: 'CHALLENGE',
-      weight: 1.0,
-      source: 'D2',
-      statement: `D2 Hora conflicts with or restricts wealth capacity for ${dimension.toLowerCase()}.`,
-      ...(d2EvidenceIds.length > 0 ? { evidenceIds: d2EvidenceIds } : {})
-    });
-  }
+  // 2. D2 VARGA FACTORS — intentionally unavailable; no D2 factor is emitted.
+  const d2Support: WealthManifestationDirection | 'UNAVAILABLE' = 'UNAVAILABLE';
 
   // 3. DASHA FACTORS & 4. TRANSIT FACTORS (CW-03 Synthesis isolated per dimension)
   let dashaSupport: WealthManifestationDirection = 'NEUTRAL';
@@ -226,7 +197,7 @@ export function resolveWealthDimensionManifestation(
 export function synthesizeWealthManifestations(
   natalEvidence: readonly DomainEvidence[],
   wealthTimingSynthesis?: WealthTimingSynthesis,
-  d2Relationship?: VargaRelationship | string
+  _d2Relationship?: VargaRelationship | string
 ): WealthManifestationSynthesis {
   const dimMap: Record<string, WealthDimensionManifestationSynthesis> = {};
 
@@ -235,7 +206,7 @@ export function synthesizeWealthManifestations(
       dim,
       natalEvidence,
       wealthTimingSynthesis,
-      d2Relationship
+      'UNAVAILABLE'
     );
   }
 

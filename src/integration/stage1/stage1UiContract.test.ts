@@ -48,6 +48,7 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
       expect(d2Confirmation?.relationship ?? 'UNAVAILABLE').toBe(
         STAGE1_GOLDEN_EXPECTATION.wealth.d2Relationship
       );
+      expect(d2Confirmation?.availability ?? 'UNAVAILABLE').toBe('UNAVAILABLE');
 
       // 2. AI Projection Assertions
       expect(result.aiContext.domainInterpretations).toBeDefined();
@@ -182,7 +183,7 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
   });
 
   describe('Wealth Speculation Separation Path (§33)', () => {
-    it('preserves granular wealth dimensions (Accumulation/Gains STRONGLY_SUPPORTED, Speculation CHALLENGED, D2 CONFIRMS) to UI model', () => {
+    it('preserves granular Wealth dimensions while keeping D2 unavailable in the UI model', () => {
       const speculationChallengedWealth = buildSpeculationChallengedWealthInterpretation();
       const projectedWealth = projectDomainInterpretationForAi(speculationChallengedWealth);
 
@@ -195,7 +196,8 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
         wealthConclusionData?.fortuneStatus === 'STRONGLY_SUPPORTED'
       ).toBe(true);
       expect(wealthConclusionData?.speculationStatus).toBe('CHALLENGED');
-      expect(wealthConclusionData?.d2Relationship).toBe('CONFIRMS');
+      expect(wealthConclusionData?.d2Relationship).toBe('UNAVAILABLE');
+      expect(wealthConclusionData?.d2AvailabilityReason).toContain('independent validation');
 
       // Overall status remains supported because accumulation + gains + fortune dominate
       expect(

@@ -224,7 +224,8 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
 
     expect(viewModel.wealthDetail?.manifestationSynthesis).toBeDefined();
     expect(viewModel.wealthDetail?.manifestationSynthesis).toEqual(mockWealthManifestations);
-    expect(viewModel.wealthDetail?.d2Relationship).toBe('PARTIALLY_CONFIRMS');
+    expect(viewModel.wealthDetail?.d2Relationship).toBe('UNAVAILABLE');
+    expect(viewModel.wealthDetail?.d2AvailabilityReason).toContain('independent validation');
     expect(viewModel.wealthDetail?.overallStatus).toBe('MIXED');
     expect(viewModel.wealthDetail?.accumulationStatus).toBe('CHALLENGED');
     expect(viewModel.wealthDetail?.gainsStatus).toBe('SUPPORTED');
@@ -232,6 +233,42 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
     expect(viewModel.wealthDetail?.speculationStatus).toBe('STRONGLY_SUPPORTED');
     expect(viewModel.wealthDetail?.dimensions?.[0].challengingEvidenceIds)
       .toEqual(['CHALLENGE-1']);
+  });
+
+  it('renders C11 evidence confidence, coverage reasons, and trace completeness separately from promise strength', () => {
+    const detail = {
+      headline: 'Career promise',
+      natalPromise: 'STRONG' as const,
+      d10Relationship: 'UNAVAILABLE' as const,
+      canonicalFinalSynthesis: { confidence: 'MEDIUM' } as any,
+      confidenceCoverage: {
+        status: 'PARTIAL' as const,
+        quality: 'HIGH' as const,
+        layers: [],
+        missingRequiredLayers: [],
+        missingSupportingLayers: ['DASHA'],
+        missingOptionalLayers: [],
+        provenance: 'COMPLETE' as const
+      },
+      confidenceReasons: [{
+        code: 'SUPPORTING_LAYER_UNAVAILABLE' as const,
+        message: 'Supporting Dasha evidence is unavailable; confidence is capped at MEDIUM.',
+        capApplied: 'MEDIUM' as const,
+        layer: 'DASHA' as const
+      }],
+      traceCompleteness: {
+        status: 'PARTIAL',
+        diagnostics: [{ code: 'MISSING_SOURCE_RULE', message: 'Source rule missing.' }]
+      } as any
+    };
+
+    render(<CareerAnalysisCard detail={detail} />);
+
+    expect(screen.getByText('Evidence confidence: Medium')).toBeInTheDocument();
+    expect(screen.getByText('Coverage: Partial')).toBeInTheDocument();
+    expect(screen.getByText('Evidence quality: High')).toBeInTheDocument();
+    expect(screen.getByText(/Supporting Dasha evidence is unavailable/)).toBeInTheDocument();
+    expect(screen.getByText(/Trace completeness: Partial/)).toBeInTheDocument();
   });
 
   it('renders CW-04 synthesis in CareerAnalysisCard and hides legacy dominant manifestations block', () => {

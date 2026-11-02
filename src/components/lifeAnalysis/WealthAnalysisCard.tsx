@@ -54,7 +54,7 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
           </div>
           <div>
             <h3 id="wealth-analysis-heading" className="text-base font-semibold text-slate-100">
-              Wealth & Prosperity Domain (D2 / 2nd & 11th Houses)
+              Wealth & Prosperity Domain (2nd & 11th Houses)
             </h3>
             <p className="text-xs text-slate-400">
               Multi-dimensional analysis across accumulation, gains, fortune, and speculation
@@ -107,12 +107,16 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
             D2 Hora
           </span>
           <span
-            className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${getVargaBadgeClass(
-              detail.d2Relationship
-            )}`}
+            className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${getVargaBadgeClass('UNAVAILABLE')}`}
           >
-            {formatEnum(detail.d2Relationship)}
+            {formatEnum('UNAVAILABLE')}
           </span>
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-400">D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.</p>
+          {detail.traceCompleteness && (
+            <p className="mt-1 text-[10px] text-slate-400">
+              Trace completeness: {formatEnum(detail.traceCompleteness.status)} · {detail.traceCompleteness.diagnostics.length} diagnostic(s)
+            </p>
+          )}
         </div>
 
         <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1">

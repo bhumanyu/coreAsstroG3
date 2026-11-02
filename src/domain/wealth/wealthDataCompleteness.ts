@@ -48,15 +48,8 @@ export function calculateWealthDataCompleteness(
     primaryFactors = 'UNAVAILABLE';
   }
 
-  const d2: 'AVAILABLE' | 'UNAVAILABLE' = evidence.some(
-    (e) =>
-      e.source === 'D2' ||
-      e.phase === 'VARGA_CONFIRMATION' ||
-      e.role === 'CONFIRMATION' ||
-      e.evidenceFamily === WealthEvidenceFamily.D2
-  )
-    ? 'AVAILABLE'
-    : 'UNAVAILABLE';
+  // D2 is not validated for canonical Wealth reasoning; declarations are diagnostic only.
+  const d2: 'UNAVAILABLE' = 'UNAVAILABLE';
 
   const dasha: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE' = evidence.some(
     (e) =>

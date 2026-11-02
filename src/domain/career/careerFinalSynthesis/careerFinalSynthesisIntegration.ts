@@ -554,6 +554,35 @@ function buildFinalConflicts(
  * @param input - Canonical integration input with C4–C10 outputs
  * @returns Frozen CareerFinalSynthesisResult from the canonical engine
  */
+export interface CareerProducerEvidenceProvenance {
+  readonly sourceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+}
+
+/** Returns true when an identifier collection contains a non-blank value. */
+function hasNonBlankProvenanceIds(ids: readonly string[]): boolean {
+  return ids.some(id => typeof id === 'string' && id.trim().length > 0);
+}
+
+/** Deterministic per-record provenance quality; never reads natal promise strength. */
+export function deriveCareerProducerEvidenceQuality(
+  records: readonly CareerProducerEvidenceProvenance[]
+): 'HIGH' | 'MEDIUM' | 'LOW' {
+  // No producer records means provenance was not supplied, not that supplied records
+  // were proven to have invalid provenance. C11 reports this as NOT_PROVIDED.
+  if (records.length === 0) return 'MEDIUM';
+
+  const completeCount = records.filter(
+    item => hasNonBlankProvenanceIds(item.sourceIds) && hasNonBlankProvenanceIds(item.ruleIds)
+  ).length;
+  if (completeCount === records.length) return 'HIGH';
+
+  const anyProvenance = records.some(
+    item => hasNonBlankProvenanceIds(item.sourceIds) || hasNonBlankProvenanceIds(item.ruleIds)
+  );
+  return anyProvenance ? 'MEDIUM' : 'LOW';
+}
+
 export function buildCareerFinalAnalysis(
   input: CareerFinalSynthesisIntegrationInput
 ): CareerFinalSynthesisResult {
@@ -621,6 +650,10 @@ export function buildCareerFinalAnalysis(
 
   const expressionEvidenceIds = collectExpressionEvidenceIds(expression);
 
+  // Producer quality is evaluated per evidence record, not inferred from promise strength.
+  const producerEvidenceRecords = [...natal.evidence, ...dasha.evidence, ...d10.evidence];
+  const evidenceQuality = deriveCareerProducerEvidenceQuality(producerEvidenceRecords);
+
   // Merge all evidence IDs, source IDs, and rule IDs deterministically
   const evidenceIds = mergeEvidenceIds(natalEvidenceIds, dashaEvidenceIds, d10EvidenceIds, expressionEvidenceIds);
   const sourceIds = mergeEvidenceIds(natalSourceIds, dashaSourceIds, d10SourceIds);
@@ -654,7 +687,8 @@ export function buildCareerFinalAnalysis(
     conflicts,
     evidenceIds,
     sourceIds,
-    ruleIds
+    ruleIds,
+    evidenceQuality
   });
 
   // Return result from canonical engine with contradictory evidence diagnostics

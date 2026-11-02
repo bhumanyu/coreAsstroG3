@@ -552,12 +552,8 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     warnings: analysis.warnings
   };
 
-  const d2Relationship = wealth.d2.relationship;
-  // Spec §37: do not fabricate a missing statement when relationship is UNAVAILABLE
-  const d2Statement =
-    d2Relationship === 'UNAVAILABLE' && !wealth.d2.statement
-      ? undefined
-      : wealth.d2.statement;
+  const d2Relationship: VargaRelationship = 'UNAVAILABLE';
+  const d2Statement = 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
 
   const d2: ReasoningVargaViewModel = {
     chart: 'D2',

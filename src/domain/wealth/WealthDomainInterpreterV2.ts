@@ -100,7 +100,9 @@ import {
   mapManifestationStatusToEdgeType,
   mapPromiseStatusToEdgeType,
   type ReasoningEdgeType,
-  type ReasoningTraceGraph
+  type ReasoningTraceGraph,
+  buildReasoningTraceCompleteness,
+  type ReasoningTraceEvidenceReference
 } from '../careerWealth/reasoningTrace';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
@@ -553,7 +555,9 @@ export function interpretWealthV2(
     wealthTimingSynthesis,
     d2Relationship,
     wealthManifestationSynthesis,
-    wealthFinalSynthesis
+    wealthFinalSynthesis,
+    synthesisRuleId: 'CW-05-WEALTH-SYNTHESIS',
+    synthesisEvidenceReferences: wealthFinalSynthesis.evidenceIds.map((id): ReasoningTraceEvidenceReference => ({ id, namespace: 'OCCURRENCE' }))
   });
 
   return buildDomainInterpretation({
@@ -622,6 +626,8 @@ export function buildWealthReasoningTraceGraph(params: {
   readonly wealthTimingSynthesis?: WealthTimingSynthesis;
   readonly d2Relationship?: VargaRelationship;
   readonly wealthManifestationSynthesis?: WealthManifestationSynthesis;
+  readonly synthesisRuleId?: string;
+  readonly synthesisEvidenceReferences?: readonly ReasoningTraceEvidenceReference[];
   readonly wealthFinalSynthesis: CareerWealthFinalSynthesis;
 }): ReasoningTraceGraph {
   const traceBuilder = new ReasoningTraceBuilder('WEALTH');
@@ -663,7 +669,9 @@ export function buildWealthReasoningTraceGraph(params: {
       const evNodeId = traceBuilder.addEvidenceNode({
         provenance: e.provenance,
         label: e.statement,
-        subjectKey: e.provenance.ruleId
+        subjectKey: e.provenance.ruleId,
+        occurrenceId: e.id,
+        identityKey: e.identityKey
       });
       const targetNodeId =
         e.provenance.axis === 'NATAL'
@@ -765,88 +773,32 @@ export function buildWealthReasoningTraceGraph(params: {
 
   const graph = traceBuilder.build();
   validateReasoningTrace(graph);
-  validateEvidenceNodes(graph, new Set(params.evidence.flatMap((e) =>
-    e.identityKey ? [e.id, e.identityKey] : [e.id]
-  )));
-  return graph;
+  validateEvidenceNodes(graph, new Set(params.evidence.map(e => e.id)));
+  if (!params.synthesisRuleId || !params.synthesisEvidenceReferences) return graph;
+  return Object.freeze({
+    ...graph,
+    traceCompleteness: buildReasoningTraceCompleteness({
+      domain: 'WEALTH',
+      conclusionNodeId: finalNodeId,
+      synthesisRuleId: params.synthesisRuleId,
+      synthesisEvidenceReferences: params.synthesisEvidenceReferences,
+      evidence: params.evidence
+    })
+  });
 }
 
+/**
+ * D2 relationship resolution is deliberately disabled until independent calculation
+ * and interpretation validation gates are approved. Evidence declarations are retained
+ * for diagnostics but cannot produce a canonical relationship.
+ */
 export function evaluateD2Relationship(
-  natalEvidence?: readonly DomainEvidence[],
-  d2Evidence?: readonly DomainEvidence[],
-  relatedNatalEvidenceIds?: readonly string[],
-  rawEvidence?: readonly WealthEvidence[],
-  legacyStatus?: string
+  _natalEvidence?: readonly DomainEvidence[],
+  _d2Evidence?: readonly DomainEvidence[],
+  _relatedNatalEvidenceIds?: readonly string[],
+  _rawEvidence?: readonly WealthEvidence[],
+  _legacyStatus?: string
 ): VargaRelationship {
-  if (d2Evidence && d2Evidence.length === 0 && (!rawEvidence || rawEvidence.length === 0)) {
-    return 'UNAVAILABLE';
-  }
-
-  // DomainEvidence-based path (primary)
-  if (d2Evidence && d2Evidence.length > 0) {
-    const relevantD2 =
-      relatedNatalEvidenceIds && relatedNatalEvidenceIds.length > 0
-        ? d2Evidence.filter((item) =>
-          item.relatedEvidenceIds.some((id) =>
-            relatedNatalEvidenceIds.includes(id)
-          )
-        )
-        : d2Evidence;
-
-    if (
-      relatedNatalEvidenceIds &&
-      relatedNatalEvidenceIds.length > 0 &&
-      relevantD2.length === 0
-    ) {
-      return 'UNAVAILABLE';
-    }
-
-    const supporting = relevantD2.filter((item) => item.polarity === 'SUPPORTING');
-    const challenging = relevantD2.filter((item) => item.polarity === 'CHALLENGING');
-
-    if (supporting.length > 0 && challenging.length === 0) {
-      return 'CONFIRMS';
-    }
-    if (supporting.length > 0 && challenging.length > 0) {
-      return 'PARTIALLY_CONFIRMS';
-    }
-    if (challenging.length > 0 && supporting.length === 0) {
-      return 'CONFLICTS';
-    }
-    return 'UNAVAILABLE';
-  }
-
-  // Fallback hints from raw evidence or legacy status only if d2Evidence is not provided
-  const d2Item = rawEvidence?.find(
-    (e) =>
-      e.evidenceFamily === WealthEvidenceFamily.D2 ||
-      e.vargaEvidence?.varga === 'D2'
-  );
-
-  if (d2Item?.vargaEvidence?.relationship) {
-    return d2Item.vargaEvidence.relationship as VargaRelationship;
-  }
-
-  if (legacyStatus === 'CONFIRMED' || legacyStatus === 'CONFIRMS') {
-    return 'CONFIRMS';
-  }
-  if (legacyStatus === 'CONFLICTED' || legacyStatus === 'CONFLICTS') {
-    return 'CONFLICTS';
-  }
-  if (legacyStatus === 'NOT_APPLICABLE' || legacyStatus === 'UNAVAILABLE') {
-    return 'UNAVAILABLE';
-  }
-
-  if (d2Item) {
-    if (d2Item.effect === 'SUPPORT') {
-      return 'CONFIRMS';
-    }
-    if (d2Item.effect === 'CHALLENGE') {
-      return 'CONFLICTS';
-    }
-    return 'MODIFIES';
-  }
-
   return 'UNAVAILABLE';
 }
 

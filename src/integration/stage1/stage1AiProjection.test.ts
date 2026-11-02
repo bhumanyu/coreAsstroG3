@@ -34,7 +34,7 @@ describe('Stage-1 AI Projection Integration', () => {
     expect(conclusionData?.gainsStatus).toBe('STRONGLY_SUPPORTED');
   });
 
-  it('preserves D2 and D10 varga confirmations without degradation or loss', () => {
+  it('preserves validated D10 confirmation and keeps unvalidated D2 unavailable', () => {
     const careerWithD10 = buildHighPressureCareerInterpretation();
     const wealthWithD2 = buildSpeculationChallengedWealthInterpretation();
 
@@ -47,7 +47,11 @@ describe('Stage-1 AI Projection Integration', () => {
 
     const d2Conf = projectedWealth.vargaConfirmations.find((v) => v.varga === 'D2');
     expect(d2Conf).toBeDefined();
-    expect(d2Conf?.relationship).toBe('CONFIRMS');
+    expect(d2Conf?.relationship).toBe('UNAVAILABLE');
+    expect(d2Conf?.availability).toBe('UNAVAILABLE');
+    expect(d2Conf?.unavailabilityReason).toContain('independent validation');
+    const wealthConclusionData = projectedWealth.conclusion.conclusionData as Record<string, unknown> | undefined;
+    expect(wealthConclusionData?.d2AvailabilityReason).toBeTruthy();
   });
 
   it('preserves Dasha timing and per-dimension activation effects distinctly', () => {
@@ -95,6 +99,14 @@ describe('Stage-1 AI Projection Integration', () => {
     expect(projectedCareer).toBeDefined();
     expect(projectedWealth).toBeDefined();
 
+    const careerConclusionData = projectedCareer?.conclusion.conclusionData as Record<string, any> | undefined;
+    const careerTrace = careerConclusionData?.reasoningTraceGraph as Record<string, any> | undefined;
+    expect(careerTrace?.traceCompleteness).toBeDefined();
+    expect(careerTrace?.traceCompleteness?.conclusionNodeId).toBeTruthy();
+    expect(projectedCareer?.evidence.every(item => Array.isArray(item.relatedEvidenceIds) && Array.isArray(item.rootEvidenceIds))).toBe(true);
+    expect(projectedCareer?.evidenceOccurrenceIds).toEqual(projectedCareer?.evidence.map(item => item.id));
+    expect(projectedCareer?.evidenceIdentityKeys).toEqual(projectedCareer?.evidence.flatMap(item => item.identityKey ? [item.identityKey] : []));
+
     expect(projectedCareer?.dashaActivation.effect).toBe(
       STAGE1_GOLDEN_EXPECTATION.career.dashaEffect
     );
@@ -125,6 +137,7 @@ describe('Stage-1 AI Projection Integration', () => {
     // Wealth D2 is UNAVAILABLE, not fabricated
     const wealthD2 = projectedWealth.vargaConfirmations.find((v) => v.varga === 'D2');
     expect(wealthD2?.relationship).toBe('UNAVAILABLE');
+    expect(wealthD2?.availability).toBe('UNAVAILABLE');
     expect(projectedWealth.dashaActivation.effect).toBe('INSUFFICIENT_DATA');
   });
 
