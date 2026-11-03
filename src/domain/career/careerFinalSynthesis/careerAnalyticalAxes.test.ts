@@ -12,7 +12,7 @@ function natal(
   strength: 'VERY_STRONG' | 'STRONG' | 'MODERATE' | 'MIXED' | 'WEAK' | 'VERY_WEAK' | 'UNDETERMINED' = 'STRONG',
   evidence: readonly object[] = [{
     identityKey: 'natal-semantic-1',
-    evidenceId: 'natal-semantic-1',
+    evidenceId: 'natal-occurrence-1',
     ruleId: 'RULE_NATAL_1',
     layer: 'PRIMARY_PROMISE',
     direction: 'SUPPORT',
@@ -21,7 +21,7 @@ function natal(
     weight: 5,
     statement: 'Natal promise evidence.',
     relatedEvidenceIds: [],
-    sourceIds: ['natal-occurrence-1']
+    sourceIds: ['raw-natal-source-1']
   }]
 ): CareerNatalAnalysis {
   return {
@@ -67,7 +67,7 @@ function dasha(
     direction: 'SUPPORT',
     strength: 'STRONG',
     statement: 'Dasha evidence.',
-    sourceIds: ['dasha-occurrence-1'],
+    sourceIds: ['raw-dasha-source-1'],
     provenance: { source: 'C9_DASHA', activationLevel: 'MD', ruleIds: ['RULE_MD'], natalRootIds: [] }
   }],
   overallStrength: CareerDashaCanonicalAnalysis['overallStrength'] = 'STRONG',
@@ -93,7 +93,7 @@ function d10(
     d10Strength: 'STRONG',
     weight: 5,
     statement: 'D10 evidence.',
-    sourceIds: ['d10-occurrence-1'],
+    sourceIds: ['raw-d10-source-1'],
     provenance: { source: 'C10_D10', ruleIds: ['RULE_D10'], sourceIds: ['d10-occurrence-1'], natalRootIds: [] },
     evidenceKind: 'OCCURRENCE'
   }],
@@ -194,6 +194,9 @@ describe('B01 independent Career analytical axes', () => {
     });
 
     expect(axes.promise.result).toEqual({ direction: 'SUPPORT', strength: 'VERY_STRONG' });
+    expect(axes.promise.supportingEvidenceOccurrenceIds).toContain('natal-occurrence-1');
+    expect(axes.promise.supportingEvidenceOccurrenceIds).not.toContain('natal-semantic-1');
+    expect(axes.promise.supportingEvidenceOccurrenceIds).not.toContain('raw-natal-source-1');
     expect(axes.activation.result?.direction).toBe('CHALLENGE');
     expect(axes.promise.status).toBe('AVAILABLE');
     expect(axes.activation.status).toBe('AVAILABLE');
@@ -211,7 +214,7 @@ describe('B01 independent Career analytical axes', () => {
         direction: 'NEUTRAL',
         strength: 'WEAK',
         statement: 'Dasha non-activation is a limiting condition.',
-        sourceIds: ['dasha-limiting-occurrence'],
+        sourceIds: ['raw-dasha-limiting-source'],
         provenance: { source: 'C9_DASHA', activationLevel: 'MD', ruleIds: ['RULE_DASHA_LIMIT'], natalRootIds: [] }
       }]),
       d10: d10([{
@@ -223,7 +226,7 @@ describe('B01 independent Career analytical axes', () => {
         d10Strength: 'STRONG',
         weight: 5,
         statement: 'D10 challenge.',
-        sourceIds: ['d10-risk-occurrence'],
+        sourceIds: ['raw-d10-risk-source'],
         provenance: { source: 'C10_D10', ruleIds: ['RULE_D10_RISK'], sourceIds: ['d10-risk-occurrence'], natalRootIds: [] },
         evidenceKind: 'OCCURRENCE'
       }, {
