@@ -69,12 +69,14 @@ function dasha(
     statement: 'Dasha evidence.',
     sourceIds: ['dasha-occurrence-1'],
     provenance: { source: 'C9_DASHA', activationLevel: 'MD', ruleIds: ['RULE_MD'], natalRootIds: [] }
-  }]
+  }],
+  overallStrength: CareerDashaCanonicalAnalysis['overallStrength'] = 'STRONG',
+  overallEffect?: CareerDashaCanonicalAnalysis['overallEffect']
 ): CareerDashaCanonicalAnalysis {
   return {
-    overallEffect: direction === 'CHALLENGE' ? 'CHALLENGES' : 'ACTIVATES',
+    overallEffect: overallEffect ?? (direction === 'CHALLENGE' ? 'CHALLENGES' : 'ACTIVATES'),
     overallDirection: direction,
-    overallStrength: 'STRONG',
+    overallStrength,
     dominantLevel: 'MD',
     evidence,
     hierarchy
@@ -170,6 +172,17 @@ function build(
 }
 
 describe('B01 independent Career analytical axes', () => {
+  it('keeps strong promise separate from weak activation strength', () => {
+    const axes = build({
+      natal: natal('SUPPORT', 'VERY_STRONG'),
+      dasha: dasha('SUPPORT', hierarchy(), undefined, 'WEAK', 'PARTIALLY_ACTIVATES')
+    });
+
+    expect(axes.promise.result?.strength).toBe('VERY_STRONG');
+    expect(axes.activation.result?.strength).toBe('WEAK');
+    expect(axes.activation.result?.effect).toBe('PARTIALLY_ACTIVATES');
+  });
+
   it('keeps strong natal promise distinct from weak or challenging activation', () => {
     const axes = build({
       natal: natal('SUPPORT', 'VERY_STRONG'),
