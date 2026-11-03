@@ -38,7 +38,7 @@ describe('careerD10 Boundary Enforcement', () => {
       it('may use career-expression contracts only as types', () => {
         const filePath = join(modulePath, file);
         const content = readFileSync(filePath, 'utf-8');
-        const forbiddenExpressionRuntimeImport = /import\\s+(?!type\\b)[\\s\\S]*?from\\s+['"][^'"]*careerExpression[^'"]*['"]/i;
+        const forbiddenExpressionRuntimeImport = /import\s+(?!type\b)[\s\S]*?from\s+['"][^'"]*careerExpression[^'"]*['"]/i;
         expect(content).not.toMatch(forbiddenExpressionRuntimeImport);
       });
 
