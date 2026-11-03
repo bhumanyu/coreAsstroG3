@@ -12,7 +12,7 @@ function natal(
   strength: 'VERY_STRONG' | 'STRONG' | 'MODERATE' | 'MIXED' | 'WEAK' | 'VERY_WEAK' | 'UNDETERMINED' = 'STRONG',
   evidence: readonly object[] = [{
     identityKey: 'natal-semantic-1',
-    evidenceId: 'natal-occurrence-1',
+    evidenceId: 'natal-semantic-1',
     ruleId: 'RULE_NATAL_1',
     layer: 'PRIMARY_PROMISE',
     direction: 'SUPPORT',
@@ -194,9 +194,9 @@ describe('B01 independent Career analytical axes', () => {
     });
 
     expect(axes.promise.result).toEqual({ direction: 'SUPPORT', strength: 'VERY_STRONG' });
-    expect(axes.promise.supportingEvidenceOccurrenceIds).toContain('natal-occurrence-1');
+    expect(axes.promise.supportingEvidenceOccurrenceIds).toContain('raw-natal-source-1');
     expect(axes.promise.supportingEvidenceOccurrenceIds).not.toContain('natal-semantic-1');
-    expect(axes.promise.supportingEvidenceOccurrenceIds).not.toContain('raw-natal-source-1');
+    expect(axes.promise.supportingEvidenceOccurrenceIds).not.toContain('natal-semantic-1');
     expect(axes.activation.result?.direction).toBe('CHALLENGE');
     expect(axes.promise.status).toBe('AVAILABLE');
     expect(axes.activation.status).toBe('AVAILABLE');
