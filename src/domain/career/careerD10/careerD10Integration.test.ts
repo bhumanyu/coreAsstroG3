@@ -1518,3 +1518,112 @@ describe('C10 D10 Integration', () => {
     });
   });
 });
+
+describe('B03 D1/D10 hierarchy acceptance', () => {
+  it('preserves a strong D1 promise when D10 is weak or challenging', () => {
+    const result = buildCareerD10Analysis(makeInput({
+      natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+      horoscope: makeHoroscopeWithD10(
+        { [Planet.SUN]: { house: 8, dignity: DignityStatus.DEBILITATED } },
+        [{ house: 8, lord: Planet.SUN, occupants: [] }]
+      )
+    }));
+
+    expect(result.natalDirection).toBe('SUPPORT');
+    expect(result.natalStrength).toBe('STRONG');
+    expect(result.d10Direction).toBe('CHALLENGE');
+    expect(result.d10Strength).toBe('VERY_WEAK');
+    expect(result.qualifiedDirection).toBe('MIXED');
+    expect(result.natalPromisePreserved).toBe(true);
+  });
+
+  it('allows strong D10 to refine a weak but valid D1 support without replacing its natal source', () => {
+    const result = buildCareerD10Analysis(makeInput({
+      natal: makeMinimalNatal('SUPPORT', 'WEAK'),
+      horoscope: makeHoroscopeWithD10(
+        { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+        [{ house: 10, lord: Planet.SUN, occupants: [] }]
+      )
+    }));
+
+    expect(result.natalDirection).toBe('SUPPORT');
+    expect(result.natalStrength).toBe('WEAK');
+    expect(result.d10Direction).toBe('SUPPORT');
+    expect(result.qualifiedDirection).toBe('SUPPORT');
+    expect(result.natalPromisePreserved).toBe(true);
+  });
+
+  it('does not create promise or expression qualification from strong D10 when D1 has none', () => {
+    const expression: CareerExpression = Object.freeze({
+      mode: 'LEADERSHIP',
+      direction: 'SUPPORTED',
+      strength: 'STRONG',
+      evidence: Object.freeze([]),
+      supportingEvidenceIds: Object.freeze(['leadership-d1-expression']),
+      statement: 'Existing expression candidate.',
+      conditional: false
+    });
+    const result = buildCareerD10Analysis(makeInput({
+      natal: makeMinimalNatal('NEUTRAL', 'UNDETERMINED'),
+      expression: makeMinimalExpression([expression]),
+      horoscope: makeHoroscopeWithD10(
+        { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+        [{ house: 10, lord: Planet.SUN, occupants: [] }]
+      )
+    }));
+
+    expect(result.natalDirection).toBe('NEUTRAL');
+    expect(result.natalStrength).toBe('UNDETERMINED');
+    expect(result.d10Effect).toBe('INSUFFICIENT_DATA');
+    expect(result.d10Direction).toBe('UNDETERMINED');
+    expect(result.expressionQualifications).toEqual([]);
+  });
+
+  it('keeps D10 mixed evidence scoped to the matching expression and traceable', () => {
+    const expression: CareerExpression = Object.freeze({
+      mode: 'LEADERSHIP',
+      direction: 'SUPPORTED',
+      strength: 'STRONG',
+      evidence: Object.freeze([]),
+      supportingEvidenceIds: Object.freeze(['leadership-expression-source']),
+      statement: 'Leadership expression.',
+      conditional: false
+    });
+    const result = buildCareerD10Analysis(makeInput({
+      natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+      expression: makeMinimalExpression([expression]),
+      horoscope: makeHoroscopeWithD10(
+        {
+          [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED },
+          [Planet.SATURN]: { house: 10, dignity: DignityStatus.DEBILITATED }
+        },
+        [{ house: 10, lord: Planet.SUN, occupants: [Planet.SATURN] }]
+      )
+    }));
+
+    expect(result.natalDirection).toBe('SUPPORT');
+    expect(result.d10Direction).toBe('MIXED');
+    expect(result.expressionQualifications).toHaveLength(1);
+    const qualification = result.expressionQualifications[0];
+    expect(qualification.expression).toBe(expression);
+    expect(qualification.mappingStatus).toBe('RESOLVED');
+    expect(qualification.direction).toBe('MIXED');
+    expect(qualification.effect).toBe('QUALIFIES');
+    expect(qualification.evidence.length).toBeGreaterThan(0);
+    expect(qualification.evidence.every(item =>
+      item.sourceIds.some(sourceId => sourceId.startsWith('D10_'))
+    )).toBe(true);
+  });
+
+  it('produces deterministic golden output for identical D1/D10 inputs', () => {
+    const input = makeInput({
+      natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+      horoscope: makeHoroscopeWithD10(
+        { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+        [{ house: 10, lord: Planet.SUN, occupants: [] }]
+      )
+    });
+
+    expect(buildCareerD10Analysis(input)).toEqual(buildCareerD10Analysis(input));
+  });
+});
