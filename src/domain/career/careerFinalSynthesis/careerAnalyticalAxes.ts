@@ -114,7 +114,7 @@ export interface CareerAnalyticalAxes {
   readonly timing: CareerTimingAxis;
 }
 
-interface CareerAnalyticalAxesInput {
+export interface CareerAnalyticalAxesInput {
   readonly natal: CareerNatalAnalysis;
   readonly dasha: CareerDashaCanonicalAnalysis;
   readonly d10: CareerD10CanonicalAnalysis;
