@@ -215,7 +215,7 @@ export function freezeProfessionCandidate(
 export function freezeProfessionAnalysis(
   analysis: {
     readonly candidates: readonly CareerProfessionCandidate[];
-    readonly ranking: CareerProfessionAnalysis['ranking'];
+    readonly ranking?: CareerProfessionAnalysis['ranking'];
     readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
     readonly unresolvedExpressionTypes: readonly string[];
     readonly mappedTypes: readonly string[];
@@ -231,7 +231,7 @@ export function freezeProfessionAnalysis(
     unresolvedExpressionTypes: Object.freeze([...analysis.unresolvedExpressionTypes] as any),
     mappedTypes: Object.freeze([...analysis.mappedTypes] as any),
     missingInputs: Object.freeze([...analysis.missingInputs]),
-    ranking: Object.freeze({
+    ...(analysis.ranking ? { ranking: Object.freeze({
       ...analysis.ranking,
       rankedCandidates: Object.freeze(analysis.ranking.rankedCandidates.map(candidate => Object.freeze({
         ...candidate,
@@ -248,7 +248,7 @@ export function freezeProfessionAnalysis(
         counterEvidenceReasons: Object.freeze([...candidate.counterEvidenceReasons])
       }))),
       diagnostics: Object.freeze([...analysis.ranking.diagnostics])
-    }),
+    }) } : {}),
     provenance: Object.freeze({
       ...analysis.provenance,
       expressionIds: Object.freeze([...analysis.provenance.expressionIds]),
