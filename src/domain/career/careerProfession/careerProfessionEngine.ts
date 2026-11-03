@@ -680,7 +680,7 @@ function applyD10Qualification(
 
     const directions = new Set(matchedQualifications.map(item => item.direction));
     const hasChallenge = directions.has('CHALLENGE') ||
-      matchedQualifications.some(item => item.effect === 'CONFLICTS');
+      matchedQualifications.some(item => item.effect === 'CONFLICTS' || item.effect === 'WEAKENS');
     const hasSupport = directions.has('SUPPORT');
     const hasMixed = directions.has('MIXED') ||
       matchedQualifications.some(item => item.effect === 'QUALIFIES' || item.effect === 'MODIFIES');
