@@ -671,6 +671,7 @@ function mapCareerProfessionRanking(value?: CareerProfessionRanking): ProductCar
       family: candidate.family,
       rank: candidate.rank,
       score: candidate.score,
+      scoreContributions: candidate.scoreContributions.map(contribution => ({ ...contribution })),
       confidence: candidate.confidence,
       confidenceReasons: [...candidate.confidenceReasons],
       evidenceCoverage: { ...candidate.evidenceCoverage },
