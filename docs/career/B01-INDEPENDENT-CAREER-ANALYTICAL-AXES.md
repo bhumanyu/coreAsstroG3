@@ -30,7 +30,7 @@ Each axis contains:
 
 - `status`: `AVAILABLE`, `PARTIAL`, `UNAVAILABLE`, `INSUFFICIENT`, `BLOCKED`, or `NOT_APPLICABLE`.
 - `result`: typed classification or `null`.
-- `supportingEvidenceOccurrenceIds` and `conflictingEvidenceOccurrenceIds`: occurrence/source IDs, not semantic identity keys.
+- `supportingEvidenceOccurrenceIds` and `conflictingEvidenceOccurrenceIds`: canonical occurrence IDs (`evidenceId` for natal evidence; `id` for Dasha/D10 evidence), not semantic identity keys or producer `sourceIds`.
 - `ruleIds` and `methodVersion`.
 - `coverage`: available/missing source families and occurrence count.
 - `confidence`: `NOT_ASSESSED` until an axis-specific confidence contract exists. C11 overall confidence is deliberately not copied into each axis.
