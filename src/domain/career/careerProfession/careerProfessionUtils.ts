@@ -240,6 +240,7 @@ export function freezeProfessionAnalysis(
         supportingCandidateIds: Object.freeze([...candidate.supportingCandidateIds]),
         ruleIds: Object.freeze([...candidate.ruleIds]),
         supportingEvidenceOccurrenceIds: Object.freeze([...candidate.supportingEvidenceOccurrenceIds]),
+        d10EvidenceOccurrenceIds: Object.freeze([...candidate.d10EvidenceOccurrenceIds]),
         counterEvidenceOccurrenceIds: Object.freeze([...candidate.counterEvidenceOccurrenceIds]),
         semanticIdentityKeys: Object.freeze([...candidate.semanticIdentityKeys]),
         rootIdentityKeys: Object.freeze([...candidate.rootIdentityKeys]),
