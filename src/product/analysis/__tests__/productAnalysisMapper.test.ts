@@ -311,6 +311,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysis.career.analyticalAxes).not.toBe(axes);
     expect(analysis.career.analyticalAxes?.promise.supportingEvidenceOccurrenceIds)
       .not.toBe(axes.promise.supportingEvidenceOccurrenceIds);
+    expect(selectCareer(analysis).analyticalAxes).toEqual(axes);
   });
 
   it('2. D10 relationship mapping preserves semantics and never returns percentage', () => {
