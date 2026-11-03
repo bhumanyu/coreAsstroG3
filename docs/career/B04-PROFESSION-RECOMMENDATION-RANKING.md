@@ -29,7 +29,7 @@ Occurrence IDs, semantic identity keys, root identity keys, candidate IDs, and r
 
 - The interpreter passes `canonicalC11Result.natalDirection` as the D1 promise gate.
 - If the gate is absent, neutral, mixed, challenged, or unavailable, B04 emits no ranked candidates and returns a diagnostic.
-- Candidate D10 qualification requires a C10 expression qualification with `mappingStatus = RESOLVED`, a non-null legacy expression, and a shared `sourceMechanismCandidateIds` reference with the already-established profession candidate's mechanism IDs.
+- Candidate D10 qualification requires a C10 expression qualification with `mappingStatus = RESOLVED`, a non-null legacy expression, a matching legacy mode from the canonical C8-to-C10 expression-type resolver, and complete ownership of the qualification's `sourceMechanismCandidateIds` by the already-established profession candidate.
 - Expression IDs are not compared across the C8 and C10 namespaces.
 - A resolved SUPPORT qualification can add a D10 refinement contribution; CHALLENGE is a counter-indication; MIXED/QUALIFIES/MODIFIES remain partial. Missing/unmapped D10 makes no score contribution and remains visible as NOT_PROVIDED/UNAVAILABLE.
 - D10 does not add candidates, change candidate identity, or modify C11.
