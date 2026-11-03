@@ -236,6 +236,7 @@ export function freezeProfessionAnalysis(
       ...analysis.ranking,
       rankedCandidates: Object.freeze(analysis.ranking.rankedCandidates.map(candidate => Object.freeze({
         ...candidate,
+        scoreContributions: Object.freeze(candidate.scoreContributions.map(contribution => Object.freeze({ ...contribution }))),
         confidenceReasons: Object.freeze([...candidate.confidenceReasons]),
         evidenceCoverage: Object.freeze({ ...candidate.evidenceCoverage }),
         supportingCandidateIds: Object.freeze([...candidate.supportingCandidateIds]),
