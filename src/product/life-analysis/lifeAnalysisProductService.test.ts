@@ -377,6 +377,36 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     wealthSpy.mockRestore();
   });
 
+  it('Test 8A: forwards explicitly supplied Career outcomes as user-reported facts', async () => {
+    const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
+    const observedCareerOutcomes = [{
+      reportId: 'reported-career-event-1',
+      outcomeType: 'JOB_CHANGE' as const,
+      statement: 'User reported changing employers.',
+      source: 'USER_REPORTED' as const,
+      occurredAt: '2025-04-15'
+    }];
+
+    const result = await runLifeAnalysisProduct({
+      horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: createTestContext(),
+      includeAiExplanation: false,
+      observedCareerOutcomes
+    });
+
+    expect(careerSpy).toHaveBeenCalledWith(
+      STAGE1_GOLDEN_HOROSCOPE,
+      expect.objectContaining({ context: expect.anything() }),
+      observedCareerOutcomes
+    );
+    expect(result.career?.conclusionData?.careerOutcomeAnalysis?.observedOutcomes)
+      .toEqual(observedCareerOutcomes);
+    expect(result.career?.conclusionData?.careerOutcomeAnalysis?.candidateOutcomes)
+      .not.toContainEqual(expect.objectContaining({ outcomeType: 'JOB_CHANGE', status: 'OBSERVED' }));
+
+    careerSpy.mockRestore();
+  });
+
   it('Test 8: invariant - pipeline cannot be configured to run LEGACY and always returns CW-01 reasoningVersion', async () => {
     const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
     const wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
