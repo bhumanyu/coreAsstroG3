@@ -491,6 +491,12 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
           unresolvedExpressionTypes: [],
           mappedTypes: ['TECHNICAL_SPECIALIZATION'],
           missingInputs: [],
+          ranking: {
+            policyVersion: 'B04-PROFESSION-RANKING-v1',
+            status: 'AVAILABLE',
+            rankedCandidates: [],
+            diagnostics: []
+          },
           provenance: {
             expressionIds: [],
             mechanismIds: [],
@@ -526,6 +532,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysisComplete.career.profession!.candidates[1].d10Status).toBe('NOT_PROVIDED');
     // Aggregate d10Status should be QUALIFIED (any candidate qualified)
     expect(analysisComplete.career.profession!.d10Status).toBe('QUALIFIED');
+    expect(analysisComplete.career.profession!.ranking.status).toBe('AVAILABLE');
 
     // Test PARTIAL status with candidates
     const viewModelWithPartialProfession: LifeAnalysisViewModel = {
