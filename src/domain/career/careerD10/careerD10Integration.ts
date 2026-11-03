@@ -655,7 +655,7 @@ const C8_TO_C10_EXPRESSION_MAPPING: Readonly<Record<CareerExpressionType, Career
  * Uses the explicit C8→C10 mapping record.
  * Returns a typed resolution result distinguishing RESOLVED, UNMAPPED, and AMBIGUOUS outcomes.
  */
-function resolveC10ModeFromC8ExpressionType(
+export function resolveC10ModeFromC8ExpressionType(
   expressionType: CareerExpressionType
 ): C8ToC10MappingResolution {
   const c10Mode = C8_TO_C10_EXPRESSION_MAPPING[expressionType];
