@@ -238,4 +238,5 @@ describe('B04 deterministic profession-family ranking', () => {
       'Expression-specific D10 challenge/weakening evidence is retained as counter-evidence.'
     );
   });
-\n});
+
+});
