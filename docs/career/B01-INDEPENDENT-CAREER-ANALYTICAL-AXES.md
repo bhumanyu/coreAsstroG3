@@ -58,6 +58,7 @@ The product mapper clones nested arrays/objects and does not calculate axis sema
 
 ## Tests added
 
+- Strong Promise with weak Activation strength.
 - Strong Promise with challenging Activation.
 - Strong Promise with elevated D10 Risk.
 - Promise available while Sustainability is unavailable.
