@@ -315,7 +315,7 @@ function makeRiskAxis(
   const missingSources = [
     ...(natal.evidence.length === 0 ? ['C4_C7_NATAL'] : []),
     ...(dasha.evidence.length === 0 ? ['C9_DASHA'] : []),
-    ...(d10.availability === 'UNAVAILABLE' ? ['C10_D10'] : [])
+    ...(d10.availability === 'UNAVAILABLE' || d10.evidence.length === 0 ? ['C10_D10'] : [])
   ];
   const status: CareerAnalyticalAxisStatus = !hasSources
     ? 'INSUFFICIENT'
@@ -350,7 +350,7 @@ function makeRiskAxis(
       [
         ...(natal.evidence.length > 0 ? ['C4_C7_NATAL'] : []),
         ...(dasha.evidence.length > 0 ? ['C9_DASHA'] : []),
-        ...(d10.availability === 'AVAILABLE' ? ['C10_D10'] : [])
+        ...(d10.availability === 'AVAILABLE' && d10.evidence.length > 0 ? ['C10_D10'] : [])
       ],
       missingSources,
       sortedUnique(allSources).length
@@ -379,6 +379,8 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     if (!hasUsableActivation) continue;
 
     const periodEvidence = period.evidence;
+    // A period without canonical activation evidence is not a candidate window.
+    if (periodEvidence.length === 0) continue;
     const occurrenceIds = sortedUnique(periodEvidence.flatMap(item => item.sourceIds));
     const periodRuleIds = ruleIds(periodEvidence.flatMap(item => item.activationRuleIds));
     const dated = Boolean(period.start && period.end);
@@ -399,11 +401,17 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     }));
   }
 
+  const usableLevels = periods.filter(period =>
+    period.direction !== 'UNAVAILABLE' &&
+    period.effect !== 'UNKNOWN' &&
+    period.effect !== 'INSUFFICIENT_DATA' &&
+    period.evidence.length > 0
+  ).length;
   const status: CareerAnalyticalAxisStatus = !hierarchy
     ? 'UNAVAILABLE'
     : windows.length === 0
       ? 'INSUFFICIENT'
-      : windows.every(window => window.dated)
+      : windows.every(window => window.dated) && usableLevels === 3
         ? 'AVAILABLE'
         : 'PARTIAL';
 
@@ -428,7 +436,12 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     coverage: coverage(
       status === 'AVAILABLE' ? 'COMPLETE' : status === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT',
       windows.length > 0 ? ['C9_DASHA_PERIODS'] : [],
-      !hierarchy ? ['C9_DASHA_HIERARCHY'] : untimedLevels.length > 0 ? ['SOURCE_PERIOD_DATES'] : [],
+      !hierarchy
+        ? ['C9_DASHA_HIERARCHY']
+        : [
+            ...(usableLevels < 3 ? ['C9_DASHA_PERIOD_LEVELS'] : []),
+            ...(untimedLevels.length > 0 ? ['SOURCE_PERIOD_DATES'] : [])
+          ],
       sortedUnique(windows.flatMap(window => window.supportingEvidenceOccurrenceIds)).length
     ),
     confidence: confidenceNotAssessed('Timing windows preserve source dates and activation conditions; no outcome probability or timing confidence is inferred.'),
