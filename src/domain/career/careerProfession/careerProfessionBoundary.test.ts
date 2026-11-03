@@ -5,7 +5,6 @@ import { join } from 'path';
 describe('careerProfession Boundary Enforcement', () => {
   const forbiddenImports = [
     'careerDasha',
-    'd10/',
     'careerFinalSynthesis',
     'domain/timing',
     'transit',
@@ -32,6 +31,15 @@ describe('careerProfession Boundary Enforcement', () => {
           );
           expect(content).not.toMatch(importPattern);
         }
+      });
+
+      it('may import only canonical D10 types, never the D10 calculation integration', () => {
+        const filePath = join(modulePath, file);
+        const content = readFileSync(filePath, 'utf-8');
+        const forbiddenD10RuntimeImport = /import\\s+(?!type\\b)[\\s\\S]*?from\\s+['"][^'"]*careerD10\\/[^'"]*['"]/i;
+        const forbiddenD10TypeImport = /import\\s+type[\\s\\S]*?from\\s+['"][^'"]*careerD10\\/(?!careerD10CanonicalTypes)[^'"]*['"]/i;
+        expect(content).not.toMatch(forbiddenD10RuntimeImport);
+        expect(content).not.toMatch(forbiddenD10TypeImport);
       });
 
       it('should not import from AI modules', () => {
