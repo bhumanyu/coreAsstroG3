@@ -189,6 +189,18 @@ describe('B01 independent Career analytical axes', () => {
   it('keeps strong promise while exposing elevated D10 risk as a separate axis', () => {
     const axes = build({
       natal: natal('SUPPORT', 'VERY_STRONG'),
+      dasha: dasha('SUPPORT', hierarchy(), [{
+        identityKey: 'dasha-limiting-semantic',
+        id: 'dasha-limiting-occurrence',
+        level: 'MD',
+        role: 'PRIMARY_DRIVER',
+        effect: 'DOES_NOT_ACTIVATE',
+        direction: 'NEUTRAL',
+        strength: 'WEAK',
+        statement: 'Dasha non-activation is a limiting condition.',
+        sourceIds: ['dasha-limiting-occurrence'],
+        provenance: { source: 'C9_DASHA', activationLevel: 'MD', ruleIds: ['RULE_DASHA_LIMIT'], natalRootIds: [] }
+      }]),
       d10: d10([{
         identityKey: 'd10-semantic-risk',
         id: 'd10-risk-occurrence',
@@ -201,12 +213,26 @@ describe('B01 independent Career analytical axes', () => {
         sourceIds: ['d10-risk-occurrence'],
         provenance: { source: 'C10_D10', ruleIds: ['RULE_D10_RISK'], sourceIds: ['d10-risk-occurrence'], natalRootIds: [] },
         evidenceKind: 'OCCURRENCE'
+      }, {
+        identityKey: 'd10-weakening-semantic',
+        id: 'd10-weakening-occurrence',
+        role: 'MODIFIER',
+        direction: 'NEUTRAL',
+        d10Effect: 'WEAKENS',
+        d10Strength: 'WEAK',
+        weight: 1,
+        statement: 'D10 weakening condition.',
+        sourceIds: ['d10-weakening-occurrence'],
+        provenance: { source: 'C10_D10', ruleIds: ['RULE_D10_WEAKENS'], sourceIds: ['d10-weakening-occurrence'], natalRootIds: [] },
+        evidenceKind: 'OCCURRENCE'
       }])
     });
 
     expect(axes.promise.result?.strength).toBe('VERY_STRONG');
     expect(axes.risk.result?.assessment).toBe('ADVERSE_EVIDENCE_PRESENT');
     expect(axes.risk.supportingEvidenceOccurrenceIds).toContain('d10-risk-occurrence');
+    expect(axes.risk.supportingEvidenceOccurrenceIds).toContain('d10-weakening-occurrence');
+    expect(axes.risk.supportingEvidenceOccurrenceIds).toContain('dasha-limiting-occurrence');
   });
 
   it('marks sustainability unavailable instead of inferring it from promise or D10', () => {
