@@ -52,6 +52,7 @@ export interface CareerObservedOutcomeInput {
 export type CareerOutcomeAnalysisStatus =
   | 'CANDIDATES_AVAILABLE'
   | 'CONDITIONAL'
+  | 'PARTIAL'
   | 'UNRESOLVED'
   | 'INSUFFICIENT';
 
