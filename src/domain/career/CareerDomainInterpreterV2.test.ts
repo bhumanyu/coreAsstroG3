@@ -2997,6 +2997,10 @@ describe('CareerDomainInterpreterV2', () => {
       expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toEqual(
         GOLDEN_C11_BASELINE.canonicalC11Synthesis
       );
+      // B01 axes are exposed beside C11; the exact C11 golden contract remains unchanged.
+      expect(v2.conclusionData?.careerAnalyticalAxes).toBeDefined();
+      expect(v2.conclusionData?.careerAnalyticalAxes?.promise.status).toBeDefined();
+      expect(v2.conclusionData?.careerAnalyticalAxes?.sustainability.status).toBe('UNAVAILABLE');
 
       // Verify golden regression test fails if C11 output is perturbed
       // This test should fail if the canonical C11 output changes unexpectedly
