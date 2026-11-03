@@ -331,19 +331,17 @@ function collectDashaSourceIds(
 }
 
 /**
- * Collects rule IDs from Dasha analysis.
- * From dasha.evidence (CareerDashaCanonicalEvidence does not expose ruleIds in provenance — return empty array).
- *
- * P2-08D-03: This is genuinely-unavailable, not fabricated. The canonical Dasha provenance
- * does not expose ruleIds in its current contract. We return an empty array rather than
- * inventing rule IDs, which would violate traceability invariants.
+ * Collects activation rule IDs from Dasha analysis.
+ * From dasha.evidence.provenance.ruleIds, preserving producer-declared provenance.
  */
 function collectDashaRuleIds(
-  _dasha: CareerDashaCanonicalAnalysis
+  dasha: CareerDashaCanonicalAnalysis
 ): readonly string[] {
-  // CareerDashaCanonicalProvenance does not expose ruleIds in current contract
-  // This is genuinely-unavailable, not fabricated (P2-08D-03)
-  return Object.freeze([]);
+  const allRuleIds = dasha.evidence.flatMap(e => e.provenance.ruleIds ?? [])
+    .filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+  return Object.freeze(
+    Array.from(new Set(allRuleIds)).sort((a, b) => a.localeCompare(b))
+  );
 }
 
 /**
@@ -657,10 +655,15 @@ export function buildCareerFinalAnalysis(
       readonly sourceIds?: readonly string[];
       readonly ruleIds?: readonly string[];
       readonly ruleId?: string;
+      readonly provenance?: {
+        readonly sourceIds?: readonly string[];
+        readonly ruleIds?: readonly string[];
+      };
     };
     return {
-      sourceIds: candidate.sourceIds ?? [],
-      ruleIds: candidate.ruleIds ?? (candidate.ruleId ? [candidate.ruleId] : [])
+      sourceIds: candidate.sourceIds ?? candidate.provenance?.sourceIds ?? [],
+      ruleIds: candidate.ruleIds ??
+        (candidate.ruleId ? [candidate.ruleId] : candidate.provenance?.ruleIds ?? [])
     };
   };
   const producerEvidenceRecords: CareerProducerEvidenceProvenance[] = [

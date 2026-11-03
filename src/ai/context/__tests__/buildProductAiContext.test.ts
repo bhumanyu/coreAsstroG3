@@ -97,6 +97,31 @@ describe('buildProductAiContext and runAiExplanation temporalState enforcement',
     expect(aiContext.dasha.active?.mahadasha).not.toBe(Planet.KETU);
   });
 
+  it('never exposes MODERATE in an AI confidence field', () => {
+    const aiContext = buildProductAiContext(baseHoroscope, {
+      domainInterpretations,
+      lifeAnalysis,
+      temporalState: canonicalTemporalState
+    });
+    const moderateConfidencePaths: string[] = [];
+    const visit = (value: unknown, path: string): void => {
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => visit(item, `${path}[${index}]`));
+      } else if (value !== null && typeof value === 'object') {
+        for (const [key, nestedValue] of Object.entries(value)) {
+          const nestedPath = path ? `${path}.${key}` : key;
+          if (key.toLowerCase().includes('confidence') && nestedValue === 'MODERATE') {
+            moderateConfidencePaths.push(nestedPath);
+          }
+          visit(nestedValue, nestedPath);
+        }
+      }
+    };
+
+    visit(aiContext, '');
+    expect(moderateConfidencePaths).toEqual([]);
+  });
+
   it('Test C: runAiExplanation routes AI request containing Jupiter Dasha from temporalState and not Ketu from horoscope', async () => {
     const staleHoroscope: Horoscope = {
       ...baseHoroscope,

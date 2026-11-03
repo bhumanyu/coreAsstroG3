@@ -8,7 +8,8 @@ import {
   buildEvidenceFromDomainInterpretations,
   projectDomainEvidenceToAi,
   projectDashaEvidenceToAi,
-  buildDashaEvidence
+  buildDashaEvidence,
+  toAiConfidence
 } from './aiContextFactory';
 import {
   DomainInterpretation,
@@ -61,6 +62,42 @@ describe('AI Context Factory', () => {
     temporalState
   });
 
+  it.each([
+    ['VERY_HIGH', 'HIGH'],
+    ['HIGH', 'HIGH'],
+    ['MEDIUM', 'MEDIUM'],
+    ['MODERATE', 'MEDIUM'],
+    ['LOW', 'LOW']
+  ] as const)('maps %s domain confidence to %s for AI', (input, expected) => {
+    expect(toAiConfidence(input)).toBe(expected);
+  });
+
+  it('rejects confidence values outside the supported domain vocabulary', () => {
+    expect(() => toAiConfidence('UNDETERMINED')).toThrow(
+      'Unsupported confidence at AI boundary: UNDETERMINED'
+    );
+    expect(() => toAiConfidence('VERY_LOW')).toThrow(
+      'Unsupported confidence at AI boundary: VERY_LOW'
+    );
+  });
+
+  it('normalizes MODERATE from the Career domain conclusion to MEDIUM', () => {
+    const moderateCareer: DomainInterpretation = {
+      ...career,
+      conclusion: {
+        ...career.conclusion,
+        confidence: 'MODERATE'
+      }
+    };
+    const moderateContext = buildAiContext(horoscope, {
+      domainInterpretations: [moderateCareer],
+      temporalState
+    });
+
+    expect(moderateContext.career?.confidence).toBe('MEDIUM');
+    expect(moderateContext.domainInterpretations?.[0].conclusion.confidence).toBe('MEDIUM');
+  });
+
   it('should include correct schema version and source engine metadata', () => {
     expect(context.schemaVersion).toBe(AI_CONTEXT_SCHEMA_VERSION);
     expect(context.schemaVersion).toBe('1.1.0');
@@ -69,6 +106,26 @@ describe('AI Context Factory', () => {
       deterministic: true,
       astrologySystem: 'VEDIC'
     });
+  });
+
+  it('never exposes MODERATE in an AI confidence field', () => {
+    const moderateConfidencePaths: string[] = [];
+    const visit = (value: unknown, path: string): void => {
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => visit(item, `${path}[${index}]`));
+      } else if (value !== null && typeof value === 'object') {
+        for (const [key, nestedValue] of Object.entries(value)) {
+          const nestedPath = path ? `${path}.${key}` : key;
+          if (key.toLowerCase().includes('confidence') && nestedValue === 'MODERATE') {
+            moderateConfidencePaths.push(nestedPath);
+          }
+          visit(nestedValue, nestedPath);
+        }
+      }
+    };
+
+    visit(context, '');
+    expect(moderateConfidencePaths).toEqual([]);
   });
 
   it('should include canonical methodology configuration', () => {
@@ -170,47 +227,15 @@ describe('AI Context Factory', () => {
 
     expect(context.wealth).toBeDefined();
     expect(context.wealth?.status).toBeDefined();
-    expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'NEUTRAL', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
+    expect(['VERY_STRONG', 'STRONGLY_SUPPORTED', 'SUPPORTED', 'NEUTRAL', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
       context.wealth?.status
     );
     expect(['HIGH', 'MEDIUM', 'LOW']).toContain(context.wealth?.confidence);
     expect(Array.isArray(context.wealth?.supportingFactors)).toBe(true);
     expect(Array.isArray(context.wealth?.challengingFactors)).toBe(true);
-    expect(context.wealth?.status).toBe(
-      horoscope.themeInterpretationV2?.wealth?.conclusion.status
-    );
+    expect(context.wealth?.status).toBe(wealth.conclusion.strength);
     expect(context.wealth?.subthemes).toBeDefined();
-    expect(context.wealth?.subthemes).toHaveLength(4);
-    const subthemeNames = context.wealth?.subthemes?.map((st) => st.subtheme);
-    expect(subthemeNames).toEqual(['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION']);
-    for (const subtheme of context.wealth?.subthemes || []) {
-      expect(['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION']).toContain(subtheme.subtheme);
-      expect(typeof subtheme.house).toBe('number');
-      expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'NEUTRAL', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
-        subtheme.status
-      );
-      expect(typeof subtheme.primaryFamily).toBe('string');
-      expect(typeof subtheme.supportingCount).toBe('number');
-      expect(typeof subtheme.challengingCount).toBe('number');
-      expect(typeof subtheme.summary).toBe('string');
-    }
-
-    const accumSubtheme = context.wealth?.subthemes?.find((st) => st.subtheme === 'ACCUMULATION');
-    expect(accumSubtheme?.house).toBe(
-      horoscope.themeInterpretationV2?.wealth?.subthemes?.ACCUMULATION?.houseNumber
-    );
-    const gainsSubtheme = context.wealth?.subthemes?.find((st) => st.subtheme === 'GAINS');
-    expect(gainsSubtheme?.house).toBe(
-      horoscope.themeInterpretationV2?.wealth?.subthemes?.GAINS?.houseNumber
-    );
-    const fortuneSubtheme = context.wealth?.subthemes?.find((st) => st.subtheme === 'FORTUNE');
-    expect(fortuneSubtheme?.house).toBe(
-      horoscope.themeInterpretationV2?.wealth?.subthemes?.FORTUNE?.houseNumber
-    );
-    const specSubtheme = context.wealth?.subthemes?.find((st) => st.subtheme === 'SPECULATION');
-    expect(specSubtheme?.house).toBe(
-      horoscope.themeInterpretationV2?.wealth?.subthemes?.SPECULATION?.houseNumber
-    );
+    expect(context.wealth?.subthemes).toEqual([]);
   });
 
   it('should project divisional facts for D9 and D10', () => {

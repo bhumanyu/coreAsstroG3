@@ -6,11 +6,14 @@ import type { TimingEffect } from '../../domain/timing/careerWealthTiming/career
 import {
   AI_CONTEXT_SCHEMA_VERSION,
   AiAvailability,
-  AiConfidence,
   AiEvidenceEffect
 } from '../types/aiTypes';
+import { toAiConfidence } from './aiConfidence';
+export { toAiConfidence } from './aiConfidence';
 import {
   ActiveDashaFact,
+  AiDomainInterpretationProjection,
+  AiLifeAnalysisProjection,
   AiContext,
   AiContextMethodology,
   AiContextSource,
@@ -51,7 +54,6 @@ import {
   WealthHierarchyFact,
   WealthTimingFact,
   WealthPeriodTimingFact,
-  WealthSubthemeFact,
   YogaFactSummary,
   TimingActivationEffect
 } from '../types/aiContextTypes';
@@ -84,7 +86,6 @@ import {
   mapPeriodToCanonicalEvidenceIds,
   type DomainInterpretation,
   type DomainEvidence,
-  type DomainInterpretationAiProjection,
   type PeriodCanonicalEvidenceResult
 } from '../../domain/interpretation';
 import {
@@ -653,7 +654,9 @@ function mapDashaPlanetProductToPeriodFacts(
       }
       : {}),
     evidenceIds,
-    confidence: product.confidence
+    ...(product.confidence !== undefined
+      ? { confidence: toAiConfidence(product.confidence) }
+      : {})
   };
 }
 
@@ -726,7 +729,7 @@ function buildDashaFacts(
         : {}),
       ...(product.pair ? { pair: mapDashaPairProductToPairFacts(product.pair) } : {}),
       evidenceIds: topLevelEvidenceIds,
-      ...(product.confidence ? { confidence: product.confidence } : {}),
+      ...(product.confidence ? { confidence: toAiConfidence(product.confidence) } : {}),
       ...(product.at ? { asOf: product.at } : {})
     };
   }
@@ -749,7 +752,7 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
       varga: 'D9',
       status: 'AVAILABLE' as AiAvailability,
       ...(d9Interp.ascendant?.sign ? { ascendantSign: d9Interp.ascendant.sign } : {}),
-      confidence: d9Interp.confidence as AiConfidence
+      confidence: toAiConfidence(d9Interp.confidence)
     }
     : {
       varga: 'D9',
@@ -761,7 +764,7 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
       varga: 'D10',
       status: 'AVAILABLE' as AiAvailability,
       ...(d10Interp.ascendant?.sign ? { ascendantSign: d10Interp.ascendant.sign } : {}),
-      confidence: d10Interp.confidence as AiConfidence
+      confidence: toAiConfidence(d10Interp.confidence)
     }
     : {
       varga: 'D10',
@@ -969,7 +972,7 @@ function buildCareerFact(
       reasoningVersion: 'CW-04',
       mode: syn.mode,
       status: syn.status,
-      confidence: syn.confidence,
+      confidence: toAiConfidence(syn.confidence),
       natalSupport: syn.natalSupport,
       dashaSupport: syn.dashaSupport,
       transitSupport: syn.transitSupport,
@@ -1011,7 +1014,7 @@ function buildCareerFact(
     const d10 = careerInterpretation.vargaConfirmations.find((v) => v.varga === 'D10');
     return {
       status: careerInterpretation.conclusion.strength as any,
-      confidence: careerInterpretation.conclusion.confidence as AiConfidence,
+      confidence: toAiConfidence(careerInterpretation.conclusion.confidence),
       natalPromise: careerInterpretation.natalPromise.strength as any,
       d10Relationship: (d10?.relationship ?? 'UNAVAILABLE') as any,
       supportingFactors: [],
@@ -1145,7 +1148,7 @@ function buildWealthFact(
         reasoningVersion: 'CW-04',
         dimension: synObj.dimension,
         status: synObj.status,
-        confidence: synObj.confidence,
+        confidence: toAiConfidence(synObj.confidence),
         natalSupport: synObj.natalSupport,
         dashaSupport: synObj.dashaSupport,
         transitSupport: synObj.transitSupport,
@@ -1184,11 +1187,12 @@ function buildWealthFact(
   const wealthTraceCompleteness = wealthInterpretation?.conclusionData?.reasoningTraceGraph?.traceCompleteness;
   const wealthFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(wealthFinalSynthesis, wealthTraceCompleteness);
 
-
   if (wealthInterpretation) {
     return {
       status: wealthInterpretation.conclusion.strength as any,
-      confidence: wealthInterpretation.conclusion.confidence as AiConfidence,
+      confidence: toAiConfidence(
+        wealthFinalSynthesis?.confidence ?? wealthInterpretation.conclusion.confidence
+      ),
       subthemes: [],
       supportingFactors: [],
       challengingFactors: [],
@@ -1223,7 +1227,7 @@ function mapCareerWealthFinalSynthesisToFact(
           timingStatus: dimVal.timingStatus,
           divisionalStatus: 'UNAVAILABLE',
           manifestationStatus: dimVal.manifestationStatus,
-          confidence: dimVal.confidence,
+          confidence: toAiConfidence(dimVal.confidence),
           primaryPromise: dimVal.primaryPromise,
           dashaEffect: dimVal.dashaEffect,
           timingEffect: dimVal.timingEffect,
@@ -1254,14 +1258,14 @@ function mapCareerWealthFinalSynthesisToFact(
     d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; canonical Wealth reasoning keeps D2 UNAVAILABLE.',
     ...(traceCompleteness ? { traceCompleteness } : {}),
     manifestationStatus: syn.manifestationStatus,
-    confidence: syn.confidence,
+    confidence: toAiConfidence(syn.confidence),
     primaryPromise: syn.primaryPromise,
     primaryStrength: syn.primaryStrength,
     secondaryStrengths: syn.secondaryStrengths ? [...syn.secondaryStrengths] : undefined,
     manifestationSummary: syn.manifestationSummary.map((m) => ({
       mode: m.mode,
       status: m.status,
-      confidence: m.confidence
+      confidence: toAiConfidence(m.confidence)
     })),
     strongestAreas: [...syn.strongestAreas],
     challengedAreas: [...syn.challengedAreas],
@@ -1366,7 +1370,7 @@ function buildLifeThemeFacts(horoscope: Horoscope): readonly LifeThemeFact[] {
   return themes.map((t: any) => ({
     theme: String(t.theme),
     effect: normalizeEvidenceEffect(t.effect),
-    confidence: t.confidence as AiConfidence,
+    confidence: toAiConfidence(t.confidence),
     evidenceCount: t.evidenceCount ?? (t.evidence?.length || 0)
   }));
 }
@@ -1735,6 +1739,72 @@ function buildLifeThemeEvidence(horoscope: Horoscope): readonly AiEvidence[] {
   return Array.from(evidenceMap.values());
 }
 
+export function buildAiContextEvidence(
+  horoscope: Horoscope,
+  interpretations: readonly DomainInterpretation[],
+  currentDasha: ActiveDashaInterpretation | undefined
+): readonly AiEvidence[] {
+  const domainEvidenceList = buildEvidenceFromDomainInterpretations(interpretations);
+  const lifeThemeEvidenceList = buildLifeThemeEvidence(horoscope);
+  const dashaEvidenceList = buildDashaEvidence(currentDasha);
+
+  const evidenceMap = new Map<string, AiEvidence>();
+  for (const item of domainEvidenceList) {
+    evidenceMap.set(item.id, item);
+  }
+  for (const item of [...lifeThemeEvidenceList, ...dashaEvidenceList]) {
+    const existing = evidenceMap.get(item.id);
+    if (existing) {
+      if (!isEvidenceEqual(existing, item)) {
+        throw new Error(`Cannot build AiContext: conflicting evidence id ${item.id}`);
+      }
+      continue;
+    }
+    evidenceMap.set(item.id, item);
+  }
+  return Array.from(evidenceMap.values());
+}
+
+function projectDomainInterpretationAtAiBoundary(
+  interpretation: DomainInterpretation
+): AiDomainInterpretationProjection {
+  const projection = projectDomainInterpretationForAi(interpretation);
+  return {
+    ...projection,
+    conclusion: {
+      ...projection.conclusion,
+      confidence: toAiConfidence(projection.conclusion.confidence)
+    },
+    vargaConfirmations: projection.vargaConfirmations.map((confirmation) => {
+      const { confidence, ...confirmationWithoutConfidence } = confirmation;
+      return {
+        ...confirmationWithoutConfidence,
+        ...(confirmation.availability !== 'UNAVAILABLE' && confidence !== undefined
+          ? { confidence: toAiConfidence(confidence) }
+          : {})
+      };
+    }),
+    manifestations: projection.manifestations.map((manifestation) => ({
+      ...manifestation,
+      confidence: toAiConfidence(manifestation.confidence)
+    }))
+  };
+}
+
+function projectLifeAnalysisAtAiBoundary(
+  analysis: LifeAnalysis
+): AiLifeAnalysisProjection {
+  const projection = projectLifeAnalysisForAi(analysis);
+  return {
+    ...projection,
+    confidence: toAiConfidence(projection.confidence),
+    domainSummaries: projection.domainSummaries.map((summary) => ({
+      ...summary,
+      confidence: toAiConfidence(summary.confidence)
+    }))
+  };
+}
+
 export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOptions): AiContext {
   const source: AiContextSource = {
     engine: 'CORE_ASTRO',
@@ -1770,47 +1840,21 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   const career = careerInterpretation ? buildCareerFact(horoscope, careerInterpretation, asOf, options?.careerProfessionAnalysis) : undefined;
   const wealth = wealthInterpretation ? buildWealthFact(horoscope, wealthInterpretation, asOf) : undefined;
 
-  const domainInterpretations: readonly DomainInterpretationAiProjection[] =
-    rawDomainInterpretations.map(projectDomainInterpretationForAi);
+  const domainInterpretations: readonly AiDomainInterpretationProjection[] =
+    rawDomainInterpretations.map(projectDomainInterpretationAtAiBoundary);
 
   const lifeAnalysisValue: LifeAnalysis | undefined =
     options?.lifeAnalysis ?? (rawDomainInterpretations.length > 0 ? synthesizeLifeAnalysis(rawDomainInterpretations) : undefined);
 
   // Ensure lifeAnalysis is always included in the projection even if undefined
   // This allows tests to verify the structure is present
-  const projectedLifeAnalysis = lifeAnalysisValue ? projectLifeAnalysisForAi(lifeAnalysisValue) : undefined;
+  const projectedLifeAnalysis = lifeAnalysisValue
+    ? projectLifeAnalysisAtAiBoundary(lifeAnalysisValue)
+    : undefined;
 
-  // Build unified evidence universe: Canonical DomainInterpretation evidence + Life Themes evidence + Dasha interpretation evidence
-  const domainEvidenceList = buildEvidenceFromDomainInterpretations(rawDomainInterpretations);
-  const lifeThemeEvidenceList = buildLifeThemeEvidence(horoscope);
   const currentDasha = options?.temporalState?.dashaInterpretation?.current;
-  const dashaEvidenceList = buildDashaEvidence(currentDasha);
-
-  const evidenceMap = new Map<string, AiEvidence>();
-  for (const item of domainEvidenceList) {
-    evidenceMap.set(item.id, item);
-  }
-  for (const item of lifeThemeEvidenceList) {
-    const existing = evidenceMap.get(item.id);
-    if (existing) {
-      if (!isEvidenceEqual(existing, item)) {
-        throw new Error(`Cannot build AiContext: conflicting evidence id ${item.id}`);
-      }
-      continue;
-    }
-    evidenceMap.set(item.id, item);
-  }
-  for (const item of dashaEvidenceList) {
-    const existing = evidenceMap.get(item.id);
-    if (existing) {
-      if (!isEvidenceEqual(existing, item)) {
-        throw new Error(`Cannot build AiContext: conflicting evidence id ${item.id}`);
-      }
-      continue;
-    }
-    evidenceMap.set(item.id, item);
-  }
-  const evidence = Array.from(evidenceMap.values());
+  const evidence = buildAiContextEvidence(horoscope, rawDomainInterpretations, currentDasha);
+  const evidenceMap = new Map(evidence.map((item) => [item.id, item]));
 
   // Net invariant assertion: every context.domainInterpretations[].evidence[].id MUST exist in context.evidence
   for (const di of domainInterpretations) {

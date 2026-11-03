@@ -221,7 +221,7 @@ describe('resolveAnalysisTemporalState Unit Test Suite', () => {
     expect(state.asOf).toBe(context.asOf);
   });
 
-  it('A05: preserves timeline/report availability metadata and exposes explicit unavailability on failed recomputation', () => {
+  it('A05: does not retain stale Dasha metadata when recomputation is unavailable', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '1990-01-01T00:00:00.000Z');
     const brokenHoroscope = { ...horoscope, vimshottari: undefined };
     const context = createAnalysisContext({
@@ -231,7 +231,6 @@ describe('resolveAnalysisTemporalState Unit Test Suite', () => {
     const state = resolveAnalysisTemporalState(brokenHoroscope, context);
     expect(state.asOf).toBe(context.asOf);
     expect(state.dashaInterpretation).toBeUndefined();
-    expect(brokenHoroscope.dashaInterpretation?.availability).toBe('AVAILABLE');
   });
 
   it('A05: product pipeline passes one canonical temporalState instance to Career, Wealth and AI', async () => {

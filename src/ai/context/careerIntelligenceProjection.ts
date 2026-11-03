@@ -15,6 +15,7 @@ import type {
   AiCareerProfessionEvidenceFact
 } from '../types/aiContextTypes';
 import type { AiAvailability } from '../types/aiTypes';
+import { toAiConfidence } from './aiConfidence';
 
 /**
  * P2-10B Projection Layer: Career Intelligence
@@ -192,7 +193,7 @@ export function projectCanonicalCareerC11(
     finalStatus: canonicalC11.finalStatus,
     finalDirection: canonicalC11.finalDirection,
     finalStrength: canonicalC11.finalStrength,
-    confidence: canonicalC11.confidence,
+    confidence: toAiConfidence(canonicalC11.confidence),
     confidenceCoverage: canonicalC11.confidenceCoverage,
     confidenceReasons: Object.freeze([...canonicalC11.confidenceReasons]),
     ...(interpretation.conclusionData?.reasoningTraceGraph?.traceCompleteness

@@ -56,12 +56,14 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     ]);
   });
 
-  it('3. D2 relationship preserved: preserves relationship without strength conversion or percentages', () => {
+  it('3. keeps the unvalidated D2 relationship unavailable', () => {
     const analysis = createProductAnalysis();
     const vm = selectWealthViewModel(analysis);
 
-    expect(vm.d2.relationship).toBe('CONFIRMS');
-    expect(vm.d2.statement).toBe('Hora D2 confirms liquid capital accumulation.');
+    expect(vm.d2.relationship).toBe('UNAVAILABLE');
+    expect(vm.d2.statement).toBe(
+      'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+    );
   });
 
   it('4. unavailable D2/Dasha/transit preserved: handles UNAVAILABLE values without coercion', () => {
@@ -90,7 +92,9 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     const vm = selectWealthViewModel(analysis);
 
     expect(vm.d2.relationship).toBe('UNAVAILABLE');
-    expect(vm.d2.statement).toBe('D2 chart unavailable');
+    expect(vm.d2.statement).toBe(
+      'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+    );
     expect(vm.dasha.status).toBe('UNAVAILABLE');
     expect(vm.transit.status).toBe('UNAVAILABLE');
     expect(vm.transit.effect).toBe('UNAVAILABLE');

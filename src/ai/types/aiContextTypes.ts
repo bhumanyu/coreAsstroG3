@@ -39,6 +39,46 @@ import type {
 
 export type { DomainInterpretationAiProjection, LifeAnalysisAiProjection, TimingActivationEffect, WealthSubthemeKey, TimingSourceCategory };
 
+export type AiLifeAnalysisProjection = Omit<
+  LifeAnalysisAiProjection,
+  'confidence' | 'domainSummaries'
+> & {
+  readonly confidence: AiConfidence;
+  readonly domainSummaries: readonly (
+    Omit<LifeAnalysisAiProjection['domainSummaries'][number], 'confidence'> & {
+      readonly confidence: AiConfidence;
+    }
+  )[];
+};
+
+export type AiDomainInterpretationProjection = Omit<
+  DomainInterpretationAiProjection,
+  'conclusion' | 'vargaConfirmations' | 'manifestations'
+> & {
+  readonly conclusion: Omit<
+    DomainInterpretationAiProjection['conclusion'],
+    'confidence'
+  > & {
+    readonly confidence: AiConfidence;
+  };
+  readonly vargaConfirmations: readonly (
+    Omit<
+      DomainInterpretationAiProjection['vargaConfirmations'][number],
+      'confidence'
+    > & {
+      readonly confidence?: AiConfidence;
+    }
+  )[];
+  readonly manifestations: readonly (
+    Omit<
+      DomainInterpretationAiProjection['manifestations'][number],
+      'confidence'
+    > & {
+      readonly confidence: AiConfidence;
+    }
+  )[];
+};
+
 export type CareerNatalPromise =
   | 'STRONG'
   | 'SUPPORTED'
@@ -190,7 +230,7 @@ export interface DashaPeriodFacts {
   readonly receivedAspects?: readonly NatalGrahaDrishti[];
   readonly yogaParticipation?: readonly DashaYogaReference[];
   readonly evidenceIds: readonly string[];
-  readonly confidence: string;
+  readonly confidence?: AiConfidence;
   readonly planetarySynthesis?: DashaPeriodSynthesisFacts;
   readonly domainSynthesis?: readonly DashaDomainSynthesisFacts[];
 }
@@ -210,7 +250,7 @@ export interface DashaInterpretationFacts {
   readonly pratyantardasha?: DashaPeriodFacts;
   readonly pair?: DashaPairFacts;
   readonly evidenceIds: readonly string[];
-  readonly confidence?: string;
+  readonly confidence?: AiConfidence;
   readonly asOf?: string;
 }
 
@@ -368,7 +408,7 @@ export interface CareerManifestationSynthesisFact {
 export interface ManifestationSummaryFact {
   readonly mode: string;
   readonly status: string;
-  readonly confidence: string;
+  readonly confidence: AiConfidence;
 }
 
 export interface WealthDimensionFinalSynthesisFact {
@@ -470,7 +510,7 @@ export interface AiCareerCanonicalC11Fact {
   readonly finalStatus: string;
   readonly finalDirection: string;
   readonly finalStrength: string;
-  readonly confidence: string;
+  readonly confidence: AiConfidence;
   readonly confidenceCoverage: CareerConfidenceCoverage;
   readonly confidenceReasons: readonly CareerConfidenceReason[];
   readonly traceCompleteness?: ReasoningTraceCompleteness;
@@ -892,8 +932,8 @@ export interface AiContext {
   readonly lifeThemes: readonly LifeThemeFact[];
   readonly evidence: readonly AiEvidence[];
   readonly methodology: AiContextMethodology;
-  readonly domainInterpretations?: readonly DomainInterpretationAiProjection[];
-  readonly lifeAnalysis?: LifeAnalysisAiProjection;
+  readonly domainInterpretations?: readonly AiDomainInterpretationProjection[];
+  readonly lifeAnalysis?: AiLifeAnalysisProjection;
   /**
    * Optional selected-period synthesis context (PBA-09).
    * When present, contains the canonical selected-period synthesis result.

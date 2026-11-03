@@ -586,8 +586,8 @@ function resolveNatalRootEvidenceIds(
  * - Uses deterministic identityKey = ['CAREER_DASHA', level, planet, role].join(':')
  * - id = identityKey + ':' + effect (occurrence identity)
  * - sourceIds = activation.evidence.map(e => e.id) (actual source occurrence ids)
- * - provenance = { source: 'C9_DASHA', activationLevel, natalRootIds }
- * - Deduplicates canonical evidence by identityKey (merging sourceIds/rootEvidenceIds)
+ * - provenance carries activation rule IDs and natal root identities
+ * - Deduplicates canonical evidence by identityKey (merging sourceIds/ruleIds/rootEvidenceIds)
  * - Sorts output by identityKey.localeCompare
  */
 function buildCanonicalEvidence(
@@ -611,11 +611,16 @@ function buildCanonicalEvidence(
 
     // Resolve natal root evidence IDs
     const natalRootIds = activation.planet ? resolveNatalRootEvidenceIds(natal, activation.planet) : [];
+    const ruleIds = Object.freeze(
+      Array.from(new Set(activation.evidence.flatMap(e => e.activationRuleIds)))
+        .sort((a, b) => a.localeCompare(b))
+    );
 
     // Build provenance
     const provenance: CareerDashaCanonicalProvenance = Object.freeze({
       source: 'C9_DASHA',
       activationLevel: level,
+      ruleIds,
       natalRootIds
     });
 
@@ -638,15 +643,20 @@ function buildCanonicalEvidence(
       provenance
     });
 
-    // Deduplicate by identityKey (merge sourceIds and rootEvidenceIds)
+    // Deduplicate by identityKey (merge sourceIds, ruleIds, and rootEvidenceIds)
     const existing = evidenceMap.get(identityKey);
     if (existing) {
-      // Merge sourceIds and rootEvidenceIds
+      // Merge sourceIds, ruleIds, and rootEvidenceIds
       const mergedSourceIds = Array.from(new Set([...existing.sourceIds, ...canonicalEvidence.sourceIds]));
+      const mergedRuleIds = Array.from(new Set([
+        ...(existing.provenance.ruleIds ?? []),
+        ...(canonicalEvidence.provenance.ruleIds ?? [])
+      ])).sort((a, b) => a.localeCompare(b));
       const mergedRootIds = Array.from(new Set([...existing.provenance.natalRootIds, ...natalRootIds]));
       const mergedProvenance: CareerDashaCanonicalProvenance = Object.freeze({
         source: 'C9_DASHA',
         activationLevel: level,
+        ruleIds: Object.freeze(mergedRuleIds),
         natalRootIds: Object.freeze(mergedRootIds)
       });
 

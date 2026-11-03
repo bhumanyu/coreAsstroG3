@@ -348,8 +348,11 @@ describe('WealthDomainInterpreterV2', () => {
     expect(golden.conclusion.strength).toBe('VERY_STRONG');
     expect(golden.dataCompleteness?.primaryFactors).toBe('AVAILABLE');
     expect(golden.dataCompleteness?.d2).toBe('UNAVAILABLE');
-    expect(golden.conclusionData?.wealthFinalSynthesis?.divisionalStatus).toBe('UNAVAILABLE');
-    expect(golden.conclusionData?.wealthFinalSynthesis?.d2AvailabilityReason).toContain('D2 calculation and interpretation');
+    const goldenD2 = golden.vargaConfirmations?.find((confirmation) => confirmation.varga === 'D2');
+    expect(goldenD2?.relationship).toBe('UNAVAILABLE');
+    expect(goldenD2?.statement).toBe(
+      'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+    );
     expect(golden.dataCompleteness?.dasha).toBe('AVAILABLE');
     expect(golden.dataCompleteness?.transit).toBe('AVAILABLE');
   });
@@ -442,8 +445,8 @@ describe('WealthDomainInterpreterV2', () => {
           expect(domainProducer.ruleId).toBe(rawProducer.ruleId);
           expect(domainProducer.dimension).toBe(row.dimension);
           expect(domainProducer.polarity).toBe(expectedPolarity);
-          // Legacy wealth mapping preserves the producer occurrence ID; the CW-01 trace
-          // then maps that domain/raw ID to a canonical semantic identity.
+          // Legacy Wealth mapping preserves the occurrence ID; CW-01 resolves
+          // its semantic key separately from that occurrence identity.
           expect(domainProducer.id).toBe(rawProducer.id);
           expect(mapWealthDimension(rawProducer)).toBe(row.dimension);
           expect(domainProducer.relatedEvidenceIds.every((id) =>
@@ -460,14 +463,21 @@ describe('WealthDomainInterpreterV2', () => {
           const canonicalRecord = Object.values(hierarchy.reasoningTrace)
             .flat()
             .find((item) => item.evidenceId === canonicalId);
-          expect(canonicalRecord?.identityKey).toBe(canonicalId);
-          expect(canonicalRecord?.sourceIds).toEqual([domainProducer.id]);
-          expect(canonicalId).not.toBe(domainProducer.id);
+          if (!canonicalRecord) {
+            throw new Error(`${canonicalId} did not resolve to a canonical reasoning record.`);
+          }
+          expect(domainProducer.planet).toBeDefined();
+          expect(domainProducer.house).toBeDefined();
+          expect(canonicalRecord.identityKey).toBe(
+            `CW-WEALTH-NATAL-D1-${domainProducer.ruleId}-${domainProducer.planet}-HOUSE_${domainProducer.house}`
+          );
+          expect(canonicalRecord.identityKey).toContain('HOUSE_');
+          expect(canonicalRecord.sourceIds).toEqual([domainProducer.id]);
+          expect(canonicalId).toBe(domainProducer.id);
           expect(hierarchy.dimensionResults[row.dimension].evidenceIds)
-            .toContain(canonicalId);
-          // Dimension supporting IDs are CW-01 canonical IDs; challenging IDs below
-          // are occurrence/domain IDs emitted by the wealth mapper.
-          expect(conclusionDimension?.supportingEvidenceIds).toContain(canonicalId);
+            .toContain(canonicalRecord.identityKey);
+          // Support IDs use the semantic key; challenge IDs remain occurrence-level.
+          expect(conclusionDimension?.supportingEvidenceIds).toContain(canonicalRecord.identityKey);
           expect(conclusionDimension?.supportingEvidenceIds).not.toContain(domainProducer.id);
 
           const manifestationFactors =
@@ -1637,9 +1647,9 @@ describe('WealthDomainInterpreterV2', () => {
       const natalStrength = calculateDomainStrength(natalSupporting, []);
       expect(natalStrength).toBe('VERY_STRONG');
 
-      // D2 downgrade test: VERY_STRONG -> STRONG
+      // Unvalidated D2 conflicts cannot alter natal strength.
       const withVarga = resolveWealthConclusionStrength(natalStrength, 'CONFLICTS', conflicts);
-      expect(withVarga).toBe('STRONG');
+      expect(withVarga).toBe(natalStrength);
 
       // Transit only conflict preserves strong natal promise
       const transitOnlyConflicts = conflicts.filter((c) => c.tier === 'PRIMARY_VS_TRANSIT');
@@ -2010,7 +2020,7 @@ describe('WealthDomainInterpreterV2', () => {
       expect(buildWealthTransitStatement(dummyEvidence, 'UNKNOWN')).toContain('could not be confirmed');
     });
 
-    it('generates D2 statements consistent with relationship', () => {
+    it('keeps D2 unavailable regardless of the declared relationship', () => {
       const dummyEvidence = [
         createDomainEvidence({
           id: 'D2-EVID',
@@ -2026,9 +2036,11 @@ describe('WealthDomainInterpreterV2', () => {
         })
       ];
 
-      expect(buildD2Statement(dummyEvidence, 'CONFIRMS')).toContain('confirms liquid wealth potential');
-      expect(buildD2Statement(dummyEvidence, 'CONFLICTS')).toContain('diverges from natal promise');
-      expect(buildD2Statement(dummyEvidence, 'UNAVAILABLE')).toContain('unavailable or neutral');
+      const statement =
+        'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
+      expect(buildD2Statement(dummyEvidence, 'CONFIRMS')).toBe(statement);
+      expect(buildD2Statement(dummyEvidence, 'CONFLICTS')).toBe(statement);
+      expect(buildD2Statement(dummyEvidence, 'UNAVAILABLE')).toBe(statement);
     });
   });
 
@@ -2178,7 +2190,7 @@ describe('WealthDomainInterpreterV2', () => {
       expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.natalSupport);
       expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.dashaSupport);
       expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.transitSupport);
-      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.d2Support);
+      expect(syn.d2Support).toBe('UNAVAILABLE');
       expect(typeof syn.summary).toBe('string');
 
       for (const factor of syn.factors) {

@@ -29,6 +29,7 @@ describe('Wealth evidence producer adapter contract', () => {
 
     const mapped = linkWealthEvidence(buildWealthEvidence(produced.evidence));
     expect(mapped).toHaveLength(produced.evidence.length);
+    expect(new Set(mapped.map((item) => item.id)).size).toBe(mapped.length);
 
     produced.evidence.forEach((record, index) => {
       const domainEvidence = mapped[index];
@@ -55,11 +56,12 @@ describe('Wealth evidence producer adapter contract', () => {
       );
       expect(domainEvidence.house).toBe(record.houses?.[0]);
       expect(domainEvidence.id).toBe(record.id);
-      if (record.identityKey) {
-        expect(domainEvidence.identityKey).toBe(record.identityKey);
-      }
       if (record.ruleId === 'WEALTH_VENUS_KARAKA_001') {
         expect(domainEvidence.provenance?.ruleId).toBe(record.ruleId);
+        expect(domainEvidence.identityKey).toBeTruthy();
+        expect(domainEvidence.identityKey).not.toBe(record.id);
+      } else {
+        expect(domainEvidence.identityKey).toBe(record.identityKey);
       }
       for (const relatedId of domainEvidence.relatedEvidenceIds) {
         expect(mapped.some((candidate) => candidate.id === relatedId)).toBe(true);
@@ -170,10 +172,11 @@ describe('Wealth evidence producer adapter contract', () => {
       }
     ];
 
-    const mapped = buildWealthEvidence(records);
+    const mapped = linkWealthEvidence(buildWealthEvidence(records));
     expect(mapped).toHaveLength(2);
     expect(mapped.map((item) => item.id)).toEqual(['OCC-SECOND-A', 'OCC-SECOND-B']);
     expect(mapped.map((item) => item.identityKey)).toEqual(['SEM-SECOND', 'SEM-SECOND']);
+    expect(new Set(mapped.map((item) => item.id)).size).toBe(mapped.length);
   });
 
   it('rejects duplicate producer occurrence IDs', () => {

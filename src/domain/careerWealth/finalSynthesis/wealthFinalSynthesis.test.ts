@@ -206,6 +206,11 @@ describe('synthesizeWealthFinal (CW-05)', () => {
     expect(result.riskProfile).toBe('INSUFFICIENT_DATA');
     expect(result.dimensions!.ACCUMULATION.status).toBe('INSUFFICIENT_DATA');
     expect(result.dimensions!.SPECULATION.status).toBe('INSUFFICIENT_DATA');
+    expect(
+      Object.values(result.dimensions ?? {}).every(
+        (dimension) => dimension.divisionalStatus !== undefined
+      )
+    ).toBe(true);
   });
 
   it('produces frozen immutable output', () => {

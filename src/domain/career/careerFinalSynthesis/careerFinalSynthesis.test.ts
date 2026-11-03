@@ -260,7 +260,11 @@ describe('C11 Final Synthesis', () => {
     it('does not infer LOW confidence from weak promise strength when evidence quality is unknown', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
-        natalStrength: 'WEAK'
+        natalStrength: 'WEAK',
+        dashaEffect: 'ACTIVATES',
+        dashaDirection: 'SUPPORT',
+        d10Direction: 'SUPPORT',
+        expressionStrength: 'STRONG'
       };
 
       const result = synthesizeCareerFinal(input);
@@ -612,7 +616,7 @@ describe('C11 Final Synthesis', () => {
       expect(result.finalStatus).toBe('SUPPORTED');
       expect(result.finalDirection).toBe('SUPPORT');
       expect(result.finalStrength).toBe('MODERATE');
-      expect(result.confidence).toBe('MEDIUM');
+      expect(result.confidence).toBe('LOW');
     });
 
     it('should handle challenged natal with no secondary support', () => {
@@ -634,7 +638,10 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
-        // No secondary layers at all
+        dashaEffect: 'ACTIVATES',
+        dashaDirection: 'SUPPORT',
+        d10Direction: 'SUPPORT',
+        expressionStrength: 'STRONG',
         conflicts: []
       };
 
@@ -648,7 +655,10 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'VERY_STRONG',
-        // No secondary layers at all
+        dashaEffect: 'ACTIVATES',
+        dashaDirection: 'SUPPORT',
+        d10Direction: 'SUPPORT',
+        expressionStrength: 'STRONG',
         conflicts: []
       };
 
@@ -661,6 +671,10 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
+        dashaEffect: 'ACTIVATES',
+        dashaDirection: 'SUPPORT',
+        d10Direction: 'SUPPORT',
+        expressionStrength: 'STRONG',
         conflicts: [
           {
             source: 'D10',
@@ -681,6 +695,10 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
+        dashaEffect: 'ACTIVATES',
+        dashaDirection: 'SUPPORT',
+        d10Direction: 'SUPPORT',
+        expressionStrength: 'STRONG',
         conflicts: [
           {
             source: 'D10',

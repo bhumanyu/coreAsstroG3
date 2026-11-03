@@ -190,7 +190,7 @@ describe('EvidenceSourceType Contract & Mapping (P-031)', () => {
       const vargaEvidence = GOLDEN_WEALTH_EVIDENCE.find(
         (e) => e.id === 'GOLDEN_WEALTH_D2_CONFIRMS'
       );
-      expect(vargaEvidence?.sourceType).toBe('VARGA');
+      expect(vargaEvidence?.sourceType).toBeUndefined();
 
       const dashaEvidence = GOLDEN_WEALTH_EVIDENCE.find(
         (e) => e.id === 'GOLDEN_WEALTH_DASHA_MD_ACTIVATES'

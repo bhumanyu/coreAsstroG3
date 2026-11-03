@@ -9,6 +9,8 @@ import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { projectDomainInterpretationForAi } from '../../domain/interpretation/DomainInterpretationAiProjection';
 import type { DomainInterpretationAiProjection } from '../../domain/interpretation/DomainInterpretationAiProjection';
+import { toAiConfidence } from '../../ai/context/aiContextFactory';
+import type { AiDomainInterpretationProjection } from '../../ai/types/aiContextTypes';
 
 describe('Stage-1 Career & Wealth Pipeline Integration', () => {
   it('projects Career V2 and Wealth V2 into AiContext with full structural fidelity', async () => {
@@ -72,8 +74,34 @@ describe('Stage-1 Career & Wealth Pipeline Integration', () => {
     const result = await runStage1Integration(STAGE1_GOLDEN_INPUT);
 
     // Direct domain interpretation and projection from the single canonical run
-    const expectedCareerProjection = projectDomainInterpretationForAi(result.career);
-    const expectedWealthProjection = projectDomainInterpretationForAi(result.wealth);
+    const normalizeExpectedProjection = (
+      projection: DomainInterpretationAiProjection
+    ): AiDomainInterpretationProjection => ({
+      ...projection,
+      conclusion: {
+        ...projection.conclusion,
+        confidence: toAiConfidence(projection.conclusion.confidence)
+      },
+      vargaConfirmations: projection.vargaConfirmations.map((confirmation) => {
+        const { confidence, ...confirmationWithoutConfidence } = confirmation;
+        return {
+          ...confirmationWithoutConfidence,
+          ...(confirmation.availability !== 'UNAVAILABLE' && confidence !== undefined
+            ? { confidence: toAiConfidence(confidence) }
+            : {})
+        };
+      }),
+      manifestations: projection.manifestations.map((manifestation) => ({
+        ...manifestation,
+        confidence: toAiConfidence(manifestation.confidence)
+      }))
+    });
+    const expectedCareerProjection = normalizeExpectedProjection(
+      projectDomainInterpretationForAi(result.career)
+    );
+    const expectedWealthProjection = normalizeExpectedProjection(
+      projectDomainInterpretationForAi(result.wealth)
+    );
 
     const contextCareer = result.aiContext.domainInterpretations?.find(
       (d) => d.domain === 'CAREER'

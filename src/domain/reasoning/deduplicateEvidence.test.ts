@@ -133,11 +133,11 @@ describe('deduplicateReasoningEvidence', () => {
       ];
 
       const inputSecondaryFirst = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-SECONDARY', {
           identityKey,
           layer: 'SECONDARY_SUPPORT'
         }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-PRIMARY', {
           identityKey,
           layer: 'PRIMARY_PROMISE'
         })
@@ -335,22 +335,22 @@ describe('deduplicateReasoningEvidence', () => {
       const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
 
       const singleOccurrence = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-OCC-1', {
           identityKey,
           weight: 7.5
         })
       ];
 
       const tripleOccurrence = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-OCC-1', {
           identityKey,
           weight: 7.5
         }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-OCC-2', {
           identityKey,
           weight: 7.5
         }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-OCC-3', {
           identityKey,
           weight: 7.5
         })

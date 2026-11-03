@@ -1953,7 +1953,9 @@ describe('CareerDomainInterpreterV2', () => {
       expect(v2.conclusion.strength).toBe(canonicalC11.finalStrength);
 
       // Conclusion confidence should match canonical C11 confidence
-      expect(v2.conclusion.confidence).toBe(canonicalC11.confidence);
+      expect(v2.conclusion.confidence).toBe(
+        canonicalC11.confidence === 'MEDIUM' ? 'MODERATE' : canonicalC11.confidence
+      );
 
       // Conclusion statement should match canonical C11 statement
       expect(v2.conclusion.statement).toBe(canonicalC11.statement);

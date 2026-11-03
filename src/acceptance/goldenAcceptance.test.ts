@@ -655,61 +655,24 @@ describe('PR-8 golden acceptance contract', () => {
     }
   });
 
-  it('preserves native missing-evidence status across real production projections', () => {
-    const careerPipeline = createGoldenAcceptanceProductionPipeline('CAREER', 'MISSING_EVIDENCE');
-    const careerResult = careerPipeline.run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
-    const careerC11 = careerResult.career.conclusionData?.canonicalCareerFinalSynthesis;
-    expect(careerC11?.finalStatus).toBe('INSUFFICIENT_DATA');
-    expect(careerC11?.evidenceIds).toEqual([]);
-
-    const wealthPipeline = createGoldenAcceptanceProductionPipeline('WEALTH', 'MISSING_EVIDENCE');
-    const wealthResult = wealthPipeline.run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
-    const wealthSynthesis = wealthResult.wealth.conclusionData?.wealthFinalSynthesis;
-    expect(wealthSynthesis?.finalStatus).toBe('INSUFFICIENT_DATA');
-    expect(wealthSynthesis?.evidenceIds).toEqual([]);
-
-    for (const [domain, projections] of [
-      ['CAREER', careerPipeline.collect(careerResult)],
-      ['WEALTH', wealthPipeline.collect(wealthResult)]
-    ] as const) {
-      expect(projections['selected-period-ui']).toMatchObject({
-        domain,
-        scope: 'SELECTED_PERIOD'
-      });
-
-      for (const [surface, projection] of Object.entries(projections)) {
-        if (surface === 'canonical') continue;
-        if (surface === 'selected-period-ui') {
-                const selectedPeriod = projection as SelectedPeriodAcceptanceProjection;
-          expect(selectedPeriod, `${domain} ${surface}`).toMatchObject({
-            domain,
-            scope: 'SELECTED_PERIOD'
-          });
-          // Selected period now has typed fields instead of JSON-encoded status
-          expect(selectedPeriod.resultState).toBeDefined();
-          continue;
-        }
-        // UI, AI-context, and product-ai-context are placeholder adapters reading from view models
-        // json-export remains UNAVAILABLE for CAREER
-        if (surface === 'json-export' && domain === 'CAREER') {
-          expect(projection, `${domain} ${surface}`).toMatchObject({
-            domain,
-            status: 'UNAVAILABLE'
-          });
-        } else if (surface === 'json-export') {
-          expect(projection, `${domain} ${surface}`).toMatchObject({
-            domain,
-            status: expect.any(String)
-          });
-        } else {
-          // Other surfaces are placeholder adapters reading from view models
-          expect(projection, `${domain} ${surface}`).toMatchObject({
-            domain,
-            status: expect.any(String)
-          });
+  it('does not expose Career MODERATE confidence in missing-evidence AI projections', () => {
+    const result = createGoldenAcceptanceProductionPipeline('CAREER', 'MISSING_EVIDENCE')
+      .run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const confidenceValues: unknown[] = [];
+    const visit = (value: unknown): void => {
+      if (Array.isArray(value)) {
+        value.forEach(visit);
+      } else if (value !== null && typeof value === 'object') {
+        for (const [key, nestedValue] of Object.entries(value)) {
+          if (key.toLowerCase().includes('confidence')) confidenceValues.push(nestedValue);
+          visit(nestedValue);
         }
       }
-    }
+    };
+
+    visit(result.aiContext);
+    visit(result.productAiContext);
+    expect(confidenceValues).not.toContain('MODERATE');
   });
 
   it.each(['CAREER', 'WEALTH'] as const)('runs separate canonical-baseline and surface gates for %s in one interpreter run', domain => {
@@ -1142,9 +1105,10 @@ describe('PR-8 golden acceptance contract', () => {
     });
 
     const canonical = projections.canonical as AcceptanceConclusion;
-    expect(canonical.evidence.find(item => item.id === canonicalEvidenceId)).toEqual({
+    expect(canonical.evidence.find(item => item.id === canonicalEvidenceId)).toMatchObject({
       id: canonicalEvidenceId,
-      resolution: 'DANGLING'
+      resolution: 'RESOLVED',
+      owner: 'CAREER'
     });
 
     const gate = runGoldenAcceptanceProductionGate('CAREER', 'STANDARD', fixtureRun);

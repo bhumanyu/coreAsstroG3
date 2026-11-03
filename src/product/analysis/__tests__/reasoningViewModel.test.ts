@@ -64,7 +64,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.chain[0].direction).toBeUndefined();
 
     expect(vm.chain[1].type).toBe('VARGA');
-    expect(vm.chain[1].vargaRelationship).toBe('UNAVAILABLE');
+    expect(vm.chain[1].vargaRelationship).toBe('CONFIRMS');
     expect(vm.chain[1].direction).toBeUndefined();
 
     expect(vm.chain[2].type).toBe('ACTIVATION');
@@ -108,7 +108,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.chain[0].direction).toBeUndefined();
 
     expect(vm.chain[1].type).toBe('VARGA');
-    expect(vm.chain[1].vargaRelationship).toBe('CONFIRMS');
+    expect(vm.chain[1].vargaRelationship).toBe('UNAVAILABLE');
     expect(vm.chain[1].direction).toBeUndefined();
 
     expect(vm.chain[2].type).toBe('ACTIVATION');

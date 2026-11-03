@@ -77,7 +77,7 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     const accumulationResult = resolveWealthDimensionManifestation('ACCUMULATION', mixedNatal, undefined, 'CONFIRMS');
     const speculationResult = resolveWealthDimensionManifestation('SPECULATION', mixedNatal, undefined, 'CONFIRMS');
 
-    expect(accumulationResult.status).toBe('STRONGLY_SUPPORTED');
+    expect(accumulationResult.status).toBe('SUPPORTED');
     expect(accumulationResult.natalSupport).toBe('SUPPORT');
 
     // Speculation must NOT inherit accumulation's status - it must be isolated!

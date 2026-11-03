@@ -1213,6 +1213,15 @@ describe('C9 Dasha Integration', () => {
 
       // Statement should include mechanism ID
       expect(result.statement).toContain('MECH_TEST_001');
+      expect(result.evidence.length).toBeGreaterThan(0);
+      expect(
+        result.evidence
+          .filter((evidence) => evidence.sourceIds.length > 0)
+          .every((evidence) =>
+            evidence.provenance.ruleIds !== undefined &&
+            evidence.provenance.ruleIds.length > 0
+          )
+      ).toBe(true);
     });
 
     it('should read MD/AD/PD timing verbatim from horoscope.dashaInterpretation', () => {
