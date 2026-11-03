@@ -305,13 +305,13 @@ function makeRiskAxis(
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES')
     .flatMap(item => item.sourceIds);
   const d10Risk = d10.evidence
-    .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CHALLENGES')
+    .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS')
     .flatMap(item => item.sourceIds);
   const adverseOccurrences = sortedUnique([...natalRisk, ...dashaRisk, ...d10Risk]);
   const hasAdverseRecords =
     natal.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED') ||
     dasha.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES') ||
-    d10.evidence.some(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CHALLENGES');
+    d10.evidence.some(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS');
 
   const identityToOccurrences = new Map<string, string[]>();
   const addIdentityOccurrences = (identity: string, occurrences: readonly string[]) => {
@@ -370,7 +370,7 @@ function makeRiskAxis(
     ruleIds: ruleIds([
       ...natal.evidence.filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED').map(item => item.ruleId ?? ''),
       ...dasha.evidence.filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES').flatMap(item => item.provenance.ruleIds ?? []),
-      ...d10.evidence.filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CHALLENGES').flatMap(item => item.provenance.ruleIds)
+      ...d10.evidence.filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS').flatMap(item => item.provenance.ruleIds)
     ]),
     coverage: coverage(
       status === 'AVAILABLE' ? 'COMPLETE' : status === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT',
