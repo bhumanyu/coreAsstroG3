@@ -1624,6 +1624,6 @@ describe('B03 D1/D10 hierarchy acceptance', () => {
       )
     });
 
-    expect(buildCareerD10Analysis(input)).toEqual(buildCareerD10Analysis(input));
+    expect(JSON.stringify(buildCareerD10Analysis(input))).toBe(JSON.stringify(buildCareerD10Analysis(input)));
   });
 });
