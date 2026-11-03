@@ -29,7 +29,7 @@ import type {
   CareerProfessionD10Qualification
 } from './careerProfessionTypes';
 import type { CareerProfessionRule } from './careerProfessionRules';
-import { resolveCareerD10ModeFromExpressionType } from '../careerExpression/careerExpressionD10Mapping';
+import { resolveCareerD10ModeFromExpressionType } from '../careerD10ModeMapping';
 import { buildCareerProfessionRanking } from './careerProfessionRanking';
 
 import { CAREER_PROFESSION_RULES } from './careerProfessionRules';
