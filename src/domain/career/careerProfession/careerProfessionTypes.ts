@@ -293,7 +293,8 @@ export interface CareerProfessionRanking {
 
 export interface CareerProfessionAnalysis {
   readonly candidates: readonly CareerProfessionCandidate[];
-  readonly ranking: CareerProfessionRanking;
+  /** Always populated by buildCareerProfessionAnalysis; optional only for legacy external fixtures. */
+  readonly ranking?: CareerProfessionRanking;
   readonly status: CareerProfessionAnalysisStatus;
   readonly unresolvedExpressionTypes: readonly CareerExpressionType[];
   readonly mappedTypes: readonly CareerExpressionType[];
