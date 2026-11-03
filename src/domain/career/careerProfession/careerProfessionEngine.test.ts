@@ -1363,7 +1363,7 @@ describe('B04 profession ranking integration and D1/D10 boundaries', () => {
     expect(result.candidates[0].d10Status).toBe('QUALIFIED');
     expect(result.candidates[0].d10Qualification?.evidenceOccurrenceIds).toEqual(['occurrence:d10:authority']);
     expect(result.candidates[0].d10Qualification?.rootIdentityKeys).toEqual(['identity:d1:career:authority']);
-    expect(result.ranking.rankedCandidates).toHaveLength(1);
+    expect(result.ranking!.rankedCandidates).toHaveLength(1);
     expect(result.ranking.rankedCandidates[0].d10Status).toBe('QUALIFIED');
     expect(result.ranking.rankedCandidates[0].d10EvidenceOccurrenceIds).toEqual(['occurrence:d10:authority']);
   });
