@@ -43,6 +43,7 @@ import type {
   ProductQualification,
   ProductCareerAnalyticalAxes,
   ProductCareerOutcomeAnalysis,
+  ProductCareerProfessionRanking,
   ProductConfidence,
   ActivationEffect,
   PromiseStrength,
@@ -64,7 +65,7 @@ import type {
 } from './productAnalysisTypes';
 import type { CareerAnalyticalAxes } from '../../domain/career/careerFinalSynthesis/careerAnalyticalAxes';
 import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
-import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerProfessionAnalysis, CareerProfessionRanking } from '../../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type {
@@ -646,6 +647,45 @@ function mapCareerOutcomeAnalysis(value: CareerOutcomeAnalysis): ProductCareerOu
   };
 }
 
+
+function mapCareerProfessionRanking(value?: CareerProfessionRanking): ProductCareerProfessionRanking {
+  if (!value) {
+    return {
+      policyVersion: 'B04-PROFESSION-RANKING-v1',
+      status: 'UNAVAILABLE',
+      rankedCandidates: [],
+      diagnostics: ['PROFESSION_RANKING_NOT_AVAILABLE_FROM_LEGACY_INPUT']
+    };
+  }
+  return {
+    policyVersion: value.policyVersion,
+    status: value.status,
+    rankedCandidates: value.rankedCandidates.map(candidate => ({
+      candidateId: candidate.candidateId,
+      domain: candidate.domain,
+      family: candidate.family,
+      rank: candidate.rank,
+      score: candidate.score,
+      confidence: candidate.confidence,
+      confidenceReasons: [...candidate.confidenceReasons],
+      evidenceCoverage: { ...candidate.evidenceCoverage },
+      supportingCandidateIds: [...candidate.supportingCandidateIds],
+      ruleIds: [...candidate.ruleIds],
+      supportingEvidenceOccurrenceIds: [...candidate.supportingEvidenceOccurrenceIds],
+      d10EvidenceOccurrenceIds: [...candidate.d10EvidenceOccurrenceIds],
+      d10Direction: candidate.d10Direction,
+      counterEvidenceOccurrenceIds: [...candidate.counterEvidenceOccurrenceIds],
+      semanticIdentityKeys: [...candidate.semanticIdentityKeys],
+      rootIdentityKeys: [...candidate.rootIdentityKeys],
+      d10Status: candidate.d10Status,
+      reasons: [...candidate.reasons],
+      counterEvidenceReasons: [...candidate.counterEvidenceReasons],
+      alternativeExplanation: candidate.alternativeExplanation
+    })),
+    diagnostics: [...value.diagnostics]
+  };
+}
+
 function mapCareer(
   viewModel: LifeAnalysisViewModel,
   explicitEvidence?: readonly ProductEvidence[]
@@ -744,33 +784,7 @@ function mapCareer(
       mappedTypes: detail.profession.mappedTypes,
       missingInputs: detail.profession.missingInputs,
       d10Status: deriveAggregateD10Status(detail.profession.candidates),
-      ranking: {
-        policyVersion: detail.profession.ranking.policyVersion,
-        status: detail.profession.ranking.status,
-        rankedCandidates: detail.profession.ranking.rankedCandidates.map(candidate => ({
-          candidateId: candidate.candidateId,
-          domain: candidate.domain,
-          family: candidate.family,
-          rank: candidate.rank,
-          score: candidate.score,
-          confidence: candidate.confidence,
-          confidenceReasons: [...candidate.confidenceReasons],
-          evidenceCoverage: { ...candidate.evidenceCoverage },
-          supportingCandidateIds: [...candidate.supportingCandidateIds],
-          ruleIds: [...candidate.ruleIds],
-          supportingEvidenceOccurrenceIds: [...candidate.supportingEvidenceOccurrenceIds],
-          d10EvidenceOccurrenceIds: [...candidate.d10EvidenceOccurrenceIds],
-          d10Direction: candidate.d10Direction,
-          counterEvidenceOccurrenceIds: [...candidate.counterEvidenceOccurrenceIds],
-          semanticIdentityKeys: [...candidate.semanticIdentityKeys],
-          rootIdentityKeys: [...candidate.rootIdentityKeys],
-          d10Status: candidate.d10Status,
-          reasons: [...candidate.reasons],
-          counterEvidenceReasons: [...candidate.counterEvidenceReasons],
-          alternativeExplanation: candidate.alternativeExplanation
-        })),
-        diagnostics: [...detail.profession.ranking.diagnostics]
-      }
+      ranking: mapCareerProfessionRanking(detail.profession.ranking)
     } : undefined,
     d10: {
       relationship: mapD10Relationship(detail?.d10Relationship ? String(detail.d10Relationship) : undefined),
