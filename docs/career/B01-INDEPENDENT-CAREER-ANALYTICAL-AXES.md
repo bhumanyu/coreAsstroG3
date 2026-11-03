@@ -4,7 +4,7 @@
 
 ## Boundary
 
-B01 adds five independent analytical projections to the canonical `CareerFinalSynthesisResult`:
+B01 adds five independent analytical projections to `CareerConclusionData` beside the canonical `CareerFinalSynthesisResult`:
 
 - Promise
 - Activation
@@ -71,7 +71,7 @@ Run the focused suites and full verification in the repository:
 
 ```bash
 npm test -- src/domain/career/careerFinalSynthesis/careerAnalyticalAxes.test.ts
-npm test -- src/domain/career/careerFinalSynthesis/careerFinalSynthesisIntegration.test.ts
+npm test -- src/domain/career/CareerDomainInterpreterV2.test.ts
 npm test -- src/product/analysis/__tests__/productAnalysisMapper.test.ts
 npm run verify
 ```
