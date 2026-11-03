@@ -67,6 +67,7 @@ import {
   resolveCareerD10ModeFromExpressionType,
   type CareerExpressionToD10ModeResolution
 } from '../careerExpression/careerExpressionD10Mapping';
+import type { CareerExpressionType } from '../careerExpression/careerExpressionTypes';
 
 
 import type {
@@ -564,6 +565,19 @@ export type C8ToC10MappingResolution = CareerExpressionToD10ModeResolution;
 
 /** Backward-compatible export; implementation is shared with the profession layer. */
 export const resolveC10ModeFromC8ExpressionType = resolveCareerD10ModeFromExpressionType;
+
+/** Representative reverse map used only by legacy C10 evidence assembly. */
+const MANIFESTATION_MODE_TO_EXPRESSION_TYPE: Readonly<Partial<Record<CareerManifestationMode, CareerExpressionType>>> = Object.freeze({
+  AUTHORITY: 'AUTHORITY_EXPRESSION',
+  LEADERSHIP: 'LEADERSHIP_EXPRESSION',
+  MANAGEMENT: 'TEACHING_EXPRESSION',
+  TECHNICAL_SPECIALIZATION: 'RESEARCH_WORK',
+  INDEPENDENT_WORK: 'COMMUNICATION_WORK',
+  SERVICE_EMPLOYMENT: 'SERVICE_WORK',
+  ENTREPRENEURSHIP: 'FINANCIAL_WORK',
+  PUBLIC_INSTITUTIONAL: 'INSTITUTIONAL_WORK_EXPRESSION'
+} as const);
+
 
 /**
  * Converts semantic expression qualification to canonical format.
