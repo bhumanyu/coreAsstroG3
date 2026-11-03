@@ -36,7 +36,10 @@ function isSupportivePromise(axes: CareerAnalyticalAxes, finalSynthesis: CareerF
     (direction === 'SUPPORT' || direction === 'CONDITIONAL') &&
     axes.promise.supportingEvidenceOccurrenceIds.length > 0 &&
     (finalSynthesis.natalDirection === 'SUPPORT' || finalSynthesis.natalDirection === 'CONDITIONAL') &&
-    finalSynthesis.natalStrength !== 'UNDETERMINED';
+    finalSynthesis.natalStrength !== 'UNDETERMINED' &&
+    (finalSynthesis.finalStatus === 'SUPPORTED' ||
+      finalSynthesis.finalStatus === 'CONDITIONALLY_SUPPORTED') &&
+    (finalSynthesis.finalDirection === 'SUPPORT' || finalSynthesis.finalDirection === 'CONDITIONAL');
 }
 
 function isActiveActivation(axes: CareerAnalyticalAxes): boolean {
@@ -133,7 +136,8 @@ function isEligibleEvent(event: CareerEvent, opportunity: CareerTrajectoryOpport
   if (!opportunity.qualified || (opportunity.direction !== 'SUPPORT' && opportunity.direction !== 'CONDITIONAL')) return false;
   if (opportunity.evidenceIds.length === 0 || event.evidenceIds.length === 0) return false;
   const eventEvidence = new Set(event.evidenceIds);
-  return opportunity.evidenceIds.some(id => eventEvidence.has(id));
+  return eventEvidence.has(event.activationId) &&
+    opportunity.evidenceIds.some(id => eventEvidence.has(id));
 }
 
 function validateObservedDate(value: string, field: string): void {
@@ -193,6 +197,8 @@ function buildCandidate(
   const counter = counterIndications(axes, finalSynthesis);
   const conditional =
     event.eventType === 'CAREER_CONDITIONAL_WINDOW' ||
+    finalSynthesis.finalStatus === 'MIXED' ||
+    finalSynthesis.finalDirection === 'MIXED' ||
     counter.severity !== 'NONE' ||
     execution.d10Qualification !== 'QUALIFIED' ||
     execution.professionAnalysisStatus !== 'COMPLETE';
@@ -249,6 +255,13 @@ export function buildCareerOutcomeAnalysis(input: CareerOutcomeAnalysisInput): C
 
   if (!promiseReady) diagnostics.push('NATAL_PROMISE_NOT_ESTABLISHED');
   if (!activationReady) diagnostics.push('DASHA_ACTIVATION_NOT_ESTABLISHED');
+  if (
+    finalSynthesis.finalStatus === 'CHALLENGED' ||
+    finalSynthesis.finalStatus === 'INSUFFICIENT_DATA' ||
+    (finalSynthesis.finalDirection !== 'SUPPORT' && finalSynthesis.finalDirection !== 'CONDITIONAL')
+  ) {
+    diagnostics.push('C11_FINAL_CONCLUSION_NOT_SUPPORTIVE');
+  }
 
   const candidateOutcomes: CareerOutcomeCandidate[] = [];
   if (promiseReady && activationReady) {
@@ -274,7 +287,10 @@ export function buildCareerOutcomeAnalysis(input: CareerOutcomeAnalysisInput): C
       axes.promise.conflictingEvidenceOccurrenceIds.length > 0 ||
       axes.activation.supportingEvidenceOccurrenceIds.length > 0 ||
       axes.activation.conflictingEvidenceOccurrenceIds.length > 0;
-    status = anyAxisEvidence ? 'UNRESOLVED' : 'INSUFFICIENT';
+    const partialAxisCoverage =
+      axes.promise.status === 'PARTIAL' ||
+      axes.activation.status === 'PARTIAL';
+    status = partialAxisCoverage ? 'PARTIAL' : anyAxisEvidence ? 'UNRESOLVED' : 'INSUFFICIENT';
     if (promiseReady && activationReady) diagnostics.push('NO_LINKED_P2_09B_OUTCOME_CANDIDATE');
   }
 
