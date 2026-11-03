@@ -79,7 +79,11 @@ function executionConditions(profession?: CareerProfessionAnalysis): CareerOutco
   const professionAnalysisStatus = profession?.status ?? 'NOT_PROVIDED';
   const hasD10QualifiedCandidate = profession?.candidates.some(candidate => candidate.d10Status === 'QUALIFIED') ?? false;
   const hasPartialD10 = profession?.candidates.some(candidate =>
-    candidate.d10Status === 'NOT_PROVIDED' || candidate.d10Status === 'NOT_APPLICABLE'
+    candidate.d10Status === 'PARTIAL' ||
+    candidate.d10Status === 'CONFLICTED' ||
+    candidate.d10Status === 'UNAVAILABLE' ||
+    candidate.d10Status === 'NOT_PROVIDED' ||
+    candidate.d10Status === 'NOT_APPLICABLE'
   ) ?? false;
   const d10Qualification = hasD10QualifiedCandidate
     ? 'QUALIFIED'

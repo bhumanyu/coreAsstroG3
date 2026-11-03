@@ -36,8 +36,81 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
         </ul>
       </div>
     )}
+    <div className="space-y-2 pt-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-xs font-semibold text-slate-300">Profession family ranking</h3>
+        <span className="text-[11px] text-slate-400">{profession.ranking.status}</span>
+      </div>
+      <p className="text-xs leading-relaxed text-slate-400">
+        Evidence-weighted policy points compare broad profession families. Scores are not probabilities,
+        job-title predictions, salary estimates, or employability forecasts. D1 establishes the promise;
+        D10 only qualifies an existing expression.
+      </p>
+      {profession.ranking.diagnostics.length > 0 && (
+        <ul aria-label="Profession ranking diagnostics" className="list-disc space-y-1 pl-5 text-xs text-slate-400">
+          {profession.ranking.diagnostics.map((diagnostic) => <li key={diagnostic}>{diagnostic}</li>)}
+        </ul>
+      )}
+      {profession.ranking.rankedCandidates.length > 0 ? (
+        <ol aria-label="Ranked profession families" className="space-y-2">
+          {profession.ranking.rankedCandidates.map((candidate) => (
+            <li key={candidate.candidateId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h4 className="text-sm font-medium text-slate-100">
+                  #{candidate.rank} · {candidate.domain} / {candidate.family}
+                </h4>
+                <span className="text-xs text-slate-300">{candidate.score} policy points · {candidate.confidence} confidence</span>
+              </div>
+              <p className="text-xs text-slate-400">{candidate.alternativeExplanation}</p>
+              {candidate.scoreContributions.length > 0 && (
+                <ul aria-label={`Score contributions for ${candidate.domain} ${candidate.family}`} className="space-y-1 text-xs text-slate-400">
+                  {candidate.scoreContributions.map((contribution) => (
+                    <li key={`${contribution.referenceType}:${contribution.referenceId}`}>
+                      <span className="font-medium text-slate-300">{contribution.referenceType}</span>
+                      {' · '}{contribution.referenceId}{' · '}
+                      <span className={contribution.points < 0 ? 'text-amber-300' : 'text-slate-200'}>
+                        {contribution.points > 0 ? '+' : ''}{contribution.points} points
+                      </span>
+                      {' — '}{contribution.explanation}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
+                <div><dt className="inline font-semibold text-slate-300">D10: </dt><dd className="inline">{candidate.d10Status} ({candidate.d10Direction})</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">Evidence coverage: </dt><dd className="inline">{candidate.evidenceCoverage.status} · {candidate.evidenceCoverage.occurrenceCount} occurrences · {candidate.evidenceCoverage.rootIdentityCount} roots</dd></div>
+              </dl>
+              {candidate.reasons.length > 0 && (
+                <ul aria-label={`Reasons for ${candidate.domain} ${candidate.family}`} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
+                  {candidate.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+                </ul>
+              )}
+              {candidate.counterEvidenceReasons.length > 0 && (
+                <ul aria-label={`Counter-evidence for ${candidate.domain} ${candidate.family}`} className="list-disc space-y-1 pl-5 text-xs text-amber-300">
+                  {candidate.counterEvidenceReasons.map((reason) => <li key={reason}>{reason}</li>)}
+                </ul>
+              )}
+              <p className="text-[11px] text-slate-500">
+                Supporting occurrences: {candidate.supportingEvidenceOccurrenceIds.join(', ') || 'None'}.
+                D10 occurrences: {candidate.d10EvidenceOccurrenceIds.join(', ') || 'None'}.
+                Counter occurrences: {candidate.counterEvidenceOccurrenceIds.join(', ') || 'None'}.
+              </p>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-xs leading-relaxed text-slate-400">
+          No profession-family ranking is available. This can mean the C11 D1 promise gate is not met,
+          no supported profession family was derived, or required evidence is unavailable.
+        </p>
+      )}
+    </div>
     <div className="space-y-2 pt-2">
-      <h3 className="text-xs font-semibold text-slate-300">Profession candidates</h3>
+      <h3 className="text-xs font-semibold text-slate-300">Expression-derived profession candidates</h3>
+      <p className="text-xs text-slate-500">
+        These pattern-scoped candidates are inputs to the ranking, not specific job-title predictions.
+        They are not ranked recommendations unless the C11 D1 promise gate is satisfied.
+      </p>
       {profession.candidates.length === 0 ? (
         <p className="text-xs leading-relaxed text-slate-400">
           No profession candidates are available from the current inputs. This is not a negative career conclusion.

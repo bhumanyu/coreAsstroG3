@@ -117,6 +117,9 @@ describe('CareerProfessionStatusSection', () => {
         mechanismTypes: ['LEADERSHIP'],
         patternIds: ['PATTERN_1'],
         d10Status: 'NOT_PROVIDED',
+        evidenceOccurrenceIds: ['OCCURRENCE_1'],
+        semanticIdentityKeys: ['IDENTITY_1'],
+        rootIdentityKeys: ['ROOT_1'],
         evidence: [{
           evidenceId: 'PROFESSION_EVIDENCE_1',
           basis: 'EXPRESSION',
@@ -162,3 +165,55 @@ describe('CareerProfessionStatusSection', () => {
     expect(region).not.toHaveTextContent(/no career promise|no career potential/i);
   });
 });
+
+  it('renders deterministic profession-family rank, score, confidence, reasons, and counter-evidence', () => {
+    const base = selectCareerViewModel(createProductAnalysis()).profession;
+    const profession = {
+      ...base,
+      ranking: {
+        policyVersion: 'B04-PROFESSION-RANKING-v1' as const,
+        status: 'PARTIAL' as const,
+        diagnostics: ['D10_QUALIFICATION_PARTIAL'],
+        rankedCandidates: [{
+          candidateId: 'PROFESSION:TECHNOLOGY:TECHNICAL_LEADERSHIP',
+          domain: 'TECHNOLOGY',
+          family: 'TECHNICAL_LEADERSHIP',
+          rank: 1,
+          score: 18,
+          confidence: 'MEDIUM' as const,
+          confidenceReasons: ['Root evidence is present; D10 is partial.'],
+          evidenceCoverage: {
+            status: 'COMPLETE' as const,
+            occurrenceCount: 2,
+            semanticIdentityCount: 2,
+            rootIdentityCount: 2,
+            linkedSourceCount: 1
+          },
+          supportingCandidateIds: ['candidate-pattern-1'],
+          ruleIds: ['RULE_PROFESSION_TECHNICAL_LEADERSHIP'],
+          supportingEvidenceOccurrenceIds: ['occ-d1-1'],
+          d10EvidenceOccurrenceIds: ['occ-d10-1'],
+          d10Direction: 'MIXED' as const,
+          counterEvidenceOccurrenceIds: ['occ-d1-challenge'],
+          semanticIdentityKeys: ['identity-d1-1'],
+          rootIdentityKeys: ['root-d1-1'],
+          d10Status: 'PARTIAL' as const,
+          reasons: ['D1-derived expression establishes this broad family.'],
+          counterEvidenceReasons: ['D10 mixed evidence constrains expression.'],
+          alternativeExplanation: 'Primary-ranked broad profession-family candidate.'
+        }]
+      }
+    };
+
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const ranking = screen.getByRole('list', { name: 'Ranked profession families' });
+    expect(ranking).toHaveTextContent('#1 · TECHNOLOGY / TECHNICAL_LEADERSHIP');
+    expect(ranking).toHaveTextContent('18 policy points · MEDIUM confidence');
+    expect(ranking).toHaveTextContent('D10: PARTIAL (MIXED)');
+    expect(ranking).toHaveTextContent('D1-derived expression establishes this broad family.');
+    expect(ranking).toHaveTextContent('D10 mixed evidence constrains expression.');
+    expect(ranking).toHaveTextContent('occ-d10-1');
+    expect(screen.getByRole('list', { name: 'Profession ranking diagnostics' }))
+      .toHaveTextContent('D10_QUALIFICATION_PARTIAL');
+  });

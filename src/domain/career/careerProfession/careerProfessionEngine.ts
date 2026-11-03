@@ -26,9 +26,11 @@ import type {
   CareerProfessionCandidate,
   CareerProfessionEvidence,
   CareerProfessionProvenance,
-  CareerProfessionD10Status
+  CareerProfessionD10Qualification
 } from './careerProfessionTypes';
 import type { CareerProfessionRule } from './careerProfessionRules';
+import { resolveCareerD10ModeFromExpressionType } from '../careerD10ModeMapping';
+import { buildCareerProfessionRanking } from './careerProfessionRanking';
 
 import { CAREER_PROFESSION_RULES } from './careerProfessionRules';
 import {
@@ -172,6 +174,11 @@ export function buildCareerProfessionAnalysis(
 
   // Build provenance from emitted candidates' evidence only
   const provenance = buildProvenance(d10QualifiedCandidates);
+  const ranking = buildCareerProfessionRanking({
+    candidates: d10QualifiedCandidates,
+    domainEvidence,
+    natalPromiseDirection: input.natalPromiseDirection
+  });
 
   // Sort and deduplicate candidates
   const sortedCandidates = canonicalSortProfessionCandidates(
@@ -181,6 +188,7 @@ export function buildCareerProfessionAnalysis(
   // Freeze and return
   return freezeProfessionAnalysis({
     candidates: sortedCandidates,
+    ranking,
     status: status as 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA',
     unresolvedExpressionTypes,
     mappedTypes,
@@ -442,12 +450,10 @@ function buildCandidateFromRule(
   patternMechanismIds?: Set<string>
 ): CareerProfessionCandidate {
   // Collect expression types that match the rule
-  const matchedExpressionTypes: CareerExpressionType[] = [];
-  if (rule.requiredExpressionTypes) {
-    for (const type of rule.requiredExpressionTypes) {
-      matchedExpressionTypes.push(type);
-    }
-  }
+  const matchedExpressionTypes: CareerExpressionType[] = rule.requiredExpressionTypes
+    ? [...rule.requiredExpressionTypes]
+    : [...new Set(satisfyingExpressions.map(expression => expression.expressionType))]
+      .sort(codePointCompare);
 
   // Collect mechanism types that match the rule
   const matchedMechanismTypes: CareerMechanismType[] = [];
@@ -472,23 +478,18 @@ function buildCandidateFromRule(
   const mechanismIds = satisfyingMechanisms.map(m => m.candidateId);
   const sourceIds = mergeSourceIds([expressionIds, mechanismIds]);
 
-  // Collect related evidence IDs from DomainEvidence
-  const domainEvidenceIds: string[] = [];
-  const relatedEvidenceIds: string[] = [];
-  if (domainEvidence) {
-    for (const de of domainEvidence) {
-      // Only include DomainEvidence that is referenced via relatedEvidenceIds
-      // Unreferenced DomainEvidence cannot create or activate a candidate
-      if (de.relatedEvidenceIds && de.relatedEvidenceIds.length > 0) {
-        // Check if this evidence is related to our sources
-        const isRelated = de.relatedEvidenceIds.some(id => sourceIds.includes(id));
-        if (isRelated) {
-          domainEvidenceIds.push(de.id);
-          relatedEvidenceIds.push(de.id);
-        }
-      }
-    }
-  }
+  // Collect only explicitly linked canonical DomainEvidence. Preserve occurrence IDs,
+  // semantic identity keys, and root identity keys in their own namespaces.
+  const matchedDomainEvidence = (domainEvidence ?? []).filter(de =>
+    de.relatedEvidenceIds.some(id => sourceIds.includes(id))
+  );
+  const domainEvidenceIds = matchedDomainEvidence.map(de => de.id);
+  const relatedEvidenceIds = matchedDomainEvidence.map(de => de.id);
+  const evidenceOccurrenceIds = uniqueProfessionIds(matchedDomainEvidence.map(de => de.id));
+  const semanticIdentityKeys = uniqueProfessionIds(
+    matchedDomainEvidence.map(de => de.identityKey).filter((id): id is string => Boolean(id))
+  );
+  const rootIdentityKeys = uniqueProfessionIds(matchedDomainEvidence.flatMap(de => de.rootEvidenceIds ?? []));
 
   // Build candidate ID (pattern-scoped with ruleId for identity)
   const candidateId = createProfessionCandidateId(
@@ -509,6 +510,9 @@ function buildCandidateFromRule(
     mechanismTypes: Object.freeze(matchedMechanismTypes.sort(codePointCompare)),
     patternIds: Object.freeze([patternId]),
     d10Status: 'NOT_PROVIDED', // Will be updated by applyD10Qualification
+    evidenceOccurrenceIds: Object.freeze(evidenceOccurrenceIds),
+    semanticIdentityKeys: Object.freeze(semanticIdentityKeys),
+    rootIdentityKeys: Object.freeze(rootIdentityKeys),
     evidence: Object.freeze(canonicalSortProfessionEvidence(evidence)),
     domainEvidenceIds: Object.freeze(domainEvidenceIds.sort(codePointCompare)),
     relatedEvidenceIds: Object.freeze(relatedEvidenceIds.sort(codePointCompare)),
@@ -623,47 +627,106 @@ function buildEvidence(
 }
 
 /**
- * Apply D10 qualification to existing candidates.
- * Per spec §5.5: D10 only qualifies existing candidates; it never creates them.
- *
- * CRITICAL TRAP: The P2-08A expressionId is built from createCareerExpressionId(expressionType, sourceMechanismIds),
- * while D10 canonical expression qualifications are keyed on the legacy mode-based CareerExpression.
- * These are DIFFERENT identity namespaces. A naive string-equality match will NEVER match.
- *
- * Resolution: Return NOT_PROVIDED/UNAVAILABLE and document that D10 per-expression qualification is deferred
- * because the identity namespaces are not yet reconciled. Do NOT ship silent dead-code matching.
- *
- * In all cases, D10 must only qualify an existing candidate and must never create one.
- * Missing/unavailable D10 is NOT_PROVIDED/UNAVAILABLE, not negative evidence.
+ * Apply expression-specific D10 qualification through the explicit C8→C10
+ * mechanism-provenance bridge. Expression IDs and legacy C10 expression IDs are
+ * never compared. Only a RESOLVED C8→C10 mapping with shared source mechanism
+ * candidate IDs may qualify an already-existing profession candidate.
  */
 function applyD10Qualification(
   candidates: CareerProfessionCandidate[],
   careerD10CanonicalAnalysis?: CareerD10CanonicalAnalysis
 ): CareerProfessionCandidate[] {
-  if (!careerD10CanonicalAnalysis) {
-    // D10 not provided - mark all candidates as NOT_PROVIDED
-    return candidates.map(c =>
-      Object.freeze({
-        ...c,
-        d10Status: 'NOT_PROVIDED' as const
-      })
-    );
-  }
+  return candidates.map(candidate => {
+    if (!careerD10CanonicalAnalysis) {
+      return Object.freeze({
+        ...candidate,
+        d10Status: 'NOT_PROVIDED' as const,
+        d10Qualification: Object.freeze({
+          status: 'NOT_PROVIDED' as const,
+          direction: 'UNDETERMINED' as const,
+          effects: Object.freeze([]),
+          evidenceOccurrenceIds: Object.freeze([]),
+          counterEvidenceOccurrenceIds: Object.freeze([]),
+          rootIdentityKeys: Object.freeze([])
+        })
+      });
+    }
 
-  // D10 is provided but identity namespaces are not reconciled
-  // Mark all candidates as UNAVAILABLE and document the deferment
-  //
-  // The P2-08A expressionId (e.g., "EXPR:RESEARCH_WORK:MECH1,MECH2") does not match
-  // the D10 canonical expressionId (legacy mode-based CareerExpression identity).
-  // Without a documented mapping between these namespaces, we cannot match them.
-  //
-  // This is explicitly documented in the P2-10A doc as deferred work.
-  return candidates.map(c =>
-    Object.freeze({
-      ...c,
-      d10Status: 'UNAVAILABLE' as const
-    })
-  );
+    const candidateMechanismIds = new Set(candidate.evidence.flatMap(item =>
+      item.basis === 'MECHANISM'
+        ? item.sourceIds
+        : (item.resolvedMechanismIds ?? [])
+    ));
+    const candidateC10Modes = new Set(candidate.expressionTypes.flatMap(expressionType => {
+      const resolution = resolveCareerD10ModeFromExpressionType(expressionType);
+      return resolution.status === 'RESOLVED' ? [resolution.c10Mode] : [];
+    }));
+    const matchedQualifications = careerD10CanonicalAnalysis.expressionQualifications.filter(qualification => {
+      if (qualification.mappingStatus !== 'RESOLVED' || !qualification.expression) return false;
+      if (!candidateC10Modes.has(qualification.expression.mode)) return false;
+      const sourceMechanismIds = qualification.expression.sourceMechanismCandidateIds ?? [];
+      // Require complete source ownership, not a single coincidental mechanism overlap.
+      return sourceMechanismIds.length > 0 &&
+        sourceMechanismIds.every(id => candidateMechanismIds.has(id));
+    });
+
+    if (matchedQualifications.length === 0) {
+      return Object.freeze({
+        ...candidate,
+        d10Status: 'UNAVAILABLE' as const,
+        d10Qualification: Object.freeze({
+          status: 'UNAVAILABLE' as const,
+          direction: 'UNDETERMINED' as const,
+          effects: Object.freeze([]),
+          evidenceOccurrenceIds: Object.freeze([]),
+          counterEvidenceOccurrenceIds: Object.freeze([]),
+          rootIdentityKeys: Object.freeze([])
+        })
+      });
+    }
+
+    const directions = new Set(matchedQualifications.map(item => item.direction));
+    const hasChallenge = directions.has('CHALLENGE') ||
+      matchedQualifications.some(item => item.effect === 'CONFLICTS' || item.effect === 'WEAKENS');
+    const hasSupport = directions.has('SUPPORT');
+    const hasMixed = directions.has('MIXED');
+    const direction = hasChallenge && hasSupport ? 'MIXED'
+      : hasChallenge ? 'CHALLENGE'
+        : hasMixed ? 'MIXED'
+          : hasSupport ? 'SUPPORT' : 'UNDETERMINED';
+    const status = direction === 'CHALLENGE' ? 'CONFLICTED'
+      : direction === 'MIXED' ? 'PARTIAL'
+        : direction === 'SUPPORT' && matchedQualifications.some(item => item.qualified)
+          ? 'QUALIFIED' : 'UNAVAILABLE';
+    const evidenceOccurrenceIds = uniqueProfessionIds(
+      matchedQualifications.flatMap(item => item.evidence.map(evidence => evidence.id))
+    );
+    const counterEvidenceOccurrenceIds = uniqueProfessionIds(
+      matchedQualifications.flatMap(item => item.evidence
+        .filter(evidence => evidence.direction === 'CHALLENGE' || evidence.d10Effect === 'CONFLICTS' || evidence.d10Effect === 'WEAKENS')
+        .map(evidence => evidence.id))
+    );
+    const rootIdentityKeys = uniqueProfessionIds(
+      matchedQualifications.flatMap(item => item.evidence.flatMap(evidence => evidence.provenance.natalRootIds))
+    );
+
+    return Object.freeze({
+      ...candidate,
+      d10Status: status,
+      d10Qualification: Object.freeze({
+        status,
+        direction,
+        effects: Object.freeze(uniqueProfessionIds(matchedQualifications.map(item => item.effect)) as CareerProfessionD10Qualification['effects']),
+        evidenceOccurrenceIds: Object.freeze(evidenceOccurrenceIds),
+        counterEvidenceOccurrenceIds: Object.freeze(counterEvidenceOccurrenceIds),
+        rootIdentityKeys: Object.freeze(rootIdentityKeys)
+      })
+    });
+  });
+}
+
+function uniqueProfessionIds(values: readonly string[]): string[] {
+  return [...new Set(values.filter(value => value.trim().length > 0))].sort(codePointCompare);
 }
 
 /**

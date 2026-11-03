@@ -928,7 +928,9 @@ export function interpretCareerV2(
       ...(career10HFoundation ? { career10HFoundation } : {}),
       ...(career10LFoundation ? { career10LFoundation } : {}),
       careerD10CanonicalAnalysis: canonicalD10Analysis,
-      domainEvidence: evidence
+      domainEvidence: evidence,
+      // C11 is the authoritative D1 promise boundary for B04 ranking.
+      natalPromiseDirection: canonicalC11Result.natalDirection
     });
   } catch (error) {
     // Surface profession engine failure as a typed diagnostic

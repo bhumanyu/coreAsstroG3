@@ -1286,3 +1286,106 @@ function createMock10LFoundation(): Career10LFoundation {
     moonContext: null
   };
 }
+
+describe('B04 profession ranking integration and D1/D10 boundaries', () => {
+  it('uses a resolved C8-to-C10 source-mechanism bridge to qualify only the matching D1 candidate', () => {
+    const mechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+    const expressions = createMockExpressionAnalysisResult([
+      createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [mechanism.candidateId])
+    ]);
+    const d10Evidence = {
+      identityKey: 'identity:d10:authority',
+      id: 'occurrence:d10:authority',
+      role: 'QUALIFICATION',
+      direction: 'SUPPORT',
+      d10Effect: 'QUALIFIES',
+      d10Strength: 'STRONG',
+      weight: 3,
+      statement: 'D10 reinforces the linked leadership expression.',
+      sourceIds: ['source:d10:authority'],
+      provenance: {
+        source: 'C10_D10',
+        ruleIds: ['RULE_D10_AUTHORITY'],
+        sourceIds: ['source:d10:authority'],
+        natalRootIds: ['identity:d1:career:authority']
+      },
+      evidenceKind: 'OCCURRENCE'
+    };
+    const d10 = {
+      availability: 'AVAILABLE',
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG',
+      d10Effect: 'REINFORCES',
+      d10Direction: 'SUPPORT',
+      d10Strength: 'STRONG',
+      qualifiedDirection: 'SUPPORT',
+      qualifiedStrength: 'STRONG',
+      natalPromisePreserved: true,
+      relationship: 'QUALIFIES',
+      evidence: [d10Evidence],
+      conflicts: [],
+      expressionQualifications: [{
+        expressionId: 'legacy-expression:authority',
+        expression: {
+          mode: 'AUTHORITY',
+          direction: 'SUPPORTED',
+          strength: 'STRONG',
+          evidence: [],
+          supportingEvidenceIds: [],
+          statement: 'Leadership expression',
+          conditional: false,
+          sourceMechanismCandidateIds: [mechanism.candidateId]
+        },
+        qualified: true,
+        effect: 'QUALIFIES',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: [d10Evidence],
+        mappingStatus: 'RESOLVED',
+        mappingGranularity: 'MODE',
+        statement: 'D10 qualifies the existing expression.'
+      }],
+      rootEvidenceIds: ['identity:d1:career:authority'],
+      statement: 'D10 analysis'
+    } as unknown as CareerD10CanonicalAnalysis;
+
+    const result = buildCareerProfessionAnalysis({
+      expressions,
+      mechanisms: [mechanism],
+      career10HFoundation: createMock10HFoundation(),
+      career10LFoundation: createMock10LFoundation(),
+      careerD10CanonicalAnalysis: d10,
+      domainEvidence: [],
+      natalPromiseDirection: 'SUPPORT'
+    });
+
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].d10Status).toBe('QUALIFIED');
+    expect(result.candidates[0].d10Qualification?.evidenceOccurrenceIds).toEqual(['occurrence:d10:authority']);
+    expect(result.candidates[0].d10Qualification?.rootIdentityKeys).toEqual(['identity:d1:career:authority']);
+    expect(result.ranking!.rankedCandidates).toHaveLength(1);
+    expect(result.ranking!.rankedCandidates[0].d10Status).toBe('QUALIFIED');
+    expect(result.ranking!.rankedCandidates[0].d10EvidenceOccurrenceIds).toEqual(['occurrence:d10:authority']);
+  });
+
+  it('does not publish a profession ranking when C11 reports no D1 promise', () => {
+    const mechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+    const expressions = createMockExpressionAnalysisResult([
+      createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [mechanism.candidateId])
+    ]);
+
+    const result = buildCareerProfessionAnalysis({
+      expressions,
+      mechanisms: [mechanism],
+      career10HFoundation: createMock10HFoundation(),
+      career10LFoundation: createMock10LFoundation(),
+      domainEvidence: [],
+      natalPromiseDirection: 'CHALLENGE'
+    });
+
+    expect(result.candidates).toHaveLength(1);
+    expect(result.ranking!.status).toBe('UNAVAILABLE');
+    expect(result.ranking!.rankedCandidates).toEqual([]);
+    expect(result.ranking!.diagnostics).toContain('D1_NATAL_PROMISE_NOT_ESTABLISHED');
+  });
+});

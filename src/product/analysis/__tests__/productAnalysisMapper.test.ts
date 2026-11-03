@@ -446,6 +446,9 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
               mechanismTypes: [],
               patternIds: ['pattern-1'],
               d10Status: 'QUALIFIED',
+              evidenceOccurrenceIds: [],
+              semanticIdentityKeys: [],
+              rootIdentityKeys: [],
               evidence: [
                 {
                   evidenceId: 'ev-1',
@@ -468,6 +471,9 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
               mechanismTypes: ['RESOURCE_MANAGEMENT'],
               patternIds: ['pattern-2'],
               d10Status: 'NOT_PROVIDED',
+              evidenceOccurrenceIds: [],
+              semanticIdentityKeys: [],
+              rootIdentityKeys: [],
               evidence: [
                 {
                   evidenceId: 'ev-2',
@@ -485,6 +491,12 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
           unresolvedExpressionTypes: [],
           mappedTypes: ['TECHNICAL_SPECIALIZATION'],
           missingInputs: [],
+          ranking: {
+            policyVersion: 'B04-PROFESSION-RANKING-v1',
+            status: 'AVAILABLE',
+            rankedCandidates: [],
+            diagnostics: []
+          },
           provenance: {
             expressionIds: [],
             mechanismIds: [],
@@ -520,6 +532,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysisComplete.career.profession!.candidates[1].d10Status).toBe('NOT_PROVIDED');
     // Aggregate d10Status should be QUALIFIED (any candidate qualified)
     expect(analysisComplete.career.profession!.d10Status).toBe('QUALIFIED');
+    expect(analysisComplete.career.profession!.ranking.status).toBe('AVAILABLE');
 
     // Test PARTIAL status with candidates
     const viewModelWithPartialProfession: LifeAnalysisViewModel = {
@@ -538,6 +551,9 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
               mechanismTypes: [],
               patternIds: ['pattern-3'],
               d10Status: 'UNAVAILABLE',
+              evidenceOccurrenceIds: [],
+              semanticIdentityKeys: [],
+              rootIdentityKeys: [],
               evidence: [
                 {
                   evidenceId: 'ev-3',

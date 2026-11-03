@@ -1595,9 +1595,9 @@ describe('B03 D1/D10 hierarchy acceptance', () => {
       horoscope: makeHoroscopeWithD10(
         {
           [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED },
-          [Planet.SATURN]: { house: 10, dignity: DignityStatus.DEBILITATED }
+          [Planet.MARS]: { house: 10, dignity: DignityStatus.DEBILITATED }
         },
-        [{ house: 10, lord: Planet.SUN, occupants: [Planet.SATURN] }]
+        [{ house: 10, lord: Planet.SUN, occupants: [Planet.MARS] }]
       )
     }));
 
