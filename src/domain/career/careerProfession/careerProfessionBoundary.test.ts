@@ -33,6 +33,13 @@ describe('careerProfession Boundary Enforcement', () => {
         }
       });
 
+      it('should not import AI runtime modules', () => {
+        const filePath = join(modulePath, file);
+        const content = readFileSync(filePath, 'utf-8');
+        const forbiddenAiImport = /import\\s+(?!type\\b)[\\s\\S]*?from\\s+['"][^'"]*(?:^|\\/)ai\\/[^'"]*['"]/;
+        expect(content).not.toMatch(forbiddenAiImport);
+      });
+
       it('may import only canonical D10 types, never the D10 calculation integration', () => {
         const filePath = join(modulePath, file);
         const content = readFileSync(filePath, 'utf-8');
