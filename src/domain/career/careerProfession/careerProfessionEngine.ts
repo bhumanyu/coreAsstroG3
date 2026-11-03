@@ -29,7 +29,7 @@ import type {
   CareerProfessionD10Qualification
 } from './careerProfessionTypes';
 import type { CareerProfessionRule } from './careerProfessionRules';
-import { resolveC10ModeFromC8ExpressionType } from '../careerD10/careerD10Integration';
+import { resolveCareerD10ModeFromExpressionType } from '../careerExpression/careerExpressionD10Mapping';
 import { buildCareerProfessionRanking } from './careerProfessionRanking';
 
 import { CAREER_PROFESSION_RULES } from './careerProfessionRules';
@@ -658,7 +658,7 @@ function applyD10Qualification(
         : (item.resolvedMechanismIds ?? [])
     ));
     const candidateC10Modes = new Set(candidate.expressionTypes.flatMap(expressionType => {
-      const resolution = resolveC10ModeFromC8ExpressionType(expressionType);
+      const resolution = resolveCareerD10ModeFromExpressionType(expressionType);
       return resolution.status === 'RESOLVED' ? [resolution.c10Mode] : [];
     }));
     const matchedQualifications = careerD10CanonicalAnalysis.expressionQualifications.filter(qualification => {
