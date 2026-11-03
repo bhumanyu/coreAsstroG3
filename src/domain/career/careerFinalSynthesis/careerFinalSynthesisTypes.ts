@@ -386,4 +386,7 @@ export interface CareerFinalSynthesisResult {
    * Empty if no contradictory evidence detected.
    */
   readonly contradictoryDashaEvidence: readonly ContradictoryEvidenceDiagnostic[];
+
+  /** B01: Orthogonal evidence projections; C11 remains the sole final conclusion authority. */
+  readonly analyticalAxes?: import('./careerAnalyticalAxes').CareerAnalyticalAxes;
 }
