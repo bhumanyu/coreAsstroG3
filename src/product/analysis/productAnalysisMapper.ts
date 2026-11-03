@@ -61,6 +61,7 @@ import type {
   ProductSelectableAntardasha,
   ProductTemporalRelation
 } from './productAnalysisTypes';
+import type { CareerAnalyticalAxes } from '../../domain/career/careerFinalSynthesis/careerAnalyticalAxes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
@@ -545,7 +546,7 @@ export function mapConclusionStatus(val?: string): ConclusionStatus {
 }
 
 function mapCareerAnalyticalAxes(
-  axes: NonNullable<import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerFinalSynthesisResult['analyticalAxes']>
+  axes: CareerAnalyticalAxes
 ): ProductCareerAnalyticalAxes {
   const mapAxis = <T, TAxis extends ProductCareerAnalyticalAxes['promise']['axis']>(axis: {
     readonly status: ProductCareerAnalyticalAxes['promise']['status'];
@@ -637,8 +638,8 @@ function mapCareer(
 
   return {
     status: careerStatus,
-    analyticalAxes: detail?.canonicalFinalSynthesis?.analyticalAxes
-      ? mapCareerAnalyticalAxes(detail.canonicalFinalSynthesis.analyticalAxes)
+    analyticalAxes: detail?.analyticalAxes
+      ? mapCareerAnalyticalAxes(detail.analyticalAxes)
       : undefined,
     promise: {
       status: careerStatus,
