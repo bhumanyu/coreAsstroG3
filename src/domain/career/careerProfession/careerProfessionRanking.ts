@@ -2,7 +2,8 @@ import type { DomainEvidence } from '../../interpretation/DomainEvidence';
 import type {
   CareerProfessionCandidate,
   CareerProfessionRanking,
-  CareerProfessionRankedCandidate
+  CareerProfessionRankedCandidate,
+  CareerProfessionScoreContribution
 } from './careerProfessionTypes';
 import { codePointCompare } from './careerProfessionUtils';
 
@@ -124,20 +125,39 @@ export function buildCareerProfessionRanking(params: {
     const supportingEvidence = linkedEvidence.filter(item => item.polarity === 'SUPPORTING');
     const counterEvidence = linkedEvidence.filter(item => item.polarity === 'CHALLENGING');
 
-    // Rule contributions are counted once per distinct rule, so duplicate pattern
-    // instances do not inflate a family's score merely by repeating the same rule.
-    let score = 0;
+    // Itemize every score contribution. Duplicate patterns cannot multiply a rule
+    // or the same canonical evidence occurrence.
+    const scoreContributions: CareerProfessionScoreContribution[] = [];
     const rulePointsById = new Map<string, number>();
     for (const candidate of groupCandidates) {
       const points = candidate.basis === 'MECHANISM' ? 8 : 5;
       rulePointsById.set(candidate.ruleId, Math.max(rulePointsById.get(candidate.ruleId) ?? 0, points));
     }
-    for (const points of [...rulePointsById.values()].sort((a, b) => a - b)) score += points;
+    for (const [ruleId, points] of [...rulePointsById.entries()].sort((a, b) => codePointCompare(a[0], b[0]))) {
+      scoreContributions.push(Object.freeze({
+        referenceType: 'PROFESSION_RULE',
+        referenceId: ruleId,
+        direction: 'SUPPORT',
+        points,
+        explanation: `${ruleId} contributes +${points} base policy points for this broad family.`
+      }));
+    }
 
     for (const item of linkedEvidence) {
-      const points = strengthPoints(item.strength) * boundedPriority(item.priority);
-      if (item.polarity === 'SUPPORTING') score += points;
-      else if (item.polarity === 'CHALLENGING') score -= points;
+      const strength = strengthPoints(item.strength);
+      const priority = boundedPriority(item.priority);
+      const basePoints = strength * priority;
+      const direction = item.polarity === 'SUPPORTING' ? 'SUPPORT'
+        : item.polarity === 'CHALLENGING' ? 'CHALLENGE' : 'NEUTRAL';
+      const points = direction === 'SUPPORT' ? basePoints
+        : direction === 'CHALLENGE' ? -basePoints : 0;
+      scoreContributions.push(Object.freeze({
+        referenceType: 'DOMAIN_EVIDENCE',
+        referenceId: item.id,
+        direction,
+        points,
+        explanation: `${item.strength} ${item.polarity.toLowerCase()} evidence × priority ${priority} contributes ${points > 0 ? '+' : ''}${points} points.`
+      }));
     }
 
     const d10Status = d10Aggregate(groupCandidates);
@@ -149,15 +169,44 @@ export function buildCareerProfessionRanking(params: {
       : d10Directions.includes('CHALLENGE') ? 'CHALLENGE'
         : d10Directions.includes('MIXED') ? 'MIXED'
           : d10Directions.includes('SUPPORT') ? 'SUPPORT' : 'UNDETERMINED';
-    const hasQualifiedD10Support = groupCandidates.some(candidate =>
-      candidate.d10Qualification?.status === 'QUALIFIED' && candidate.d10Qualification.direction === 'SUPPORT'
+
+    const seenD10QualificationKeys = new Set<string>();
+    for (const candidate of groupCandidates) {
+      const qualification = candidate.d10Qualification;
+      const key = qualification
+        ? [qualification.status, qualification.direction, ...qualification.evidenceOccurrenceIds].join('|')
+        : `NO_D10_INPUT:${candidate.candidateId}`;
+      if (seenD10QualificationKeys.has(key)) continue;
+      seenD10QualificationKeys.add(key);
+
+      const isSupport = qualification?.status === 'QUALIFIED' && qualification.direction === 'SUPPORT';
+      const isChallenge = qualification?.status === 'CONFLICTED' || qualification?.direction === 'CHALLENGE';
+      const direction: CareerProfessionScoreContribution['direction'] = isSupport ? 'SUPPORT'
+        : isChallenge ? 'CHALLENGE' : 'NEUTRAL';
+      const points = isSupport ? 3 : isChallenge ? -3 : 0;
+      const referenceId = qualification?.evidenceOccurrenceIds[0] ?? candidate.candidateId;
+      const explanation = isSupport
+        ? 'Resolved expression-linked D10 support contributes +3 qualification points; it does not create a D1 promise.'
+        : isChallenge
+          ? 'Expression-linked D10 challenge/weakening contributes -3 points and remains counter-evidence.'
+          : qualification?.status === 'NOT_PROVIDED'
+            ? 'D10 was not provided; no D10 score adjustment is applied.'
+            : 'D10 is partial, unavailable, or mixed; no D10 score adjustment is applied.';
+      scoreContributions.push(Object.freeze({
+        referenceType: 'D10_QUALIFICATION',
+        referenceId,
+        direction,
+        points,
+        explanation
+      }));
+    }
+
+    scoreContributions.sort((a, b) =>
+      codePointCompare(a.referenceType, b.referenceType) ||
+      codePointCompare(a.referenceId, b.referenceId) ||
+      codePointCompare(a.direction, b.direction)
     );
-    const hasD10Challenge = groupCandidates.some(candidate =>
-      candidate.d10Qualification?.direction === 'CHALLENGE' ||
-      candidate.d10Qualification?.status === 'CONFLICTED'
-    );
-    if (hasQualifiedD10Support) score += 3;
-    if (hasD10Challenge) score -= 3;
+    const score = scoreContributions.reduce((total, contribution) => total + contribution.points, 0);
     if (d10Status === 'NOT_PROVIDED' || d10Status === 'UNAVAILABLE' || d10Status === 'PARTIAL') partial = true;
 
     const evidenceCoverageStatus: CareerProfessionRankedCandidate['evidenceCoverage']['status'] =
@@ -207,6 +256,7 @@ export function buildCareerProfessionRanking(params: {
       domain: group.domain,
       family: group.family,
       score,
+      scoreContributions: Object.freeze(scoreContributions),
       confidence,
       confidenceReasons: Object.freeze(confidenceReasons),
       evidenceCoverage: Object.freeze({
