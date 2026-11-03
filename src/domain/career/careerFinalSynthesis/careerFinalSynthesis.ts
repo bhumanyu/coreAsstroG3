@@ -228,8 +228,18 @@ function deriveFinalStatus(
     }
   }
 
-  // Weak natal support
+  // Weak natal states remain authoritative. D10 may qualify expression, but
+  // must not erase an existing weak SUPPORT promise or turn it into a new promise.
   if (natalStrength === 'WEAK' || natalStrength === 'VERY_WEAK') {
+    if (natalDirection === 'SUPPORT') {
+      if (hasExpressionConditional) {
+        return 'CONDITIONALLY_SUPPORTED';
+      }
+      const hasManifestationChallenge =
+        (hasD10 && d10Direction === 'CHALLENGE') ||
+        (hasExpression && expressionDirection === 'CHALLENGE');
+      return hasManifestationChallenge ? 'CONDITIONALLY_SUPPORTED' : 'SUPPORTED';
+    }
     if (natalDirection === 'CHALLENGE') {
       return 'CHALLENGED';
     }
