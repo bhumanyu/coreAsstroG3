@@ -756,9 +756,9 @@ function mapCareer(
         mechanismTypes: c.mechanismTypes,
         patternIds: c.patternIds,
         d10Status: c.d10Status,
-        evidenceOccurrenceIds: [...c.evidenceOccurrenceIds],
-        semanticIdentityKeys: [...c.semanticIdentityKeys],
-        rootIdentityKeys: [...c.rootIdentityKeys],
+        evidenceOccurrenceIds: [...(c.evidenceOccurrenceIds ?? [])],
+        semanticIdentityKeys: [...(c.semanticIdentityKeys ?? [])],
+        rootIdentityKeys: [...(c.rootIdentityKeys ?? [])],
         d10Qualification: c.d10Qualification ? {
           status: c.d10Qualification.status,
           direction: c.d10Qualification.direction,
