@@ -128,8 +128,15 @@ function sortedUnique(values: readonly string[]): readonly string[] {
   );
 }
 
-function sourceIds(values: readonly { readonly sourceIds: readonly string[] }[]): readonly string[] {
-  return sortedUnique(values.flatMap(value => value.sourceIds));
+function occurrenceIds(values: readonly {
+  readonly id?: string;
+  readonly evidenceId?: string;
+}[]): readonly string[] {
+  return sortedUnique(values.flatMap(value => {
+    if (value.evidenceId) return [value.evidenceId];
+    if (value.id) return [value.id];
+    return [];
+  }));
 }
 
 function ruleIds(values: readonly string[]): readonly string[] {
@@ -158,14 +165,14 @@ function makePromiseAxis(natal: CareerNatalAnalysis): CareerPromiseAxis {
   const eligibleEvidence = natal.evidence.filter(item => isNatalStrengthMappable(item.strength));
   const supporting = eligibleEvidence
     .filter(item => item.direction === 'SUPPORT')
-    .flatMap(item => item.sourceIds);
+    .map(item => item.evidenceId);
   const conflicting = eligibleEvidence
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED')
-    .flatMap(item => item.sourceIds);
+    .map(item => item.evidenceId);
   const hasClassification =
     natal.structural.direction !== 'UNAVAILABLE' &&
     natal.structural.strength !== 'UNDETERMINED';
-  const natalOccurrenceIds = sortedUnique(eligibleEvidence.flatMap(item => item.sourceIds));
+  const natalOccurrenceIds = occurrenceIds(eligibleEvidence);
   const status: CareerAnalyticalAxisStatus = hasClassification && eligibleEvidence.length > 0 && natalOccurrenceIds.length > 0
     ? 'AVAILABLE'
     : eligibleEvidence.length > 0
@@ -210,7 +217,7 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
   const validEffect =
     dasha.overallEffect !== 'UNKNOWN' &&
     dasha.overallEffect !== 'INSUFFICIENT_DATA';
-  const canonicalEvidenceOccurrences = sourceIds(evidence);
+  const canonicalEvidenceOccurrences = occurrenceIds(evidence);
   const hasEvidence = canonicalEvidenceOccurrences.length > 0;
   const completeLevels = hierarchy
     ? [hierarchy.md, hierarchy.ad, hierarchy.pd].filter(
@@ -219,7 +226,7 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
           item.effect !== 'UNKNOWN' &&
           item.effect !== 'INSUFFICIENT_DATA' &&
           item.evidence.length > 0 &&
-          item.evidence.some(evidenceItem => evidenceItem.sourceIds.length > 0)
+          item.evidence.some(evidenceItem => evidenceItem.id.trim().length > 0)
       ).length
     : 0;
   const status: CareerAnalyticalAxisStatus = !hierarchy
@@ -232,10 +239,10 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
 
   const supporting = evidence
     .filter(item => item.direction === 'SUPPORT')
-    .flatMap(item => item.sourceIds);
+    .map(item => item.id);
   const conflicting = evidence
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED')
-    .flatMap(item => item.sourceIds);
+    .map(item => item.id);
   const allRuleIds = evidence.flatMap(item => item.provenance.ruleIds ?? []);
 
   return Object.freeze({
@@ -301,13 +308,13 @@ function makeRiskAxis(
 ): CareerRiskAxis {
   const natalRisk = natal.evidence
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED')
-    .flatMap(item => item.sourceIds);
+    .map(item => item.evidenceId);
   const dashaRisk = dasha.evidence
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES' || item.effect === 'DOES_NOT_ACTIVATE')
-    .flatMap(item => item.sourceIds);
+    .map(item => item.id);
   const d10Risk = d10.evidence
     .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS' || item.d10Effect === 'WEAKENS')
-    .flatMap(item => item.sourceIds);
+    .map(item => item.id);
   const adverseOccurrences = sortedUnique([...natalRisk, ...dashaRisk, ...d10Risk]);
   const hasAdverseRecords =
     natal.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED') ||
@@ -321,9 +328,9 @@ function makeRiskAxis(
       [...(identityToOccurrences.get(identity) ?? []), ...occurrences]
     );
   };
-  for (const item of natal.evidence) addIdentityOccurrences(item.identityKey, item.sourceIds);
-  for (const item of dasha.evidence) addIdentityOccurrences(item.identityKey, item.sourceIds);
-  for (const item of d10.evidence) addIdentityOccurrences(item.identityKey, item.sourceIds);
+  for (const item of natal.evidence) addIdentityOccurrences(item.identityKey, [item.evidenceId]);
+  for (const item of dasha.evidence) addIdentityOccurrences(item.identityKey, [item.id]);
+  for (const item of d10.evidence) addIdentityOccurrences(item.identityKey, [item.id]);
 
   const c11RiskSupport = finalSynthesis.conflicts
     .filter(conflict => conflict.direction === 'CHALLENGE' || conflict.direction === 'MIXED')
@@ -333,9 +340,9 @@ function makeRiskAxis(
     .flatMap(conflict => conflict.evidenceIds.flatMap(identity => identityToOccurrences.get(identity) ?? []));
   const riskSupportingOccurrences = sortedUnique([...adverseOccurrences, ...c11RiskSupport]);
   const riskConflictingOccurrences = sortedUnique(c11RiskCounterEvidence);
-  const natalOccurrences = sourceIds(natal.evidence);
-  const dashaOccurrences = sourceIds(dasha.evidence);
-  const d10Occurrences = sourceIds(d10.evidence);
+  const natalOccurrences = occurrenceIds(natal.evidence);
+  const dashaOccurrences = occurrenceIds(dasha.evidence);
+  const d10Occurrences = occurrenceIds(d10.evidence);
   const hasRecords = natal.evidence.length > 0 || dasha.evidence.length > 0 || d10.evidence.length > 0;
   const hasOccurrences = natalOccurrences.length > 0 || dashaOccurrences.length > 0 || d10Occurrences.length > 0;
   const missingSources = [
@@ -352,9 +359,9 @@ function makeRiskAxis(
       : 'AVAILABLE';
 
   const allSources = [
-    ...sourceIds(natal.evidence),
-    ...sourceIds(dasha.evidence),
-    ...sourceIds(d10.evidence)
+    ...occurrenceIds(natal.evidence),
+    ...occurrenceIds(dasha.evidence),
+    ...occurrenceIds(d10.evidence)
   ];
 
   return Object.freeze({
@@ -414,8 +421,8 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     const periodEvidence = period.evidence;
     // A period without canonical activation evidence is not a candidate window.
     if (periodEvidence.length === 0) continue;
-    const occurrenceIds = sortedUnique(periodEvidence.flatMap(item => item.sourceIds));
-    if (occurrenceIds.length === 0) continue;
+    const periodOccurrenceIds = occurrenceIds(periodEvidence);
+    if (periodOccurrenceIds.length === 0) continue;
     const periodRuleIds = ruleIds(periodEvidence.flatMap(item => item.activationRuleIds));
     const dated = Boolean(period.start && period.end);
 
@@ -430,7 +437,7 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
       direction: period.direction,
       strength: period.strength,
       activatedPromiseEvidenceIds: sortedUnique(period.activatedPromiseEvidenceIds),
-      supportingEvidenceOccurrenceIds: occurrenceIds,
+      supportingEvidenceOccurrenceIds: periodOccurrenceIds,
       ruleIds: periodRuleIds
     }));
   }
@@ -439,7 +446,7 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     period.direction !== 'UNAVAILABLE' &&
     period.effect !== 'UNKNOWN' &&
     period.effect !== 'INSUFFICIENT_DATA' &&
-    period.evidence.some(evidenceItem => evidenceItem.sourceIds.length > 0)
+    period.evidence.some(evidenceItem => evidenceItem.id.trim().length > 0)
   ).length;
   const status: CareerAnalyticalAxisStatus = !hierarchy
     ? 'UNAVAILABLE'
