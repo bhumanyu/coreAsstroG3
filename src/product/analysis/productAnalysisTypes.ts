@@ -365,12 +365,21 @@ export interface ProductQualification {
 
 export type ProductCareerProfessionConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNAVAILABLE';
 
+export interface ProductCareerProfessionScoreContribution {
+  readonly referenceType: 'PROFESSION_RULE' | 'DOMAIN_EVIDENCE' | 'D10_QUALIFICATION';
+  readonly referenceId: string;
+  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly points: number;
+  readonly explanation: string;
+}
+
 export interface ProductCareerProfessionRankedCandidate {
   readonly candidateId: string;
   readonly domain: string;
   readonly family: string;
   readonly rank: number;
   readonly score: number;
+  readonly scoreContributions: readonly ProductCareerProfessionScoreContribution[];
   readonly confidence: ProductCareerProfessionConfidence;
   readonly confidenceReasons: readonly string[];
   readonly evidenceCoverage: {
