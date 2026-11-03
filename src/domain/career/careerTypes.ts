@@ -149,6 +149,8 @@ export interface CareerConclusionData {
   readonly careerFinalSynthesis?: CareerWealthFinalSynthesis;
   /** Canonical C11 result; legacy careerFinalSynthesis remains compatibility-only. */
   readonly canonicalCareerFinalSynthesis?: import('./careerFinalSynthesis/careerFinalSynthesisTypes').CareerFinalSynthesisResult;
+  /** B01: Independent Career analytical axes; deliberately sibling to the immutable C11 result. */
+  readonly careerAnalyticalAxes?: import('./careerFinalSynthesis/careerAnalyticalAxes').CareerAnalyticalAxes;
   readonly reasoningTraceGraph?: ReasoningTraceGraph;
   /**
    * Canonical career foundation from the orchestrator (P2-11G).

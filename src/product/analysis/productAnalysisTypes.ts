@@ -200,6 +200,81 @@ export interface CareerActivationProduct {
   readonly transit: TransitProductResult;
 }
 
+export type ProductCareerAxisStatus =
+  | 'AVAILABLE'
+  | 'PARTIAL'
+  | 'UNAVAILABLE'
+  | 'INSUFFICIENT'
+  | 'BLOCKED'
+  | 'NOT_APPLICABLE';
+
+export interface ProductCareerAxisCoverage {
+  readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT';
+  readonly availableSources: readonly string[];
+  readonly missingSources: readonly string[];
+  readonly evidenceOccurrenceCount: number;
+}
+
+export interface ProductCareerAxisConfidence {
+  readonly status: 'NOT_ASSESSED';
+  readonly reason: string;
+}
+
+export interface ProductCareerAnalyticalAxis<TResult> {
+  readonly axis: 'PROMISE' | 'ACTIVATION' | 'SUSTAINABILITY' | 'RISK' | 'TIMING';
+  readonly status: ProductCareerAxisStatus;
+  readonly result: TResult | null;
+  readonly supportingEvidenceOccurrenceIds: readonly string[];
+  readonly conflictingEvidenceOccurrenceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly coverage: ProductCareerAxisCoverage;
+  readonly confidence: ProductCareerAxisConfidence;
+  readonly methodVersion: string;
+  readonly unavailableReason?: string;
+  readonly diagnostic?: string;
+}
+
+export interface ProductCareerTimingCandidateWindow {
+  readonly level: 'MD' | 'AD' | 'PD';
+  readonly planet?: string;
+  readonly start?: string;
+  readonly end?: string;
+  readonly dated: boolean;
+  readonly effect: string;
+  readonly direction: string;
+  readonly strength: string;
+  readonly activatedPromiseEvidenceIds: readonly string[];
+  readonly supportingEvidenceOccurrenceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+}
+
+export interface ProductCareerAnalyticalAxes {
+  readonly version: string;
+  readonly promise: ProductCareerAnalyticalAxis<{
+    readonly direction: string;
+    readonly strength: string;
+  }>;
+  readonly activation: ProductCareerAnalyticalAxis<{
+    readonly direction: string;
+    readonly effect: string;
+    readonly strength: string;
+    readonly dominantLevel: 'MD' | 'AD' | 'PD' | 'NONE';
+  }>;
+  readonly sustainability: ProductCareerAnalyticalAxis<{
+    readonly assessment: 'NOT_ASSESSED';
+    readonly requiredEvidenceFamily: 'CAREER_SUSTAINABILITY';
+  }>;
+  readonly risk: ProductCareerAnalyticalAxis<{
+    readonly assessment: 'ADVERSE_EVIDENCE_PRESENT' | 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES';
+    readonly conflictCount: number;
+  }>;
+  readonly timing: ProductCareerAnalyticalAxis<{
+    readonly candidateWindows: readonly ProductCareerTimingCandidateWindow[];
+    readonly untimedLevels: readonly ('MD' | 'AD' | 'PD')[];
+    readonly guarantee: 'NONE';
+  }>;
+}
+
 export interface ProductQualification {
   readonly type: string;
   readonly severity: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -208,6 +283,8 @@ export interface ProductQualification {
 
 export interface CareerProductAnalysis {
   readonly status?: ConclusionStatus | string;
+  /** B01: Independent, evidence-traceable analytical axes; not a parallel final score. */
+  readonly analyticalAxes?: ProductCareerAnalyticalAxes;
   readonly promise: CareerPromiseProduct;
   readonly expression?: CareerExpressionProduct;
   readonly d10: D10ProductResult;

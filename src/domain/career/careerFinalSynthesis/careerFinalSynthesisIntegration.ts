@@ -710,10 +710,10 @@ export function buildCareerFinalAnalysis(
     evidenceQuality
   });
 
-  // Return result from canonical engine with contradictory evidence diagnostics
+  // C11 remains the only final conclusion authority.
   const result = synthesizeCareerFinal(finalInput);
 
-  // Add contradictory Dasha evidence diagnostics to the result
+  // Add contradictory Dasha evidence diagnostics to the canonical C11 result.
   return Object.freeze({
     ...result,
     contradictoryDashaEvidence: dashaContradictory

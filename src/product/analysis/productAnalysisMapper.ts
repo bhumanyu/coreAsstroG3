@@ -41,6 +41,7 @@ import type {
   D2ProductResult,
   SpeculativeRiskProduct,
   ProductQualification,
+  ProductCareerAnalyticalAxes,
   ProductConfidence,
   ActivationEffect,
   PromiseStrength,
@@ -60,6 +61,7 @@ import type {
   ProductSelectableAntardasha,
   ProductTemporalRelation
 } from './productAnalysisTypes';
+import type { CareerAnalyticalAxes } from '../../domain/career/careerFinalSynthesis/careerAnalyticalAxes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
@@ -543,6 +545,70 @@ export function mapConclusionStatus(val?: string): ConclusionStatus {
   }
 }
 
+function mapCareerAnalyticalAxes(
+  axes: CareerAnalyticalAxes
+): ProductCareerAnalyticalAxes {
+  const mapAxis = <T, TAxis extends ProductCareerAnalyticalAxes['promise']['axis']>(axis: {
+    readonly status: ProductCareerAnalyticalAxes['promise']['status'];
+    readonly result: T | null;
+    readonly supportingEvidenceOccurrenceIds: readonly string[];
+    readonly conflictingEvidenceOccurrenceIds: readonly string[];
+    readonly ruleIds: readonly string[];
+    readonly coverage: ProductCareerAnalyticalAxes['promise']['coverage'];
+    readonly confidence: ProductCareerAnalyticalAxes['promise']['confidence'];
+    readonly methodVersion: string;
+    readonly unavailableReason?: string;
+    readonly diagnostic?: string;
+    readonly axis: TAxis;
+  }) => ({
+    ...axis,
+    supportingEvidenceOccurrenceIds: [...axis.supportingEvidenceOccurrenceIds],
+    conflictingEvidenceOccurrenceIds: [...axis.conflictingEvidenceOccurrenceIds],
+    ruleIds: [...axis.ruleIds],
+    coverage: {
+      ...axis.coverage,
+      availableSources: [...axis.coverage.availableSources],
+      missingSources: [...axis.coverage.missingSources]
+    },
+    confidence: { ...axis.confidence }
+  });
+
+  return {
+    version: axes.version,
+    promise: {
+      ...mapAxis(axes.promise),
+      result: axes.promise.result ? { ...axes.promise.result } : null
+    },
+    activation: {
+      ...mapAxis(axes.activation),
+      result: axes.activation.result ? { ...axes.activation.result } : null
+    },
+    sustainability: {
+      ...mapAxis(axes.sustainability),
+      result: axes.sustainability.result ? { ...axes.sustainability.result } : null
+    },
+    risk: {
+      ...mapAxis(axes.risk),
+      result: axes.risk.result ? { ...axes.risk.result } : null
+    },
+    timing: {
+      ...mapAxis(axes.timing),
+      result: axes.timing.result
+        ? {
+            ...axes.timing.result,
+            candidateWindows: axes.timing.result.candidateWindows.map(window => ({
+              ...window,
+              activatedPromiseEvidenceIds: [...window.activatedPromiseEvidenceIds],
+              supportingEvidenceOccurrenceIds: [...window.supportingEvidenceOccurrenceIds],
+              ruleIds: [...window.ruleIds]
+            })),
+            untimedLevels: [...axes.timing.result.untimedLevels]
+          }
+        : null
+    }
+  };
+}
+
 function mapCareer(
   viewModel: LifeAnalysisViewModel,
   explicitEvidence?: readonly ProductEvidence[]
@@ -572,6 +638,9 @@ function mapCareer(
 
   return {
     status: careerStatus,
+    analyticalAxes: detail?.analyticalAxes
+      ? mapCareerAnalyticalAxes(detail.analyticalAxes)
+      : undefined,
     promise: {
       status: careerStatus,
       strength: detail?.status

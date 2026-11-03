@@ -91,6 +91,7 @@ import type {
 import {
   buildCareerFinalAnalysis
 } from './careerFinalSynthesis/careerFinalSynthesisIntegration';
+import { buildCareerAnalyticalAxes } from './careerFinalSynthesis/careerAnalyticalAxes';
 import type {
   CareerFinalSynthesisIntegrationInput
 } from './careerFinalSynthesis/careerFinalSynthesisCanonicalTypes';
@@ -748,6 +749,16 @@ export function interpretCareerV2(
 
   const canonicalC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(finalCanonicalC11Input);
 
+  // B01: Build orthogonal axis projections from the same canonical C4-C10 inputs.
+  // Keep them beside (not inside) CareerFinalSynthesisResult so the frozen C11 contract
+  // and its golden snapshots remain unchanged.
+  const careerAnalyticalAxes = buildCareerAnalyticalAxes({
+    natal: canonicalNatalAnalysis,
+    dasha: canonicalDashaAnalysis,
+    d10: canonicalD10Analysis,
+    finalSynthesis: canonicalC11Result
+  });
+
   /**
    * Gate D: Evidence Continuity Validation
    *
@@ -1178,6 +1189,7 @@ export function interpretCareerV2(
       careerManifestationSynthesis,
       careerFinalSynthesis: legacyCareerFinalSynthesis, // P2-08D: Legacy compatibility artifact (not authoritative)
       canonicalCareerFinalSynthesis: canonicalC11Result, // P2-08D: Canonical C11 result (authoritative)
+      careerAnalyticalAxes, // B01: sibling projection; does not alter C11
       reasoningTraceGraph,
       evidenceContinuityReport, // Gate D: Evidence continuity validation report
       careerTrajectory, // P2-11G: Career trajectory analysis (downstream consumer of C11)
