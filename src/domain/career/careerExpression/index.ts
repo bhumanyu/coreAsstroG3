@@ -65,3 +65,9 @@ export {
   type CareerMechanismRefinementAdapterResult,
   type CareerMechanismRefinementDiagnostic
 } from './careerMechanismRefinementAdapter';
+
+// Shared C8-to-C10 semantic mapping (used by D10 and profession qualification)
+export {
+  resolveCareerD10ModeFromExpressionType,
+  type CareerExpressionToD10ModeResolution
+} from './careerExpressionD10Mapping';
