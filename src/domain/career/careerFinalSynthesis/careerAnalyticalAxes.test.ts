@@ -308,6 +308,62 @@ describe('B01 independent Career analytical axes', () => {
     expect(axes.risk.conflictingEvidenceOccurrenceIds).not.toContain('d10-semantic-1');
   });
 
+  it('resolves C11 conflicts within their source namespace when semantic keys collide', () => {
+    const natalWithSharedKey = natal('SUPPORT', 'STRONG', [{
+      identityKey: 'shared-semantic-key',
+      evidenceId: 'shared-semantic-key',
+      ruleId: 'RULE_NATAL_SHARED',
+      layer: 'PRIMARY_PROMISE',
+      direction: 'SUPPORT',
+      strength: 'STRONG',
+      priority: 80,
+      weight: 4,
+      statement: 'Natal support.',
+      relatedEvidenceIds: [],
+      sourceIds: ['natal-source-occurrence']
+    }]);
+    const d10WithSharedKey = d10([{
+      identityKey: 'shared-semantic-key',
+      id: 'd10-canonical-occurrence',
+      role: 'PRIMARY',
+      direction: 'SUPPORT',
+      d10Effect: 'REINFORCES',
+      d10Strength: 'STRONG',
+      weight: 4,
+      statement: 'D10 support.',
+      sourceIds: ['d10-raw-source'],
+      provenance: { source: 'C10_D10', ruleIds: ['RULE_D10_SHARED'], sourceIds: ['d10-raw-source'], natalRootIds: [] },
+      evidenceKind: 'OCCURRENCE'
+    }]);
+    const conflict = {
+      source: 'D10',
+      direction: 'SUPPORT',
+      severity: 'HIGH',
+      evidenceIds: ['shared-semantic-key'],
+      statement: 'D10 counter-evidence.'
+    } as CareerFinalConflict;
+
+    const axes = build({ natal: natalWithSharedKey, d10: d10WithSharedKey, conflicts: [conflict] });
+    expect(axes.risk.conflictingEvidenceOccurrenceIds).toContain('d10-canonical-occurrence');
+    expect(axes.risk.conflictingEvidenceOccurrenceIds).not.toContain('natal-source-occurrence');
+  });
+
+  it('marks risk coverage partial when C11 conflict provenance cannot be resolved to occurrences', () => {
+    const conflict = {
+      source: 'EXPRESSION',
+      direction: 'CHALLENGE',
+      severity: 'HIGH',
+      evidenceIds: ['expression-semantic-id'],
+      statement: 'Expression conflict.'
+    } as CareerFinalConflict;
+    const axes = build({ conflicts: [conflict] });
+
+    expect(axes.risk.status).toBe('PARTIAL');
+    expect(axes.risk.coverage.missingSources)
+      .toContain('C11_EXPRESSION_CONFLICT_OCCURRENCE_MAPPING');
+    expect(axes.risk.conflictingEvidenceOccurrenceIds).toEqual([]);
+  });
+
   it('exposes all currently supported axes without manufacturing sustainability', () => {
     const axes = build();
     expect(axes.promise.status).toBe('AVAILABLE');
