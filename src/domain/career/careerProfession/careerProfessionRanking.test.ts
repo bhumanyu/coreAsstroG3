@@ -303,4 +303,24 @@ describe('B04 deterministic profession-family ranking', () => {
     expect(result.diagnostics).toContain('DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID');
   });
 
+
+  it('keeps recommendation granularity at broad profession families, not planets or job titles', () => {
+    const item = candidate({
+      id: 'candidate-broad-technology',
+      domain: 'TECHNOLOGY',
+      family: 'TECHNICAL_LEADERSHIP'
+    });
+    const result = buildCareerProfessionRanking({
+      candidates: [item],
+      natalPromiseDirection: 'SUPPORT'
+    });
+    const ranked = result.rankedCandidates[0];
+
+    expect(ranked.candidateId).toBe('PROFESSION:TECHNOLOGY:TECHNICAL_LEADERSHIP');
+    expect(ranked.domain).toBe('TECHNOLOGY');
+    expect(ranked.family).toBe('TECHNICAL_LEADERSHIP');
+    expect(ranked).not.toHaveProperty('planet');
+    expect(ranked).not.toHaveProperty('jobTitle');
+  });
+
 });
