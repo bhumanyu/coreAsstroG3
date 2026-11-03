@@ -14,6 +14,7 @@ import type {
   ProductEvidenceRole,
   ProductAvailability,
   ProductWarning,
+  ProductCareerAnalyticalAxes,
   PromiseStrength,
   ActivationEffect,
   TransitEffect
@@ -161,6 +162,8 @@ export interface CareerProfessionViewModel {
 }
 
 export interface CareerViewModel {
+  /** B01: Five orthogonal, evidence-traceable Career axes from the canonical product projection. */
+  readonly analyticalAxes?: ProductCareerAnalyticalAxes;
   readonly hero: CareerHeroViewModel;
   readonly promise: CareerPromiseViewModel;
   readonly expression: CareerExpressionViewModel;
@@ -341,6 +344,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
   })();
 
   return {
+    analyticalAxes: career.analyticalAxes,
     hero,
     promise,
     expression,
