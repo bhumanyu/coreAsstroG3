@@ -236,6 +236,19 @@ describe('B01 independent Career analytical axes', () => {
     expect(axes.timing.result?.candidateWindows).toHaveLength(1);
   });
 
+  it('marks timing not applicable when all canonical periods are assessed as neutral/non-activating', () => {
+    const axes = build({
+      dasha: dasha('NEUTRAL', hierarchy({
+        md: period('MD', 'NEUTRAL', 'DOES_NOT_ACTIVATE', 'md', '2025-01-01', '2026-01-01'),
+        ad: period('AD', 'NEUTRAL', 'DOES_NOT_ACTIVATE', 'ad', '2025-02-01', '2025-06-01'),
+        pd: period('PD', 'NEUTRAL', 'DOES_NOT_ACTIVATE', 'pd', '2025-03-01', '2025-04-01')
+      }))
+    });
+    expect(axes.timing.status).toBe('NOT_APPLICABLE');
+    expect(axes.timing.coverage.status).toBe('COMPLETE');
+    expect(axes.timing.result?.candidateWindows).toEqual([]);
+  });
+
   it('resolves C11 conflict semantic IDs back to occurrence IDs without mixing namespaces', () => {
     const conflict = {
       source: 'D10',
