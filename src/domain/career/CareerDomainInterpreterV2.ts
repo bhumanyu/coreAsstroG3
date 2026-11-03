@@ -949,6 +949,7 @@ export function interpretCareerV2(
     finalSynthesis: canonicalC11Result,
     trajectory: careerTrajectory,
     events: careerEvents,
+    dasha: canonicalDashaAnalysis,
     ...(careerProfessionAnalysis ? { profession: careerProfessionAnalysis } : {}),
     observedOutcomes: observedCareerOutcomes
   });
