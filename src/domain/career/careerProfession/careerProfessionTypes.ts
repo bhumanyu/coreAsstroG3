@@ -135,6 +135,8 @@ export type CareerProfessionBasis =
  * NOT_PROVIDED: D10 data is not provided (input missing).
  * UNAVAILABLE: D10 data is provided but no qualification matches this candidate.
  * NOT_APPLICABLE: D10 qualification is not applicable to this candidate.
+ * PARTIAL: D10 evidence is mixed or only partially qualifies the expression.
+ * CONFLICTED: D10 evidence challenges or weakens the matched expression.
  */
 export type CareerProfessionD10Status =
   | 'QUALIFIED'
