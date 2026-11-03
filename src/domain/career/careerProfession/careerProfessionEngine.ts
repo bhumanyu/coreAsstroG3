@@ -26,7 +26,6 @@ import type {
   CareerProfessionCandidate,
   CareerProfessionEvidence,
   CareerProfessionProvenance,
-  CareerProfessionD10Status,
   CareerProfessionD10Qualification
 } from './careerProfessionTypes';
 import type { CareerProfessionRule } from './careerProfessionRules';
