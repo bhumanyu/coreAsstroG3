@@ -85,6 +85,9 @@ export function buildCareerProfessionRanking(params: {
 
   const evidenceById = new Map(domainEvidence.map(item => [item.id, item]));
   const groups = groupCandidates(candidates);
+  if (groups.length === 0) {
+    return Object.freeze({ policyVersion: POLICY_VERSION, status: 'UNAVAILABLE', rankedCandidates: Object.freeze([]), diagnostics: Object.freeze(['NO_PROFESSION_FAMILY_CANDIDATES_AVAILABLE']) });
+  }
   const ranked: Array<Omit<CareerProfessionRankedCandidate, 'rank' | 'alternativeExplanation'>> = [];
   let partial = natalPromiseDirection === 'CONDITIONAL';
 
@@ -110,15 +113,11 @@ export function buildCareerProfessionRanking(params: {
     // Rule contributions are counted once per distinct rule, so duplicate pattern
     // instances do not inflate a family's score merely by repeating the same rule.
     let score = 0;
+    const scoredRuleIds = new Set<string>();
     for (const candidate of groupCandidates) {
-      if (ruleIds.includes(candidate.ruleId)) {
-        const basisPoints = candidate.basis === 'MECHANISM' ? 6 : 4;
-        const rulePoints = basisPoints + (candidate.basis === 'MECHANISM' ? 2 : 1);
-        // Count only the first occurrence of each rule in this family.
-        if (groupCandidates.findIndex(item => item.ruleId === candidate.ruleId) === groupCandidates.indexOf(candidate)) {
-          score += rulePoints;
-        }
-      }
+      if (scoredRuleIds.has(candidate.ruleId)) continue;
+      scoredRuleIds.add(candidate.ruleId);
+      score += candidate.basis === 'MECHANISM' ? 8 : 5;
     }
 
     for (const item of linkedEvidence) {
@@ -131,6 +130,11 @@ export function buildCareerProfessionRanking(params: {
     const d10Directions = groupCandidates.flatMap(candidate =>
       candidate.d10Qualification ? [candidate.d10Qualification.direction] : []
     );
+    const d10EvidenceOccurrenceIds = uniqueSorted(groupCandidates.flatMap(candidate => candidate.d10Qualification?.evidenceOccurrenceIds ?? []));
+    const d10Direction = d10Directions.includes('CHALLENGE') && d10Directions.includes('SUPPORT') ? 'MIXED'
+      : d10Directions.includes('CHALLENGE') ? 'CHALLENGE'
+        : d10Directions.includes('MIXED') ? 'MIXED'
+          : d10Directions.includes('SUPPORT') ? 'SUPPORT' : 'UNDETERMINED';
     if (d10Directions.includes('SUPPORT') && d10Status === 'QUALIFIED') score += 3;
     if (d10Directions.includes('CHALLENGE') || d10Status === 'CONFLICTED') score -= 3;
     if (d10Status === 'NOT_PROVIDED' || d10Status === 'UNAVAILABLE' || d10Status === 'PARTIAL') partial = true;
@@ -193,6 +197,8 @@ export function buildCareerProfessionRanking(params: {
       supportingCandidateIds: Object.freeze(supportIds),
       ruleIds: Object.freeze(ruleIds),
       supportingEvidenceOccurrenceIds: Object.freeze(uniqueSorted(supportingEvidence.map(item => item.id))),
+      d10EvidenceOccurrenceIds: Object.freeze(d10EvidenceOccurrenceIds),
+      d10Direction,
       counterEvidenceOccurrenceIds: Object.freeze(uniqueSorted(counterEvidence.map(item => item.id))),
       semanticIdentityKeys: Object.freeze(semanticIdentityKeys),
       rootIdentityKeys: Object.freeze(rootIdentityKeys),
