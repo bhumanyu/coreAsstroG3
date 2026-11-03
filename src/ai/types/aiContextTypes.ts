@@ -764,7 +764,7 @@ export interface WealthFact {
 export interface LifeThemeFact {
   readonly theme: string;
   readonly effect: AiEvidenceEffect;
-  readonly confidence: AiConfidence;
+  readonly confidence?: AiConfidence;
   readonly evidenceCount: number;
 }
 

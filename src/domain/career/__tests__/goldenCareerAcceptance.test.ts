@@ -283,6 +283,19 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
 
     const goldenResult = runGoldenScenario(scenario);
     const input = producerInputs[0];
+    expect(goldenResult.canonicalC11.confidence).toBe('MEDIUM');
+    expect(goldenResult.canonicalC11.confidenceCoverage).toMatchObject({
+      quality: 'HIGH',
+      provenance: 'COMPLETE',
+      missingSupportingLayers: ['EXPRESSION']
+    });
+    expect(goldenResult.canonicalC11.confidenceReasons).toContainEqual(
+      expect.objectContaining({
+        code: 'SUPPORTING_LAYER_UNAVAILABLE',
+        layer: 'EXPRESSION',
+        capApplied: 'MEDIUM'
+      })
+    );
     expect(goldenResult.canonicalC11.confidenceCoverage.provenance).toBe('COMPLETE');
     expect(input).toBeDefined();
     if (!input) {
@@ -987,7 +1000,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // C11 should be authoritative
     expect(canonicalC11.finalDirection).toBe('MIXED');
     expect(['MIXED', 'MODERATE'].includes(canonicalC11.finalStrength)).toBe(true);
-    expect(canonicalC11.confidence).toBe('HIGH');
+    expect(canonicalC11.confidence).toBe('MEDIUM');
 
     scenarioResults.push({
       scenarioId: scenario.scenarioId,
@@ -1467,7 +1480,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // Note: Gate D precedence test, Engine-argument assertions, and C11 immutability test are
     // regression/integration tests outside the golden scenario fixture list and are not counted here.
     // G21 is a golden scenario tested at unit level (level: UNIT, excluded from acceptance pass count).
-    expect(passCount).toBe(16);
+    expect(passCount).toBe(18);
     expect(unitPassCount).toBe(1);
   });
 });

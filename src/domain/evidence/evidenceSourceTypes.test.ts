@@ -188,9 +188,10 @@ describe('EvidenceSourceType Contract & Mapping (P-031)', () => {
       expect(planetEvidence?.sourceType).toBe('PLANET');
 
       const vargaEvidence = GOLDEN_WEALTH_EVIDENCE.find(
-        (e) => e.id === 'GOLDEN_WEALTH_D2_CONFIRMS'
+        (e) => e.id === 'GOLDEN_WEALTH_D2_UNVALIDATED'
       );
-      expect(vargaEvidence?.sourceType).toBeUndefined();
+      // Source classification remains VARGA even though the D2 relationship is gated unavailable.
+      expect(vargaEvidence?.sourceType).toBe('VARGA');
 
       const dashaEvidence = GOLDEN_WEALTH_EVIDENCE.find(
         (e) => e.id === 'GOLDEN_WEALTH_DASHA_MD_ACTIVATES'

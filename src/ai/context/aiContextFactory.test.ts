@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { Planet } from '../../types';
+import type { Horoscope } from '../../types';
 import { AI_CONTEXT_SCHEMA_VERSION } from '../types/aiTypes';
 import {
   buildAiContext,
@@ -72,6 +73,13 @@ describe('AI Context Factory', () => {
     expect(toAiConfidence(input)).toBe(expected);
   });
 
+  it.each(['HIGH', 'MEDIUM', 'LOW'] as const)(
+    'supports the declared divisional and life-theme producer confidence %s',
+    confidence => {
+      expect(toAiConfidence(confidence)).toBe(confidence);
+    }
+  );
+
   it('rejects confidence values outside the supported domain vocabulary', () => {
     expect(() => toAiConfidence('UNDETERMINED')).toThrow(
       'Unsupported confidence at AI boundary: UNDETERMINED'
@@ -96,6 +104,58 @@ describe('AI Context Factory', () => {
 
     expect(moderateContext.career?.confidence).toBe('MEDIUM');
     expect(moderateContext.domainInterpretations?.[0].conclusion.confidence).toBe('MEDIUM');
+  });
+
+  it('omits unsupported optional confidence values from divisional and life-theme facts', () => {
+    const d9 = horoscope.divisionalInterpretation?.d9;
+    const d10 = horoscope.divisionalInterpretation?.d10;
+    if (!d9 || !d10) throw new Error('Confidence projection test requires D9 and D10 fixtures.');
+
+    const horoscopeWithUnsupportedConfidence = {
+      ...horoscope,
+      divisionalInterpretation: {
+        ...horoscope.divisionalInterpretation,
+        d9: { ...d9, confidence: undefined },
+        d10: { ...d10, confidence: 'UNDETERMINED' }
+      },
+      lifeThemes: {
+        ...horoscope.lifeThemes,
+        themes: [{
+          theme: 'TEST_THEME',
+          effect: 'SUPPORT',
+          confidence: 'UNDETERMINED',
+          evidenceCount: 1
+        }]
+      }
+    } as unknown as Horoscope;
+
+    const contextWithUnsupportedConfidence = buildAiContext(horoscopeWithUnsupportedConfidence, {
+      domainInterpretations: [career, wealth],
+      temporalState
+    });
+
+    expect(contextWithUnsupportedConfidence.divisional.d9).not.toHaveProperty('confidence');
+    expect(contextWithUnsupportedConfidence.divisional.d10).not.toHaveProperty('confidence');
+    expect(contextWithUnsupportedConfidence.lifeThemes[0]).not.toHaveProperty('confidence');
+  });
+
+  it('preserves Career D10 values while keeping Wealth D2 unavailable in final synthesis facts', () => {
+    const careerSynthesis = career.conclusionData?.careerFinalSynthesis;
+    const wealthSynthesis = wealth.conclusionData?.wealthFinalSynthesis;
+    expect(careerSynthesis).toBeDefined();
+    expect(wealthSynthesis).toBeDefined();
+
+    expect(context.career?.finalSynthesis?.divisionalStatus).toBe(careerSynthesis?.divisionalStatus);
+    expect(context.career?.finalSynthesis?.divisionalEffect).toBe(careerSynthesis?.divisionalEffect);
+    expect(context.career?.finalSynthesis).not.toHaveProperty('d2AvailabilityReason');
+
+    expect(context.wealth?.finalSynthesis?.divisionalStatus).toBe('UNAVAILABLE');
+    expect(context.wealth?.finalSynthesis?.divisionalEffect).toBe('UNAVAILABLE');
+    expect(context.wealth?.finalSynthesis?.d2AvailabilityReason).toContain('D2 calculation');
+    for (const [dimension, projection] of Object.entries(context.wealth?.finalSynthesis?.dimensions ?? {})) {
+      expect(projection?.divisionalStatus, dimension).toBe('UNAVAILABLE');
+      expect(projection?.divisionalEffect, dimension).toBe('UNAVAILABLE');
+    }
   });
 
   it('should include correct schema version and source engine metadata', () => {

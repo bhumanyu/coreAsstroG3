@@ -81,7 +81,7 @@ The initial product UI MUST NOT invoke remote providers.
 
 ```text
 Canonical Pipeline (runLifeAnalysisProduct / ProductAnalysisService)
-  ↓ (computes canonical execution artifacts once on LifeAnalysisProductState: career, wealth, lifeAnalysis, temporalState; plus horoscope)
+  ↓ (computes canonical artifacts once and resolves evidence for the deterministic product view model)
 AiExplanationPanel (pure consumer of canonical LifeAnalysisProductState artifacts + horoscope, NOT ProductAnalysis)
   ↓
 runAiExplanation()
@@ -102,6 +102,8 @@ React UI
 ```
 
 `AiExplanationPanel` is a pure consumer of already-computed canonical execution artifacts (`horoscope` plus `career`, `wealth`, `lifeAnalysis`, `temporalState` carried on `LifeAnalysisProductState`). `ProductAnalysis` remains the serialized product model deliberately free of raw engine objects; the panel consumes canonical `LifeAnalysisProductState` artifacts, not `ProductAnalysis`. It MUST NOT create `AnalysisContext`, resolve temporal state, or interpret Career/Wealth/LifeAnalysis.
+
+For deterministic evidence resolution, `runLifeAnalysisProduct` calls `buildAiContextEvidence()` and does not construct or return an intermediate `AiContext`. When an explanation is requested, `runAiExplanation()` constructs its request context through `buildProductAiContext()` from the exact precomputed artifacts. `LifeAnalysisProductState` exposes those artifacts and optional `aiExplanation`, not an `aiContext` property.
 
 The canonical product AI path is `buildProductAiContext` → `runAiExplanation`.
 
@@ -257,6 +259,7 @@ P-026 does not implement:
 25. New P-026 unit and component tests pass.
 26. TypeScript compilation passes.
 27. Production build passes.
+28. `LifeAnalysisProductState` retains the documented product result shape without exposing an intermediate `AiContext`.
 
 ---
 
@@ -267,4 +270,3 @@ P-026 does not implement:
 3. **Canonical AI Path**: The product AI reasoning path is strictly `buildProductAiContext` → `runAiExplanation`. The AI boundary does not re-derive or mutate deterministic engine state.
 4. **Temporal State Single Source of Truth**: AI explanation uses the canonical `temporalState` resolved by the pipeline. The UI must never construct ad-hoc temporal states or fall back to uncoordinated chart timestamps.
 5. **Stable Stale Guard**: Stale-request guarding in the UI is derived from a stable canonical analysis identity (`analysisId`) passed into the panel as the primary `chartKey`/reset dependency (falling back to canonical inputs like `temporalState.asOf` and horoscope markers when unavailable) to invalidate state on canonical analysis changes and discard stale in-flight results without reintroducing birthDetails orchestration.
-

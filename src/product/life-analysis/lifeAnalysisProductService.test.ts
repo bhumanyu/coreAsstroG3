@@ -71,6 +71,18 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     expect(result.status).toBe('READY');
     expect(result.analysis).toBeDefined();
     expect(result.aiExplanation).toBeDefined();
+    expect(Object.keys(result).sort()).toEqual([
+      'analysis',
+      'aiExplanation',
+      'career',
+      'careerArtifacts',
+      'domainInterpretations',
+      'lifeAnalysis',
+      'status',
+      'temporalState',
+      'wealth'
+    ].sort());
+    expect(result).not.toHaveProperty('aiContext');
 
     careerSpy.mockRestore();
     wealthSpy.mockRestore();
@@ -298,6 +310,17 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
 
     expect(resultA.analysis).toBeDefined();
     expect(resultB.analysis).toBeDefined();
+    expect(Object.keys(resultA).sort()).toEqual([
+      'analysis',
+      'career',
+      'careerArtifacts',
+      'domainInterpretations',
+      'lifeAnalysis',
+      'status',
+      'temporalState',
+      'wealth'
+    ].sort());
+    expect(resultA).not.toHaveProperty('aiContext');
 
     const evidenceIdsA = new Set(resultA.analysis!.evidence.map((e) => e.id));
     const evidenceIdsB = new Set(resultB.analysis!.evidence.map((e) => e.id));

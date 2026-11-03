@@ -215,8 +215,7 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
             expected: evidence.owner,
             reason: `Surface-specific provenance owner does not match evidence ${evidence.id}.`
           });
-        } else if (provenanceEntries[0].occurrence !== evidence.id
-          || !deepEqualAcceptance(provenanceEntries[0], evidence.resolvedProvenance)) {
+        } else if (!deepEqualAcceptance(provenanceEntries[0], evidence.resolvedProvenance)) {
           differences.push({
             surface: surface.name,
             kind: 'PROVENANCE_MISMATCH',

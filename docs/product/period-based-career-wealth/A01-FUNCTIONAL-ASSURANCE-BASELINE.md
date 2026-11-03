@@ -42,22 +42,25 @@ Horoscope + AnalysisContext
   -> DomainReasoningOptions(context, temporalState)
   -> interpretCareerV2 + interpretWealthV2
   -> buildLifeAnalysis
-  -> buildProductAiContext
+  -> buildAiContextEvidence (evidence-only projection)
   -> resolveLifeAnalysisEvidence
   -> buildLifeAnalysisViewModel
-  -> optional runAiExplanation
+  -> optional runAiExplanation -> buildProductAiContext
   -> LifeAnalysisProductState
 ```
 
+`LifeAnalysisProductState` carries the precomputed domain/life-analysis artifacts and optional `aiExplanation`; it does not expose an intermediate `AiContext`. The deterministic view-model path uses `buildAiContextEvidence()` only. `runAiExplanation()` constructs the product AI context through `buildProductAiContext()` when an explanation is requested.
+
 | Layer | Canonical source | Responsibility |
 |---|---|---|
-| Product orchestration | `src/product/life-analysis/lifeAnalysisProductService.ts` | Resolve temporal state; invoke Career and Wealth V2; build product, evidence, AI context and view model; optionally explain |
+| Product orchestration | `src/product/life-analysis/lifeAnalysisProductService.ts` | Resolve temporal state; invoke Career and Wealth V2; project evidence for the view model; optionally explain |
 | Product entry | `src/product/analysis/productAnalysisService.ts` | Calls `runLifeAnalysisProduct` |
 | Career interpreter | `src/domain/career/CareerDomainInterpreterV2.ts` | Exports `interpretCareerV2` |
 | Wealth interpreter | `src/domain/wealth/WealthDomainInterpreterV2.ts` | Exports `interpretWealthV2` |
 | Temporal authority | `src/core/analysis/resolveAnalysisTemporalState.ts` | Resolves active temporal/Dasha state for `AnalysisContext.asOf` |
-| AI context | `src/ai/context/aiContextFactory.ts` | Consumes precomputed domain results and temporal state |
-| AI explanation | `src/ai/product/aiExplanationService.ts` | Optional explanation/presentation layer |
+| Evidence-only projection | `src/ai/context/aiContextFactory.ts` | Supplies conflict-checked evidence for deterministic evidence resolution without building an AI DTO |
+| AI context | `src/ai/context/aiContextFactory.ts` | `buildProductAiContext` consumes precomputed domain results and temporal state for requested explanations |
+| AI explanation | `src/ai/product/aiExplanationService.ts` | Optionally builds product AI context and invokes the explanation/presentation layer |
 
 ## 4. Single-authority register
 

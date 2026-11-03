@@ -434,6 +434,42 @@ describe('Wealth Reasoning Hierarchy (Golden Scenarios W1-W6 & CW-01 Validation)
     expect(canonicalEvidence.sourceIds[0]).toBe('WEALTH_2H_OCCURRENCE_1');
   });
 
+  it('derives identity from both planet and HOUSE_n for repeated structural occurrences of one fact', () => {
+    const first = createDomainEvidence({
+      id: 'WEALTH_MOON_HOUSE_2_OCCURRENCE_1',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.MOON,
+      house: 2,
+      statement: 'Moon affliction of the 2nd-house wealth factor.',
+      polarity: 'CHALLENGING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'WEALTH_2H_LORD_AFFLICTION_001',
+      dimension: 'ACCUMULATION'
+    });
+    const second = createDomainEvidence({
+      ...first,
+      id: 'WEALTH_MOON_HOUSE_2_OCCURRENCE_2',
+      statement: 'Repeated source record for the same Moon/2nd-house fact.'
+    });
+
+    const result = evaluateWealthReasoningHierarchy({ evidence: [first, second] });
+    const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
+
+    expect(first.id).not.toBe(second.id);
+    expect(canonicalEvidence.identityKey).toContain('MOON');
+    expect(canonicalEvidence.identityKey).toContain('HOUSE_2');
+    expect(canonicalEvidence.occurrenceCount).toBe(2);
+    expect(canonicalEvidence.sourceIds).toEqual([
+      'WEALTH_MOON_HOUSE_2_OCCURRENCE_1',
+      'WEALTH_MOON_HOUSE_2_OCCURRENCE_2'
+    ]);
+  });
+
   it('P0: mapped relatedEvidenceIds and rootEvidenceIds survive canonicalization end-to-end', () => {
     const rootEvidence = createDomainEvidence({
       id: 'WEALTH_ROOT_OCCURRENCE',

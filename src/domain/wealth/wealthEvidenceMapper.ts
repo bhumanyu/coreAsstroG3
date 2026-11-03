@@ -225,6 +225,13 @@ export function buildWealthEvidence(
           : undefined);
       const dimension = mapWealthDimension(item);
 
+      // Identity policy: the producer's identityKey is authoritative and is never rewritten
+      // by the mapper. Generic reasoning identity uses ruleId plus semantic selectors:
+      // house-only facts use HOUSE_n, planet-only facts use the planet, and facts containing
+      // both use planet + HOUSE_n. Producers should include HOUSE_n only when location is
+      // identity-relevant. WEALTH_VENUS_KARAKA_001 is the registered exception: its key is
+      // VENUS_KARAKA and deliberately excludes incidental placement metadata.
+      //
       // Provenance path is deliberately registered only for WEALTH_VENUS_KARAKA_001.
       // All other Wealth rules continue through the legacy createDomainEvidence branch below.
       if (item.ruleId === 'WEALTH_VENUS_KARAKA_001') {

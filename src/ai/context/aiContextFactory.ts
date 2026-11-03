@@ -6,6 +6,7 @@ import type { TimingEffect } from '../../domain/timing/careerWealthTiming/career
 import {
   AI_CONTEXT_SCHEMA_VERSION,
   AiAvailability,
+  AiConfidence,
   AiEvidenceEffect
 } from '../types/aiTypes';
 import { toAiConfidence } from './aiConfidence';
@@ -746,13 +747,15 @@ function buildDashaFacts(
 function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
   const d9Interp = horoscope.divisionalInterpretation?.d9;
   const d10Interp = horoscope.divisionalInterpretation?.d10;
+  const d9Confidence = toOptionalAiConfidence(d9Interp?.confidence);
+  const d10Confidence = toOptionalAiConfidence(d10Interp?.confidence);
 
   const d9: DivisionalFact = d9Interp
     ? {
       varga: 'D9',
       status: 'AVAILABLE' as AiAvailability,
       ...(d9Interp.ascendant?.sign ? { ascendantSign: d9Interp.ascendant.sign } : {}),
-      confidence: toAiConfidence(d9Interp.confidence)
+      ...(d9Confidence ? { confidence: d9Confidence } : {})
     }
     : {
       varga: 'D9',
@@ -764,7 +767,7 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
       varga: 'D10',
       status: 'AVAILABLE' as AiAvailability,
       ...(d10Interp.ascendant?.sign ? { ascendantSign: d10Interp.ascendant.sign } : {}),
-      confidence: toAiConfidence(d10Interp.confidence)
+      ...(d10Confidence ? { confidence: d10Confidence } : {})
     }
     : {
       varga: 'D10',
@@ -1225,13 +1228,13 @@ function mapCareerWealthFinalSynthesisToFact(
           ...(dimVal.activationSummary ? { activationSummary: dimVal.activationSummary } : {}),
           ...(dimVal.activationHierarchy ? { activationHierarchy: dimVal.activationHierarchy } : {}),
           timingStatus: dimVal.timingStatus,
-          divisionalStatus: 'UNAVAILABLE',
+          divisionalStatus: syn.domain === 'WEALTH' ? 'UNAVAILABLE' : dimVal.divisionalStatus,
           manifestationStatus: dimVal.manifestationStatus,
           confidence: toAiConfidence(dimVal.confidence),
           primaryPromise: dimVal.primaryPromise,
           dashaEffect: dimVal.dashaEffect,
           timingEffect: dimVal.timingEffect,
-          divisionalEffect: 'UNAVAILABLE',
+          divisionalEffect: syn.domain === 'WEALTH' ? 'UNAVAILABLE' : dimVal.divisionalEffect,
           summary: dimVal.summary,
           ruleIds: dimVal.ruleIds ? [...dimVal.ruleIds] : undefined,
           evidenceIds: [...dimVal.evidenceIds],
@@ -1254,8 +1257,10 @@ function mapCareerWealthFinalSynthesisToFact(
     ...(syn.activationSummary ? { activationSummary: syn.activationSummary } : {}),
     ...(syn.activationHierarchy ? { activationHierarchy: syn.activationHierarchy } : {}),
     timingStatus: syn.timingStatus,
-    divisionalStatus: 'UNAVAILABLE',
-    d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; canonical Wealth reasoning keeps D2 UNAVAILABLE.',
+    divisionalStatus: syn.domain === 'WEALTH' ? 'UNAVAILABLE' : syn.divisionalStatus,
+    ...(syn.domain === 'WEALTH'
+      ? { d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; canonical Wealth reasoning keeps D2 UNAVAILABLE.' }
+      : {}),
     ...(traceCompleteness ? { traceCompleteness } : {}),
     manifestationStatus: syn.manifestationStatus,
     confidence: toAiConfidence(syn.confidence),
@@ -1271,7 +1276,7 @@ function mapCareerWealthFinalSynthesisToFact(
     challengedAreas: [...syn.challengedAreas],
     dashaEffect: syn.dashaEffect,
     timingEffect: syn.timingEffect,
-    divisionalEffect: syn.divisionalEffect,
+    divisionalEffect: syn.domain === 'WEALTH' ? 'UNAVAILABLE' : syn.divisionalEffect,
     keySupport: [...syn.keySupport],
     keyChallenges: [...syn.keyChallenges],
     summary: syn.summary,
@@ -1367,12 +1372,28 @@ export function normalizeTimingActivationEffect(effect: unknown): TimingActivati
 
 function buildLifeThemeFacts(horoscope: Horoscope): readonly LifeThemeFact[] {
   const themes = horoscope.lifeThemes?.themes || [];
-  return themes.map((t: any) => ({
-    theme: String(t.theme),
-    effect: normalizeEvidenceEffect(t.effect),
-    confidence: toAiConfidence(t.confidence),
-    evidenceCount: t.evidenceCount ?? (t.evidence?.length || 0)
-  }));
+  return themes.map((t: any) => {
+    const confidence = toOptionalAiConfidence(t.confidence);
+    return {
+      theme: String(t.theme),
+      effect: normalizeEvidenceEffect(t.effect),
+      ...(confidence ? { confidence } : {}),
+      evidenceCount: t.evidenceCount ?? (t.evidence?.length || 0)
+    };
+  });
+}
+
+function toOptionalAiConfidence(value: unknown): AiConfidence | undefined {
+  switch (value) {
+    case 'VERY_HIGH':
+    case 'HIGH':
+    case 'MEDIUM':
+    case 'MODERATE':
+    case 'LOW':
+      return toAiConfidence(value);
+    default:
+      return undefined;
+  }
 }
 
 function normalizeEvidenceStrength(strength: unknown): AiEvidenceStrength {

@@ -79,10 +79,10 @@ export const G01_STRONG_NATAL: GoldenScenarioMetadata = Object.freeze({
     finalStrength: 'MIXED', // or MODERATE
     natalDirection: 'MIXED', // Canonical chart produces MIXED (actual behavior)
     natalStrength: 'MIXED', // or MODERATE
-    confidence: 'HIGH'
+    confidence: 'MEDIUM'
   }),
   blockedFields: Object.freeze([]),
-  notes: 'Uses CANONICAL_BIRTH_DETAILS (1988-05-08). Canonical chart produces MIXED (actual behavior). Validates C11-INV-01 (natal promise authoritative).'
+  notes: 'Uses CANONICAL_BIRTH_DETAILS (1988-05-08). C11 confidence is MEDIUM because EXPRESSION is unavailable; complete provenance does not replace supporting-layer coverage. Validates C11-INV-01 (natal promise authoritative).'
 });
 
 /**
@@ -341,7 +341,7 @@ export const G14_AI_UI_OVERRIDE: GoldenScenarioMetadata = Object.freeze({
   expectedC11Fields: Object.freeze({
     finalDirection: 'MIXED', // Canonical chart produces MIXED (actual behavior)
     finalStrength: 'MIXED', // or MODERATE
-    confidence: 'HIGH'
+    confidence: 'MEDIUM'
   }),
   blockedFields: Object.freeze([]),
   notes: 'Validates that C11 is authoritative; AI/UI are read-only projections.'
@@ -361,7 +361,7 @@ export const G15_DETERMINISTIC_REPETITION: GoldenScenarioMetadata = Object.freez
   expectedC11Fields: Object.freeze({
     finalDirection: 'MIXED', // Canonical chart produces MIXED (actual behavior)
     finalStrength: 'MIXED', // or MODERATE
-    confidence: 'HIGH'
+    confidence: 'MEDIUM'
   }),
   blockedFields: Object.freeze([]),
   notes: 'Validates C11-INV-11: Deterministic output for identical inputs.'
@@ -381,7 +381,7 @@ export const G16_INPUT_PERMUTATION: GoldenScenarioMetadata = Object.freeze({
   expectedC11Fields: Object.freeze({
     finalDirection: 'MIXED', // Canonical chart produces MIXED (actual behavior)
     finalStrength: 'MIXED', // or MODERATE
-    confidence: 'HIGH'
+    confidence: 'MEDIUM'
   }),
   blockedFields: Object.freeze([]),
   notes: 'Validates that unordered collection order does not affect conclusion.'
@@ -460,7 +460,7 @@ export const G20_CW01_COMPATIBILITY: GoldenScenarioMetadata = Object.freeze({
   expectedC11Fields: Object.freeze({
     finalDirection: 'MIXED', // Canonical chart produces MIXED (actual behavior)
     finalStrength: 'MIXED', // or MODERATE
-    confidence: 'HIGH'
+    confidence: 'MEDIUM'
   }),
   blockedFields: Object.freeze([]),
   notes: 'Validates that reasoningVersion is CW-01 and reasoning trace is present.'

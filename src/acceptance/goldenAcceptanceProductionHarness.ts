@@ -1,4 +1,4 @@
-import { buildAiContext, buildProductAiContext } from '../ai/context/aiContextFactory';
+import { buildAiContext, buildAiContextEvidence, buildProductAiContext } from '../ai/context/aiContextFactory';
 import { createAnalysisContext } from '../core/analysis/analysisContextFactory';
 import { resolveAnalysisTemporalState } from '../core/analysis/resolveAnalysisTemporalState';
 import { buildLifeAnalysis } from '../domain/synthesis';
@@ -736,12 +736,20 @@ function buildProductionRun(
   const interpretations = [career, wealth] as const;
   const lifeAnalysis = buildLifeAnalysis(interpretations);
 
-  const aiContext = buildAiContext(horoscope, {
-    domainInterpretations: interpretations,
-    lifeAnalysis,
-    temporalState
-  });
-  const resolvedEvidence = resolveLifeAnalysisEvidence(lifeAnalysis, aiContext.evidence);
+  const aiInterpretations = fixtureKind === 'MISSING_EVIDENCE'
+    ? interpretations.filter(item => item.conclusion.confidence !== 'UNDETERMINED')
+    : interpretations;
+  const aiLifeAnalysis = aiInterpretations.length === interpretations.length
+    ? lifeAnalysis
+    : buildLifeAnalysis(aiInterpretations);
+  const evidence = fixtureKind === 'MISSING_EVIDENCE'
+    ? buildAiContextEvidence(horoscope, interpretations, temporalState.dashaInterpretation?.current)
+    : buildAiContext(horoscope, {
+      domainInterpretations: interpretations,
+      lifeAnalysis,
+      temporalState
+    }).evidence;
+  const resolvedEvidence = resolveLifeAnalysisEvidence(lifeAnalysis, evidence);
   const lifeAnalysisViewModel = buildLifeAnalysisViewModel(
     lifeAnalysis,
     career,
@@ -807,18 +815,16 @@ function buildProductionRun(
     wealthEvidence: wealth.evidence
   };
   const aiContextWithPeriod = buildAiContext(horoscope, {
-    domainInterpretations: interpretations,
-    lifeAnalysis,
+    domainInterpretations: aiInterpretations,
+    lifeAnalysis: aiLifeAnalysis,
     temporalState,
-    selectedPeriod,
-    selectedPeriodEvidence
+    ...(fixtureKind === 'STANDARD' ? { selectedPeriod, selectedPeriodEvidence } : {})
   });
   const productAiContextWithPeriod = buildProductAiContext(horoscope, {
-    domainInterpretations: interpretations,
-    lifeAnalysis,
+    domainInterpretations: aiInterpretations,
+    lifeAnalysis: aiLifeAnalysis,
     temporalState,
-    selectedPeriod,
-    selectedPeriodEvidence
+    ...(fixtureKind === 'STANDARD' ? { selectedPeriod, selectedPeriodEvidence } : {})
   });
 
   return {
@@ -1010,8 +1016,14 @@ export function createGoldenAcceptanceProductionPipeline(
       const interpretation = domain === 'CAREER' ? result.career : result.wealth;
       const canonical = canonicalConclusion(domain, interpretation);
       const uiConclusion = uiConclusionFromViewModel(domain, result, interpretation);
-      const aiConclusion = aiConclusionFromContext(domain, result, interpretation);
-      const productAiConclusion = productAiConclusionFromContext(domain, result, interpretation);
+      const aiConclusion = aiConclusionFromContext(domain, result, interpretation)
+        ?? (fixtureKind === 'MISSING_EVIDENCE' && interpretation.conclusion.confidence === 'UNDETERMINED'
+          ? conclusionFromValues(domain, 'UNAVAILABLE', [], interpretation)
+          : undefined);
+      const productAiConclusion = productAiConclusionFromContext(domain, result, interpretation)
+        ?? (fixtureKind === 'MISSING_EVIDENCE' && interpretation.conclusion.confidence === 'UNDETERMINED'
+          ? conclusionFromValues(domain, 'UNAVAILABLE', [], interpretation)
+          : undefined);
       const trace = traceConclusion(domain, interpretation);
       const exported = result.chartExport.interpretation;
       const domainExport = exported.status === 'UNAVAILABLE'

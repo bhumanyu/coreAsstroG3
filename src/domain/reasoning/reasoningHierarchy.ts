@@ -125,7 +125,9 @@ export function classifyReasoningEvidence(
         // Use the pre-computed identityKey from evidence if available
         identityKey = item.identityKey;
       } else if (item.provenance) {
-        // Determine subjectKey and objectKey based on planet/house presence
+        // Rule IDs identify the family; semantic subjects identify the actual fact.
+        // If both are present, retain both the planet and HOUSE_n; a producer-supplied
+        // identityKey remains authoritative for rule-specific invariants such as karakas.
         let subjectKey: string;
         let objectKey: string | undefined;
         const hasSemanticSubject = item.planet || item.house;
