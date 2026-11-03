@@ -299,7 +299,10 @@ function makeRiskAxis(
     .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CHALLENGES')
     .flatMap(item => item.sourceIds);
   const adverseOccurrences = sortedUnique([...natalRisk, ...dashaRisk, ...d10Risk]);
-  const hasAdverseRecords = natalRisk.length > 0 || dashaRisk.length > 0 || d10Risk.length > 0;
+  const hasAdverseRecords =
+    natal.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED') ||
+    dasha.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES') ||
+    d10.evidence.some(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CHALLENGES');
 
   const identityToOccurrences = new Map<string, string[]>();
   const addIdentityOccurrences = (identity: string, occurrences: readonly string[]) => {
