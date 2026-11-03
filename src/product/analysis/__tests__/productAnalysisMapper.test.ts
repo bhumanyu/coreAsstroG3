@@ -223,6 +223,97 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysis.wealth.d2.statement).toContain('independent validation');
   });
 
+  it('1.1 projects canonical Career analytical axes into the product DTO without sharing mutable arrays', () => {
+    const axes = {
+      version: 'B01-AXIS-PROJECTION-v1',
+      promise: {
+        axis: 'PROMISE',
+        status: 'AVAILABLE',
+        result: { direction: 'SUPPORT', strength: 'STRONG' },
+        supportingEvidenceOccurrenceIds: ['promise-occurrence'],
+        conflictingEvidenceOccurrenceIds: [],
+        ruleIds: ['RULE_PROMISE'],
+        coverage: { status: 'COMPLETE', availableSources: ['C4_C7_NATAL'], missingSources: [], evidenceOccurrenceCount: 1 },
+        confidence: { status: 'NOT_ASSESSED', reason: 'Axis-specific confidence is not defined.' },
+        methodVersion: 'B01-AXIS-PROJECTION-v1'
+      },
+      activation: {
+        axis: 'ACTIVATION',
+        status: 'PARTIAL',
+        result: { direction: 'CHALLENGE', effect: 'CHALLENGES', strength: 'MODERATE', dominantLevel: 'MD' },
+        supportingEvidenceOccurrenceIds: [],
+        conflictingEvidenceOccurrenceIds: ['dasha-occurrence'],
+        ruleIds: ['RULE_DASHA'],
+        coverage: { status: 'PARTIAL', availableSources: ['C9_DASHA_EVIDENCE'], missingSources: ['C9_DASHA_PERIOD_LEVELS'], evidenceOccurrenceCount: 1 },
+        confidence: { status: 'NOT_ASSESSED', reason: 'Axis-specific confidence is not defined.' },
+        methodVersion: 'B01-AXIS-PROJECTION-v1'
+      },
+      sustainability: {
+        axis: 'SUSTAINABILITY',
+        status: 'UNAVAILABLE',
+        result: { assessment: 'NOT_ASSESSED', requiredEvidenceFamily: 'CAREER_SUSTAINABILITY' },
+        supportingEvidenceOccurrenceIds: [],
+        conflictingEvidenceOccurrenceIds: [],
+        ruleIds: [],
+        coverage: { status: 'INSUFFICIENT', availableSources: [], missingSources: ['CAREER_SUSTAINABILITY_EVIDENCE'], evidenceOccurrenceCount: 0 },
+        confidence: { status: 'NOT_ASSESSED', reason: 'No validated evidence family.' },
+        methodVersion: 'B01-AXIS-PROJECTION-v1',
+        unavailableReason: 'No validated sustainability evidence family.'
+      },
+      risk: {
+        axis: 'RISK',
+        status: 'AVAILABLE',
+        result: { assessment: 'ADVERSE_EVIDENCE_PRESENT', conflictCount: 1 },
+        supportingEvidenceOccurrenceIds: ['risk-occurrence'],
+        conflictingEvidenceOccurrenceIds: [],
+        ruleIds: ['RULE_RISK'],
+        coverage: { status: 'COMPLETE', availableSources: ['C4_C7_NATAL', 'C9_DASHA', 'C10_D10'], missingSources: [], evidenceOccurrenceCount: 1 },
+        confidence: { status: 'NOT_ASSESSED', reason: 'Risk confidence is not calibrated.' },
+        methodVersion: 'B01-AXIS-PROJECTION-v1'
+      },
+      timing: {
+        axis: 'TIMING',
+        status: 'PARTIAL',
+        result: {
+          candidateWindows: [{
+            level: 'MD', start: '2025-01-01', end: '2026-01-01', dated: true,
+            effect: 'ACTIVATES', direction: 'SUPPORT', strength: 'STRONG',
+            activatedPromiseEvidenceIds: ['promise-key'],
+            supportingEvidenceOccurrenceIds: ['timing-occurrence'], ruleIds: ['RULE_MD']
+          }],
+          untimedLevels: ['AD'],
+          guarantee: 'NONE'
+        },
+        supportingEvidenceOccurrenceIds: ['timing-occurrence'],
+        conflictingEvidenceOccurrenceIds: [],
+        ruleIds: ['RULE_MD'],
+        coverage: { status: 'PARTIAL', availableSources: ['C9_DASHA_PERIODS'], missingSources: ['C9_DASHA_PERIOD_LEVELS'], evidenceOccurrenceCount: 1 },
+        confidence: { status: 'NOT_ASSESSED', reason: 'No timing probability is inferred.' },
+        methodVersion: 'B01-AXIS-PROJECTION-v1'
+      }
+    };
+    const viewModelWithAxes: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        canonicalFinalSynthesis: { analyticalAxes: axes } as any
+      }
+    };
+
+    const analysis = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: viewModelWithAxes,
+      context: sampleContext
+    });
+
+    expect(analysis.career.analyticalAxes).toEqual(axes);
+    expect(analysis.career.analyticalAxes).not.toBe(axes);
+    expect(analysis.career.analyticalAxes?.promise.supportingEvidenceOccurrenceIds)
+      .not.toBe(axes.promise.supportingEvidenceOccurrenceIds);
+    expect(selectCareer(analysis).analyticalAxes).toEqual(axes);
+  });
+
   it('2. D10 relationship mapping preserves semantics and never returns percentage', () => {
     expect(mapD10Relationship('CONFIRMS')).toBe('CONFIRMS');
     expect(mapD10Relationship('PARTIALLY_CONFIRMS')).toBe('PARTIALLY_CONFIRMS');

@@ -51,6 +51,7 @@ import type {
 import {
   synthesizeCareerFinal
 } from './careerFinalSynthesis';
+import { buildCareerAnalyticalAxes } from './careerAnalyticalAxes';
 
 /**
  * Maps C8 CareerExpressionDirection to C11 CareerFinalDirection.
@@ -710,12 +711,20 @@ export function buildCareerFinalAnalysis(
     evidenceQuality
   });
 
-  // Return result from canonical engine with contradictory evidence diagnostics
+  // C11 remains the only final conclusion authority. B01 adds orthogonal projections
+  // from the same canonical inputs; the projections do not feed back into C11.
   const result = synthesizeCareerFinal(finalInput);
+  const analyticalAxes = buildCareerAnalyticalAxes({
+    natal,
+    dasha,
+    d10,
+    finalSynthesis: result
+  });
 
-  // Add contradictory Dasha evidence diagnostics to the result
+  // Add diagnostics and the five axis projections to the canonical C11 result.
   return Object.freeze({
     ...result,
+    analyticalAxes,
     contradictoryDashaEvidence: dashaContradictory
   });
 }
