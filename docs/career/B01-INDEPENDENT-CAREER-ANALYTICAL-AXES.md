@@ -53,8 +53,9 @@ The product mapper clones nested arrays/objects and does not calculate axis sema
 
 1. **Sustainability is not yet assessable.** A future upstream workstream must define canonical evidence for continuity, stability, and repeatability, with explicit provenance and validation. Until then, the axis remains unavailable.
 2. **Timing windows are Dasha-period candidates only.** They are not guaranteed outcomes and do not use downstream P2-09B event candidates, because P2-09B is a C11 consumer and must not feed back into C11.
-3. **Axis confidence is not calibrated.** Coverage is reported; axis-specific confidence is explicitly `NOT_ASSESSED`.
-4. A fully available five-axis fixture is not currently valid because the sustainability evidence family does not exist. Tests therefore assert all currently supported axes are available while Sustainability remains unavailable.
+3. **Expression/Transit conflict occurrence mapping is not available in the current B01 input contract.** Such C11 conflicts are retained as a partial-coverage diagnostic rather than misreported as occurrence IDs.
+4. **Axis confidence is not calibrated.** Coverage is reported; axis-specific confidence is explicitly `NOT_ASSESSED`.
+5. A fully available five-axis fixture is not currently valid because the sustainability evidence family does not exist. Tests therefore assert all currently supported axes are available while Sustainability remains unavailable.
 
 ## Tests added
 
@@ -64,7 +65,9 @@ The product mapper clones nested arrays/objects and does not calculate axis sema
 - Promise available while Sustainability is unavailable.
 - Timing unavailable without the canonical Dasha hierarchy.
 - Partial Timing when periods lack dates or usable activation evidence.
-- C11 semantic conflict IDs resolve to source occurrence IDs at the Risk projection.
+- C11 semantic conflict IDs resolve to source-scoped occurrence IDs at the Risk projection.
+- Same semantic identity across Natal/D10 does not cross-contaminate conflict occurrences.
+- Unmappable C11 Expression conflict provenance makes Risk explicitly partial.
 - All currently supported axes available while Sustainability remains unavailable.
 - ProductAnalysis and CareerViewModel preserve the axes as a pure projection.
 
