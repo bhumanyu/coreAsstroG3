@@ -3,6 +3,7 @@ import { runLifeAnalysisProduct } from './lifeAnalysisProductService';
 import { buildAiContext } from '../../ai/context/aiContextFactory';
 import { resolveLifeAnalysisEvidence } from './lifeAnalysisEvidence';
 import { buildLifeAnalysisViewModel } from './lifeAnalysisMapper';
+import { isCareerDomainInterpretation } from './lifeAnalysisTypes';
 import {
   STAGE1_GOLDEN_HOROSCOPE,
   STAGE1_GOLDEN_CAREER,
@@ -399,9 +400,12 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
       expect.objectContaining({ context: expect.anything() }),
       observedCareerOutcomes
     );
-    expect(result.career?.conclusionData?.careerOutcomeAnalysis?.observedOutcomes)
+    const careerInterpretation = result.career && isCareerDomainInterpretation(result.career)
+      ? result.career
+      : undefined;
+    expect(careerInterpretation?.conclusionData?.careerOutcomeAnalysis?.observedOutcomes)
       .toEqual(observedCareerOutcomes);
-    expect(result.career?.conclusionData?.careerOutcomeAnalysis?.candidateOutcomes)
+    expect(careerInterpretation?.conclusionData?.careerOutcomeAnalysis?.candidateOutcomes)
       .not.toContainEqual(expect.objectContaining({ outcomeType: 'JOB_CHANGE', status: 'OBSERVED' }));
 
     careerSpy.mockRestore();
