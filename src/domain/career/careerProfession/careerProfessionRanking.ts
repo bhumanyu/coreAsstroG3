@@ -20,6 +20,7 @@ function uniqueSorted(values: readonly string[]): string[] {
 
 function strengthPoints(strength: DomainEvidence['strength']): number {
   switch (strength) {
+    case 'VERY_STRONG': return 4;
     case 'STRONG': return 3;
     case 'MODERATE': return 2;
     case 'WEAK': return 1;
@@ -108,7 +109,6 @@ export function buildCareerProfessionRanking(params: {
     const linkedIds = uniqueSorted(linkedEvidence.map(item => item.id));
     const supportingEvidence = linkedEvidence.filter(item => item.polarity === 'SUPPORTING');
     const counterEvidence = linkedEvidence.filter(item => item.polarity === 'CHALLENGING');
-    const mixedEvidence = linkedEvidence.filter(item => item.polarity === 'MIXED');
 
     // Rule contributions are counted once per distinct rule, so duplicate pattern
     // instances do not inflate a family's score merely by repeating the same rule.
@@ -148,7 +148,7 @@ export function buildCareerProfessionRanking(params: {
     if (linkedIds.length === 0) {
       confidence = 'UNAVAILABLE';
       confidenceReasons.push('No linked canonical evidence occurrences were available for this family.');
-    } else if (counterEvidence.length > 0 || mixedEvidence.length > 0 || d10Status === 'CONFLICTED') {
+    } else if (counterEvidence.length > 0 || d10Status === 'CONFLICTED') {
       confidence = 'LOW';
       confidenceReasons.push('Conflicting or mixed evidence limits candidate-level confidence.');
     } else if (
@@ -177,7 +177,6 @@ export function buildCareerProfessionRanking(params: {
     else reasons.push('D10 qualification is unavailable or unmapped; no D10 score contribution was applied.');
 
     const counterEvidenceReasons = counterEvidence.map(item => item.statement);
-    if (mixedEvidence.length > 0) counterEvidenceReasons.push(`${mixedEvidence.length} mixed-polarity evidence occurrence(s) were retained without being treated as pure support.`);
     if (d10Status === 'CONFLICTED') counterEvidenceReasons.push('Expression-specific D10 challenge is retained as counter-evidence.');
 
     ranked.push({
