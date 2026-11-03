@@ -98,6 +98,8 @@ D10 qualification status for a profession candidate.
 - `NOT_PROVIDED`: D10 data is not provided (input missing)
 - `UNAVAILABLE`: D10 data is provided but no qualification matches this candidate
 - `NOT_APPLICABLE`: D10 qualification is not applicable to this candidate
+- `PARTIAL`: expression-linked D10 evidence is mixed or only partially qualifies the candidate
+- `CONFLICTED`: expression-linked D10 evidence challenges/weakens the candidate expression
 
 **Critical Note:** D10 can only qualify an existing candidate; it never creates one. Missing/unavailable D10 is `NOT_PROVIDED`/`UNAVAILABLE`, not negative evidence.
 
@@ -311,25 +313,15 @@ The boundary test (`careerProfessionBoundary.test.ts`) enforces these restrictio
 
 ### Integration Status
 
-**NOT YET INTEGRATED:** This module is NOT registered in `CareerDomainInterpreterV2.ts` or any public app API. It is a standalone module for future integration.
+**INTEGRATED:** The profession analysis is invoked from `CareerDomainInterpreterV2.ts`; B04 ranking is projected through ProductAnalysis, CareerViewModel, and the Career profession UI.
 
 ### Deferred Work
 
-#### D10 Expression Identity Namespace Reconciliation (Known Qualification Gap)
+#### D10 Expression Identity Namespace Reconciliation
 
-The P2-08A `expressionId` (e.g., `EXPR:RESEARCH_WORK:MECH1,MECH2`) does not match the D10 canonical `expressionId` (legacy mode-based `CareerExpression` identity). Without a documented mapping between these namespaces, D10 per-expression qualification is deferred.
+**Resolved for supported canonical mappings by B03/B04.** The implementation does not compare C8 and C10 expression IDs. It uses the shared C8-expression-type-to-C10-mode mapping and complete source-mechanism ownership. Unsupported or unresolved mappings remain `UNAVAILABLE`; they are not treated as neutral support or negative evidence.
 
-**Current Behavior:**
-- `applyD10Qualification` returns `NOT_PROVIDED` when D10 data is missing
-- `applyD10Qualification` returns `UNAVAILABLE` when D10 data is provided but identity namespaces are not reconciled
-- `UNAVAILABLE` is never read as negative evidence downstream
-- D10 only qualifies existing candidates; it never creates them
-
-**Resolution Path:**
-1. Implement and unit-test a documented mapping between P2-08A expression identity and D10 canonical expression identity
-2. OR: If no reliable mapping exists, continue to return `NOT_PROVIDED`/`UNAVAILABLE` and document that D10 per-expression qualification is deferred
-
-**Status:** This is a known qualification gap. Functional D10 qualification will be implemented once a tested P2-08A↔D10 expression-identity mapping exists.
+B04 uses this same mapping to qualify already-existing profession families. The mapping is qualification-only and cannot create a candidate or natal promise.
 
 #### Refinement Adapters
 
