@@ -293,19 +293,24 @@ function makeRiskAxis(
   const adverseOccurrences = sortedUnique([...natalRisk, ...dashaRisk, ...d10Risk]);
 
   const identityToOccurrences = new Map<string, string[]>();
-  for (const item of natal.evidence) {
-    identityToOccurrences.set(item.identityKey, [...(identityToOccurrences.get(item.identityKey) ?? []), ...item.sourceIds]);
-  }
-  for (const item of dasha.evidence) {
-    identityToOccurrences.set(item.identityKey, [...(identityToOccurrences.get(item.identityKey) ?? []), ...item.sourceIds]);
-  }
-  for (const item of d10.evidence) {
-    identityToOccurrences.set(item.identityKey, [...(identityToOccurrences.get(item.identityKey) ?? []), ...item.sourceIds]);
-  }
-  const c11ConflictOccurrences = finalSynthesis.conflicts.flatMap(conflict =>
-    conflict.evidenceIds.flatMap(identity => identityToOccurrences.get(identity) ?? [])
-  );
-  const conflicting = sortedUnique([...adverseOccurrences, ...c11ConflictOccurrences]);
+  const addIdentityOccurrences = (identity: string, occurrences: readonly string[]) => {
+    identityToOccurrences.set(
+      identity,
+      [...(identityToOccurrences.get(identity) ?? []), ...occurrences]
+    );
+  };
+  for (const item of natal.evidence) addIdentityOccurrences(item.identityKey, item.sourceIds);
+  for (const item of dasha.evidence) addIdentityOccurrences(item.identityKey, item.sourceIds);
+  for (const item of d10.evidence) addIdentityOccurrences(item.identityKey, item.sourceIds);
+
+  const c11RiskSupport = finalSynthesis.conflicts
+    .filter(conflict => conflict.direction === 'CHALLENGE' || conflict.direction === 'MIXED')
+    .flatMap(conflict => conflict.evidenceIds.flatMap(identity => identityToOccurrences.get(identity) ?? []));
+  const c11RiskCounterEvidence = finalSynthesis.conflicts
+    .filter(conflict => conflict.direction === 'SUPPORT')
+    .flatMap(conflict => conflict.evidenceIds.flatMap(identity => identityToOccurrences.get(identity) ?? []));
+  const riskSupportingOccurrences = sortedUnique([...adverseOccurrences, ...c11RiskSupport]);
+  const riskConflictingOccurrences = sortedUnique(c11RiskCounterEvidence);
   const hasSources = natal.evidence.length > 0 || dasha.evidence.length > 0 || d10.evidence.length > 0;
   const missingSources = [
     ...(natal.evidence.length === 0 ? ['C4_C7_NATAL'] : []),
@@ -328,13 +333,13 @@ function makeRiskAxis(
     axis: 'RISK',
     status,
     result: Object.freeze({
-      assessment: conflicting.length > 0
+      assessment: riskSupportingOccurrences.length > 0
         ? 'ADVERSE_EVIDENCE_PRESENT'
         : 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES',
       conflictCount: finalSynthesis.conflicts.length
     }),
-    supportingEvidenceOccurrenceIds: Object.freeze([]),
-    conflictingEvidenceOccurrenceIds: conflicting,
+    supportingEvidenceOccurrenceIds: riskSupportingOccurrences,
+    conflictingEvidenceOccurrenceIds: riskConflictingOccurrences,
     ruleIds: ruleIds([
       ...natal.evidence.filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED').map(item => item.ruleId ?? ''),
       ...dasha.evidence.filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES').flatMap(item => item.provenance.ruleIds ?? []),
