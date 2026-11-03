@@ -239,4 +239,61 @@ describe('B04 deterministic profession-family ranking', () => {
     );
   });
 
+
+  it('groups pattern-scoped candidates into one stable domain/family identity', () => {
+    const first = candidate({
+      id: 'pattern-1-candidate',
+      domain: 'TECHNOLOGY',
+      family: 'TECHNICAL_LEADERSHIP',
+      ruleId: 'RULE_TECH_LEAD',
+      occurrenceIds: ['occ-pattern-1'],
+      semanticIds: ['identity-1'],
+      rootIds: ['root-1']
+    });
+    const second = candidate({
+      id: 'pattern-2-candidate',
+      domain: 'TECHNOLOGY',
+      family: 'TECHNICAL_LEADERSHIP',
+      ruleId: 'RULE_TECH_LEAD',
+      occurrenceIds: ['occ-pattern-2'],
+      semanticIds: ['identity-2'],
+      rootIds: ['root-2']
+    });
+    const result = buildCareerProfessionRanking({
+      candidates: [first, second],
+      domainEvidence: [
+        evidence({ id: 'occ-pattern-1', identityKey: 'identity-1', rootEvidenceIds: ['root-1'] }),
+        evidence({ id: 'occ-pattern-2', identityKey: 'identity-2', rootEvidenceIds: ['root-2'] })
+      ],
+      natalPromiseDirection: 'SUPPORT'
+    });
+
+    expect(result.rankedCandidates).toHaveLength(1);
+    expect(result.rankedCandidates[0].candidateId).toBe('PROFESSION:TECHNOLOGY:TECHNICAL_LEADERSHIP');
+    expect(result.rankedCandidates[0].supportingCandidateIds).toEqual(['pattern-1-candidate', 'pattern-2-candidate']);
+    // One distinct rule contribution (+5), plus two STRONG × priority-1 evidence occurrences (+6).
+    expect(result.rankedCandidates[0].score).toBe(11);
+  });
+
+  it('fails closed when duplicate canonical occurrence IDs are supplied', () => {
+    const item = candidate({
+      id: 'candidate-duplicate-evidence',
+      domain: 'RESEARCH',
+      family: 'ANALYTICAL_RESEARCH',
+      occurrenceIds: ['duplicate-occ'],
+      semanticIds: ['identity-1'],
+      rootIds: ['root-1']
+    });
+    const duplicate = evidence({ id: 'duplicate-occ', identityKey: 'identity-1', rootEvidenceIds: ['root-1'] });
+    const result = buildCareerProfessionRanking({
+      candidates: [item],
+      domainEvidence: [duplicate, duplicate],
+      natalPromiseDirection: 'SUPPORT'
+    });
+
+    expect(result.status).toBe('UNAVAILABLE');
+    expect(result.rankedCandidates).toEqual([]);
+    expect(result.diagnostics).toContain('DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID');
+  });
+
 });
