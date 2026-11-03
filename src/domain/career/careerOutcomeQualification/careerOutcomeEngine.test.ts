@@ -257,6 +257,38 @@ describe('B02 Career outcome and success qualification', () => {
     expect(result.candidateOutcomes[0]?.counterIndications.evidenceOccurrenceIds).toContain('risk-occ-1');
   });
 
+  it('reports PARTIAL when one required axis has partial evidence coverage', () => {
+    const result = buildCareerOutcomeAnalysis({
+      axes: axes({ promiseStatus: 'PARTIAL' }),
+      finalSynthesis: finalSynthesis(),
+      trajectory: trajectory(),
+      events: events(),
+      profession: profession()
+    });
+
+    expect(result.status).toBe('PARTIAL');
+    expect(result.candidateOutcomes).toEqual([]);
+  });
+
+  it('does not qualify a candidate when authoritative C11 final conclusion is challenged', () => {
+    const challenged = {
+      ...finalSynthesis(),
+      finalStatus: 'CHALLENGED',
+      finalDirection: 'CHALLENGE'
+    } as CareerFinalSynthesisResult;
+    const result = buildCareerOutcomeAnalysis({
+      axes: axes(),
+      finalSynthesis: challenged,
+      trajectory: trajectory(),
+      events: events(),
+      profession: profession()
+    });
+
+    expect(result.status).toBe('UNRESOLVED');
+    expect(result.candidateOutcomes).toEqual([]);
+    expect(result.diagnostics).toContain('C11_FINAL_CONCLUSION_NOT_SUPPORTIVE');
+  });
+
   it('keeps missing Dasha activation unresolved rather than treating it as negative evidence', () => {
     const result = buildCareerOutcomeAnalysis({
       axes: axes({ activationStatus: 'UNAVAILABLE' }),
