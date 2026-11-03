@@ -191,6 +191,7 @@ export function freezeProfessionCandidate(
       ...candidate.d10Qualification,
       effects: Object.freeze([...candidate.d10Qualification.effects]),
       evidenceOccurrenceIds: Object.freeze([...candidate.d10Qualification.evidenceOccurrenceIds]),
+      counterEvidenceOccurrenceIds: Object.freeze([...candidate.d10Qualification.counterEvidenceOccurrenceIds]),
       rootIdentityKeys: Object.freeze([...candidate.d10Qualification.rootIdentityKeys])
     }) } : {}),
     mechanismTypes: Object.freeze([...candidate.mechanismTypes]),
