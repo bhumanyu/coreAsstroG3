@@ -184,6 +184,15 @@ export function freezeProfessionCandidate(
   return Object.freeze({
     ...candidate,
     expressionTypes: Object.freeze([...candidate.expressionTypes]),
+    evidenceOccurrenceIds: Object.freeze([...candidate.evidenceOccurrenceIds]),
+    semanticIdentityKeys: Object.freeze([...candidate.semanticIdentityKeys]),
+    rootIdentityKeys: Object.freeze([...candidate.rootIdentityKeys]),
+    ...(candidate.d10Qualification ? { d10Qualification: Object.freeze({
+      ...candidate.d10Qualification,
+      effects: Object.freeze([...candidate.d10Qualification.effects]),
+      evidenceOccurrenceIds: Object.freeze([...candidate.d10Qualification.evidenceOccurrenceIds]),
+      rootIdentityKeys: Object.freeze([...candidate.d10Qualification.rootIdentityKeys])
+    }) } : {}),
     mechanismTypes: Object.freeze([...candidate.mechanismTypes]),
     patternIds: Object.freeze([...candidate.patternIds]),
     evidence: Object.freeze(
@@ -206,6 +215,7 @@ export function freezeProfessionCandidate(
 export function freezeProfessionAnalysis(
   analysis: {
     readonly candidates: readonly CareerProfessionCandidate[];
+    readonly ranking: CareerProfessionAnalysis['ranking'];
     readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
     readonly unresolvedExpressionTypes: readonly string[];
     readonly mappedTypes: readonly string[];
@@ -221,6 +231,23 @@ export function freezeProfessionAnalysis(
     unresolvedExpressionTypes: Object.freeze([...analysis.unresolvedExpressionTypes] as any),
     mappedTypes: Object.freeze([...analysis.mappedTypes] as any),
     missingInputs: Object.freeze([...analysis.missingInputs]),
+    ranking: Object.freeze({
+      ...analysis.ranking,
+      rankedCandidates: Object.freeze(analysis.ranking.rankedCandidates.map(candidate => Object.freeze({
+        ...candidate,
+        confidenceReasons: Object.freeze([...candidate.confidenceReasons]),
+        evidenceCoverage: Object.freeze({ ...candidate.evidenceCoverage }),
+        supportingCandidateIds: Object.freeze([...candidate.supportingCandidateIds]),
+        ruleIds: Object.freeze([...candidate.ruleIds]),
+        supportingEvidenceOccurrenceIds: Object.freeze([...candidate.supportingEvidenceOccurrenceIds]),
+        counterEvidenceOccurrenceIds: Object.freeze([...candidate.counterEvidenceOccurrenceIds]),
+        semanticIdentityKeys: Object.freeze([...candidate.semanticIdentityKeys]),
+        rootIdentityKeys: Object.freeze([...candidate.rootIdentityKeys]),
+        reasons: Object.freeze([...candidate.reasons]),
+        counterEvidenceReasons: Object.freeze([...candidate.counterEvidenceReasons])
+      }))),
+      diagnostics: Object.freeze([...analysis.ranking.diagnostics])
+    }),
     provenance: Object.freeze({
       ...analysis.provenance,
       expressionIds: Object.freeze([...analysis.provenance.expressionIds]),
