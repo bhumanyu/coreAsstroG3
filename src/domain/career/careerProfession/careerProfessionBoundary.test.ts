@@ -36,7 +36,7 @@ describe('careerProfession Boundary Enforcement', () => {
       it('should not import AI runtime modules', () => {
         const filePath = join(modulePath, file);
         const content = readFileSync(filePath, 'utf-8');
-        const forbiddenAiImport = /import\\s+(?!type\\b)[\\s\\S]*?from\\s+['"][^'"]*(?:^|\\/)ai\\/[^'"]*['"]/;
+        const forbiddenAiImport = /import\s+(?!type\b)[\s\S]*?from\s+['"][^'"]*(?:\/ai\/|^ai\/)[^'"]*['"]/i;
         expect(content).not.toMatch(forbiddenAiImport);
       });
 
