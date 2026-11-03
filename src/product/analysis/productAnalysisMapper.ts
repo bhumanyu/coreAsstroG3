@@ -759,6 +759,8 @@ function mapCareer(
           supportingCandidateIds: [...candidate.supportingCandidateIds],
           ruleIds: [...candidate.ruleIds],
           supportingEvidenceOccurrenceIds: [...candidate.supportingEvidenceOccurrenceIds],
+          d10EvidenceOccurrenceIds: [...candidate.d10EvidenceOccurrenceIds],
+          d10Direction: candidate.d10Direction,
           counterEvidenceOccurrenceIds: [...candidate.counterEvidenceOccurrenceIds],
           semanticIdentityKeys: [...candidate.semanticIdentityKeys],
           rootIdentityKeys: [...candidate.rootIdentityKeys],
