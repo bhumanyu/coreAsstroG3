@@ -165,7 +165,8 @@ function makePromiseAxis(natal: CareerNatalAnalysis): CareerPromiseAxis {
   const hasClassification =
     natal.structural.direction !== 'UNAVAILABLE' &&
     natal.structural.strength !== 'UNDETERMINED';
-  const status: CareerAnalyticalAxisStatus = hasClassification && eligibleEvidence.length > 0
+  const natalOccurrenceIds = sortedUnique(eligibleEvidence.flatMap(item => item.sourceIds));
+  const status: CareerAnalyticalAxisStatus = hasClassification && eligibleEvidence.length > 0 && natalOccurrenceIds.length > 0
     ? 'AVAILABLE'
     : eligibleEvidence.length > 0
       ? 'PARTIAL'
@@ -186,8 +187,10 @@ function makePromiseAxis(natal: CareerNatalAnalysis): CareerPromiseAxis {
     coverage: coverage(
       status === 'AVAILABLE' ? 'COMPLETE' : status === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT',
       eligibleEvidence.length > 0 ? ['C4_C7_NATAL'] : [],
-      eligibleEvidence.length > 0 && hasClassification ? [] : ['C4_C7_NATAL_CLASSIFICATION'],
-      sortedUnique(eligibleEvidence.flatMap(item => item.sourceIds)).length
+      eligibleEvidence.length > 0 && hasClassification && natalOccurrenceIds.length > 0
+        ? []
+        : [ ...(hasClassification ? [] : ['C4_C7_NATAL_CLASSIFICATION']), ...(natalOccurrenceIds.length === 0 ? ['C4_C7_NATAL_PROVENANCE'] : []) ],
+      natalOccurrenceIds.length
     ),
     confidence: confidenceNotAssessed('No axis-specific natal confidence contract exists; C11 overall confidence is not copied.'),
     methodVersion: CAREER_ANALYTICAL_AXES_VERSION,
@@ -207,7 +210,12 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
   const hasEvidence = evidence.length > 0;
   const completeLevels = hierarchy
     ? [hierarchy.md, hierarchy.ad, hierarchy.pd].filter(
-        item => item.direction !== 'UNAVAILABLE' && item.effect !== 'UNKNOWN' && item.effect !== 'INSUFFICIENT_DATA'
+        item =>
+          item.direction !== 'UNAVAILABLE' &&
+          item.effect !== 'UNKNOWN' &&
+          item.effect !== 'INSUFFICIENT_DATA' &&
+          item.evidence.length > 0 &&
+          item.evidence.some(evidenceItem => evidenceItem.sourceIds.length > 0)
       ).length
     : 0;
   const status: CareerAnalyticalAxisStatus = !hierarchy
@@ -291,6 +299,7 @@ function makeRiskAxis(
     .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CHALLENGES')
     .flatMap(item => item.sourceIds);
   const adverseOccurrences = sortedUnique([...natalRisk, ...dashaRisk, ...d10Risk]);
+  const hasAdverseRecords = natalRisk.length > 0 || dashaRisk.length > 0 || d10Risk.length > 0;
 
   const identityToOccurrences = new Map<string, string[]>();
   const addIdentityOccurrences = (identity: string, occurrences: readonly string[]) => {
@@ -311,15 +320,21 @@ function makeRiskAxis(
     .flatMap(conflict => conflict.evidenceIds.flatMap(identity => identityToOccurrences.get(identity) ?? []));
   const riskSupportingOccurrences = sortedUnique([...adverseOccurrences, ...c11RiskSupport]);
   const riskConflictingOccurrences = sortedUnique(c11RiskCounterEvidence);
-  const hasSources = natal.evidence.length > 0 || dasha.evidence.length > 0 || d10.evidence.length > 0;
+  const natalOccurrences = sourceIds(natal.evidence);
+  const dashaOccurrences = sourceIds(dasha.evidence);
+  const d10Occurrences = sourceIds(d10.evidence);
+  const hasRecords = natal.evidence.length > 0 || dasha.evidence.length > 0 || d10.evidence.length > 0;
+  const hasOccurrences = natalOccurrences.length > 0 || dashaOccurrences.length > 0 || d10Occurrences.length > 0;
   const missingSources = [
-    ...(natal.evidence.length === 0 ? ['C4_C7_NATAL'] : []),
-    ...(dasha.evidence.length === 0 ? ['C9_DASHA'] : []),
-    ...(d10.availability === 'UNAVAILABLE' || d10.evidence.length === 0 ? ['C10_D10'] : [])
+    ...(natal.evidence.length === 0 ? ['C4_C7_NATAL'] : natalOccurrences.length === 0 ? ['C4_C7_NATAL_PROVENANCE'] : []),
+    ...(dasha.evidence.length === 0 ? ['C9_DASHA'] : dashaOccurrences.length === 0 ? ['C9_DASHA_PROVENANCE'] : []),
+    ...(d10.availability === 'UNAVAILABLE' || d10.evidence.length === 0
+      ? ['C10_D10']
+      : d10Occurrences.length === 0 ? ['C10_D10_PROVENANCE'] : [])
   ];
-  const status: CareerAnalyticalAxisStatus = !hasSources
+  const status: CareerAnalyticalAxisStatus = !hasRecords
     ? 'INSUFFICIENT'
-    : missingSources.length > 0
+    : missingSources.length > 0 || !hasOccurrences
       ? 'PARTIAL'
       : 'AVAILABLE';
 
@@ -333,7 +348,7 @@ function makeRiskAxis(
     axis: 'RISK',
     status,
     result: Object.freeze({
-      assessment: riskSupportingOccurrences.length > 0
+      assessment: hasAdverseRecords || c11RiskSupport.length > 0
         ? 'ADVERSE_EVIDENCE_PRESENT'
         : 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES',
       conflictCount: finalSynthesis.conflicts.length
@@ -382,6 +397,7 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     // A period without canonical activation evidence is not a candidate window.
     if (periodEvidence.length === 0) continue;
     const occurrenceIds = sortedUnique(periodEvidence.flatMap(item => item.sourceIds));
+    if (occurrenceIds.length === 0) continue;
     const periodRuleIds = ruleIds(periodEvidence.flatMap(item => item.activationRuleIds));
     const dated = Boolean(period.start && period.end);
 
@@ -405,7 +421,7 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     period.direction !== 'UNAVAILABLE' &&
     period.effect !== 'UNKNOWN' &&
     period.effect !== 'INSUFFICIENT_DATA' &&
-    period.evidence.length > 0
+    period.evidence.some(evidenceItem => evidenceItem.sourceIds.length > 0)
   ).length;
   const status: CareerAnalyticalAxisStatus = !hierarchy
     ? 'UNAVAILABLE'
