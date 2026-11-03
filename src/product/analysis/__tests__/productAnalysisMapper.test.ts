@@ -296,7 +296,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       ...sampleViewModel,
       careerDetail: {
         ...sampleViewModel.careerDetail!,
-        canonicalFinalSynthesis: { analyticalAxes: axes } as any
+        analyticalAxes: axes
       }
     };
 
