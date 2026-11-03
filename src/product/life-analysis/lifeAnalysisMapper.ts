@@ -147,6 +147,7 @@ export function buildLifeAnalysisViewModel(
     manifestationSynthesis: careerConclusionData?.careerManifestationSynthesis,
     finalSynthesis: careerConclusionData?.careerFinalSynthesis,
     canonicalFinalSynthesis: careerConclusionData?.canonicalCareerFinalSynthesis,
+    analyticalAxes: careerConclusionData?.careerAnalyticalAxes,
     confidenceCoverage: careerConclusionData?.canonicalCareerFinalSynthesis?.confidenceCoverage,
     confidenceReasons: careerConclusionData?.canonicalCareerFinalSynthesis?.confidenceReasons,
     traceCompleteness: careerConclusionData?.reasoningTraceGraph?.traceCompleteness,
