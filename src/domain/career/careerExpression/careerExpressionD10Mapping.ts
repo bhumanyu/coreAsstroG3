@@ -30,7 +30,8 @@ const C8_TO_C10_EXPRESSION_MAPPING: Readonly<Record<CareerExpressionType, Career
 
 export type CareerExpressionToD10ModeResolution =
   | { readonly status: 'RESOLVED'; readonly c10Mode: CareerManifestationMode }
-  | { readonly status: 'UNMAPPED'; readonly diagnostic: string };
+  | { readonly status: 'UNMAPPED'; readonly diagnostic: string }
+  | { readonly status: 'AMBIGUOUS'; readonly diagnostic: string };
 
 /**
  * Resolve the legacy C10 mode for a canonical C8 expression type.
