@@ -30,6 +30,7 @@ import type {
   CareerProfessionD10Qualification
 } from './careerProfessionTypes';
 import type { CareerProfessionRule } from './careerProfessionRules';
+import { resolveC10ModeFromC8ExpressionType } from '../careerD10/careerD10Integration';
 import { buildCareerProfessionRanking } from './careerProfessionRanking';
 
 import { CAREER_PROFESSION_RULES } from './careerProfessionRules';
@@ -450,12 +451,10 @@ function buildCandidateFromRule(
   patternMechanismIds?: Set<string>
 ): CareerProfessionCandidate {
   // Collect expression types that match the rule
-  const matchedExpressionTypes: CareerExpressionType[] = [];
-  if (rule.requiredExpressionTypes) {
-    for (const type of rule.requiredExpressionTypes) {
-      matchedExpressionTypes.push(type);
-    }
-  }
+  const matchedExpressionTypes: CareerExpressionType[] = rule.requiredExpressionTypes
+    ? [...rule.requiredExpressionTypes]
+    : [...new Set(satisfyingExpressions.map(expression => expression.expressionType))]
+      .sort(codePointCompare);
 
   // Collect mechanism types that match the rule
   const matchedMechanismTypes: CareerMechanismType[] = [];
@@ -658,10 +657,17 @@ function applyD10Qualification(
         ? item.sourceIds
         : (item.resolvedMechanismIds ?? [])
     ));
+    const candidateC10Modes = new Set(candidate.expressionTypes.flatMap(expressionType => {
+      const resolution = resolveC10ModeFromC8ExpressionType(expressionType);
+      return resolution.status === 'RESOLVED' ? [resolution.c10Mode] : [];
+    }));
     const matchedQualifications = careerD10CanonicalAnalysis.expressionQualifications.filter(qualification => {
       if (qualification.mappingStatus !== 'RESOLVED' || !qualification.expression) return false;
+      if (!candidateC10Modes.has(qualification.expression.mode)) return false;
       const sourceMechanismIds = qualification.expression.sourceMechanismCandidateIds ?? [];
-      return sourceMechanismIds.some(id => candidateMechanismIds.has(id));
+      // Require complete source ownership, not a single coincidental mechanism overlap.
+      return sourceMechanismIds.length > 0 &&
+        sourceMechanismIds.every(id => candidateMechanismIds.has(id));
     });
 
     if (matchedQualifications.length === 0) {
