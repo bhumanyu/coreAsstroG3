@@ -299,10 +299,13 @@ export function projectCareerProfessionAnalysis(
   let aggregateD10Status: CareerProfessionD10Status = 'NOT_PROVIDED';
   if (candidates.length > 0) {
     const hasQualified = candidates.some((c) => c.d10Status === 'QUALIFIED');
+    const hasPartial = candidates.some((c) => c.d10Status === 'PARTIAL' || c.d10Status === 'CONFLICTED');
     const hasUnavailable = candidates.some((c) => c.d10Status === 'UNAVAILABLE');
     const hasNotProvided = candidates.some((c) => c.d10Status === 'NOT_PROVIDED');
 
-    if (hasQualified) {
+    if (hasPartial) {
+      aggregateD10Status = 'PARTIAL';
+    } else if (hasQualified) {
       aggregateD10Status = 'QUALIFIED';
     } else if (hasUnavailable) {
       aggregateD10Status = 'UNAVAILABLE';
