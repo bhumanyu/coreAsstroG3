@@ -273,6 +273,8 @@ export interface CareerProfessionRankedCandidate {
   readonly supportingCandidateIds: readonly string[];
   readonly ruleIds: readonly string[];
   readonly supportingEvidenceOccurrenceIds: readonly string[];
+  readonly d10EvidenceOccurrenceIds: readonly string[];
+  readonly d10Direction: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'UNDETERMINED';
   readonly counterEvidenceOccurrenceIds: readonly string[];
   readonly semanticIdentityKeys: readonly string[];
   readonly rootIdentityKeys: readonly string[];
