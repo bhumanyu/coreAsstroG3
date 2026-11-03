@@ -190,7 +190,19 @@ describe('B01 independent Career analytical axes', () => {
         md: period('MD', 'CHALLENGE', 'CHALLENGES', 'md', '2025-01-01', '2026-01-01'),
         ad: period('AD', 'CHALLENGE', 'CHALLENGES', 'ad', '2025-02-01', '2025-06-01'),
         pd: period('PD', 'CHALLENGE', 'CHALLENGES', 'pd', '2025-03-01', '2025-04-01')
-      }))
+      }), [{
+        identityKey: 'dasha-semantic-1',
+        id: 'dasha-occurrence-1',
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'CHALLENGES',
+        direction: 'CHALLENGE',
+        strength: 'STRONG',
+        statement: 'Dasha challenge evidence.',
+        sourceIds: ['raw-dasha-source-1'],
+        provenance: { source: 'C9_DASHA', activationLevel: 'MD', ruleIds: ['RULE_MD'], natalRootIds: [] }
+      }])
     });
 
     expect(axes.promise.result).toEqual({ direction: 'SUPPORT', strength: 'VERY_STRONG' });
@@ -200,8 +212,8 @@ describe('B01 independent Career analytical axes', () => {
     expect(axes.activation.result?.direction).toBe('CHALLENGE');
     expect(axes.promise.status).toBe('AVAILABLE');
     expect(axes.activation.status).toBe('AVAILABLE');
-    expect(axes.activation.conflictingEvidenceOccurrenceIds).toContain('md');
-    expect(axes.activation.conflictingEvidenceOccurrenceIds).not.toContain('occurrence-md');
+    expect(axes.activation.conflictingEvidenceOccurrenceIds).toContain('dasha-occurrence-1');
+    expect(axes.activation.conflictingEvidenceOccurrenceIds).not.toContain('raw-dasha-source-1');
   });
 
   it('keeps strong promise while exposing elevated D10 risk as a separate axis', () => {
