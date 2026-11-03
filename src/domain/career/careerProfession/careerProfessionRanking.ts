@@ -145,7 +145,7 @@ export function buildCareerProfessionRanking(params: {
     );
     const hasD10Challenge = groupCandidates.some(candidate =>
       candidate.d10Qualification?.direction === 'CHALLENGE' ||
-      (candidate.d10Qualification?.counterEvidenceOccurrenceIds.length ?? 0) > 0
+      candidate.d10Qualification?.status === 'CONFLICTED'
     );
     if (hasQualifiedD10Support) score += 3;
     if (hasD10Challenge) score -= 3;
