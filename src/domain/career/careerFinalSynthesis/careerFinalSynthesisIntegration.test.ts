@@ -1750,6 +1750,6 @@ describe('B03 D1/D10 hierarchy acceptance at C11 boundary', () => {
       natal: makeMinimalNatal('SUPPORT', 'STRONG'),
       d10: makeMinimalD10('CHALLENGE', 'WEAK')
     });
-    expect(buildCareerFinalAnalysis(input)).toEqual(buildCareerFinalAnalysis(input));
+    expect(JSON.stringify(buildCareerFinalAnalysis(input))).toBe(JSON.stringify(buildCareerFinalAnalysis(input)));
   });
 });
