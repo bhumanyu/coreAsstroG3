@@ -26,7 +26,8 @@ import type {
   CareerProfessionCandidate,
   CareerProfessionEvidence,
   CareerProfessionProvenance,
-  CareerProfessionD10Status
+  CareerProfessionD10Status,
+  CareerProfessionD10Qualification
 } from './careerProfessionTypes';
 import type { CareerProfessionRule } from './careerProfessionRules';
 import { buildCareerProfessionRanking } from './careerProfessionRanking';
@@ -704,7 +705,7 @@ function applyD10Qualification(
       d10Qualification: Object.freeze({
         status,
         direction,
-        effects: Object.freeze(uniqueProfessionIds(matchedQualifications.map(item => item.effect)) as CareerProfessionCandidate['d10Qualification'] extends infer _T ? ('REINFORCES' | 'QUALIFIES' | 'MODIFIES' | 'CONFLICTS' | 'PRESERVES' | 'INSUFFICIENT_DATA')[] : never),
+        effects: Object.freeze(uniqueProfessionIds(matchedQualifications.map(item => item.effect)) as CareerProfessionD10Qualification['effects']),
         evidenceOccurrenceIds: Object.freeze(evidenceOccurrenceIds),
         rootIdentityKeys: Object.freeze(rootIdentityKeys)
       })
