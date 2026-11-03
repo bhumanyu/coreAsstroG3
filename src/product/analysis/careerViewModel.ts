@@ -16,6 +16,7 @@ import type {
   ProductWarning,
   ProductCareerAnalyticalAxes,
   ProductCareerOutcomeAnalysis,
+  ProductCareerProfessionRanking,
   PromiseStrength,
   ActivationEffect,
   TransitEffect
@@ -134,6 +135,16 @@ export interface CareerProfessionCandidateViewModel {
   readonly mechanismTypes: readonly string[];
   readonly patternIds: readonly string[];
   readonly d10Status: string;
+  readonly evidenceOccurrenceIds: readonly string[];
+  readonly semanticIdentityKeys: readonly string[];
+  readonly rootIdentityKeys: readonly string[];
+  readonly d10Qualification?: {
+    readonly status: string;
+    readonly direction: string;
+    readonly effects: readonly string[];
+    readonly evidenceOccurrenceIds: readonly string[];
+    readonly rootIdentityKeys: readonly string[];
+  };
   readonly evidence: readonly CareerProfessionEvidenceViewModel[];
   readonly domainEvidenceIds: readonly string[];
   readonly relatedEvidenceIds: readonly string[];
@@ -160,6 +171,7 @@ export interface CareerProfessionViewModel {
   readonly mappedTypes: readonly string[];
   readonly missingInputs: readonly string[];
   readonly d10Status: string;
+  readonly ranking: ProductCareerProfessionRanking;
 }
 
 export interface CareerViewModel {
@@ -319,6 +331,10 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
       mechanismTypes: c.mechanismTypes,
       patternIds: c.patternIds,
       d10Status: c.d10Status,
+      evidenceOccurrenceIds: c.evidenceOccurrenceIds,
+      semanticIdentityKeys: c.semanticIdentityKeys,
+      rootIdentityKeys: c.rootIdentityKeys,
+      d10Qualification: c.d10Qualification,
       evidence: c.evidence.map(e => ({
         evidenceId: e.evidenceId,
         basis: e.basis,
@@ -342,7 +358,8 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
       unresolvedExpressionTypes: professionData.unresolvedExpressionTypes,
       mappedTypes: professionData.mappedTypes,
       missingInputs: professionData.missingInputs,
-      d10Status: professionData.d10Status
+      d10Status: professionData.d10Status,
+      ranking: professionData.ranking
     };
   })();
 
