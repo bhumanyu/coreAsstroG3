@@ -12,7 +12,7 @@
  *
  * BOUNDARY ENFORCEMENT: This module must NOT import from:
  * - careerDasha
- * - d10/ (except careerD10 canonical types for qualification-only)
+ * - D10 calculation integration (canonical D10 types and the shared mode mapping are qualification-only)
  * - careerFinalSynthesis
  * - domain/timing
  * - transit
@@ -22,8 +22,8 @@
  * Profession ≠ job title: This module does NOT contain exact job titles
  * like SOFTWARE_ENGINEER, BANKER, DOCTOR, etc. Those belong to a later synthesis layer.
  *
- * NOTE: This module is NOT registered in CareerDomainInterpreterV2.ts or any public app API.
- * It is a standalone module for future integration.
+ * INTEGRATION: CareerDomainInterpreterV2 supplies the C11 D1 promise and canonical C10 qualification.
+ * B04 ranking is projected through ProductAnalysis, CareerViewModel, and Career profession UI.
  */
 
 // Types (§3)
@@ -36,6 +36,7 @@ export type {
   CareerProfessionRankingStatus,
   CareerProfessionCandidateConfidence,
   CareerProfessionRankedCandidate,
+  CareerProfessionScoreContribution,
   CareerProfessionRanking,
   CareerProfessionEvidence,
   CareerProfessionCandidate,
