@@ -102,7 +102,7 @@ function counterIndications(
     .filter(conflict => conflict.direction === 'CHALLENGE' || conflict.direction === 'MIXED')
     .map(conflict => Object.freeze({
       source: conflict.source,
-      direction: conflict.direction,
+      direction: conflict.direction as 'CHALLENGE' | 'MIXED',
       severity: conflict.severity,
       evidenceIdentityIds: sortedUnique(conflict.evidenceIds)
     }));
