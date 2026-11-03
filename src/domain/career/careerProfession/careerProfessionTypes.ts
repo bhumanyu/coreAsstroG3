@@ -140,7 +140,9 @@ export type CareerProfessionD10Status =
   | 'QUALIFIED'
   | 'NOT_PROVIDED'
   | 'UNAVAILABLE'
-  | 'NOT_APPLICABLE';
+  | 'NOT_APPLICABLE'
+  | 'PARTIAL'
+  | 'CONFLICTED';
 
 /**
  * Career profession evidence.
@@ -192,6 +194,14 @@ export interface CareerProfessionEvidence {
  * Invariant: D10 can only qualify an existing candidate; it never creates one.
  * Missing/unavailable D10 is NOT_PROVIDED/UNAVAILABLE, not negative evidence.
  */
+export interface CareerProfessionD10Qualification {
+  readonly status: CareerProfessionD10Status;
+  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'UNDETERMINED';
+  readonly effects: readonly ('REINFORCES' | 'QUALIFIES' | 'MODIFIES' | 'CONFLICTS' | 'PRESERVES' | 'INSUFFICIENT_DATA')[];
+  readonly evidenceOccurrenceIds: readonly string[];
+  readonly rootIdentityKeys: readonly string[];
+}
+
 export interface CareerProfessionCandidate {
   readonly candidateId: string;
   readonly domain: CareerProfessionDomain;
@@ -201,6 +211,13 @@ export interface CareerProfessionCandidate {
   readonly mechanismTypes: readonly CareerMechanismType[];
   readonly patternIds: readonly string[];
   readonly d10Status: CareerProfessionD10Status;
+  readonly d10Qualification?: CareerProfessionD10Qualification;
+  /** Canonical DomainEvidence occurrence IDs linked to this candidate. */
+  readonly evidenceOccurrenceIds: readonly string[];
+  /** Semantic identity keys for linked DomainEvidence; never occurrence IDs. */
+  readonly semanticIdentityKeys: readonly string[];
+  /** Root semantic identity keys declared by linked DomainEvidence or D10 evidence. */
+  readonly rootIdentityKeys: readonly string[];
   readonly evidence: readonly CareerProfessionEvidence[];
   readonly domainEvidenceIds: readonly string[];
   readonly relatedEvidenceIds: readonly string[];
@@ -231,8 +248,50 @@ export type CareerProfessionAnalysisStatus =
  * missingInputs: List of missing input types.
  * provenance: Aggregate provenance for the entire analysis.
  */
+export type CareerProfessionRankingStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+
+export type CareerProfessionCandidateConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNAVAILABLE';
+
+export interface CareerProfessionRankedCandidate {
+  /** Stable identity at domain/family granularity; independent of pattern/rule IDs. */
+  readonly candidateId: string;
+  readonly domain: CareerProfessionDomain;
+  readonly family: CareerProfessionFamily;
+  /** Competition rank: equal scores share rank; next rank skips tied positions. */
+  readonly rank: number;
+  /** Deterministic policy points, not a probability or employability estimate. */
+  readonly score: number;
+  readonly confidence: CareerProfessionCandidateConfidence;
+  readonly confidenceReasons: readonly string[];
+  readonly evidenceCoverage: {
+    readonly status: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
+    readonly occurrenceCount: number;
+    readonly semanticIdentityCount: number;
+    readonly rootIdentityCount: number;
+    readonly linkedSourceCount: number;
+  };
+  readonly supportingCandidateIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly supportingEvidenceOccurrenceIds: readonly string[];
+  readonly counterEvidenceOccurrenceIds: readonly string[];
+  readonly semanticIdentityKeys: readonly string[];
+  readonly rootIdentityKeys: readonly string[];
+  readonly d10Status: 'QUALIFIED' | 'PARTIAL' | 'CONFLICTED' | 'NOT_PROVIDED' | 'UNAVAILABLE';
+  readonly reasons: readonly string[];
+  readonly counterEvidenceReasons: readonly string[];
+  readonly alternativeExplanation: string;
+}
+
+export interface CareerProfessionRanking {
+  readonly policyVersion: 'B04-PROFESSION-RANKING-v1';
+  readonly status: CareerProfessionRankingStatus;
+  readonly rankedCandidates: readonly CareerProfessionRankedCandidate[];
+  readonly diagnostics: readonly string[];
+}
+
 export interface CareerProfessionAnalysis {
   readonly candidates: readonly CareerProfessionCandidate[];
+  readonly ranking: CareerProfessionRanking;
   readonly status: CareerProfessionAnalysisStatus;
   readonly unresolvedExpressionTypes: readonly CareerExpressionType[];
   readonly mappedTypes: readonly CareerExpressionType[];
@@ -295,4 +354,6 @@ export interface CareerProfessionInput {
   readonly career10LFoundation?: Career10LFoundation;
   readonly careerD10CanonicalAnalysis?: CareerD10CanonicalAnalysis;
   readonly domainEvidence?: readonly DomainEvidence[];
+  /** C11 natalDirection is supplied by the authoritative synthesis boundary. */
+  readonly natalPromiseDirection?: 'SUPPORT' | 'CONDITIONAL' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL' | 'UNAVAILABLE';
 }
