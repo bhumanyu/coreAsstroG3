@@ -1,5 +1,5 @@
-import type { CareerExpressionType } from './careerExpressionTypes';
-import type { CareerManifestationMode } from '../careerTypes';
+import type { CareerExpressionType } from './careerExpression/careerExpressionTypes';
+import type { CareerManifestationMode } from './careerTypes';
 
 /**
  * Canonical C8 expression-type to legacy C10 manifestation-mode bridge.
