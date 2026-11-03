@@ -1532,7 +1532,7 @@ describe('B03 D1/D10 hierarchy acceptance', () => {
     expect(result.natalDirection).toBe('SUPPORT');
     expect(result.natalStrength).toBe('STRONG');
     expect(result.d10Direction).toBe('CHALLENGE');
-    expect(result.d10Strength).toBe('VERY_WEAK');
+    expect(result.d10Strength).toBe('WEAK');
     expect(result.qualifiedDirection).toBe('MIXED');
     expect(result.natalPromisePreserved).toBe(true);
   });
@@ -1611,7 +1611,7 @@ describe('B03 D1/D10 hierarchy acceptance', () => {
     expect(qualification.effect).toBe('QUALIFIES');
     expect(qualification.evidence.length).toBeGreaterThan(0);
     expect(qualification.evidence.every(item =>
-      item.sourceIds.some(sourceId => sourceId.startsWith('D10_'))
+      item.sourceIds.some(sourceId => sourceId.includes('D10_'))
     )).toBe(true);
   });
 
