@@ -1657,3 +1657,99 @@ describe('A07 producer evidence quality', () => {
     ])).toBe('MEDIUM');
   });
 });
+
+describe('B03 D1/D10 hierarchy acceptance at C11 boundary', () => {
+  it('keeps a strong D1 promise supported when D10 challenge is weak', () => {
+    const d10 = Object.freeze({
+      ...makeMinimalD10('CHALLENGE', 'WEAK'),
+      d10Effect: 'WEAKENS' as const
+    });
+    const result = buildCareerFinalAnalysis(makeInput({
+      natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+      d10
+    }));
+
+    expect(result.natalDirection).toBe('SUPPORT');
+    expect(result.natalStrength).toBe('STRONG');
+    expect(result.d10Direction).toBe('CHALLENGE');
+    expect(result.finalStatus).toBe('SUPPORTED');
+    expect(result.finalStrength).toBe('STRONG');
+  });
+
+  it('retains a weak but valid D1 support promise when D10 strongly reinforces it', () => {
+    const d10 = Object.freeze({
+      ...makeMinimalD10('SUPPORT', 'VERY_STRONG'),
+      d10Effect: 'REINFORCES' as const
+    });
+    const result = buildCareerFinalAnalysis(makeInput({
+      natal: makeMinimalNatal('SUPPORT', 'WEAK'),
+      d10
+    }));
+
+    expect(result.natalDirection).toBe('SUPPORT');
+    expect(result.natalStrength).toBe('WEAK');
+    expect(result.finalStatus).toBe('SUPPORTED');
+    // C11 reports the D1 strength; D10 does not promote the natal promise itself.
+    expect(result.finalStrength).toBe('WEAK');
+  });
+
+  it('does not let strong D10 create a promise when D1 is neutral/unresolved', () => {
+    const d10 = Object.freeze({
+      ...makeMinimalD10('SUPPORT', 'VERY_STRONG'),
+      d10Effect: 'INSUFFICIENT_DATA' as const
+    });
+    const result = buildCareerFinalAnalysis(makeInput({
+      natal: makeMinimalNatal('NEUTRAL', 'UNDETERMINED'),
+      d10
+    }));
+
+    expect(result.natalDirection).toBe('NEUTRAL');
+    expect(result.finalStatus).toBe('INSUFFICIENT_DATA');
+    expect(result.finalDirection).toBe('UNAVAILABLE');
+    expect(result.finalStrength).toBe('UNDETERMINED');
+  });
+
+  it('keeps mixed D1 promise mixed even when D10 is strongly supportive', () => {
+    const d10 = Object.freeze({
+      ...makeMinimalD10('SUPPORT', 'VERY_STRONG'),
+      d10Effect: 'QUALIFIES' as const
+    });
+    const result = buildCareerFinalAnalysis(makeInput({
+      natal: makeMinimalNatal('MIXED', 'MIXED'),
+      d10
+    }));
+
+    expect(result.natalDirection).toBe('MIXED');
+    expect(result.natalStrength).toBe('MIXED');
+    expect(result.finalStatus).toBe('MIXED');
+    expect(result.finalDirection).toBe('MIXED');
+  });
+
+  it('keeps missing D10 visibly unavailable while preserving D1 promise', () => {
+    const d10 = Object.freeze({
+      ...makeMinimalD10('UNAVAILABLE', 'UNDETERMINED'),
+      availability: 'UNAVAILABLE' as const,
+      d10Effect: 'UNAVAILABLE' as const,
+      relationship: 'UNAVAILABLE' as const
+    });
+    const result = buildCareerFinalAnalysis(makeInput({
+      natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+      d10
+    }));
+
+    expect(result.natalDirection).toBe('SUPPORT');
+    expect(result.natalStrength).toBe('STRONG');
+    expect(result.d10Direction).toBe('UNAVAILABLE');
+    expect(result.finalStatus).toBe('SUPPORTED');
+    expect(result.confidenceCoverage.status).toBe('PARTIAL');
+    expect(result.confidenceCoverage.missingSupportingLayers).toContain('D10');
+  });
+
+  it('is byte-stable for the same D1/D10 hierarchy input', () => {
+    const input = makeInput({
+      natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+      d10: makeMinimalD10('CHALLENGE', 'WEAK')
+    });
+    expect(buildCareerFinalAnalysis(input)).toEqual(buildCareerFinalAnalysis(input));
+  });
+});
