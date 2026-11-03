@@ -36,7 +36,7 @@ These categories describe the direction of a candidate opportunity. They are not
 1. Natal Promise must be `AVAILABLE`, have supportive/conditional direction, and carry supporting occurrence provenance. C11 natal direction must also remain supportive/conditional and natal strength must not be undetermined.
 2. Activation must be `AVAILABLE`, have SUPPORT direction, an `ACTIVATES` or `PARTIALLY_ACTIVATES` effect, and supporting occurrence provenance.
 3. An existing P2-09B event must be `CANDIDATE`, be an opportunity or conditional window, reference a qualified P2-09A opportunity, carry a non-null activation identity, and retain evidence overlap with its source opportunity.
-4. If either Promise or Activation is absent, partial, unavailable, non-supportive, or unlinked, B02 does not emit a candidate outcome.
+4. C11 must not be `CHALLENGED`/`INSUFFICIENT_DATA` or have a non-supportive final direction. If either Promise or Activation is absent, partial, unavailable, non-supportive, or unlinked, B02 does not emit a candidate outcome.
 5. C11 challenge/mixed conflicts and B01 Risk occurrences are carried as counter-indications. HIGH C11 conflicts make a candidate conditional; they do not get silently discarded.
 6. D10/profession qualification is shown separately. If D10 qualification is absent or profession analysis is incomplete, the candidate remains conditional.
 7. Practical execution is always `NOT_ASSESSED`. Skills/experience fit, a real-world opening, user action, employer/market context and resource constraints are explicit checks outside the horoscope engine.
@@ -44,7 +44,8 @@ These categories describe the direction of a candidate opportunity. They are not
 ## Status vocabulary
 
 - `CANDIDATES_AVAILABLE` — at least one existing opportunity window passed Promise + Activation gates and has no qualification caveat under the implemented checks.
-- `CONDITIONAL` — one or more candidates remain, but conditional timing, counter-indications, or incomplete D10/profession qualification apply.
+- `CONDITIONAL` — one or more candidates remain, but conditional timing, counter-indications, mixed C11 conclusion, or incomplete D10/profession qualification apply.
+- `PARTIAL` — a required B01 axis has partial evidence coverage; no candidate is emitted from that incomplete axis.
 - `UNRESOLVED` — some evidence exists, but required Promise/Activation linkage or a P2-09B candidate is missing.
 - `INSUFFICIENT` — no usable Promise or Activation evidence is available.
 
