@@ -12,7 +12,7 @@ B01 adds five independent analytical projections to the canonical `CareerFinalSy
 - Risk
 - Timing
 
-The projection is composed in `careerFinalSynthesisIntegration.ts` from the same canonical C4–C10 inputs already passed to C11. It does not add a new astrology evaluator, score, probability, or final conclusion. `synthesizeCareerFinal` still runs first and remains the only final Career conclusion authority. The axes are attached as explanatory projections after C11 has produced its result; they do not feed back into C11.
+The projection is composed in `CareerDomainInterpreterV2.ts` from the same canonical C4–C10 inputs passed to C11. It does not add a new astrology evaluator, score, probability, or final conclusion. `synthesizeCareerFinal` remains the only final Career conclusion authority. The axes are attached to `CareerConclusionData` as a sibling of `canonicalCareerFinalSynthesis`, not as fields inside `CareerFinalSynthesisResult`; this preserves the exact C11 output contract and golden snapshots.
 
 ## Source mapping
 
@@ -42,8 +42,8 @@ For Timing, `activatedPromiseEvidenceIds` remain semantic identity references an
 
 The axes are carried through:
 
-1. `CareerFinalSynthesisResult.analyticalAxes`
-2. `LifeAnalysisCareerDetailViewModel.canonicalFinalSynthesis`
+1. `CareerConclusionData.careerAnalyticalAxes` (sibling of `canonicalCareerFinalSynthesis`)
+2. `LifeAnalysisCareerDetailViewModel.analyticalAxes`
 3. `CareerProductAnalysis.analyticalAxes`
 4. `CareerViewModel.analyticalAxes`
 
