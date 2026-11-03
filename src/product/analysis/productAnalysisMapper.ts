@@ -214,6 +214,11 @@ function deriveAggregateD10Status(candidates: readonly { d10Status: string }[]):
     return 'NOT_PROVIDED';
   }
 
+  const hasPartial = candidates.some(c => c.d10Status === 'PARTIAL' || c.d10Status === 'CONFLICTED');
+  if (hasPartial) {
+    return 'PARTIAL';
+  }
+
   const hasQualified = candidates.some(c => c.d10Status === 'QUALIFIED');
   if (hasQualified) {
     return 'QUALIFIED';
