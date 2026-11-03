@@ -174,7 +174,7 @@ export function buildCareerProfessionRanking(params: {
     for (const candidate of groupCandidates) {
       const qualification = candidate.d10Qualification;
       const key = qualification
-        ? [qualification.status, qualification.direction, ...qualification.evidenceOccurrenceIds].join('|')
+        ? [qualification.status, qualification.direction, ...qualification.evidenceOccurrenceIds, 'COUNTER', ...qualification.counterEvidenceOccurrenceIds].join('|')
         : 'NO_D10_INPUT';
       if (seenD10QualificationKeys.has(key)) continue;
       seenD10QualificationKeys.add(key);
