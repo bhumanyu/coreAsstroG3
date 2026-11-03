@@ -200,6 +200,8 @@ describe('B01 independent Career analytical axes', () => {
     expect(axes.activation.result?.direction).toBe('CHALLENGE');
     expect(axes.promise.status).toBe('AVAILABLE');
     expect(axes.activation.status).toBe('AVAILABLE');
+    expect(axes.activation.conflictingEvidenceOccurrenceIds).toContain('md');
+    expect(axes.activation.conflictingEvidenceOccurrenceIds).not.toContain('occurrence-md');
   });
 
   it('keeps strong promise while exposing elevated D10 risk as a separate axis', () => {
@@ -276,6 +278,8 @@ describe('B01 independent Career analytical axes', () => {
     expect(axes.timing.status).toBe('PARTIAL');
     expect(axes.timing.result?.untimedLevels).toContain('MD');
     expect(axes.timing.result?.candidateWindows).toHaveLength(1);
+    expect(axes.timing.result?.candidateWindows[0]?.supportingEvidenceOccurrenceIds).toContain('md');
+    expect(axes.timing.result?.candidateWindows[0]?.supportingEvidenceOccurrenceIds).not.toContain('occurrence-md');
   });
 
   it('marks timing not applicable when all canonical periods are assessed as neutral/non-activating', () => {
