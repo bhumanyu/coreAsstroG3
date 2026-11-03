@@ -3,6 +3,7 @@ import type { CareerFinalSynthesisResult } from '../careerFinalSynthesis/careerF
 import type { CareerEvent, CareerEventsAnalysis } from '../careerEvents/careerEventTypes';
 import type { CareerTrajectoryAnalysis, CareerTrajectoryOpportunity } from '../careerTrajectory/careerTrajectoryTypes';
 import type { CareerProfessionAnalysis } from '../careerProfession/careerProfessionTypes';
+import type { CareerDashaCanonicalAnalysis } from '../careerDasha/careerDashaCanonicalTypes';
 import type {
   CareerOutcomeAnalysis,
   CareerOutcomeAnalysisInput,
@@ -130,11 +131,29 @@ function findOpportunity(
   return trajectory.opportunities.find(opportunity => opportunity.opportunityId === event.opportunityId);
 }
 
-function isEligibleEvent(event: CareerEvent, opportunity: CareerTrajectoryOpportunity | undefined): boolean {
+function matchingActivationEvidence(
+  event: CareerEvent,
+  dasha: CareerDashaCanonicalAnalysis,
+  axes: CareerAnalyticalAxes
+): readonly CareerDashaCanonicalAnalysis['evidence'][number][] {
+  if (!event.activationId) return [];
+  return dasha.evidence.filter(item =>
+    item.identityKey === event.activationId &&
+    item.direction === 'SUPPORT' &&
+    (item.effect === 'ACTIVATES' || item.effect === 'PARTIALLY_ACTIVATES') &&
+    axes.activation.supportingEvidenceOccurrenceIds.includes(item.id)
+  );
+}
+
+function isEligibleEvent(
+  event: CareerEvent,
+  opportunity: CareerTrajectoryOpportunity | undefined,
+  activationEvidence: readonly CareerDashaCanonicalAnalysis['evidence'][number][]
+): boolean {
   if (event.status !== 'CANDIDATE' || !opportunity || !event.activationId) return false;
   if (event.eventType !== 'CAREER_OPPORTUNITY_WINDOW' && event.eventType !== 'CAREER_CONDITIONAL_WINDOW') return false;
   if (!opportunity.qualified || (opportunity.direction !== 'SUPPORT' && opportunity.direction !== 'CONDITIONAL')) return false;
-  if (opportunity.evidenceIds.length === 0 || event.evidenceIds.length === 0) return false;
+  if (opportunity.evidenceIds.length === 0 || event.evidenceIds.length === 0 || activationEvidence.length === 0) return false;
   const eventEvidence = new Set(event.evidenceIds);
   return eventEvidence.has(event.activationId) &&
     opportunity.evidenceIds.some(id => eventEvidence.has(id));
@@ -191,7 +210,8 @@ function buildCandidate(
   opportunity: CareerTrajectoryOpportunity,
   axes: CareerAnalyticalAxes,
   finalSynthesis: CareerFinalSynthesisResult,
-  profession?: CareerProfessionAnalysis
+  profession: CareerProfessionAnalysis | undefined,
+  activationOccurrenceIds: readonly string[]
 ): CareerOutcomeCandidate {
   const execution = executionConditions(profession);
   const counter = counterIndications(axes, finalSynthesis);
@@ -215,7 +235,7 @@ function buildCandidate(
     timing: Object.freeze({ ...event.timing }),
     supportingEvidence: Object.freeze({
       natalPromiseOccurrenceIds: sortedUnique(axes.promise.supportingEvidenceOccurrenceIds),
-      activationOccurrenceIds: sortedUnique(axes.activation.supportingEvidenceOccurrenceIds),
+      activationOccurrenceIds: sortedUnique(activationOccurrenceIds),
       candidateEventEvidenceIds: sortedUnique(event.evidenceIds),
       ruleIds: sortedUnique([
         ...axes.promise.ruleIds,
@@ -236,7 +256,7 @@ function buildCandidate(
  * or treats candidate windows as observed outcomes.
  */
 export function buildCareerOutcomeAnalysis(input: CareerOutcomeAnalysisInput): CareerOutcomeAnalysis {
-  const { axes, finalSynthesis, trajectory, events, profession } = input;
+  const { axes, finalSynthesis, trajectory, events, dasha, profession } = input;
   const observedOutcomes = validateObservedOutcomes(input.observedOutcomes ?? []);
 
   if (axes.version !== 'B01-AXIS-PROJECTION-v1') {
@@ -267,8 +287,16 @@ export function buildCareerOutcomeAnalysis(input: CareerOutcomeAnalysisInput): C
   if (promiseReady && activationReady) {
     for (const event of events.events) {
       const opportunity = findOpportunity(trajectory, event);
-      if (!isEligibleEvent(event, opportunity)) continue;
-      candidateOutcomes.push(buildCandidate(event, opportunity!, axes, finalSynthesis, profession));
+      const activationEvidence = matchingActivationEvidence(event, dasha, axes);
+      if (!isEligibleEvent(event, opportunity, activationEvidence)) continue;
+      candidateOutcomes.push(buildCandidate(
+        event,
+        opportunity!,
+        axes,
+        finalSynthesis,
+        profession,
+        activationEvidence.map(item => item.id)
+      ));
     }
   } else if (events.events.some(event => event.eventType === 'CAREER_OPPORTUNITY_WINDOW' || event.eventType === 'CAREER_CONDITIONAL_WINDOW')) {
     diagnostics.push('P2_09B_CANDIDATE_NOT_PROMOTED_WITHOUT_BOTH_PROMISE_AND_ACTIVATION');
