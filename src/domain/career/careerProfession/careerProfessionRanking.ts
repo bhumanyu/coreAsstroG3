@@ -178,6 +178,7 @@ export function buildCareerProfessionRanking(params: {
 
     const counterEvidenceReasons = counterEvidence.map(item => item.statement);
     if (d10Status === 'CONFLICTED') counterEvidenceReasons.push('Expression-specific D10 challenge is retained as counter-evidence.');
+    else if (d10Direction === 'MIXED') counterEvidenceReasons.push('Expression-specific D10 evidence is mixed; it qualifies the expression without creating or removing the D1-derived family.');
 
     ranked.push({
       candidateId: `PROFESSION:${group.domain}:${group.family}`,
@@ -198,7 +199,10 @@ export function buildCareerProfessionRanking(params: {
       supportingEvidenceOccurrenceIds: Object.freeze(uniqueSorted(supportingEvidence.map(item => item.id))),
       d10EvidenceOccurrenceIds: Object.freeze(d10EvidenceOccurrenceIds),
       d10Direction,
-      counterEvidenceOccurrenceIds: Object.freeze(uniqueSorted(counterEvidence.map(item => item.id))),
+      counterEvidenceOccurrenceIds: Object.freeze(uniqueSorted([
+        ...counterEvidence.map(item => item.id),
+        ...(d10Direction === 'CHALLENGE' || d10Status === 'CONFLICTED' ? d10EvidenceOccurrenceIds : [])
+      ])),
       semanticIdentityKeys: Object.freeze(semanticIdentityKeys),
       rootIdentityKeys: Object.freeze(rootIdentityKeys),
       d10Status,
