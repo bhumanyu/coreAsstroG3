@@ -66,7 +66,7 @@ import {
 import {
   resolveCareerD10ModeFromExpressionType,
   type CareerExpressionToD10ModeResolution
-} from '../careerExpression/careerExpressionD10Mapping';
+} from '../careerD10ModeMapping';
 import type { CareerExpressionType } from '../careerExpression/careerExpressionTypes';
 
 
