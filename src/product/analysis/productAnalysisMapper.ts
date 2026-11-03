@@ -547,7 +547,7 @@ export function mapConclusionStatus(val?: string): ConclusionStatus {
 function mapCareerAnalyticalAxes(
   axes: NonNullable<import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerFinalSynthesisResult['analyticalAxes']>
 ): ProductCareerAnalyticalAxes {
-  const mapAxis = <T,>(axis: {
+  const mapAxis = <T, TAxis extends ProductCareerAnalyticalAxes['promise']['axis']>(axis: {
     readonly status: ProductCareerAnalyticalAxes['promise']['status'];
     readonly result: T | null;
     readonly supportingEvidenceOccurrenceIds: readonly string[];
@@ -558,7 +558,7 @@ function mapCareerAnalyticalAxes(
     readonly methodVersion: string;
     readonly unavailableReason?: string;
     readonly diagnostic?: string;
-    readonly axis: 'PROMISE' | 'ACTIVATION' | 'SUSTAINABILITY' | 'RISK' | 'TIMING';
+    readonly axis: TAxis;
   }) => ({
     ...axis,
     supportingEvidenceOccurrenceIds: [...axis.supportingEvidenceOccurrenceIds],
