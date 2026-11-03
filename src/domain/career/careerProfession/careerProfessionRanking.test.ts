@@ -99,6 +99,11 @@ describe('B04 deterministic profession-family ranking', () => {
     expect(result.rankedCandidates).toHaveLength(2);
     expect(result.rankedCandidates[0].domain).toBe('RESEARCH');
     expect(result.rankedCandidates[0].rank).toBe(1);
+    expect(result.rankedCandidates[0].scoreContributions.reduce((sum, item) => sum + item.points, 0))
+      .toBe(result.rankedCandidates[0].score);
+    expect(result.rankedCandidates[0].scoreContributions.some(item =>
+      item.referenceType === 'DOMAIN_EVIDENCE' && item.direction === 'SUPPORT'
+    )).toBe(true);
     expect(result.rankedCandidates[1].rank).toBe(2);
     expect(result.rankedCandidates[1].alternativeExplanation).toContain('Retained as an alternative');
   });
@@ -273,6 +278,8 @@ describe('B04 deterministic profession-family ranking', () => {
     expect(result.rankedCandidates[0].supportingCandidateIds).toEqual(['pattern-1-candidate', 'pattern-2-candidate']);
     // One distinct rule contribution (+5), plus two STRONG × priority-1 evidence occurrences (+6).
     expect(result.rankedCandidates[0].score).toBe(11);
+    expect(result.rankedCandidates[0].scoreContributions.filter(item => item.referenceType === 'PROFESSION_RULE')).toHaveLength(1);
+    expect(result.rankedCandidates[0].scoreContributions.reduce((sum, item) => sum + item.points, 0)).toBe(11);
   });
 
   it('fails closed when duplicate canonical occurrence IDs are supplied', () => {
