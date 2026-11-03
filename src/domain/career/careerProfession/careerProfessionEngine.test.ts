@@ -1298,7 +1298,7 @@ describe('B04 profession ranking integration and D1/D10 boundaries', () => {
       id: 'occurrence:d10:authority',
       role: 'QUALIFICATION',
       direction: 'SUPPORT',
-      d10Effect: 'REINFORCES',
+      d10Effect: 'QUALIFIES',
       d10Strength: 'STRONG',
       weight: 3,
       statement: 'D10 reinforces the linked leadership expression.',
@@ -1321,7 +1321,7 @@ describe('B04 profession ranking integration and D1/D10 boundaries', () => {
       qualifiedDirection: 'SUPPORT',
       qualifiedStrength: 'STRONG',
       natalPromisePreserved: true,
-      relationship: 'REINFORCES',
+      relationship: 'QUALIFIES',
       evidence: [d10Evidence],
       conflicts: [],
       expressionQualifications: [{
@@ -1337,7 +1337,7 @@ describe('B04 profession ranking integration and D1/D10 boundaries', () => {
           sourceMechanismCandidateIds: [mechanism.candidateId]
         },
         qualified: true,
-        effect: 'REINFORCES',
+        effect: 'QUALIFIES',
         direction: 'SUPPORT',
         strength: 'STRONG',
         evidence: [d10Evidence],
