@@ -318,7 +318,13 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
         unresolvedExpressionTypes: [],
         mappedTypes: [],
         missingInputs: [],
-        d10Status: 'NOT_PROVIDED'
+        d10Status: 'NOT_PROVIDED',
+        ranking: {
+          policyVersion: 'B04-PROFESSION-RANKING-v1',
+          status: 'UNAVAILABLE',
+          rankedCandidates: [],
+          diagnostics: ['PROFESSION_ANALYSIS_NOT_PROVIDED']
+        }
       };
     }
 
