@@ -298,7 +298,9 @@ export function buildCareerOutcomeAnalysis(input: CareerOutcomeAnalysisInput): C
     ? `Career outcome qualification: ${candidateOutcomes.length} candidate window(s) retained; no real-world outcome is guaranteed.`
     : status === 'INSUFFICIENT'
       ? 'Career outcome qualification is insufficient because required promise and activation evidence is unavailable.'
-      : 'Career outcome qualification is unresolved; missing or unlinked evidence prevents an outcome candidate.';
+      : status === 'PARTIAL'
+        ? 'Career outcome qualification is partial because a required analytical axis has incomplete evidence coverage.'
+        : 'Career outcome qualification is unresolved; missing or unlinked evidence prevents an outcome candidate.';
 
   return Object.freeze({
     reasoningVersion: 'B02',
