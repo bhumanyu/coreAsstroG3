@@ -95,6 +95,11 @@ export function buildCareerProfessionRanking(params: {
   for (const group of groups) {
     const groupCandidates = group.candidates;
     const supportIds = uniqueSorted(groupCandidates.map(candidate => candidate.candidateId));
+    const linkedSourceIds = uniqueSorted(groupCandidates.flatMap(candidate => candidate.evidence.flatMap(item => [
+      ...item.sourceIds,
+      ...(item.resolvedMechanismIds ?? []),
+      ...(item.unresolvedMechanismIds ?? [])
+    ])));
     const ruleIds = uniqueSorted(groupCandidates.map(candidate => candidate.ruleId));
     const occurrenceIds = uniqueSorted(groupCandidates.flatMap(candidate => candidate.evidenceOccurrenceIds));
     const semanticIdentityKeys = uniqueSorted(groupCandidates.flatMap(candidate => candidate.semanticIdentityKeys));
@@ -200,7 +205,7 @@ export function buildCareerProfessionRanking(params: {
         occurrenceCount: linkedIds.length,
         semanticIdentityCount: semanticIdentityKeys.length,
         rootIdentityCount: rootIdentityKeys.length,
-        linkedSourceCount: supportIds.length
+        linkedSourceCount: linkedSourceIds.length
       }),
       supportingCandidateIds: Object.freeze(supportIds),
       ruleIds: Object.freeze(ruleIds),
