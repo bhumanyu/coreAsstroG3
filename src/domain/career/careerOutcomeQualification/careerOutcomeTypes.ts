@@ -3,6 +3,7 @@ import type { CareerFinalSynthesisResult } from '../careerFinalSynthesis/careerF
 import type { CareerEventsAnalysis, CareerEventTiming } from '../careerEvents/careerEventTypes';
 import type { CareerTrajectoryAnalysis } from '../careerTrajectory/careerTrajectoryTypes';
 import type { CareerProfessionAnalysis } from '../careerProfession/careerProfessionTypes';
+import type { CareerDashaCanonicalAnalysis } from '../careerDasha/careerDashaCanonicalTypes';
 
 /**
  * B02 outcome vocabulary is deliberately broad and mode-aligned.
@@ -128,6 +129,8 @@ export interface CareerOutcomeAnalysisInput {
   readonly finalSynthesis: CareerFinalSynthesisResult;
   readonly trajectory: CareerTrajectoryAnalysis;
   readonly events: CareerEventsAnalysis;
+  /** Canonical C9 records resolve each P2-09B activation identity to its occurrence ID. */
+  readonly dasha: CareerDashaCanonicalAnalysis;
   readonly profession?: CareerProfessionAnalysis;
   /** Facts explicitly supplied by a user or trusted caller; never derived from chart data. */
   readonly observedOutcomes?: readonly CareerObservedOutcomeInput[];
