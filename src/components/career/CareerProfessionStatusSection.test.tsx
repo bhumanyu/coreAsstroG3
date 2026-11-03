@@ -179,7 +179,7 @@ describe('CareerProfessionStatusSection', () => {
           domain: 'TECHNOLOGY',
           family: 'TECHNICAL_LEADERSHIP',
           rank: 1,
-          score: 18,
+          score: 14,
           scoreContributions: [{
             referenceType: 'PROFESSION_RULE' as const,
             referenceId: 'RULE_TECHNICAL_LEADERSHIP',
@@ -228,7 +228,7 @@ describe('CareerProfessionStatusSection', () => {
 
     const ranking = screen.getByRole('list', { name: 'Ranked profession families' });
     expect(ranking).toHaveTextContent('#1 · TECHNOLOGY / TECHNICAL_LEADERSHIP');
-    expect(ranking).toHaveTextContent('18 policy points · MEDIUM confidence');
+    expect(ranking).toHaveTextContent('14 policy points · MEDIUM confidence');
     expect(screen.getByRole('list', { name: 'Score contributions for TECHNOLOGY TECHNICAL_LEADERSHIP' }))
       .toHaveTextContent('Strong evidence × priority 2 contributes +6 points.');
     expect(ranking).toHaveTextContent('D10: PARTIAL (MIXED)');
