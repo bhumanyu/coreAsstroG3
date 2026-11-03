@@ -16,12 +16,15 @@ import type {
 import { deepFreeze } from '../../ai/context/deepFreeze';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import type { CareerObservedOutcomeInput } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 
 export interface RunLifeAnalysisProductOptions {
   readonly horoscope: Horoscope;
   readonly context: AnalysisContext;
   readonly router?: AiRouter;
   readonly includeAiExplanation?: boolean;
+  /** Explicit user-supplied facts only; never inferred from the horoscope. */
+  readonly observedCareerOutcomes?: readonly CareerObservedOutcomeInput[];
 }
 
 /**
@@ -46,7 +49,9 @@ export async function runLifeAnalysisProduct(
     };
 
     // Compute Career, Wealth, and LifeAnalysis exactly once
-    const career = interpretCareerV2(options.horoscope, domainOptions);
+    const career = options.observedCareerOutcomes
+      ? interpretCareerV2(options.horoscope, domainOptions, options.observedCareerOutcomes)
+      : interpretCareerV2(options.horoscope, domainOptions);
     const wealth = interpretWealthV2(options.horoscope, domainOptions);
     const domainInterpretations: readonly DomainInterpretation[] = [career, wealth];
     const analysis = buildLifeAnalysis(domainInterpretations);

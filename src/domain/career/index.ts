@@ -29,6 +29,7 @@ export * from './careerPatternQualification';
 export * from './careerParticipantRoles';
 export * from './careerMechanism';
 export * from './careerTrajectory';
+export * from './careerOutcomeQualification';
 
 // Orchestration exports (selective to avoid conflicts)
 export {

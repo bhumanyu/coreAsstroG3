@@ -149,6 +149,12 @@ import {
   buildCareerEvents
 } from './careerEvents/careerEventEngine';
 import {
+  buildCareerOutcomeAnalysis
+} from './careerOutcomeQualification/careerOutcomeEngine';
+import type {
+  CareerObservedOutcomeInput
+} from './careerOutcomeQualification/careerOutcomeTypes';
+import {
   buildCareerProfessionAnalysis
 } from './careerProfession/careerProfessionEngine';
 import type {
@@ -198,7 +204,8 @@ import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
 export function interpretCareerV2(
   horoscope: Horoscope,
-  options: DomainReasoningOptions
+  options: DomainReasoningOptions,
+  observedCareerOutcomes: readonly CareerObservedOutcomeInput[] = []
 ): DomainInterpretation {
   const context = options.context;
   const asOfDate = analysisAsOfDate(context);
@@ -934,6 +941,19 @@ export function interpretCareerV2(
     // Profession analysis is the only engine with a typed failure diagnostic for non-fatal handling.
   }
 
+  // B02: Qualify P2-09B candidate windows only when B01 natal promise and activation
+  // are independently established. Explicit observed facts are passed through separately;
+  // no observed outcome is inferred from chart or candidate-window data.
+  const careerOutcomeAnalysis = buildCareerOutcomeAnalysis({
+    axes: careerAnalyticalAxes,
+    finalSynthesis: canonicalC11Result,
+    trajectory: careerTrajectory,
+    events: careerEvents,
+    dasha: canonicalDashaAnalysis,
+    ...(careerProfessionAnalysis ? { profession: careerProfessionAnalysis } : {}),
+    observedOutcomes: observedCareerOutcomes
+  });
+
   /**
    * P2-08D: Presentation/Compatibility Adapter
    *
@@ -1194,6 +1214,7 @@ export function interpretCareerV2(
       evidenceContinuityReport, // Gate D: Evidence continuity validation report
       careerTrajectory, // P2-11G: Career trajectory analysis (downstream consumer of C11)
       careerEvents, // P2-11G: Career events analysis (downstream consumer of trajectory and C9)
+      careerOutcomeAnalysis, // B02: qualified candidates + explicitly supplied observed facts
       careerProfessionAnalysis, // P2-11F Gate F: Career profession analysis (downstream consumer of C8, C10, evidence)
       professionAnalysisFailure, // P2-11F Gate F: Profession analysis failure diagnostic (non-fatal)
       internalArtifacts // PBA-07: Internal canonical artifacts for selected-period synthesis

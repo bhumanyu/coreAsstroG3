@@ -42,6 +42,7 @@ import type {
   SpeculativeRiskProduct,
   ProductQualification,
   ProductCareerAnalyticalAxes,
+  ProductCareerOutcomeAnalysis,
   ProductConfidence,
   ActivationEffect,
   PromiseStrength,
@@ -62,6 +63,7 @@ import type {
   ProductTemporalRelation
 } from './productAnalysisTypes';
 import type { CareerAnalyticalAxes } from '../../domain/career/careerFinalSynthesis/careerAnalyticalAxes';
+import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
@@ -609,6 +611,41 @@ function mapCareerAnalyticalAxes(
   };
 }
 
+function mapCareerOutcomeAnalysis(value: CareerOutcomeAnalysis): ProductCareerOutcomeAnalysis {
+  return {
+    reasoningVersion: value.reasoningVersion,
+    methodVersion: value.methodVersion,
+    status: value.status,
+    candidateOutcomes: value.candidateOutcomes.map(candidate => ({
+      ...candidate,
+      timing: { ...candidate.timing },
+      supportingEvidence: {
+        natalPromiseOccurrenceIds: [...candidate.supportingEvidence.natalPromiseOccurrenceIds],
+        activationOccurrenceIds: [...candidate.supportingEvidence.activationOccurrenceIds],
+        candidateEventEvidenceIds: [...candidate.supportingEvidence.candidateEventEvidenceIds],
+        ruleIds: [...candidate.supportingEvidence.ruleIds]
+      },
+      executionConditions: {
+        ...candidate.executionConditions,
+        requiredChecks: [...candidate.executionConditions.requiredChecks]
+      },
+      counterIndications: {
+        ...candidate.counterIndications,
+        evidenceOccurrenceIds: [...candidate.counterIndications.evidenceOccurrenceIds],
+        conflicts: candidate.counterIndications.conflicts.map(conflict => ({
+          ...conflict,
+          evidenceIdentityIds: [...conflict.evidenceIdentityIds]
+        }))
+      }
+    })),
+    observedOutcomes: value.observedOutcomes.map(outcome => ({ ...outcome })),
+    diagnostics: [...value.diagnostics],
+    guaranteedOutcomeAvailable: false,
+    numericProbabilityAvailable: false,
+    statement: value.statement
+  };
+}
+
 function mapCareer(
   viewModel: LifeAnalysisViewModel,
   explicitEvidence?: readonly ProductEvidence[]
@@ -640,6 +677,9 @@ function mapCareer(
     status: careerStatus,
     analyticalAxes: detail?.analyticalAxes
       ? mapCareerAnalyticalAxes(detail.analyticalAxes)
+      : undefined,
+    outcomeQualification: detail?.careerOutcomeAnalysis
+      ? mapCareerOutcomeAnalysis(detail.careerOutcomeAnalysis)
       : undefined,
     promise: {
       status: careerStatus,

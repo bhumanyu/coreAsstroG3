@@ -3001,6 +3001,11 @@ describe('CareerDomainInterpreterV2', () => {
       expect(v2.conclusionData?.careerAnalyticalAxes).toBeDefined();
       expect(v2.conclusionData?.careerAnalyticalAxes?.promise.status).toBeDefined();
       expect(v2.conclusionData?.careerAnalyticalAxes?.sustainability.status).toBe('UNAVAILABLE');
+      // B02 is a downstream qualification only; no observed event is inferred from this chart.
+      expect(v2.conclusionData?.careerOutcomeAnalysis).toBeDefined();
+      expect(v2.conclusionData?.careerOutcomeAnalysis?.observedOutcomes).toEqual([]);
+      expect(v2.conclusionData?.careerOutcomeAnalysis?.guaranteedOutcomeAvailable).toBe(false);
+      expect(v2.conclusionData?.careerOutcomeAnalysis?.numericProbabilityAvailable).toBe(false);
 
       // Verify golden regression test fails if C11 output is perturbed
       // This test should fail if the canonical C11 output changes unexpectedly

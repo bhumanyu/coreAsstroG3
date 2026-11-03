@@ -30,6 +30,7 @@ import {
 import type { ProductEvidence, ProductWarning } from '../productAnalysisTypes';
 import type { LifeAnalysisViewModel } from '../../life-analysis/lifeAnalysisTypes';
 import type { CareerProfessionAnalysis } from '../../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerOutcomeAnalysis } from '../../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 
 describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   const sampleBirth: BirthDetails = {
@@ -312,6 +313,45 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysis.career.analyticalAxes?.promise.supportingEvidenceOccurrenceIds)
       .not.toBe(axes.promise.supportingEvidenceOccurrenceIds);
     expect(selectCareer(analysis).analyticalAxes).toEqual(axes);
+  });
+
+  it('1.2 projects B02 outcome candidates and user-reported facts as separate collections', () => {
+    const outcomeQualification: CareerOutcomeAnalysis = {
+      reasoningVersion: 'B02',
+      methodVersion: 'B02-OUTCOME-QUALIFICATION-v1',
+      status: 'CONDITIONAL',
+      candidateOutcomes: [],
+      observedOutcomes: [{
+        reportId: 'reported-career-event-1',
+        outcomeType: 'PROMOTION',
+        statement: 'User reported a promotion.',
+        source: 'USER_REPORTED',
+        occurredAt: '2025-07-01'
+      }],
+      diagnostics: [],
+      guaranteedOutcomeAvailable: false,
+      numericProbabilityAvailable: false,
+      statement: 'Candidate qualification is conditional; observed facts are user-reported.'
+    };
+    const viewModelWithOutcome: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        careerOutcomeAnalysis: outcomeQualification
+      }
+    };
+
+    const analysis = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: viewModelWithOutcome,
+      context: sampleContext
+    });
+
+    expect(analysis.career.outcomeQualification).toEqual(outcomeQualification);
+    expect(analysis.career.outcomeQualification).not.toBe(outcomeQualification);
+    expect(analysis.career.outcomeQualification?.observedOutcomes[0]?.source).toBe('USER_REPORTED');
+    expect(selectCareer(analysis).outcomeQualification).toEqual(outcomeQualification);
   });
 
   it('2. D10 relationship mapping preserves semantics and never returns percentage', () => {

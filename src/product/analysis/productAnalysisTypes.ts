@@ -275,6 +275,88 @@ export interface ProductCareerAnalyticalAxes {
   }>;
 }
 
+export type ProductCareerOutcomeStatus =
+  | 'CANDIDATES_AVAILABLE'
+  | 'CONDITIONAL'
+  | 'PARTIAL'
+  | 'UNRESOLVED'
+  | 'INSUFFICIENT';
+
+export interface ProductCareerObservedOutcome {
+  readonly reportId: string;
+  readonly outcomeType:
+    | 'PROMOTION'
+    | 'JOB_CHANGE'
+    | 'ROLE_CHANGE'
+    | 'LEADERSHIP_APPOINTMENT'
+    | 'COMPENSATION_CHANGE'
+    | 'BUSINESS_LAUNCH'
+    | 'BUSINESS_EXPANSION'
+    | 'RECOGNITION'
+    | 'LAYOFF_OR_JOB_LOSS'
+    | 'CAREER_BREAK'
+    | 'OTHER';
+  readonly statement: string;
+  readonly source: 'USER_REPORTED';
+  readonly occurredAt?: string;
+  readonly reportedAt?: string;
+  readonly sourceReference?: string;
+}
+
+export interface ProductCareerOutcomeCandidate {
+  readonly candidateId: string;
+  readonly outcomeType:
+    | 'CAREER_GROWTH_OR_EXPANSION'
+    | 'ROLE_OR_AUTHORITY_EXPANSION'
+    | 'EMPLOYMENT_OR_SERVICE_OPPORTUNITY'
+    | 'TECHNICAL_SPECIALIZATION_OR_SKILL_DEVELOPMENT'
+    | 'INDEPENDENT_OR_BUSINESS_ACTIVITY'
+    | 'PUBLIC_OR_INSTITUTIONAL_CAREER'
+    | 'GENERAL_CAREER_OPPORTUNITY';
+  readonly status: 'CANDIDATE';
+  readonly qualification: 'SUPPORTED_CANDIDATE' | 'CONDITIONALLY_SUPPORTED_CANDIDATE';
+  readonly qualificationBasis: 'NATAL_PROMISE_AND_LINKED_DASHA_ACTIVATION';
+  readonly sourceEventId: string;
+  readonly opportunityId: string;
+  readonly activationId: string;
+  readonly timing: { readonly type: 'DASHA_PERIOD_WINDOW' | 'UNTIMED'; readonly start?: string; readonly end?: string };
+  readonly supportingEvidence: {
+    readonly natalPromiseOccurrenceIds: readonly string[];
+    readonly activationOccurrenceIds: readonly string[];
+    readonly candidateEventEvidenceIds: readonly string[];
+    readonly ruleIds: readonly string[];
+  };
+  readonly executionConditions: {
+    readonly professionAnalysisStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA' | 'NOT_PROVIDED';
+    readonly d10Qualification: 'QUALIFIED' | 'PARTIAL' | 'UNAVAILABLE';
+    readonly practicalExecution: 'NOT_ASSESSED';
+    readonly requiredChecks: readonly string[];
+  };
+  readonly counterIndications: {
+    readonly severity: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH';
+    readonly evidenceOccurrenceIds: readonly string[];
+    readonly conflicts: readonly {
+      readonly source: 'NATAL' | 'EXPRESSION' | 'D10' | 'DASHA' | 'TRANSIT';
+      readonly direction: 'CHALLENGE' | 'MIXED';
+      readonly severity: 'LOW' | 'MODERATE' | 'HIGH';
+      readonly evidenceIdentityIds: readonly string[];
+    }[];
+  };
+  readonly guarantee: 'NONE';
+}
+
+export interface ProductCareerOutcomeAnalysis {
+  readonly reasoningVersion: 'B02';
+  readonly methodVersion: string;
+  readonly status: ProductCareerOutcomeStatus;
+  readonly candidateOutcomes: readonly ProductCareerOutcomeCandidate[];
+  readonly observedOutcomes: readonly ProductCareerObservedOutcome[];
+  readonly diagnostics: readonly string[];
+  readonly guaranteedOutcomeAvailable: false;
+  readonly numericProbabilityAvailable: false;
+  readonly statement: string;
+}
+
 export interface ProductQualification {
   readonly type: string;
   readonly severity: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -285,6 +367,8 @@ export interface CareerProductAnalysis {
   readonly status?: ConclusionStatus | string;
   /** B01: Independent, evidence-traceable analytical axes; not a parallel final score. */
   readonly analyticalAxes?: ProductCareerAnalyticalAxes;
+  /** B02: Outcome candidates qualified by Promise + Activation; observed facts stay separate. */
+  readonly outcomeQualification?: ProductCareerOutcomeAnalysis;
   readonly promise: CareerPromiseProduct;
   readonly expression?: CareerExpressionProduct;
   readonly d10: D10ProductResult;
