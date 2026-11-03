@@ -689,8 +689,7 @@ function applyD10Qualification(
     const hasChallenge = directions.has('CHALLENGE') ||
       matchedQualifications.some(item => item.effect === 'CONFLICTS' || item.effect === 'WEAKENS');
     const hasSupport = directions.has('SUPPORT');
-    const hasMixed = directions.has('MIXED') ||
-      matchedQualifications.some(item => item.effect === 'MODIFIES');
+    const hasMixed = directions.has('MIXED');
     const direction = hasChallenge && hasSupport ? 'MIXED'
       : hasChallenge ? 'CHALLENGE'
         : hasMixed ? 'MIXED'
