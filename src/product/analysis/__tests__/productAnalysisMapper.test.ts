@@ -30,6 +30,7 @@ import {
 import type { ProductEvidence, ProductWarning } from '../productAnalysisTypes';
 import type { LifeAnalysisViewModel } from '../../life-analysis/lifeAnalysisTypes';
 import type { CareerProfessionAnalysis } from '../../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerOutcomeAnalysis } from '../../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 
 describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   const sampleBirth: BirthDetails = {
