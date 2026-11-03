@@ -111,6 +111,38 @@ describe('CareerPage (P-UI-04)', () => {
     expect(screen.getByText('Integrated Vocational Synthesis')).toBeInTheDocument();
   });
 
+  it('4A. Outcome qualification: renders candidate windows and separate observed facts when supplied', () => {
+    const analysis = {
+      ...createProductAnalysis(),
+      career: {
+        ...createProductAnalysis().career,
+        outcomeQualification: {
+          reasoningVersion: 'B02' as const,
+          methodVersion: 'B02-OUTCOME-QUALIFICATION-v1',
+          status: 'CONDITIONAL' as const,
+          candidateOutcomes: [],
+          observedOutcomes: [{
+            reportId: 'career-report-1',
+            outcomeType: 'PROMOTION' as const,
+            statement: 'User reported a promotion.',
+            source: 'USER_REPORTED' as const,
+            occurredAt: '2025-07-01'
+          }],
+          diagnostics: [],
+          guaranteedOutcomeAvailable: false as const,
+          numericProbabilityAvailable: false as const,
+          statement: 'Outcome qualification remains conditional.'
+        }
+      }
+    };
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
+
+    expect(screen.getByRole('heading', { name: 'Career Outcome Qualification' })).toBeInTheDocument();
+    expect(screen.getByText('Outcome qualification remains conditional.')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'User-reported observed career outcomes' })).toHaveTextContent('User reported a promotion.');
+    expect(screen.getByText(/No outcome candidate is qualified/)).toBeInTheDocument();
+  });
+
   it('5. Navigation to reasoning: invokes onNavigate with reasoning', () => {
     const onNavigate = vi.fn();
     const analysis = createProductAnalysis();
