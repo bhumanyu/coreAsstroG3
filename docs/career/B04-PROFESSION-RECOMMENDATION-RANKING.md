@@ -75,6 +75,7 @@ Coverage reports occurrence, semantic identity, root identity, and linked source
 
 All distinct domain/family candidates are retained. Each ranked item includes:
 - contributing pattern-scoped candidate IDs and rule IDs;
+- itemized signed score contributions by rule, canonical evidence occurrence, and D10 qualification, with a per-contribution explanation;
 - support occurrence IDs and D10 occurrence IDs;
 - counter-evidence occurrence IDs and counter-evidence explanations;
 - candidate confidence and coverage;
