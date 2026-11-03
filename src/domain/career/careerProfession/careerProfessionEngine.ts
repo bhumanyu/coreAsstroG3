@@ -647,6 +647,7 @@ function applyD10Qualification(
           direction: 'UNDETERMINED' as const,
           effects: Object.freeze([]),
           evidenceOccurrenceIds: Object.freeze([]),
+          counterEvidenceOccurrenceIds: Object.freeze([]),
           rootIdentityKeys: Object.freeze([])
         })
       });
@@ -679,6 +680,7 @@ function applyD10Qualification(
           direction: 'UNDETERMINED' as const,
           effects: Object.freeze([]),
           evidenceOccurrenceIds: Object.freeze([]),
+          counterEvidenceOccurrenceIds: Object.freeze([]),
           rootIdentityKeys: Object.freeze([])
         })
       });
@@ -701,6 +703,11 @@ function applyD10Qualification(
     const evidenceOccurrenceIds = uniqueProfessionIds(
       matchedQualifications.flatMap(item => item.evidence.map(evidence => evidence.id))
     );
+    const counterEvidenceOccurrenceIds = uniqueProfessionIds(
+      matchedQualifications.flatMap(item => item.evidence
+        .filter(evidence => evidence.direction === 'CHALLENGE' || evidence.d10Effect === 'CONFLICTS' || evidence.d10Effect === 'WEAKENS')
+        .map(evidence => evidence.id))
+    );
     const rootIdentityKeys = uniqueProfessionIds(
       matchedQualifications.flatMap(item => item.evidence.flatMap(evidence => evidence.provenance.natalRootIds))
     );
@@ -713,6 +720,7 @@ function applyD10Qualification(
         direction,
         effects: Object.freeze(uniqueProfessionIds(matchedQualifications.map(item => item.effect)) as CareerProfessionD10Qualification['effects']),
         evidenceOccurrenceIds: Object.freeze(evidenceOccurrenceIds),
+        counterEvidenceOccurrenceIds: Object.freeze(counterEvidenceOccurrenceIds),
         rootIdentityKeys: Object.freeze(rootIdentityKeys)
       })
     });
