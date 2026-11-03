@@ -5,7 +5,6 @@ import { join } from 'path';
 describe('careerD10 Boundary Enforcement', () => {
   const forbiddenImports = [
     'careerDasha',
-    'careerExpression',
     'careerProfession',
     'careerFinalSynthesis',
     'domain/timing',
@@ -34,6 +33,13 @@ describe('careerD10 Boundary Enforcement', () => {
           );
           expect(content).not.toMatch(importPattern);
         }
+      });
+
+      it('may use career-expression contracts only as types', () => {
+        const filePath = join(modulePath, file);
+        const content = readFileSync(filePath, 'utf-8');
+        const forbiddenExpressionRuntimeImport = /import\\s+(?!type\\b)[\\s\\S]*?from\\s+['"][^'"]*careerExpression[^'"]*['"]/i;
+        expect(content).not.toMatch(forbiddenExpressionRuntimeImport);
       });
 
       it('should not import from AI modules', () => {
