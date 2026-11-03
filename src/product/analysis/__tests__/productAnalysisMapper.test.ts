@@ -446,6 +446,9 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
               mechanismTypes: [],
               patternIds: ['pattern-1'],
               d10Status: 'QUALIFIED',
+              evidenceOccurrenceIds: [],
+              semanticIdentityKeys: [],
+              rootIdentityKeys: [],
               evidence: [
                 {
                   evidenceId: 'ev-1',
@@ -468,6 +471,9 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
               mechanismTypes: ['RESOURCE_MANAGEMENT'],
               patternIds: ['pattern-2'],
               d10Status: 'NOT_PROVIDED',
+              evidenceOccurrenceIds: [],
+              semanticIdentityKeys: [],
+              rootIdentityKeys: [],
               evidence: [
                 {
                   evidenceId: 'ev-2',
@@ -538,6 +544,9 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
               mechanismTypes: [],
               patternIds: ['pattern-3'],
               d10Status: 'UNAVAILABLE',
+              evidenceOccurrenceIds: [],
+              semanticIdentityKeys: [],
+              rootIdentityKeys: [],
               evidence: [
                 {
                   evidenceId: 'ev-3',
