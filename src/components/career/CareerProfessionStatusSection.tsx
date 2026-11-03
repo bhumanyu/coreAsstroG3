@@ -62,6 +62,20 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                 <span className="text-xs text-slate-300">{candidate.score} policy points · {candidate.confidence} confidence</span>
               </div>
               <p className="text-xs text-slate-400">{candidate.alternativeExplanation}</p>
+              {candidate.scoreContributions.length > 0 && (
+                <ul aria-label={`Score contributions for ${candidate.domain} ${candidate.family}`} className="space-y-1 text-xs text-slate-400">
+                  {candidate.scoreContributions.map((contribution) => (
+                    <li key={`${contribution.referenceType}:${contribution.referenceId}`}>
+                      <span className="font-medium text-slate-300">{contribution.referenceType}</span>
+                      {' · '}{contribution.referenceId}{' · '}
+                      <span className={contribution.points < 0 ? 'text-amber-300' : 'text-slate-200'}>
+                        {contribution.points > 0 ? '+' : ''}{contribution.points} points
+                      </span>
+                      {' — '}{contribution.explanation}
+                    </li>
+                  ))}
+                </ul>
+              )}
               <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
                 <div><dt className="inline font-semibold text-slate-300">D10: </dt><dd className="inline">{candidate.d10Status} ({candidate.d10Direction})</dd></div>
                 <div><dt className="inline font-semibold text-slate-300">Evidence coverage: </dt><dd className="inline">{candidate.evidenceCoverage.status} · {candidate.evidenceCoverage.occurrenceCount} occurrences · {candidate.evidenceCoverage.rootIdentityCount} roots</dd></div>
