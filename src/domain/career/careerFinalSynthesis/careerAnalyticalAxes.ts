@@ -302,10 +302,10 @@ function makeRiskAxis(
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED')
     .flatMap(item => item.sourceIds);
   const dashaRisk = dasha.evidence
-    .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES')
+    .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES' || item.effect === 'DOES_NOT_ACTIVATE')
     .flatMap(item => item.sourceIds);
   const d10Risk = d10.evidence
-    .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS')
+    .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS' || item.d10Effect === 'WEAKENS')
     .flatMap(item => item.sourceIds);
   const adverseOccurrences = sortedUnique([...natalRisk, ...dashaRisk, ...d10Risk]);
   const hasAdverseRecords =
