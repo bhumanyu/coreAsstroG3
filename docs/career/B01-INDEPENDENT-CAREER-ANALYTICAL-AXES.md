@@ -30,7 +30,7 @@ Each axis contains:
 
 - `status`: `AVAILABLE`, `PARTIAL`, `UNAVAILABLE`, `INSUFFICIENT`, `BLOCKED`, or `NOT_APPLICABLE`.
 - `result`: typed classification or `null`.
-- `supportingEvidenceOccurrenceIds` and `conflictingEvidenceOccurrenceIds`: canonical occurrence IDs (`evidenceId` for natal evidence; `id` for Dasha/D10 evidence), not semantic identity keys or producer `sourceIds`.
+- `supportingEvidenceOccurrenceIds` and `conflictingEvidenceOccurrenceIds`: occurrence provenance IDs: natal uses its `sourceIds` (producer/source occurrence IDs); canonical Dasha/D10 and Dasha-period evidence use `id` (canonical occurrence identity). Semantic `evidenceId`/`identityKey` values are not placed in occurrence-ID arrays.
 - `ruleIds` and `methodVersion`.
 - `coverage`: available/missing source families and occurrence count.
 - `confidence`: `NOT_ASSESSED` until an axis-specific confidence contract exists. C11 overall confidence is deliberately not copied into each axis.
