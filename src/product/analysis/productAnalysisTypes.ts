@@ -363,6 +363,42 @@ export interface ProductQualification {
   readonly description: string;
 }
 
+export type ProductCareerProfessionConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNAVAILABLE';
+
+export interface ProductCareerProfessionRankedCandidate {
+  readonly candidateId: string;
+  readonly domain: string;
+  readonly family: string;
+  readonly rank: number;
+  readonly score: number;
+  readonly confidence: ProductCareerProfessionConfidence;
+  readonly confidenceReasons: readonly string[];
+  readonly evidenceCoverage: {
+    readonly status: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
+    readonly occurrenceCount: number;
+    readonly semanticIdentityCount: number;
+    readonly rootIdentityCount: number;
+    readonly linkedSourceCount: number;
+  };
+  readonly supportingCandidateIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly supportingEvidenceOccurrenceIds: readonly string[];
+  readonly counterEvidenceOccurrenceIds: readonly string[];
+  readonly semanticIdentityKeys: readonly string[];
+  readonly rootIdentityKeys: readonly string[];
+  readonly d10Status: 'QUALIFIED' | 'PARTIAL' | 'CONFLICTED' | 'NOT_PROVIDED' | 'UNAVAILABLE';
+  readonly reasons: readonly string[];
+  readonly counterEvidenceReasons: readonly string[];
+  readonly alternativeExplanation: string;
+}
+
+export interface ProductCareerProfessionRanking {
+  readonly policyVersion: 'B04-PROFESSION-RANKING-v1';
+  readonly status: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly rankedCandidates: readonly ProductCareerProfessionRankedCandidate[];
+  readonly diagnostics: readonly string[];
+}
+
 export interface CareerProductAnalysis {
   readonly status?: ConclusionStatus | string;
   /** B01: Independent, evidence-traceable analytical axes; not a parallel final score. */
@@ -391,6 +427,16 @@ export interface CareerProductAnalysis {
       readonly mechanismTypes: readonly string[];
       readonly patternIds: readonly string[];
       readonly d10Status: string;
+      readonly evidenceOccurrenceIds: readonly string[];
+      readonly semanticIdentityKeys: readonly string[];
+      readonly rootIdentityKeys: readonly string[];
+      readonly d10Qualification?: {
+        readonly status: string;
+        readonly direction: string;
+        readonly effects: readonly string[];
+        readonly evidenceOccurrenceIds: readonly string[];
+        readonly rootIdentityKeys: readonly string[];
+      };
       readonly evidence: readonly {
         readonly evidenceId: string;
         readonly basis: string;
@@ -409,6 +455,7 @@ export interface CareerProductAnalysis {
     readonly mappedTypes: readonly string[];
     readonly missingInputs: readonly string[];
     readonly d10Status: string;
+    readonly ranking: ProductCareerProfessionRanking;
   };
 }
 
