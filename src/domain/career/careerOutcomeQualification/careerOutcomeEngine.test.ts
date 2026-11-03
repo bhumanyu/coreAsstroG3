@@ -4,6 +4,7 @@ import type { CareerFinalSynthesisResult } from '../careerFinalSynthesis/careerF
 import type { CareerEventsAnalysis } from '../careerEvents/careerEventTypes';
 import type { CareerTrajectoryAnalysis } from '../careerTrajectory/careerTrajectoryTypes';
 import type { CareerProfessionAnalysis } from '../careerProfession/careerProfessionTypes';
+import type { CareerDashaCanonicalAnalysis } from '../careerDasha/careerDashaCanonicalTypes';
 import { buildCareerOutcomeAnalysis } from './careerOutcomeEngine';
 
 function axes(overrides: {
@@ -164,6 +165,15 @@ function events(): CareerEventsAnalysis {
   };
 }
 
+function dashaAnalysis(evidence: readonly object[] = [{
+  id: 'dasha-occ-1',
+  identityKey: 'dasha-semantic-1',
+  direction: 'SUPPORT',
+  effect: 'ACTIVATES'
+}]): CareerDashaCanonicalAnalysis {
+  return { evidence } as unknown as CareerDashaCanonicalAnalysis;
+}
+
 function profession(): CareerProfessionAnalysis {
   return {
     status: 'COMPLETE',
@@ -195,6 +205,7 @@ describe('B02 Career outcome and success qualification', () => {
       finalSynthesis: finalSynthesis(),
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession()
     });
 
@@ -209,6 +220,7 @@ describe('B02 Career outcome and success qualification', () => {
       finalSynthesis: finalSynthesis(),
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession()
     });
 
@@ -223,6 +235,7 @@ describe('B02 Career outcome and success qualification', () => {
       finalSynthesis: finalSynthesis(),
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession()
     });
 
@@ -249,6 +262,7 @@ describe('B02 Career outcome and success qualification', () => {
       }]),
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession()
     });
 
@@ -264,6 +278,7 @@ describe('B02 Career outcome and success qualification', () => {
       finalSynthesis: finalSynthesis(),
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession()
     });
 
@@ -282,6 +297,7 @@ describe('B02 Career outcome and success qualification', () => {
       finalSynthesis: challenged,
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession()
     });
 
@@ -295,7 +311,8 @@ describe('B02 Career outcome and success qualification', () => {
       axes: axes({ activationStatus: 'UNAVAILABLE' }),
       finalSynthesis: finalSynthesis(),
       trajectory: trajectory(),
-      events: events()
+      events: events(),
+      dasha: dashaAnalysis([])
     });
 
     expect(result.status).toBe('UNRESOLVED');
@@ -308,6 +325,7 @@ describe('B02 Career outcome and success qualification', () => {
       finalSynthesis: finalSynthesis(),
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession()
     });
     expect(chartOnly.observedOutcomes).toEqual([]);
@@ -318,6 +336,7 @@ describe('B02 Career outcome and success qualification', () => {
       finalSynthesis: finalSynthesis(),
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession(),
       observedOutcomes: [{
         reportId: 'user-report-1',
@@ -344,6 +363,7 @@ describe('B02 Career outcome and success qualification', () => {
       finalSynthesis: finalSynthesis(),
       trajectory: trajectory(),
       events: events(),
+      dasha: dashaAnalysis(),
       profession: profession()
     });
 
