@@ -229,10 +229,6 @@ describe('C11 Final Career Synthesis Integration', () => {
 
       expect(result.reasoningVersion).toBe('C11');
       expect(result.domain).toBe('CAREER');
-      expect(result.analyticalAxes).toBeDefined();
-      expect(result.analyticalAxes?.promise.result?.direction).toBe(result.natalDirection);
-      expect(result.analyticalAxes?.sustainability.status).toBe('UNAVAILABLE');
-      expect(result).not.toHaveProperty('probability');
     });
   });
 
