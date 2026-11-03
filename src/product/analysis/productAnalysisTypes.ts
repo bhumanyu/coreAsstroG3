@@ -278,6 +278,7 @@ export interface ProductCareerAnalyticalAxes {
 export type ProductCareerOutcomeStatus =
   | 'CANDIDATES_AVAILABLE'
   | 'CONDITIONAL'
+  | 'PARTIAL'
   | 'UNRESOLVED'
   | 'INSUFFICIENT';
 
