@@ -199,6 +199,7 @@ export interface CareerProfessionD10Qualification {
   readonly direction: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'UNDETERMINED';
   readonly effects: readonly ('REINFORCES' | 'QUALIFIES' | 'MODIFIES' | 'WEAKENS' | 'CONFLICTS' | 'PRESERVES' | 'INSUFFICIENT_DATA' | 'UNAVAILABLE')[];
   readonly evidenceOccurrenceIds: readonly string[];
+  readonly counterEvidenceOccurrenceIds: readonly string[];
   readonly rootIdentityKeys: readonly string[];
 }
 
