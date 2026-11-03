@@ -716,6 +716,16 @@ function mapCareer(
         mechanismTypes: c.mechanismTypes,
         patternIds: c.patternIds,
         d10Status: c.d10Status,
+        evidenceOccurrenceIds: [...c.evidenceOccurrenceIds],
+        semanticIdentityKeys: [...c.semanticIdentityKeys],
+        rootIdentityKeys: [...c.rootIdentityKeys],
+        d10Qualification: c.d10Qualification ? {
+          status: c.d10Qualification.status,
+          direction: c.d10Qualification.direction,
+          effects: [...c.d10Qualification.effects],
+          evidenceOccurrenceIds: [...c.d10Qualification.evidenceOccurrenceIds],
+          rootIdentityKeys: [...c.d10Qualification.rootIdentityKeys]
+        } : undefined,
         evidence: c.evidence.map(e => ({
           evidenceId: e.evidenceId,
           basis: e.basis,
@@ -733,7 +743,32 @@ function mapCareer(
       unresolvedExpressionTypes: detail.profession.unresolvedExpressionTypes,
       mappedTypes: detail.profession.mappedTypes,
       missingInputs: detail.profession.missingInputs,
-      d10Status: deriveAggregateD10Status(detail.profession.candidates)
+      d10Status: deriveAggregateD10Status(detail.profession.candidates),
+      ranking: {
+        policyVersion: detail.profession.ranking.policyVersion,
+        status: detail.profession.ranking.status,
+        rankedCandidates: detail.profession.ranking.rankedCandidates.map(candidate => ({
+          candidateId: candidate.candidateId,
+          domain: candidate.domain,
+          family: candidate.family,
+          rank: candidate.rank,
+          score: candidate.score,
+          confidence: candidate.confidence,
+          confidenceReasons: [...candidate.confidenceReasons],
+          evidenceCoverage: { ...candidate.evidenceCoverage },
+          supportingCandidateIds: [...candidate.supportingCandidateIds],
+          ruleIds: [...candidate.ruleIds],
+          supportingEvidenceOccurrenceIds: [...candidate.supportingEvidenceOccurrenceIds],
+          counterEvidenceOccurrenceIds: [...candidate.counterEvidenceOccurrenceIds],
+          semanticIdentityKeys: [...candidate.semanticIdentityKeys],
+          rootIdentityKeys: [...candidate.rootIdentityKeys],
+          d10Status: candidate.d10Status,
+          reasons: [...candidate.reasons],
+          counterEvidenceReasons: [...candidate.counterEvidenceReasons],
+          alternativeExplanation: candidate.alternativeExplanation
+        })),
+        diagnostics: [...detail.profession.ranking.diagnostics]
+      }
     } : undefined,
     d10: {
       relationship: mapD10Relationship(detail?.d10Relationship ? String(detail.d10Relationship) : undefined),
