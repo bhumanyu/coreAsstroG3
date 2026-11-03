@@ -32,6 +32,7 @@ function candidate(params: {
         direction: params.d10Direction,
         effects: params.d10Direction === 'SUPPORT' ? ['REINFORCES'] : params.d10Direction === 'CHALLENGE' ? ['CONFLICTS'] : ['QUALIFIES'],
         evidenceOccurrenceIds: params.d10OccurrenceIds ?? ['d10-occ-1'],
+        counterEvidenceOccurrenceIds: params.d10Direction === 'CHALLENGE' ? (params.d10OccurrenceIds ?? ['d10-occ-1']) : [],
         rootIdentityKeys: ['root:d1:career:research']
       }
     } : {}),
@@ -216,4 +217,25 @@ describe('B04 deterministic profession-family ranking', () => {
 
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
   });
-});
+
+  it('exposes expression-specific D10 challenge occurrence IDs as counter-evidence', () => {
+    const item = candidate({
+      id: 'candidate-d10-challenge',
+      domain: 'TECHNOLOGY',
+      family: 'TECHNICAL_LEADERSHIP',
+      d10Status: 'CONFLICTED',
+      d10Direction: 'CHALLENGE',
+      d10OccurrenceIds: ['d10-challenge-occ']
+    });
+    const result = buildCareerProfessionRanking({
+      candidates: [item],
+      natalPromiseDirection: 'SUPPORT'
+    });
+
+    expect(result.rankedCandidates[0].counterEvidenceOccurrenceIds).toContain('d10-challenge-occ');
+    expect(result.rankedCandidates[0].d10Direction).toBe('CHALLENGE');
+    expect(result.rankedCandidates[0].counterEvidenceReasons).toContain(
+      'Expression-specific D10 challenge/weakening evidence is retained as counter-evidence.'
+    );
+  });
+\n});
