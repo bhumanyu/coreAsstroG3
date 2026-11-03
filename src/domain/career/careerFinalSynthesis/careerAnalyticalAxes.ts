@@ -128,15 +128,8 @@ function sortedUnique(values: readonly string[]): readonly string[] {
   );
 }
 
-function occurrenceIds(values: readonly {
-  readonly id?: string;
-  readonly evidenceId?: string;
-}[]): readonly string[] {
-  return sortedUnique(values.flatMap(value => {
-    if (value.evidenceId) return [value.evidenceId];
-    if (value.id) return [value.id];
-    return [];
-  }));
+function occurrenceIds(values: readonly { readonly id: string }[]): readonly string[] {
+  return sortedUnique(values.map(value => value.id));
 }
 
 function ruleIds(values: readonly string[]): readonly string[] {
@@ -165,14 +158,14 @@ function makePromiseAxis(natal: CareerNatalAnalysis): CareerPromiseAxis {
   const eligibleEvidence = natal.evidence.filter(item => isNatalStrengthMappable(item.strength));
   const supporting = eligibleEvidence
     .filter(item => item.direction === 'SUPPORT')
-    .map(item => item.evidenceId);
+    .flatMap(item => item.sourceIds);
   const conflicting = eligibleEvidence
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED')
-    .map(item => item.evidenceId);
+    .flatMap(item => item.sourceIds);
   const hasClassification =
     natal.structural.direction !== 'UNAVAILABLE' &&
     natal.structural.strength !== 'UNDETERMINED';
-  const natalOccurrenceIds = occurrenceIds(eligibleEvidence);
+  const natalOccurrenceIds = sortedUnique(eligibleEvidence.flatMap(item => item.sourceIds));
   const status: CareerAnalyticalAxisStatus = hasClassification && eligibleEvidence.length > 0 && natalOccurrenceIds.length > 0
     ? 'AVAILABLE'
     : eligibleEvidence.length > 0
@@ -308,7 +301,7 @@ function makeRiskAxis(
 ): CareerRiskAxis {
   const natalRisk = natal.evidence
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED')
-    .map(item => item.evidenceId);
+    .flatMap(item => item.sourceIds);
   const dashaRisk = dasha.evidence
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES' || item.effect === 'DOES_NOT_ACTIVATE')
     .map(item => item.id);
@@ -328,7 +321,7 @@ function makeRiskAxis(
       [...(identityToOccurrences.get(identity) ?? []), ...occurrences]
     );
   };
-  for (const item of natal.evidence) addIdentityOccurrences(item.identityKey, [item.evidenceId]);
+  for (const item of natal.evidence) addIdentityOccurrences(item.identityKey, item.sourceIds);
   for (const item of dasha.evidence) addIdentityOccurrences(item.identityKey, [item.id]);
   for (const item of d10.evidence) addIdentityOccurrences(item.identityKey, [item.id]);
 
@@ -340,7 +333,7 @@ function makeRiskAxis(
     .flatMap(conflict => conflict.evidenceIds.flatMap(identity => identityToOccurrences.get(identity) ?? []));
   const riskSupportingOccurrences = sortedUnique([...adverseOccurrences, ...c11RiskSupport]);
   const riskConflictingOccurrences = sortedUnique(c11RiskCounterEvidence);
-  const natalOccurrences = occurrenceIds(natal.evidence);
+  const natalOccurrences = sortedUnique(natal.evidence.flatMap(item => item.sourceIds));
   const dashaOccurrences = occurrenceIds(dasha.evidence);
   const d10Occurrences = occurrenceIds(d10.evidence);
   const hasRecords = natal.evidence.length > 0 || dasha.evidence.length > 0 || d10.evidence.length > 0;
@@ -359,7 +352,7 @@ function makeRiskAxis(
       : 'AVAILABLE';
 
   const allSources = [
-    ...occurrenceIds(natal.evidence),
+    ...sortedUnique(natal.evidence.flatMap(item => item.sourceIds)),
     ...occurrenceIds(dasha.evidence),
     ...occurrenceIds(d10.evidence)
   ];
