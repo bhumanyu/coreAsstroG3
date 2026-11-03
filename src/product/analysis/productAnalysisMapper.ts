@@ -764,6 +764,7 @@ function mapCareer(
           direction: c.d10Qualification.direction,
           effects: [...c.d10Qualification.effects],
           evidenceOccurrenceIds: [...c.d10Qualification.evidenceOccurrenceIds],
+          counterEvidenceOccurrenceIds: [...c.d10Qualification.counterEvidenceOccurrenceIds],
           rootIdentityKeys: [...c.d10Qualification.rootIdentityKeys]
         } : undefined,
         evidence: c.evidence.map(e => ({
