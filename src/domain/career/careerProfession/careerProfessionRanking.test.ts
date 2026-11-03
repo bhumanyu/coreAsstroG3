@@ -55,13 +55,13 @@ function evidence(params: {
   readonly id: string;
   readonly identityKey: string;
   readonly rootEvidenceIds?: readonly string[];
-  readonly polarity?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL' | 'MIXED';
-  readonly strength?: 'STRONG' | 'MODERATE' | 'WEAK' | 'VERY_WEAK' | 'UNAVAILABLE';
+  readonly polarity?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
+  readonly strength?: 'VERY_STRONG' | 'STRONG' | 'MODERATE' | 'WEAK';
   readonly priority?: number;
 }): DomainEvidence {
   return {
     id: params.id,
-    sourceType: 'CAREER',
+    sourceType: 'STRUCTURAL',
     domain: 'CAREER',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
