@@ -51,6 +51,8 @@ The product mapper clones nested arrays/objects and does not calculate axis sema
 
 ## Current limitations and dependencies
 
+- **Dependency status:** A03 occurrence/provenance conventions, A05 canonical Dasha authority, and A07 confidence/coverage conventions are consumed as existing contracts. I did not find a B03 D1/D10 hierarchy-acceptance implementation or branch on the current main revision. B01 therefore projects the existing C4/C9/C10 outputs without claiming to complete B03 or replace its acceptance gate.
+
 1. **Sustainability is not yet assessable.** A future upstream workstream must define canonical evidence for continuity, stability, and repeatability, with explicit provenance and validation. Until then, the axis remains unavailable.
 2. **Timing windows are Dasha-period candidates only.** They are not guaranteed outcomes and do not use downstream P2-09B event candidates, because P2-09B is a C11 consumer and must not feed back into C11.
 3. **Expression/Transit conflict occurrence mapping is not available in the current B01 input contract.** Such C11 conflicts are retained as a partial-coverage diagnostic rather than misreported as occurrence IDs.
