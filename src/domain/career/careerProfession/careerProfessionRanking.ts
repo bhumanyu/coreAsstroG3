@@ -175,7 +175,7 @@ export function buildCareerProfessionRanking(params: {
       const qualification = candidate.d10Qualification;
       const key = qualification
         ? [qualification.status, qualification.direction, ...qualification.evidenceOccurrenceIds].join('|')
-        : `NO_D10_INPUT:${candidate.candidateId}`;
+        : 'NO_D10_INPUT';
       if (seenD10QualificationKeys.has(key)) continue;
       seenD10QualificationKeys.add(key);
 
@@ -184,7 +184,8 @@ export function buildCareerProfessionRanking(params: {
       const direction: CareerProfessionScoreContribution['direction'] = isSupport ? 'SUPPORT'
         : isChallenge ? 'CHALLENGE' : 'NEUTRAL';
       const points = isSupport ? 3 : isChallenge ? -3 : 0;
-      const referenceId = qualification?.evidenceOccurrenceIds[0] ?? candidate.candidateId;
+      const referenceId = qualification?.evidenceOccurrenceIds[0] ??
+        (qualification ? `D10_${qualification.status}` : 'D10_NOT_PROVIDED');
       const explanation = isSupport
         ? 'Resolved expression-linked D10 support contributes +3 qualification points; it does not create a D1 promise.'
         : isChallenge
