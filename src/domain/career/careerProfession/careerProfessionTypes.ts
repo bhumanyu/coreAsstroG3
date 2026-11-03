@@ -255,6 +255,15 @@ export type CareerProfessionRankingStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILAB
 
 export type CareerProfessionCandidateConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNAVAILABLE';
 
+export interface CareerProfessionScoreContribution {
+  readonly referenceType: 'PROFESSION_RULE' | 'DOMAIN_EVIDENCE' | 'D10_QUALIFICATION';
+  readonly referenceId: string;
+  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  /** Signed policy points; never a probability. */
+  readonly points: number;
+  readonly explanation: string;
+}
+
 export interface CareerProfessionRankedCandidate {
   /** Stable identity at domain/family granularity; independent of pattern/rule IDs. */
   readonly candidateId: string;
@@ -264,6 +273,7 @@ export interface CareerProfessionRankedCandidate {
   readonly rank: number;
   /** Deterministic policy points, not a probability or employability estimate. */
   readonly score: number;
+  readonly scoreContributions: readonly CareerProfessionScoreContribution[];
   readonly confidence: CareerProfessionCandidateConfidence;
   readonly confidenceReasons: readonly string[];
   readonly evidenceCoverage: {
