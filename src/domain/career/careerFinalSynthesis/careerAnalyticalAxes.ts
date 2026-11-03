@@ -124,7 +124,7 @@ export interface CareerAnalyticalAxesInput {
 function sortedUnique(values: readonly string[]): readonly string[] {
   return Object.freeze(
     [...new Set(values.filter(value => typeof value === 'string' && value.trim().length > 0))]
-      .sort((a, b) => a.localeCompare(b))
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
   );
 }
 
@@ -220,7 +220,7 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
     : 0;
   const status: CareerAnalyticalAxisStatus = !hierarchy
     ? (hasEvidence ? 'PARTIAL' : 'UNAVAILABLE')
-    : validDirection && completeLevels === 3
+    : validDirection && hasEvidence && completeLevels === 3
       ? 'AVAILABLE'
       : hasEvidence || completeLevels > 0
         ? 'PARTIAL'
@@ -390,11 +390,14 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
   const untimedLevels: ('MD' | 'AD' | 'PD')[] = [];
 
   for (const period of periods) {
-    const hasUsableActivation =
-      period.direction !== 'UNAVAILABLE' &&
-      period.effect !== 'UNKNOWN' &&
-      period.effect !== 'INSUFFICIENT_DATA';
-    if (!hasUsableActivation) continue;
+    const hasCandidateActivation =
+      (period.effect === 'ACTIVATES' ||
+        period.effect === 'PARTIALLY_ACTIVATES' ||
+        period.effect === 'CHALLENGES') &&
+      (period.direction === 'SUPPORT' ||
+        period.direction === 'CHALLENGE' ||
+        period.direction === 'MIXED');
+    if (!hasCandidateActivation) continue;
 
     const periodEvidence = period.evidence;
     // A period without canonical activation evidence is not a candidate window.
@@ -429,7 +432,11 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
   const status: CareerAnalyticalAxisStatus = !hierarchy
     ? 'UNAVAILABLE'
     : windows.length === 0
-      ? 'INSUFFICIENT'
+      ? usableLevels === 3
+        ? 'NOT_APPLICABLE'
+        : usableLevels > 0
+          ? 'PARTIAL'
+          : 'INSUFFICIENT'
       : windows.every(window => window.dated) && usableLevels === 3
         ? 'AVAILABLE'
         : 'PARTIAL';
@@ -467,9 +474,11 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     methodVersion: CAREER_ANALYTICAL_AXES_VERSION,
     ...(!hierarchy
       ? { unavailableReason: 'Canonical Dasha hierarchy is unavailable.' }
-      : windows.length === 0
-        ? { unavailableReason: 'No usable canonical Dasha activation conditions are available.' }
-        : {}),
+      : windows.length === 0 && status === 'NOT_APPLICABLE'
+        ? { diagnostic: 'All canonical Dasha levels were assessed, but none meets the activation conditions for a timing candidate window.' }
+        : windows.length === 0
+          ? { unavailableReason: 'No usable canonical Dasha activation conditions are available.' }
+          : {}),
     ...(status === 'PARTIAL'
       ? { diagnostic: 'One or more activation candidates lack complete source-backed start/end dates; no dates were inferred.' }
       : {})
