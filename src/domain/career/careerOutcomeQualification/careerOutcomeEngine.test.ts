@@ -244,7 +244,8 @@ describe('B02 Career outcome and success qualification', () => {
         source: 'D10',
         direction: 'CHALLENGE',
         severity: 'HIGH',
-        evidenceIds: ['d10-conflict-semantic']
+        evidenceIds: ['d10-conflict-semantic'],
+        statement: 'Strong D10 counter-indication.'
       }]),
       trajectory: trajectory(),
       events: events(),
