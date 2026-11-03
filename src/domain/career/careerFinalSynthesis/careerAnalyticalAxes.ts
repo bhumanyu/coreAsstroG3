@@ -460,8 +460,8 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
     conflictingEvidenceOccurrenceIds: sortedUnique(conflicting),
     ruleIds: ruleIds(windows.flatMap(window => window.ruleIds)),
     coverage: coverage(
-      status === 'AVAILABLE' ? 'COMPLETE' : status === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT',
-      windows.length > 0 ? ['C9_DASHA_PERIODS'] : [],
+      status === 'AVAILABLE' || status === 'NOT_APPLICABLE' ? 'COMPLETE' : status === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT',
+      windows.length > 0 || status === 'NOT_APPLICABLE' ? ['C9_DASHA_PERIODS'] : [],
       !hierarchy
         ? ['C9_DASHA_HIERARCHY']
         : [
