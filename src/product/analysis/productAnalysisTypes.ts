@@ -437,6 +437,7 @@ export interface CareerProductAnalysis {
         readonly direction: string;
         readonly effects: readonly string[];
         readonly evidenceOccurrenceIds: readonly string[];
+        readonly counterEvidenceOccurrenceIds: readonly string[];
         readonly rootIdentityKeys: readonly string[];
       };
       readonly evidence: readonly {
