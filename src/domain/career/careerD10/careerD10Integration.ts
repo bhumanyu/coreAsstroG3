@@ -63,9 +63,6 @@ import {
   evaluateDimensionQualification
 } from './careerD10QualificationRules';
 
-import type {
-  CareerExpressionType
-} from '../careerExpression/careerExpressionTypes';
 import {
   resolveCareerD10ModeFromExpressionType,
   type CareerExpressionToD10ModeResolution
