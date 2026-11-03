@@ -2329,8 +2329,8 @@ describe('CareerDomainInterpreterV2', () => {
           { direction: 'SUPPORT', strength: 'VERY_STRONG', expected: 'VERY_STRONG', description: 'SUPPORT + VERY_STRONG → VERY_STRONG' },
           { direction: 'SUPPORT', strength: 'STRONG', expected: 'VERY_STRONG', description: 'SUPPORT + STRONG → VERY_STRONG' },
           { direction: 'SUPPORT', strength: 'MODERATE', expected: 'STRONG', description: 'SUPPORT + MODERATE → STRONG' },
-          { direction: 'SUPPORT', strength: 'WEAK', expected: 'INSUFFICIENT_DATA', description: 'SUPPORT + WEAK → INSUFFICIENT_DATA (no positive status)' },
-          { direction: 'SUPPORT', strength: 'VERY_WEAK', expected: 'INSUFFICIENT_DATA', description: 'SUPPORT + VERY_WEAK → INSUFFICIENT_DATA (no positive status)' },
+          { direction: 'SUPPORT', strength: 'WEAK', expected: 'INSUFFICIENT_DATA', description: 'SUPPORT + WEAK → INSUFFICIENT_DATA in legacy trace; canonical C11 preserves the D1 promise' },
+          { direction: 'SUPPORT', strength: 'VERY_WEAK', expected: 'INSUFFICIENT_DATA', description: 'SUPPORT + VERY_WEAK → INSUFFICIENT_DATA in legacy trace; canonical C11 preserves the D1 promise' },
           { direction: 'SUPPORT', strength: 'UNDETERMINED', expected: 'INSUFFICIENT_DATA', description: 'SUPPORT + UNDETERMINED → INSUFFICIENT_DATA (invariant guard)' },
           { direction: 'SUPPORT', strength: 'MIXED', expected: 'INSUFFICIENT_DATA', description: 'SUPPORT + MIXED → INSUFFICIENT_DATA (invariant guard)' },
 
@@ -2389,10 +2389,15 @@ describe('CareerDomainInterpreterV2', () => {
           });
 
           // Verify key invariants for the mapper
-          // SUPPORT + UNDETERMINED, SUPPORT + WEAK, SUPPORT + VERY_WEAK, SUPPORT + MIXED never yield positive status
-          if (testCase.direction === 'SUPPORT' && (testCase.strength === 'UNDETERMINED' || testCase.strength === 'WEAK' || testCase.strength === 'VERY_WEAK' || testCase.strength === 'MIXED')) {
+          // Undetermined/mixed strength cannot establish a promise. B03 explicitly
+          // preserves a weak/very-weak D1 SUPPORT promise; D10 may make its expression conditional.
+          if (testCase.direction === 'SUPPORT' && (testCase.strength === 'UNDETERMINED' || testCase.strength === 'MIXED')) {
             expect(canonicalC11.finalStatus).not.toBe('SUPPORTED');
             expect(canonicalC11.finalStatus).not.toBe('CONDITIONALLY_SUPPORTED');
+          }
+          if (testCase.direction === 'SUPPORT' && (testCase.strength === 'WEAK' || testCase.strength === 'VERY_WEAK')) {
+            expect(canonicalC11.natalDirection).toBe('SUPPORT');
+            expect(['SUPPORTED', 'CONDITIONALLY_SUPPORTED']).toContain(canonicalC11.finalStatus);
           }
 
           // NEUTRAL and UNAVAILABLE directions map to unavailable representation
