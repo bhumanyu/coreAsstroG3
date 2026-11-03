@@ -180,6 +180,25 @@ describe('CareerProfessionStatusSection', () => {
           family: 'TECHNICAL_LEADERSHIP',
           rank: 1,
           score: 18,
+          scoreContributions: [{
+            referenceType: 'PROFESSION_RULE' as const,
+            referenceId: 'RULE_TECHNICAL_LEADERSHIP',
+            direction: 'SUPPORT' as const,
+            points: 8,
+            explanation: 'The profession rule contributes +8 base points.'
+          }, {
+            referenceType: 'DOMAIN_EVIDENCE' as const,
+            referenceId: 'occ-d1-1',
+            direction: 'SUPPORT' as const,
+            points: 6,
+            explanation: 'Strong evidence × priority 2 contributes +6 points.'
+          }, {
+            referenceType: 'D10_QUALIFICATION' as const,
+            referenceId: 'occ-d10-1',
+            direction: 'NEUTRAL' as const,
+            points: 0,
+            explanation: 'Mixed D10 does not change the score.'
+          }],
           confidence: 'MEDIUM' as const,
           confidenceReasons: ['Root evidence is present; D10 is partial.'],
           evidenceCoverage: {
@@ -210,6 +229,8 @@ describe('CareerProfessionStatusSection', () => {
     const ranking = screen.getByRole('list', { name: 'Ranked profession families' });
     expect(ranking).toHaveTextContent('#1 · TECHNOLOGY / TECHNICAL_LEADERSHIP');
     expect(ranking).toHaveTextContent('18 policy points · MEDIUM confidence');
+    expect(screen.getByRole('list', { name: 'Score contributions for TECHNOLOGY TECHNICAL_LEADERSHIP' }))
+      .toHaveTextContent('Strong evidence × priority 2 contributes +6 points.');
     expect(ranking).toHaveTextContent('D10: PARTIAL (MIXED)');
     expect(ranking).toHaveTextContent('D1-derived expression establishes this broad family.');
     expect(ranking).toHaveTextContent('D10 mixed evidence constrains expression.');
