@@ -32,6 +32,11 @@ export type {
   CareerProfessionFamily,
   CareerProfessionBasis,
   CareerProfessionD10Status,
+  CareerProfessionD10Qualification,
+  CareerProfessionRankingStatus,
+  CareerProfessionCandidateConfidence,
+  CareerProfessionRankedCandidate,
+  CareerProfessionRanking,
   CareerProfessionEvidence,
   CareerProfessionCandidate,
   CareerProfessionAnalysisStatus,
@@ -65,3 +70,6 @@ export {
 export {
   buildCareerProfessionAnalysis
 } from './careerProfessionEngine';
+
+// B04 deterministic ranking
+export { buildCareerProfessionRanking } from './careerProfessionRanking';
