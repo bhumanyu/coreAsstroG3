@@ -1327,7 +1327,7 @@ describe('B04 profession ranking integration and D1/D10 boundaries', () => {
       expressionQualifications: [{
         expressionId: 'legacy-expression:authority',
         expression: {
-          mode: 'LEADERSHIP',
+          mode: 'AUTHORITY',
           direction: 'SUPPORTED',
           strength: 'STRONG',
           evidence: [],
