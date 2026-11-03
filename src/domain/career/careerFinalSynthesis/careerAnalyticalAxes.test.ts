@@ -194,7 +194,7 @@ describe('B01 independent Career analytical axes', () => {
         id: 'd10-risk-occurrence',
         role: 'PRIMARY',
         direction: 'CHALLENGE',
-        d10Effect: 'CHALLENGES',
+        d10Effect: 'CONFLICTS',
         d10Strength: 'STRONG',
         weight: 5,
         statement: 'D10 challenge.',
