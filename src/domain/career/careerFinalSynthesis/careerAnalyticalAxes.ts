@@ -314,36 +314,66 @@ function makeRiskAxis(
     dasha.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES' || item.effect === 'DOES_NOT_ACTIVATE') ||
     d10.evidence.some(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS' || item.d10Effect === 'WEAKENS');
 
-  const identityToOccurrences = new Map<string, string[]>();
-  const addIdentityOccurrences = (identity: string, occurrences: readonly string[]) => {
-    identityToOccurrences.set(
-      identity,
-      [...(identityToOccurrences.get(identity) ?? []), ...occurrences]
-    );
+  const natalIdentityToOccurrences = new Map<string, string[]>();
+  const dashaIdentityToOccurrences = new Map<string, string[]>();
+  const d10IdentityToOccurrences = new Map<string, string[]>();
+  const addIdentityOccurrences = (
+    map: Map<string, string[]>,
+    identity: string,
+    occurrences: readonly string[]
+  ) => {
+    map.set(identity, [...(map.get(identity) ?? []), ...occurrences]);
   };
-  for (const item of natal.evidence) addIdentityOccurrences(item.identityKey, item.sourceIds);
-  for (const item of dasha.evidence) addIdentityOccurrences(item.identityKey, [item.id]);
-  for (const item of d10.evidence) addIdentityOccurrences(item.identityKey, [item.id]);
+  for (const item of natal.evidence) {
+    addIdentityOccurrences(natalIdentityToOccurrences, item.identityKey, item.sourceIds);
+  }
+  for (const item of dasha.evidence) {
+    addIdentityOccurrences(dashaIdentityToOccurrences, item.identityKey, [item.id]);
+  }
+  for (const item of d10.evidence) {
+    addIdentityOccurrences(d10IdentityToOccurrences, item.identityKey, [item.id]);
+  }
 
-  const c11RiskSupport = finalSynthesis.conflicts
-    .filter(conflict => conflict.direction === 'CHALLENGE' || conflict.direction === 'MIXED')
-    .flatMap(conflict => conflict.evidenceIds.flatMap(identity => identityToOccurrences.get(identity) ?? []));
-  const c11RiskCounterEvidence = finalSynthesis.conflicts
-    .filter(conflict => conflict.direction === 'SUPPORT')
-    .flatMap(conflict => conflict.evidenceIds.flatMap(identity => identityToOccurrences.get(identity) ?? []));
+  const conflictResolutions = finalSynthesis.conflicts.map(conflict => {
+    const sourceMap =
+      conflict.source === 'NATAL' ? natalIdentityToOccurrences :
+      conflict.source === 'DASHA' ? dashaIdentityToOccurrences :
+      conflict.source === 'D10' ? d10IdentityToOccurrences :
+      undefined;
+    const occurrences = sourceMap
+      ? conflict.evidenceIds.flatMap(identity => sourceMap.get(identity) ?? [])
+      : [];
+    const unresolved = !sourceMap ||
+      conflict.evidenceIds.some(identity => (sourceMap.get(identity) ?? []).length === 0);
+    return { conflict, occurrences: sortedUnique(occurrences), unresolved };
+  });
+  const c11RiskSupport = conflictResolutions
+    .filter(item => item.conflict.direction === 'CHALLENGE' || item.conflict.direction === 'MIXED')
+    .flatMap(item => item.occurrences);
+  const c11RiskCounterEvidence = conflictResolutions
+    .filter(item => item.conflict.direction === 'SUPPORT')
+    .flatMap(item => item.occurrences);
+  const unresolvedConflictSources = sortedUnique(
+    conflictResolutions.filter(item => item.unresolved).map(item => item.conflict.source)
+  );
   const riskSupportingOccurrences = sortedUnique([...adverseOccurrences, ...c11RiskSupport]);
   const riskConflictingOccurrences = sortedUnique(c11RiskCounterEvidence);
   const natalOccurrences = sortedUnique(natal.evidence.flatMap(item => item.sourceIds));
   const dashaOccurrences = occurrenceIds(dasha.evidence);
   const d10Occurrences = occurrenceIds(d10.evidence);
-  const hasRecords = natal.evidence.length > 0 || dasha.evidence.length > 0 || d10.evidence.length > 0;
+  const hasRecords =
+    natal.evidence.length > 0 ||
+    dasha.evidence.length > 0 ||
+    d10.evidence.length > 0 ||
+    finalSynthesis.conflicts.length > 0;
   const hasOccurrences = natalOccurrences.length > 0 || dashaOccurrences.length > 0 || d10Occurrences.length > 0;
   const missingSources = [
     ...(natal.evidence.length === 0 ? ['C4_C7_NATAL'] : natalOccurrences.length === 0 ? ['C4_C7_NATAL_PROVENANCE'] : []),
     ...(dasha.evidence.length === 0 ? ['C9_DASHA'] : dashaOccurrences.length === 0 ? ['C9_DASHA_PROVENANCE'] : []),
     ...(d10.availability === 'UNAVAILABLE' || d10.evidence.length === 0
       ? ['C10_D10']
-      : d10Occurrences.length === 0 ? ['C10_D10_PROVENANCE'] : [])
+      : d10Occurrences.length === 0 ? ['C10_D10_PROVENANCE'] : []),
+    ...unresolvedConflictSources.map(source => `C11_${source}_CONFLICT_OCCURRENCE_MAPPING`)
   ];
   const status: CareerAnalyticalAxisStatus = !hasRecords
     ? 'INSUFFICIENT'
@@ -361,7 +391,9 @@ function makeRiskAxis(
     axis: 'RISK',
     status,
     result: Object.freeze({
-      assessment: hasAdverseRecords || c11RiskSupport.length > 0
+      assessment: hasAdverseRecords ||
+        c11RiskSupport.length > 0 ||
+        finalSynthesis.conflicts.some(conflict => conflict.direction === 'CHALLENGE' || conflict.direction === 'MIXED')
         ? 'ADVERSE_EVIDENCE_PRESENT'
         : 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES',
       conflictCount: finalSynthesis.conflicts.length
@@ -378,7 +410,8 @@ function makeRiskAxis(
       [
         ...(natal.evidence.length > 0 ? ['C4_C7_NATAL'] : []),
         ...(dasha.evidence.length > 0 ? ['C9_DASHA'] : []),
-        ...(d10.availability === 'AVAILABLE' && d10.evidence.length > 0 ? ['C10_D10'] : [])
+        ...(d10.availability === 'AVAILABLE' && d10.evidence.length > 0 ? ['C10_D10'] : []),
+        ...(finalSynthesis.conflicts.length > 0 ? ['C11_CONFLICT_DIAGNOSTICS'] : [])
       ],
       missingSources,
       sortedUnique(allSources).length
