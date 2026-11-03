@@ -207,7 +207,11 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
   const hierarchy = dasha.hierarchy;
   const evidence = dasha.evidence;
   const validDirection = dasha.overallDirection !== 'UNAVAILABLE';
-  const hasEvidence = evidence.length > 0;
+  const validEffect =
+    dasha.overallEffect !== 'UNKNOWN' &&
+    dasha.overallEffect !== 'INSUFFICIENT_DATA';
+  const canonicalEvidenceOccurrences = sourceIds(evidence);
+  const hasEvidence = canonicalEvidenceOccurrences.length > 0;
   const completeLevels = hierarchy
     ? [hierarchy.md, hierarchy.ad, hierarchy.pd].filter(
         item =>
@@ -220,7 +224,7 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
     : 0;
   const status: CareerAnalyticalAxisStatus = !hierarchy
     ? (hasEvidence ? 'PARTIAL' : 'UNAVAILABLE')
-    : validDirection && hasEvidence && completeLevels === 3
+    : validDirection && validEffect && hasEvidence && completeLevels === 3
       ? 'AVAILABLE'
       : hasEvidence || completeLevels > 0
         ? 'PARTIAL'
@@ -251,8 +255,13 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
     coverage: coverage(
       status === 'AVAILABLE' ? 'COMPLETE' : status === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT',
       hasEvidence ? ['C9_DASHA_EVIDENCE'] : [],
-      hierarchy ? (completeLevels < 3 ? ['C9_DASHA_PERIOD_LEVELS'] : []) : ['C9_DASHA_HIERARCHY'],
-      sourceIds(evidence).length
+      hierarchy
+        ? [
+            ...(completeLevels < 3 ? ['C9_DASHA_PERIOD_LEVELS'] : []),
+            ...(canonicalEvidenceOccurrences.length === 0 ? ['C9_DASHA_EVIDENCE_PROVENANCE'] : [])
+          ]
+        : ['C9_DASHA_HIERARCHY'],
+      canonicalEvidenceOccurrences.length
     ),
     confidence: confidenceNotAssessed('C9 provides activation strength and evidence, but no axis-specific confidence scale.'),
     methodVersion: CAREER_ANALYTICAL_AXES_VERSION,
