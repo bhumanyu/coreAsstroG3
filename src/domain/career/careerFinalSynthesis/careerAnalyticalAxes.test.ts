@@ -95,7 +95,7 @@ function d10(
     provenance: { source: 'C10_D10', ruleIds: ['RULE_D10'], sourceIds: ['d10-occurrence-1'], natalRootIds: [] },
     evidenceKind: 'OCCURRENCE'
   }],
-  availability: 'AVAILABLE'
+  availability: 'AVAILABLE' | 'UNAVAILABLE' = 'AVAILABLE'
 ): CareerD10CanonicalAnalysis {
   return { availability, evidence } as unknown as CareerD10CanonicalAnalysis;
 }
