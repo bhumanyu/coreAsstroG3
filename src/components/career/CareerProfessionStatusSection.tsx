@@ -92,7 +92,11 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
       )}
     </div>
     <div className="space-y-2 pt-2">
-      <h3 className="text-xs font-semibold text-slate-300">Profession candidates</h3>
+      <h3 className="text-xs font-semibold text-slate-300">Expression-derived profession candidates</h3>
+      <p className="text-xs text-slate-500">
+        These pattern-scoped candidates are inputs to the ranking, not specific job-title predictions.
+        They are not ranked recommendations unless the C11 D1 promise gate is satisfied.
+      </p>
       {profession.candidates.length === 0 ? (
         <p className="text-xs leading-relaxed text-slate-400">
           No profession candidates are available from the current inputs. This is not a negative career conclusion.
