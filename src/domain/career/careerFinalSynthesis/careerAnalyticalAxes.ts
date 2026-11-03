@@ -198,7 +198,7 @@ function makePromiseAxis(natal: CareerNatalAnalysis): CareerPromiseAxis {
       ? { unavailableReason: 'Canonical natal evidence is absent or not mappable.' }
       : {}),
     ...(status === 'PARTIAL'
-      ? { diagnostic: 'Natal evidence exists, but the canonical structural classification is incomplete.' }
+      ? { diagnostic: 'Natal evidence exists, but the canonical classification and/or occurrence provenance is incomplete.' }
       : {})
   });
 }
@@ -258,7 +258,8 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
       hierarchy
         ? [
             ...(completeLevels < 3 ? ['C9_DASHA_PERIOD_LEVELS'] : []),
-            ...(canonicalEvidenceOccurrences.length === 0 ? ['C9_DASHA_EVIDENCE_PROVENANCE'] : [])
+            ...(canonicalEvidenceOccurrences.length === 0 ? ['C9_DASHA_EVIDENCE_PROVENANCE'] : []),
+            ...(!validDirection || !validEffect ? ['C9_DASHA_OVERALL_CLASSIFICATION'] : [])
           ]
         : ['C9_DASHA_HIERARCHY'],
       canonicalEvidenceOccurrences.length
@@ -269,7 +270,7 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
       ? { unavailableReason: 'Canonical MD/AD/PD activation hierarchy is unavailable.' }
       : {}),
     ...(hierarchy && status === 'PARTIAL'
-      ? { diagnostic: 'The canonical hierarchy is present, but one or more period levels lack usable activation evidence.' }
+      ? { diagnostic: 'The canonical hierarchy is present, but the overall classification, period-level evidence, or occurrence provenance is incomplete.' }
       : {})
   });
 }
@@ -386,7 +387,9 @@ function makeRiskAxis(
     methodVersion: CAREER_ANALYTICAL_AXES_VERSION,
     ...(status === 'INSUFFICIENT'
       ? { unavailableReason: 'No canonical Career evidence sources are available for risk inspection.' }
-      : {})
+      : status === 'PARTIAL'
+        ? { diagnostic: `Risk coverage is partial; missing source families: ${missingSources.join(', ')}.` }
+        : {})
   });
 }
 
@@ -489,7 +492,7 @@ function makeTimingAxis(dasha: CareerDashaCanonicalAnalysis): CareerTimingAxis {
           ? { unavailableReason: 'No usable canonical Dasha activation conditions are available.' }
           : {}),
     ...(status === 'PARTIAL'
-      ? { diagnostic: 'One or more activation candidates lack complete source-backed start/end dates; no dates were inferred.' }
+      ? { diagnostic: 'One or more canonical period levels lack usable occurrence-backed activation evidence or complete source-backed start/end dates; no dates were inferred.' }
       : {})
   });
 }
