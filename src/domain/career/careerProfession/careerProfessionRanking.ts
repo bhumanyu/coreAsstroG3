@@ -53,6 +53,7 @@ function d10Aggregate(
   if (statuses.includes('PARTIAL')) return 'PARTIAL';
   if (statuses.length > 0 && statuses.every(status => status === 'QUALIFIED')) return 'QUALIFIED';
   if (statuses.length > 0 && statuses.every(status => status === 'NOT_PROVIDED')) return 'NOT_PROVIDED';
+  if (statuses.some(status => status === 'QUALIFIED' || status === 'NOT_PROVIDED' || status === 'UNAVAILABLE')) return 'PARTIAL';
   return 'UNAVAILABLE';
 }
 
@@ -127,9 +128,6 @@ export function buildCareerProfessionRanking(params: {
     }
 
     const d10Status = d10Aggregate(groupCandidates);
-    const d10EvidenceIds = uniqueSorted(groupCandidates.flatMap(candidate =>
-      candidate.d10Qualification?.evidenceOccurrenceIds ?? []
-    ));
     const d10Directions = groupCandidates.flatMap(candidate =>
       candidate.d10Qualification ? [candidate.d10Qualification.direction] : []
     );
@@ -200,8 +198,7 @@ export function buildCareerProfessionRanking(params: {
       rootIdentityKeys: Object.freeze(rootIdentityKeys),
       d10Status,
       reasons: Object.freeze(reasons),
-      counterEvidenceReasons: Object.freeze(counterEvidenceReasons),
-      _d10EvidenceIds: d10EvidenceIds
+      counterEvidenceReasons: Object.freeze(counterEvidenceReasons)
     } as Omit<CareerProfessionRankedCandidate, 'rank' | 'alternativeExplanation'>);
   }
 
