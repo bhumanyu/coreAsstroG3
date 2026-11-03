@@ -84,6 +84,15 @@ export function buildCareerProfessionRanking(params: {
     });
   }
 
+  const evidenceOccurrenceIds = domainEvidence.map(item => item.id);
+  if (new Set(evidenceOccurrenceIds).size !== evidenceOccurrenceIds.length) {
+    return Object.freeze({
+      policyVersion: POLICY_VERSION,
+      status: 'UNAVAILABLE',
+      rankedCandidates: Object.freeze([]),
+      diagnostics: Object.freeze(['DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID'])
+    });
+  }
   const evidenceById = new Map(domainEvidence.map(item => [item.id, item]));
   const groups = groupCandidates(candidates);
   if (groups.length === 0) {
@@ -118,12 +127,12 @@ export function buildCareerProfessionRanking(params: {
     // Rule contributions are counted once per distinct rule, so duplicate pattern
     // instances do not inflate a family's score merely by repeating the same rule.
     let score = 0;
-    const scoredRuleIds = new Set<string>();
+    const rulePointsById = new Map<string, number>();
     for (const candidate of groupCandidates) {
-      if (scoredRuleIds.has(candidate.ruleId)) continue;
-      scoredRuleIds.add(candidate.ruleId);
-      score += candidate.basis === 'MECHANISM' ? 8 : 5;
+      const points = candidate.basis === 'MECHANISM' ? 8 : 5;
+      rulePointsById.set(candidate.ruleId, Math.max(rulePointsById.get(candidate.ruleId) ?? 0, points));
     }
+    for (const points of [...rulePointsById.values()].sort((a, b) => a - b)) score += points;
 
     for (const item of linkedEvidence) {
       const points = strengthPoints(item.strength) * boundedPriority(item.priority);
