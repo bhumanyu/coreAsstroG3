@@ -15,6 +15,7 @@ import {
 } from '../productAnalysisMapper';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import { listSelectableMdAdPeriods } from '../../../core/analysis/selectedMdAdPeriod';
+import { createUnavailableWealthFinancialDataSet, createUserReportedFinancialDatum, createConnectedFinancialDatum } from '../../../domain/wealth/wealthFinancialData';
 import type { ProductTemporalRelation } from '../productAnalysisTypes';
 import {
   selectCareer,
@@ -431,6 +432,36 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(sanitizeSpeculativePropensityDescription('Options may provide higher returns.')).toBeUndefined();
     expect(sanitizeSpeculativePropensityDescription('Buy shares during this period.')).toBeUndefined();
     expect(sanitizeSpeculativePropensityDescription('Expected profit is high.')).toBeUndefined();
+  });
+
+  it('maps only explicit financial-source facts into financialData and leaves chart output non-prescriptive', () => {
+    const absent = mapProductAnalysis({
+      birthDetails: sampleBirth, horoscope: sampleHoroscope, lifeAnalysisViewModel: sampleViewModel, context: sampleContext
+    });
+    expect(absent.wealth.financialData).toBeUndefined();
+    expect(absent.wealth.speculativePropensity.source).toBe('ASTROLOGICAL_INDICATION');
+    expect(absent.wealth.speculativePropensity.adviceAvailable).toBe(false);
+    expect(absent.wealth.riskAndSuitability.suitability).toBe('UNAVAILABLE');
+
+    const base = createUnavailableWealthFinancialDataSet();
+    const p = { reportedBy: 'USER' as const, reportId: 'rep-1', reportedAt: '2026-11-04T06:00:00Z' };
+    const data = [...base.data];
+    data[data.findIndex((d) => d.concept === 'TRADING_EXPOSURE')] = createUserReportedFinancialDatum({
+      id: 'trade-exposure', concept: 'TRADING_EXPOSURE', value: { gross: 5000 }, currency: 'INR', provenance: p
+    });
+    data[data.findIndex((d) => d.concept === 'TRADING_HISTORY')] = createConnectedFinancialDatum({
+      id: 'trade-history', concept: 'TRADING_HISTORY', value: { count: 4 },
+      provenance: { sourceType: 'BROKERAGE', providerId: 'broker', connectionId: 'connection', retrievedAt: '2026-11-04T06:05:00Z' }
+    });
+    const supplied = mapProductAnalysis({
+      birthDetails: sampleBirth, horoscope: sampleHoroscope, lifeAnalysisViewModel: sampleViewModel, context: sampleContext,
+      wealthFinancialData: { schemaVersion: 'C01-v1', status: 'AVAILABLE', data }
+    });
+    expect(supplied.wealth.financialData?.status).toBe('AVAILABLE');
+    expect(supplied.wealth.financialData?.data).toHaveLength(12);
+    expect(supplied.wealth.speculativePropensity.source).toBe('ASTROLOGICAL_INDICATION');
+    expect(supplied.wealth.speculativePropensity.adviceAvailable).toBe(false);
+    expect(supplied.wealth.riskAndSuitability.suitability).toBe('UNAVAILABLE');
   });
 
   it('4. Dasha hierarchy mapping: MD -> PRIMARY, AD -> MODIFIER, PD -> REFINEMENT', () => {
