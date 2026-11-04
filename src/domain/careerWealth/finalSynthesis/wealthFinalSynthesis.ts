@@ -6,6 +6,8 @@ import type {
   ManifestationSummary,
   WealthDimensionFinalSynthesis,
   WealthRiskProfile,
+  WealthRiskQualification,
+  WealthRiskReasonCode,
   SynthesisAxisStatus
 } from './careerWealthFinalSynthesisTypes';
 import type { WealthDimension } from '../../wealth/wealthTypes';
@@ -19,8 +21,7 @@ import {
   enforceWealthDimensionIsolation
 } from './finalSynthesisGuardrails';
 import {
-  calculateFinalConfidenceV2,
-  type FinalDomainStatusForConfidence
+  calculateFinalConfidenceV2
 } from './finalConfidenceModel';
 
 const WEALTH_DIMENSIONS: readonly WealthDimension[] = [
@@ -122,6 +123,109 @@ function calculateWealthEvidenceSourceCount(input: {
   }
 
   return count;
+}
+
+/**
+ * CW-05 policy: a qualitative speculation-risk conclusion requires a known natal
+ * speculation promise and at least one independent corroborating producer
+ * (timing, manifestation, or D2). D2 is supporting rather than mandatory: when
+ * unavailable it constrains coverage/confidence, but does not erase otherwise
+ * sufficient natal and producer evidence.
+ */
+function qualifyWealthRisk(input: {
+  readonly speculation: WealthDimensionFinalSynthesis;
+  readonly d2Relationship: VargaRelationship;
+}): WealthRiskQualification {
+  const { speculation, d2Relationship } = input;
+  const timingAvailable = speculation.timingStatus !== 'INSUFFICIENT_DATA' ||
+    speculation.activationStatus !== 'INSUFFICIENT_DATA';
+  const manifestationAvailable = speculation.manifestationStatus !== 'INSUFFICIENT_DATA';
+  const d2Available = d2Relationship !== 'UNAVAILABLE';
+  const natalAvailable = speculation.primaryPromise !== 'UNDETERMINED';
+  const corroborationAvailable = timingAvailable || manifestationAvailable || d2Available;
+  const missingRequiredEvidenceFamilies: ('NATAL' | 'CORROBORATION')[] = [];
+  const reasonCodes: WealthRiskReasonCode[] = [];
+  const reasons: string[] = [];
+
+  if (!natalAvailable) {
+    missingRequiredEvidenceFamilies.push('NATAL');
+    reasonCodes.push('SPECULATION_NATAL_UNAVAILABLE');
+    reasons.push('Speculation natal promise is unavailable, so risk cannot be qualified.');
+  }
+  if (!corroborationAvailable) {
+    missingRequiredEvidenceFamilies.push('CORROBORATION');
+    reasonCodes.push('SPECULATION_CORROBORATION_UNAVAILABLE');
+    reasons.push('No timing, manifestation, or D2 producer corroborates the speculation assessment.');
+  }
+  if (!d2Available) {
+    reasonCodes.push('D2_UNAVAILABLE');
+    reasons.push('D2 Hora is unavailable; it reduces evidence coverage but is not required when another corroborating producer is available.');
+  }
+  if (d2Relationship === 'CONFLICTS') {
+    reasonCodes.push('D2_CONFLICT');
+    reasons.push('D2 Hora conflicts with the natal wealth indication.');
+  }
+
+  const conflictingEvidence = d2Relationship === 'CONFLICTS' ||
+    speculation.status === 'MIXED' ||
+    (speculation.activationStatus === 'CHALLENGE' && speculation.timingStatus === 'SUPPORT');
+  if (conflictingEvidence) {
+    reasonCodes.push('CONFLICTING_SPECULATION_EVIDENCE');
+    reasons.push('Speculation evidence contains conflicting or mixed indications.');
+  }
+  if (speculation.evidenceIds.length === 0) {
+    reasonCodes.push('EVIDENCE_IDS_UNAVAILABLE');
+    reasons.push('The contributing producer result has no traceable speculation evidence IDs.');
+  }
+
+  const availableFamilies = [natalAvailable, timingAvailable, manifestationAvailable, d2Available]
+    .filter(Boolean).length;
+  const evidenceCoverage = availableFamilies >= 3 ? 'HIGH' : availableFamilies >= 2 ? 'MEDIUM' : 'LOW';
+  let classification: WealthRiskProfile;
+
+  if (missingRequiredEvidenceFamilies.length > 0) {
+    classification = 'INSUFFICIENT_DATA';
+  } else if (speculation.status === 'CHALLENGED' || speculation.primaryPromise === 'WEAK' || speculation.primaryPromise === 'VERY_WEAK') {
+    classification = 'HIGH';
+    reasonCodes.push('SPECULATION_CHALLENGED');
+    reasons.push('Speculation is structurally challenged by the available evidence.');
+  } else if (speculation.status === 'MIXED') {
+    classification = speculation.activationStatus === 'CHALLENGE' || speculation.timingStatus === 'CHALLENGE' ? 'ELEVATED' : 'MODERATE';
+    reasonCodes.push('SPECULATION_MIXED');
+    reasons.push('Speculation has mixed indications; current challenge evidence determines the qualitative risk level.');
+  } else if (speculation.status === 'STRONG' || speculation.status === 'VERY_STRONG') {
+    classification = speculation.activationStatus === 'CHALLENGE' ? 'MODERATE' : 'LOW';
+    reasonCodes.push('SPECULATION_SUPPORTED');
+    reasons.push('Speculation is supported by the available evidence.');
+  } else {
+    classification = 'MODERATE';
+    reasons.push('Speculation evidence is neither clearly supportive nor clearly challenged.');
+  }
+
+  if (classification !== 'INSUFFICIENT_DATA' && conflictingEvidence && classification === 'LOW') {
+    classification = 'MODERATE';
+  }
+  if (speculation.activationStatus === 'CHALLENGE' || speculation.timingStatus === 'CHALLENGE') {
+    reasonCodes.push('SPECULATION_TIMING_CHALLENGE');
+  }
+
+  return Object.freeze({
+    classification,
+    dimension: 'SPECULATION' as const,
+    evidenceCoverage,
+    evidenceFamilies: Object.freeze({
+      natal: natalAvailable ? 'AVAILABLE' : 'UNAVAILABLE',
+      timing: timingAvailable ? 'AVAILABLE' : 'UNAVAILABLE',
+      manifestation: manifestationAvailable ? 'AVAILABLE' : 'UNAVAILABLE',
+      d2: d2Available ? 'AVAILABLE' : 'UNAVAILABLE'
+    }),
+    missingRequiredEvidenceFamilies: Object.freeze(missingRequiredEvidenceFamilies),
+    conflictingEvidence,
+    d2Availability: d2Available ? 'AVAILABLE' : 'UNAVAILABLE',
+    evidenceIds: Object.freeze([...speculation.evidenceIds]),
+    reasonCodes: Object.freeze(reasonCodes),
+    reasons: Object.freeze(reasons)
+  });
 }
 
 export function synthesizeWealthFinal(
@@ -373,32 +477,44 @@ export function synthesizeWealthFinal(
     overallStatus = 'MODERATE';
   }
 
-  // 3. Compute Risk Profile (Speculation isolation and exposure)
+  // 3. Compute qualitative risk from the isolated speculation dimension only.
+  // Foundational wealth promise and risk remain deliberately independent.
   const specStatus = isolatedDimensions.SPECULATION.status;
-  const specNatal = natalPromise.SPECULATION;
-  const specActivation = isolatedDimensions.SPECULATION.activationStatus;
-  const specTiming = isolatedDimensions.SPECULATION.timingStatus;
-  let riskProfile: WealthRiskProfile;
+  const riskQualification = qualifyWealthRisk({
+    speculation: isolatedDimensions.SPECULATION,
+    d2Relationship
+  });
+  const riskProfile: WealthRiskProfile = riskQualification.classification;
 
-  if (specStatus === 'INSUFFICIENT_DATA') {
-    riskProfile = 'INSUFFICIENT_DATA';
-  } else if (specStatus === 'CHALLENGED' || specNatal === 'WEAK' || specNatal === 'VERY_WEAK') {
-    riskProfile = overallStatus === 'STRONG' || overallStatus === 'VERY_STRONG' ? 'ELEVATED' : 'HIGH';
-  } else if (specStatus === 'MIXED') {
-    riskProfile = specActivation === 'CHALLENGE' || specTiming === 'CHALLENGE' ? 'ELEVATED' : 'MODERATE';
-  } else if (specStatus === 'STRONG' || specStatus === 'VERY_STRONG') {
-    riskProfile = specActivation === 'CHALLENGE' ? 'MODERATE' : 'LOW';
-  } else if (specStatus === 'MODERATE') {
-    riskProfile = 'MODERATE';
-  } else {
-    riskProfile = 'MODERATE';
-  }
-
-  // 4. Overall Confidence
-  const allConf = Object.values(isolatedDimensions).map((d) => d.confidence);
-  const highConfCount = allConf.filter((c) => c === 'HIGH').length;
-  const lowConfCount = allConf.filter((c) => c === 'LOW').length;
-  const overallConfidence: FinalDomainConfidence = highConfCount >= 2 ? 'HIGH' : lowConfCount >= 3 ? 'LOW' : 'MEDIUM';
+  // 4. Overall confidence describes evidence quality and consistency, never promise or risk.
+  const timingDimensions = Object.values(timingSynthesis?.dimensions ?? {});
+  const timingConfidences = timingDimensions
+    .map((dimension) => dimension.confidence)
+    .filter((confidence): confidence is number => typeof confidence === 'number');
+  const timingConfidence = timingConfidences.length > 0
+    ? timingConfidences.reduce((total, confidence) => total + confidence, 0) / timingConfidences.length
+    : undefined;
+  const manifestationDimensions = Object.values(manifestationSynthesis?.dimensions ?? {});
+  const overallConfidenceBreakdown = calculateFinalConfidenceV2({
+    natalPromise: natalPromise.ACCUMULATION ?? 'UNDETERMINED',
+    natalEvidenceCount: allNatalEvidenceIds.length,
+    activationStatus: isolatedDimensions.ACCUMULATION.activationStatus,
+    activationConfidence: undefined,
+    dashaEffectConsistent: undefined,
+    dashaHierarchyRolesConsistent: undefined,
+    timingStatus: isolatedDimensions.ACCUMULATION.timingStatus,
+    timingConfidence,
+    divisionalStatus: d2Relationship,
+    manifestationConfidences: manifestationDimensions.map((dimension) => dimension.confidence),
+    manifestationStatuses: manifestationDimensions.map((dimension) => mapManifestationStatus(dimension.status)),
+    evidenceSourceCount: calculateWealthEvidenceSourceCount({
+      natalEvidenceIds: allNatalEvidenceIds,
+      dimTiming: timingSynthesis?.dimensions?.ACCUMULATION,
+      d2Synthesis,
+      dimManifestation: manifestationSynthesis?.dimensions?.ACCUMULATION
+    })
+  });
+  const overallConfidence: FinalDomainConfidence = overallConfidenceBreakdown.final;
 
   // 5. Secondary strengths
   const secondaryStrengths: readonly WealthDimension[] = Object.freeze(
@@ -427,6 +543,7 @@ export function synthesizeWealthFinal(
     divisionalStatus: d2Relationship,
     manifestationStatus: isolatedDimensions.ACCUMULATION.manifestationStatus,
     confidence: overallConfidence,
+    confidenceBreakdown: Object.freeze(overallConfidenceBreakdown),
     primaryPromise: natalPromise.ACCUMULATION ?? 'UNDETERMINED',
     primaryStrength: natalPromise.ACCUMULATION ?? 'UNDETERMINED',
     secondaryStrengths,
@@ -445,6 +562,7 @@ export function synthesizeWealthFinal(
     natalRuleIds: Object.freeze([...new Set(allNatalRuleIds)]),
     d2Evidence: d2Synthesis ? Object.freeze([...d2Synthesis]) : undefined,
     dimensions: isolatedDimensions,
-    riskProfile
+    riskProfile,
+    riskQualification
   });
 }

@@ -37,6 +37,41 @@ export type WealthRiskProfile =
   | 'HIGH'
   | 'INSUFFICIENT_DATA';
 
+/**
+ * CW-05 risk is a qualitative interpretation of the speculation dimension.
+ * It is deliberately not a probability of a financial outcome.
+ */
+export type WealthRiskReasonCode =
+  | 'SPECULATION_NATAL_UNAVAILABLE'
+  | 'SPECULATION_CORROBORATION_UNAVAILABLE'
+  | 'SPECULATION_CHALLENGED'
+  | 'SPECULATION_MIXED'
+  | 'SPECULATION_SUPPORTED'
+  | 'SPECULATION_TIMING_CHALLENGE'
+  | 'D2_UNAVAILABLE'
+  | 'D2_CONFLICT'
+  | 'CONFLICTING_SPECULATION_EVIDENCE'
+  | 'EVIDENCE_IDS_UNAVAILABLE';
+
+export interface WealthRiskQualification {
+  readonly classification: WealthRiskProfile;
+  readonly dimension: 'SPECULATION';
+  readonly evidenceCoverage: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly evidenceFamilies: Readonly<{
+    natal: 'AVAILABLE' | 'UNAVAILABLE';
+    timing: 'AVAILABLE' | 'UNAVAILABLE';
+    manifestation: 'AVAILABLE' | 'UNAVAILABLE';
+    d2: 'AVAILABLE' | 'UNAVAILABLE';
+  }>;
+  /** Natal promise plus one corroborating producer are required for a risk classification. */
+  readonly missingRequiredEvidenceFamilies: readonly ('NATAL' | 'CORROBORATION')[];
+  readonly conflictingEvidence: boolean;
+  readonly d2Availability: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly evidenceIds: readonly string[];
+  readonly reasonCodes: readonly WealthRiskReasonCode[];
+  readonly reasons: readonly string[];
+}
+
 export interface FinalSynthesisEvidence {
   readonly id: string;
   readonly source: 'NATAL' | 'DASHA' | 'TRANSIT' | 'D10' | 'D2' | 'MANIFESTATION';
@@ -139,6 +174,7 @@ export interface CareerWealthFinalSynthesis {
   readonly natalRuleIds: readonly string[];
   readonly dimensions?: Readonly<Record<WealthDimension, WealthDimensionFinalSynthesis>>;
   readonly riskProfile?: WealthRiskProfile;
+  readonly riskQualification?: WealthRiskQualification;
   readonly primaryStrength?: DomainStrength;
   readonly secondaryStrengths?: readonly WealthDimension[];
   readonly d10Evidence?: readonly DomainEvidence[];
