@@ -731,6 +731,8 @@ function mapCareerEventTimeline(value: CareerEventTimelineAnalysis): ProductCare
       opportunityId: window.opportunityId,
       activationId: window.activationId,
       qualificationBasis: window.qualificationBasis,
+      conditions: [...window.conditions],
+      counterEvidenceOccurrenceIds: [...window.counterEvidenceOccurrenceIds],
       evidence: {
         semanticIdentityIds: [...window.evidence.semanticIdentityIds],
         occurrenceIds: [...window.evidence.occurrenceIds],
