@@ -367,6 +367,8 @@ export interface ProductCareerEventTimelineWindow {
   readonly opportunityId: string | null;
   readonly activationId: string;
   readonly qualificationBasis: 'B02_NATAL_PROMISE_AND_LINKED_ACTIVATION' | 'B01_NATAL_RISK_AND_LINKED_CHALLENGE_ACTIVATION';
+  readonly conditions: readonly string[];
+  readonly counterEvidenceOccurrenceIds: readonly string[];
   readonly evidence: {
     readonly semanticIdentityIds: readonly string[];
     readonly occurrenceIds: readonly string[];
