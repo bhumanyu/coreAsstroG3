@@ -79,9 +79,15 @@ export interface WealthLifecycleAnalysis {
   readonly statement: string;
 }
 
+export interface WealthLifecyclePeriodInput {
+  readonly periodTimingActivation: WealthPeriodTimingActivation;
+  readonly interval: { readonly start: string; readonly end: string };
+  readonly sourcePeriodId: string;
+}
+
 export interface WealthLifecycleInput {
   readonly evidence: readonly DomainEvidence[];
-  readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
+  readonly periodTimingActivations?: readonly WealthLifecyclePeriodInput[];
   readonly cw05?: {
     readonly reasoningVersion: 'CW-05';
     readonly domain: 'WEALTH';
@@ -136,7 +142,8 @@ function natalSupport(item: DomainEvidence, dimension: WealthDimension): boolean
     item.source === 'D1' && item.polarity === 'SUPPORTING' &&
     Boolean(item.ruleId?.trim()) && Boolean(item.identityKey?.trim() || item.id.trim());
 }
-function linkedActivation(period: WealthPeriodTimingActivation, evidence: readonly DomainEvidence[], promiseIds: ReadonlySet<string>): readonly string[] {
+function linkedActivation(periodInput: WealthLifecyclePeriodInput, evidence: readonly DomainEvidence[], promiseIds: ReadonlySet<string>): readonly string[] {
+  const period = periodInput.periodTimingActivation;
   const linked = evidence.filter(item => item.domain === 'WEALTH' && item.phase === 'DASHA_ACTIVATION' &&
     item.timing?.period === period.period && period.evidenceIds.includes(item.id) &&
     item.polarity === 'SUPPORTING' && item.relatedEvidenceIds.some(id => promiseIds.has(id)));
@@ -178,10 +185,11 @@ export function buildWealthLifecycleAnalysis(input: WealthLifecycleInput): Wealt
     if (natal.length > 0 && !periods.some(period => linkedActivation(period, evidence, promiseIds).length > 0)) {
       diagnostics.push({ code: periods.length === 0 ? 'MISSING_DASHA_ACTIVATION' : 'UNLINKED_DASHA_SUPPRESSED', eventType: rule.eventType, message: 'Natal promise exists, but no accepted MD/AD/PD activation occurrence links back to it.', evidenceOccurrenceIds: natal.map(item => item.id) });
     }
-    for (const period of periods) {
-      if (linkedActivation(period, evidence, promiseIds).length === 0) continue;
-      if (!validDateOnly(period.interval.start) || !validDateOnly(period.interval.end) || period.interval.end <= period.interval.start) {
-        diagnostics.push({ code: 'INVALID_PERIOD_INTERVAL', eventType: rule.eventType, message: 'Linked ' + period.period + ' source period has an invalid date-only interval; no dates are emitted.', evidenceOccurrenceIds: period.evidenceIds });
+    for (const periodInput of periods) {
+      if (linkedActivation(periodInput, evidence, promiseIds).length === 0) continue;
+      const period = periodInput.periodTimingActivation;
+      if (!validDateOnly(periodInput.interval.start) || !validDateOnly(periodInput.interval.end) || periodInput.interval.end <= periodInput.interval.start) {
+        diagnostics.push({ code: 'INVALID_PERIOD_INTERVAL', eventType: rule.eventType, message: 'Linked ' + period.periodTimingActivation.period + ' source period has an invalid date-only interval; no dates are emitted.', evidenceOccurrenceIds: period.periodTimingActivation.evidenceIds });
       }
     }
   }
