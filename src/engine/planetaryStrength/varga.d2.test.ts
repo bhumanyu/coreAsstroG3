@@ -71,7 +71,7 @@ describe('D2 Hora deterministic calculation contract', () => {
 
   it('does not leak D2 behavior into other varga mappings', () => {
     expect(getVargaSign(10, 'D3')).toBe(Sign.LEO);
-    expect(getVargaSign(10, 'D7')).toBe(Sign.ARIES);
+    expect(getVargaSign(10, 'D7')).toBe(Sign.GEMINI);
     expect(getVargaSign(10, 'D9')).toBe(Sign.GEMINI);
   });
 });
