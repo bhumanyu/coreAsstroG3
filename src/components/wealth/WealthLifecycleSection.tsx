@@ -11,7 +11,7 @@ export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ 
         <div className="rounded-xl border border-sky-500/20 bg-sky-500/10 p-2 text-sky-300"><Clock3 className="h-5 w-5" aria-hidden="true" /></div>
         <div className="min-w-0 flex-1">
           <h2 id="wealth-lifecycle-title" className="text-base font-semibold text-slate-100">Wealth Lifecycle & Candidate Timing</h2>
-          <p className="mt-1 text-xs text-slate-400">Astrological lifecycle indications only. Candidate windows are not guaranteed events or verified financial facts.</p>
+          <p className="mt-1 text-xs text-slate-400">Astrological lifecycle indication candidates only. They are not verified financial events, guarantees, or investment advice.</p>
         </div>
         <span className="rounded-lg border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-xs text-slate-300">{lifecycle.status.replaceAll('_', ' ')}</span>
       </div>
@@ -35,7 +35,7 @@ export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ 
       ) : (
         <div className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
-          <div><p className="text-sm font-medium text-slate-200">No event-enabled Wealth lifecycle candidate</p><p className="mt-1 text-xs text-slate-400">Event categories remain registered but disabled until their natal evidence, linked activation rules and independent fixtures are validated.</p></div>
+          <div><p className="text-sm font-medium text-slate-200">No event-enabled Wealth lifecycle candidate</p><p className="mt-1 text-xs text-slate-400">The first validated indication types are Accumulation and Gains. Other categories remain disabled until their event-specific natal rules, activation links and independent fixtures are validated.</p></div>
         </div>
       )}
 
