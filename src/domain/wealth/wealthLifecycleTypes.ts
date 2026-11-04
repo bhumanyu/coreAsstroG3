@@ -201,7 +201,8 @@ export function buildWealthLifecycleAnalysis(input: WealthLifecycleInput): Wealt
     const cw05PromiseAvailable = Boolean(cw05Dimension &&
       !['INSUFFICIENT_DATA', 'CHALLENGED'].includes(cw05Dimension.promiseStatus) &&
       !['INSUFFICIENT_DATA', 'CHALLENGED'].includes(cw05Dimension.status) &&
-      ['SUPPORT', 'MIXED'].includes(cw05Dimension.activationStatus));
+      ['SUPPORT', 'MIXED'].includes(cw05Dimension.activationStatus) &&
+      ['SUPPORT', 'MIXED'].includes(cw05Dimension.timingStatus));
     if (natal.length === 0 || !cw05PromiseAvailable) {
       diagnostics.push({ code: 'NO_NATAL_PROMISE', eventType: rule.eventType, message: 'A qualified D1 natal ' + dimension + ' promise is not present in both source evidence and CW-05; Dasha alone cannot create this lifecycle event.', evidenceOccurrenceIds: [] });
       if (hasDashaEvidence) diagnostics.push({ code: 'DASHA_ONLY_SUPPRESSED', eventType: rule.eventType, message: 'Dasha evidence exists without the required supported natal ' + dimension + ' promise; no event is emitted.', evidenceOccurrenceIds: evidence.filter(item => item.phase === 'DASHA_ACTIVATION').map(item => item.id) });
