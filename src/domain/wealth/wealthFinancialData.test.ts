@@ -100,12 +100,12 @@ describe('C03 trading facts provenance guardrails', () => {
     expect(validateWealthFinancialDatum({ ...item, connectedSourceProvenance: undefined })).toBe(false);
   });
 
-  it('does not accept astrology-only data as actual trading exposure or history', () => {
-    const astro = createAstrologicalFinancialIndicator({ id: 'astro', concept: 'TRADING_EXPOSURE', value: 'strong chart indication' });
-    expect(astro.sourceClassification).toBe('ASTROLOGICAL_INDICATOR');
-    expect(astro.userReportedProvenance).toBeUndefined();
-    expect(astro.connectedSourceProvenance).toBeUndefined();
-    expect(validateWealthFinancialDatum({ ...astro, sourceClassification: 'USER_REPORTED_FINANCIAL_FACT' })).toBe(false);
-    expect(validateWealthFinancialDatum({ ...astro, sourceClassification: 'CONNECTED_FINANCIAL_SOURCE' })).toBe(false);
+  it('rejects astrological indicators for trading exposure and trading history concepts', () => {
+    expect(() => createAstrologicalFinancialIndicator({
+      id: 'astro-exposure', concept: 'TRADING_EXPOSURE', value: 'strong chart indication'
+    })).toThrow(/real-world trading concepts/);
+    expect(() => createAstrologicalFinancialIndicator({
+      id: 'astro-history', concept: 'TRADING_HISTORY', value: 'frequent trader'
+    })).toThrow(/real-world trading concepts/);
   });
 });
