@@ -13,7 +13,6 @@ import type { WealthDimension } from '../../domain/wealth/wealthTypes';
 import type {
   FinalDomainStatus,
   FinalDomainConfidence,
-  WealthRiskProfile,
   SynthesisAxisStatus,
   FinalSynthesisActivationHierarchy
 } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
@@ -468,7 +467,7 @@ export interface CareerWealthFinalSynthesisFact {
   readonly natalEvidenceIds?: readonly string[];
   readonly natalRuleIds?: readonly string[];
   readonly dimensions?: Partial<Record<WealthDimension, WealthDimensionFinalSynthesisFact>>;
-  readonly riskProfile?: WealthRiskProfile;
+  readonly speculativePropensity?: 'VERY_STRONG' | 'STRONG' | 'MODERATE' | 'MIXED' | 'CHALLENGED' | 'INSUFFICIENT_DATA';
 }
 
 /**
