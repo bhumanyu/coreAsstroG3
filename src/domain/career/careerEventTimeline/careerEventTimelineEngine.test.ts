@@ -144,6 +144,8 @@ function makeInput(params: {
     finalSynthesis: {
       reasoningVersion: 'C11',
       domain: 'CAREER',
+      finalStatus: 'SUPPORTED',
+      finalDirection: 'SUPPORT',
       evidenceIds: ['natal-identity-1'],
       conflicts: params.conflicts ?? [],
       natalDirection: 'SUPPORT'
