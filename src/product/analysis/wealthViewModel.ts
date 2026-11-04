@@ -20,7 +20,7 @@ import type {
   ActivationEffect,
   TransitEffect
 } from './productAnalysisTypes';
-import { createUnavailableWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
+import { createUnavailableWealthFinancialDataSet, validateWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -93,9 +93,18 @@ export interface WealthTransitViewModel {
   readonly statement?: string;
 }
 
-export interface WealthSpeculativeRiskViewModel {
-  readonly level: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME' | 'UNAVAILABLE' | string;
+export interface WealthSpeculativePropensityViewModel {
+  readonly status: 'VERY_STRONG' | 'STRONG' | 'MODERATE' | 'MIXED' | 'CHALLENGED' | 'INSUFFICIENT_DATA';
+  readonly label: string;
   readonly description?: string;
+  readonly source: 'ASTROLOGICAL_INDICATION';
+  readonly adviceAvailable: false;
+}
+export interface WealthRiskAndSuitabilityViewModel {
+  readonly actualExposure: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly tradingHistory: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly suitability: 'UNAVAILABLE';
+  readonly suitabilityReason: string;
 }
 
 export interface WealthQualificationViewModel {
@@ -151,7 +160,8 @@ export interface WealthViewModel {
   readonly d2: WealthD2ViewModel;
   readonly dasha: WealthDashaViewModel;
   readonly transit: WealthTransitViewModel;
-  readonly speculativeRisk?: WealthSpeculativeRiskViewModel;
+  readonly speculativePropensity: WealthSpeculativePropensityViewModel;
+  readonly riskAndSuitability: WealthRiskAndSuitabilityViewModel;
   readonly qualifications: readonly WealthQualificationViewModel[];
   readonly evidence: readonly WealthEvidenceViewModel[];
   readonly conclusion: WealthConclusionViewModel;
@@ -170,6 +180,13 @@ export const DASHA_LEVEL_ORDER: Record<string, number> = {
  * Invariant: Performs no domain calculations, no strength derivation from D2/transit,
  * and maintains role vs direction independence.
  */
+const PROHIBITED_PROPENSITY_DESCRIPTION = /\b(?:buy|sell|hold|options?|leverage|margin|short(?:ing)?|long(?:ing)?|position\s*size|instrument|expected\s+return|profit|loss|stop\s*loss|target\s*price|portfolio\s+allocation|recommend(?:ation|ed)?|trade\s+signal)\b/i;
+
+function sanitizePropensityDescription(value?: string): string | undefined {
+  if (!value?.trim() || PROHIBITED_PROPENSITY_DESCRIPTION.test(value)) return undefined;
+  return value.trim();
+}
+
 export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewModel {
   const wealth = analysis.wealth;
 
@@ -184,7 +201,9 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   };
 
   const sourceFinancialData = wealth.financialData ?? createUnavailableWealthFinancialDataSet();
-  const financialData: WealthFinancialDataViewModel = { status: sourceFinancialData.status, data: sourceFinancialData.data };
+  const isValidFinancialData = validateWealthFinancialDataSet(sourceFinancialData);
+  const normalizedFinancialData = isValidFinancialData ? sourceFinancialData : createUnavailableWealthFinancialDataSet('Financial source data failed C01 validation.');
+  const financialData: WealthFinancialDataViewModel = { status: normalizedFinancialData.status, data: normalizedFinancialData.data };
 
   const overall: WealthOverallViewModel = {
     promise: wealth.overall.promise,
@@ -271,12 +290,41 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     statement: wealth.activation.transit.statement
   };
 
-  const speculativeRisk: WealthSpeculativeRiskViewModel | undefined = wealth.speculativeRisk
-    ? {
-        level: wealth.speculativeRisk.level,
-        description: wealth.speculativeRisk.description
-      }
-    : undefined;
+  const rawPropensityStatus = wealth.speculativePropensity?.status ?? 'INSUFFICIENT_DATA';
+  const allowedPropensityStatuses = ['VERY_STRONG', 'STRONG', 'MODERATE', 'MIXED', 'CHALLENGED', 'INSUFFICIENT_DATA'] as const;
+  const propensityStatus = (allowedPropensityStatuses as readonly string[]).includes(rawPropensityStatus)
+    ? rawPropensityStatus as typeof allowedPropensityStatuses[number]
+    : 'INSUFFICIENT_DATA';
+  const propensityLabels = {
+    VERY_STRONG: 'Very strong indication',
+    STRONG: 'Strong indication',
+    MODERATE: 'Moderate indication',
+    MIXED: 'Mixed indication',
+    CHALLENGED: 'Challenged indication',
+    INSUFFICIENT_DATA: 'Insufficient data'
+  } as const;
+  const speculativePropensity: WealthSpeculativePropensityViewModel = {
+    status: propensityStatus,
+    label: propensityLabels[propensityStatus],
+    // Persisted ProductAnalysis content is untrusted too; fail closed at the final presentation boundary.
+    description: sanitizePropensityDescription(wealth.speculativePropensity?.description),
+    source: 'ASTROLOGICAL_INDICATION',
+    adviceAvailable: false
+  };
+  const hasExplicitFinancialSource = (concept: 'TRADING_EXPOSURE' | 'TRADING_HISTORY'): boolean =>
+    normalizedFinancialData.data.some((datum) =>
+      datum.concept === concept &&
+      datum.availability === 'AVAILABLE' &&
+      (datum.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' ||
+        datum.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE')
+    );
+  // Availability is projected only from validated C01 source facts; never trust a precomputed flag.
+  const riskAndSuitability: WealthRiskAndSuitabilityViewModel = {
+    actualExposure: hasExplicitFinancialSource('TRADING_EXPOSURE') ? 'AVAILABLE' : 'UNAVAILABLE',
+    tradingHistory: hasExplicitFinancialSource('TRADING_HISTORY') ? 'AVAILABLE' : 'UNAVAILABLE',
+    suitability: 'UNAVAILABLE',
+    suitabilityReason: 'Suitability requires a separately governed model; neither chart-derived propensity nor factual exposure data is a suitability assessment.'
+  };
 
   const qualifications: WealthQualificationViewModel[] = (wealth.qualifications ?? []).map(
     (q) => ({
@@ -322,7 +370,8 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     d2,
     dasha,
     transit,
-    speculativeRisk,
+    speculativePropensity,
+    riskAndSuitability,
     qualifications,
     evidence,
     conclusion,

@@ -20,7 +20,8 @@ import type {
   WealthD2ViewModel,
   WealthDashaViewModel,
   WealthTransitViewModel,
-  WealthSpeculativeRiskViewModel,
+  WealthSpeculativePropensityViewModel,
+  WealthRiskAndSuitabilityViewModel,
   WealthQualificationViewModel,
   WealthEvidenceViewModel,
   WealthConclusionViewModel
@@ -298,26 +299,43 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
     });
   });
 
-  describe('WealthSpeculativeRiskSection', () => {
-    it.each([
-      ['LOW', 'Low Risk'],
-      ['MODERATE', 'Moderate Risk'],
-      ['HIGH', 'High Risk'],
-      ['EXTREME', 'Extreme Risk'],
-      ['UNAVAILABLE', 'Unavailable']
-    ])('renders speculative risk level "%s" as "%s"', (levelValue, expectedLabel) => {
-      const speculativeRisk: WealthSpeculativeRiskViewModel = {
-        level: levelValue,
-        description: `Speculative risk description for ${levelValue}`
-      };
+  describe('WealthSpeculativeRiskSection — C03 separation', () => {
+    const riskAndSuitability: WealthRiskAndSuitabilityViewModel = {
+      actualExposure: 'UNAVAILABLE',
+      tradingHistory: 'UNAVAILABLE',
+      suitability: 'UNAVAILABLE',
+      suitabilityReason: 'No separately governed suitability model is approved.'
+    };
 
+    it.each([
+      ['VERY_STRONG', 'Very strong indication'],
+      ['STRONG', 'Strong indication'],
+      ['MODERATE', 'Moderate indication'],
+      ['MIXED', 'Mixed indication'],
+      ['CHALLENGED', 'Challenged indication'],
+      ['INSUFFICIENT_DATA', 'Insufficient data']
+    ] as const)('renders propensity %s as %s', (status, label) => {
+      const speculativePropensity: WealthSpeculativePropensityViewModel = {
+        status,
+        label,
+        source: 'ASTROLOGICAL_INDICATION',
+        adviceAvailable: false,
+        description: 'Chart-derived indication only.'
+      };
       const { unmount } = render(
-        <WealthSpeculativeRiskSection speculativeRisk={speculativeRisk} />
+        <WealthSpeculativeRiskSection
+          speculativePropensity={speculativePropensity}
+          riskAndSuitability={riskAndSuitability}
+        />
       );
-      expect(
-        screen.getByText('Speculative Risk & Market Exposure Profile')
-      ).toBeInTheDocument();
-      expect(screen.getByText(expectedLabel)).toBeInTheDocument();
+      expect(screen.getByText('Astrological Speculative Propensity')).toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByText(/not a measure of actual trading exposure/)).toBeInTheDocument();
+      expect(screen.getByText(/Actual exposure:/)).toBeInTheDocument();
+      expect(screen.getByText(/Trading history:/)).toBeInTheDocument();
+      expect(screen.getByText(/Suitability:/)).toBeInTheDocument();
+      expect(screen.queryByText(/investments recommended/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/risk profile|market exposure profile/i)).not.toBeInTheDocument();
       unmount();
     });
   });

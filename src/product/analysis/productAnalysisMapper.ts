@@ -21,6 +21,7 @@ import type {
   LifeAnalysisQualification
 } from '../life-analysis/lifeAnalysisTypes';
 import type { AiExplanationResult } from '../../ai/browser';
+import type { WealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
 import type {
   ProductAnalysis,
   ProductAnalysisStatus,
@@ -39,7 +40,6 @@ import type {
   ProductWarning,
   D10ProductResult,
   D2ProductResult,
-  SpeculativeRiskProduct,
   ProductQualification,
   ProductCareerAnalyticalAxes,
   ProductCareerOutcomeAnalysis,
@@ -92,6 +92,8 @@ export interface ProductAnalysisMapperInput {
   readonly careerEvidence?: readonly ProductEvidence[];
   readonly wealthEvidence?: readonly ProductEvidence[];
   readonly temporalState?: import('../../core/analysis/AnalysisTemporalState').AnalysisTemporalState;
+  /** Explicit user-reported or connected-source financial facts; never derived from horoscope. */
+  readonly wealthFinancialData?: WealthFinancialDataSet;
 }
 
 /**
@@ -326,17 +328,32 @@ export function mapD2Relationship(_val?: string): D2ProductResult['relationship'
   return 'UNAVAILABLE';
 }
 
-/**
- * Maps speculative risk level.
- */
-export function mapSpeculativeRisk(val?: string): SpeculativeRiskProduct['level'] {
-  if (!val) return 'UNAVAILABLE';
-  const u = val.toUpperCase();
-  if (u.includes('EXTREME')) return 'EXTREME';
-  if (u.includes('HIGH')) return 'HIGH';
-  if (u.includes('MODERATE') || u.includes('AVERAGE')) return 'MODERATE';
-  if (u.includes('LOW')) return 'LOW';
-  return 'UNAVAILABLE';
+/** Maps legacy dimension status to descriptive chart-propensity vocabulary. */
+export function mapSpeculativePropensity(val?: string): import('./productAnalysisTypes').AstrologicalSpeculativePropensity {
+  const u = (val ?? '').trim().toUpperCase();
+  switch (u) {
+    case 'VERY_STRONG':
+    case 'STRONGLY_SUPPORTED': return 'VERY_STRONG';
+    case 'STRONG':
+    case 'SUPPORTED': return 'STRONG';
+    case 'MODERATE': return 'MODERATE';
+    case 'MIXED': return 'MIXED';
+    case 'CHALLENGED':
+    case 'CHALLENGE':
+    case 'WEAK':
+    case 'VERY_WEAK':
+    case 'LIMITED': return 'CHALLENGED';
+    default: return 'INSUFFICIENT_DATA';
+  }
+}
+
+const PROHIBITED_SPECULATION_OUTPUT = /\\b(?:buy|sell|hold|options?|leverage|margin|short(?:ing)?|long(?:ing)?|position\\s*size|instrument|expected\\s+return|profit|loss|stop\\s*loss|target\\s*price|portfolio\\s+allocation|recommend(?:ation|ed)?|trade\\s+signal)\\b/i;
+
+/** Only retain non-prescriptive chart description text. Untrusted engine prose fails closed. */
+export function sanitizeSpeculativePropensityDescription(value?: string): string | undefined {
+  if (!value?.trim()) return undefined;
+  if (PROHIBITED_SPECULATION_OUTPUT.test(value)) return undefined;
+  return value.trim();
 }
 
 /**
@@ -881,10 +898,12 @@ function mapCareer(
 
 function mapWealth(
   viewModel: LifeAnalysisViewModel,
-  explicitEvidence?: readonly ProductEvidence[]
+  explicitEvidence?: readonly ProductEvidence[],
+  financialData?: WealthFinancialDataSet
 ): WealthProductAnalysis {
   const detail = viewModel.wealthDetail;
   const summary = viewModel.domains.find((d) => d.domain === 'WEALTH');
+
 
   const evidence =
     explicitEvidence && explicitEvidence.length > 0
@@ -910,6 +929,7 @@ function mapWealth(
   const speculationStatement = detail?.speculation?.statement;
 
   return {
+    ...(financialData ? { financialData } : {}),
     overall: {
       status: detail?.status
         ? String(detail.status)
@@ -965,12 +985,25 @@ function mapWealth(
         statement: detail?.timing?.transitStatement
       }
     },
-    speculativeRisk: speculationStatus
-      ? {
-        level: mapSpeculativeRisk(String(speculationStatus)),
-        description: speculationStatement
-      }
-      : undefined,
+    speculativePropensity: {
+      source: 'ASTROLOGICAL_INDICATION',
+      status: speculationStatus ? mapSpeculativePropensity(String(speculationStatus)) : 'INSUFFICIENT_DATA',
+      description: sanitizeSpeculativePropensityDescription(speculationStatement),
+      evidenceIds: evidence
+        .filter((item) =>
+          item.source.toUpperCase().includes('SPECULATION') ||
+          (item.ruleId ?? '').toUpperCase().includes('SPECULATION')
+        )
+        .map((item) => item.id),
+      adviceAvailable: false
+    },
+    riskAndSuitability: {
+      // The view-model recomputes availability only after validating the C01 dataset.
+      actualExposure: 'UNAVAILABLE',
+      tradingHistory: 'UNAVAILABLE',
+      suitability: 'UNAVAILABLE',
+      suitabilityReason: 'Suitability requires a separately governed assessment and cannot be inferred from astrology or exposure facts.'
+    },
     qualifications: mapQualifications(detail?.qualifications),
     evidence,
     synthesis: {
@@ -1545,7 +1578,7 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
   const chart = mapChartSummary(input.horoscope);
 
   const career = mapCareer(input.lifeAnalysisViewModel, input.careerEvidence);
-  const wealth = mapWealth(input.lifeAnalysisViewModel, input.wealthEvidence);
+  const wealth = mapWealth(input.lifeAnalysisViewModel, input.wealthEvidence, input.wealthFinancialData);
 
   const dasha = mapDashaState(input.horoscope, career, wealth, asOf, input.temporalState);
   const reasoning = mapReasoning(input.lifeAnalysisViewModel, career, wealth, input.aiExplanation);

@@ -29,6 +29,6 @@ describe('DefaultCareerWealthFinalSynthesisService (CW-05)', () => {
     expect(res.domain).toBe('WEALTH');
     expect(res.reasoningVersion).toBe('CW-05');
     expect(res.status).toBe('STRONG');
-    expect(res.riskProfile).toBe('LOW');
+    expect(res.speculativePropensity).toBe('STRONG');
   });
 });

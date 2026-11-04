@@ -572,9 +572,22 @@ export interface WealthActivationProduct {
   readonly transit: TransitProductResult;
 }
 
-export interface SpeculativeRiskProduct {
-  readonly level: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME' | 'UNAVAILABLE';
+export type AstrologicalSpeculativePropensity =
+  | 'VERY_STRONG' | 'STRONG' | 'MODERATE' | 'MIXED' | 'CHALLENGED' | 'INSUFFICIENT_DATA';
+
+export interface AstrologicalSpeculativePropensityProduct {
+  readonly source: 'ASTROLOGICAL_INDICATION';
+  readonly status: AstrologicalSpeculativePropensity;
   readonly description?: string;
+  readonly evidenceIds: readonly string[];
+  readonly adviceAvailable: false;
+}
+
+export interface WealthRiskAndSuitabilityProduct {
+  readonly actualExposure: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly tradingHistory: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly suitability: 'UNAVAILABLE';
+  readonly suitabilityReason: string;
 }
 
 import type { WealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
@@ -586,7 +599,10 @@ export interface WealthProductAnalysis {
   readonly dimensions: WealthDimensionsProduct;
   readonly d2: D2ProductResult;
   readonly activation: WealthActivationProduct;
-  readonly speculativeRisk?: SpeculativeRiskProduct;
+  /** Optional for legacy persisted analyses; projection defaults to unavailable. */
+  readonly speculativePropensity?: AstrologicalSpeculativePropensityProduct;
+  /** Optional for legacy persisted analyses; never inferred from horoscope. */
+  readonly riskAndSuitability?: WealthRiskAndSuitabilityProduct;
   readonly qualifications?: readonly ProductQualification[];
   readonly evidence: readonly ProductEvidence[];
   readonly synthesis?: {

@@ -1,13 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { selectWealthViewModel } from '../wealthViewModel';
 import { createProductAnalysis } from './testHelpers';
+import { createUserReportedFinancialDatum, createUnavailableWealthFinancialDataSet } from '../../../domain/wealth/wealthFinancialData';
+function createUserReportedFinancialDataFixture() {
+  const data = [...createUnavailableWealthFinancialDataSet().data];
+  const provenance = { reportedBy: 'USER' as const, reportId: 'trade-report', reportedAt: '2026-11-04T05:30:00Z' };
+  data[data.findIndex((item) => item.concept === 'TRADING_EXPOSURE')] = createUserReportedFinancialDatum({ id: 'trading-exposure', concept: 'TRADING_EXPOSURE', value: { gross: 1000 }, provenance });
+  data[data.findIndex((item) => item.concept === 'TRADING_HISTORY')] = createUserReportedFinancialDatum({ id: 'trading-history', concept: 'TRADING_HISTORY', value: { trades: 2 }, provenance });
+  return { schemaVersion: 'C01-v1' as const, status: 'AVAILABLE' as const, data };
+}
+
 import type { ProductDashaPeriod } from '../productAnalysisTypes';
 
 describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
   it('defaults real-world financial data to UNAVAILABLE when none is supplied', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.financialData.status).toBe('UNAVAILABLE');
-    expect(vm.financialData.data).toHaveLength(10);
+    expect(vm.financialData.data).toHaveLength(12);
     expect(vm.financialData.data.every((datum) =>
       datum.sourceClassification === 'UNAVAILABLE' && datum.value === undefined
     )).toBe(true);
@@ -16,7 +25,7 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
   it('defaults all real-world financial concepts to UNAVAILABLE without reported data', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.financialData.status).toBe('UNAVAILABLE');
-    expect(vm.financialData.data).toHaveLength(10);
+    expect(vm.financialData.data).toHaveLength(12);
     expect(vm.financialData.data.every((item) => item.sourceClassification === 'UNAVAILABLE' && item.value === undefined)).toBe(true);
   });
   it('1. promise vs conclusion vs confidence separation: preserves distinct fields on overall', () => {
@@ -121,17 +130,24 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
           promise: 'STRONG',
           status: 'STRONGLY_SUPPORTED'
         },
-        speculativeRisk: {
-          level: 'EXTREME',
-          description: 'High volatility in 5th house.'
+        speculativePropensity: {
+          source: 'ASTROLOGICAL_INDICATION',
+          status: 'CHALLENGED',
+          description: 'Chart-derived indication only.',
+          evidenceIds: ['spec-1'],
+          adviceAvailable: false
         }
       }
     });
     const vm = selectWealthViewModel(analysis);
 
     expect(vm.overall.promise).toBe('STRONG');
-    expect(vm.speculativeRisk?.level).toBe('EXTREME');
-    expect(vm.speculativeRisk?.description).toBe('High volatility in 5th house.');
+    expect(vm.speculativePropensity.status).toBe('CHALLENGED');
+    expect(vm.speculativePropensity.source).toBe('ASTROLOGICAL_INDICATION');
+    expect(vm.speculativePropensity.adviceAvailable).toBe(false);
+    expect(vm.riskAndSuitability.actualExposure).toBe('UNAVAILABLE');
+    expect(vm.riskAndSuitability.tradingHistory).toBe('UNAVAILABLE');
+    expect(vm.riskAndSuitability.suitability).toBe('UNAVAILABLE');
   });
 
   it('6. preserves MD -> AD -> PD hierarchy: strictly orders periods regardless of input array order', () => {
@@ -305,4 +321,75 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     expect(vm.dimensions.accumulation.status).not.toBe(vm.dimensions.speculation.status);
     expect(vm.dimensions.accumulation.statement).not.toBe(vm.dimensions.speculation.statement);
   });
+});
+
+
+describe('C03 separation guardrails', () => {
+  it('keeps exposure, trading history, and suitability unavailable without explicit financial source data', () => {
+    const vm = selectWealthViewModel(createProductAnalysis());
+    expect(vm.riskAndSuitability).toMatchObject({ actualExposure: 'UNAVAILABLE', tradingHistory: 'UNAVAILABLE', suitability: 'UNAVAILABLE' });
+  });
+  it('removes prohibited trading language from persisted propensity descriptions', () => {
+    const base = createProductAnalysis();
+    const analysis = { ...base, wealth: { ...base.wealth, speculativePropensity: {
+      source: 'ASTROLOGICAL_INDICATION' as const,
+      status: 'STRONG' as const,
+      description: 'Buy options with leverage for expected profit.',
+      evidenceIds: [],
+      adviceAvailable: false as const
+    } } };
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.speculativePropensity.description).toBeUndefined();
+  });
+
+  it('fails closed for unrecognized persisted propensity vocabulary', () => {
+    const base = createProductAnalysis();
+    const analysis = { ...base, wealth: { ...base.wealth, speculativePropensity: {
+      source: 'ASTROLOGICAL_INDICATION' as const,
+      status: 'BUY_NOW' as never,
+      evidenceIds: [],
+      adviceAvailable: false as const
+    } } };
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.speculativePropensity.status).toBe('INSUFFICIENT_DATA');
+    expect(vm.speculativePropensity.label).toBe('Insufficient data');
+  });
+
+  it('does not derive exposure, history, or suitability from chart propensity', () => {
+    const base = createProductAnalysis();
+    const analysis = { ...base, wealth: { ...base.wealth, speculativePropensity: { source: 'ASTROLOGICAL_INDICATION' as const, status: 'VERY_STRONG' as const, evidenceIds: ['ast-1'], adviceAvailable: false as const } } };
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.speculativePropensity.status).toBe('VERY_STRONG');
+    expect(vm.riskAndSuitability.actualExposure).toBe('UNAVAILABLE');
+    expect(vm.riskAndSuitability.tradingHistory).toBe('UNAVAILABLE');
+    expect(vm.riskAndSuitability.suitability).toBe('UNAVAILABLE');
+  });
+});
+
+
+it('derives actual exposure and trading history only from explicit C01 fact sources', () => {
+  const base = createProductAnalysis();
+  const financialData = createUserReportedFinancialDataFixture();
+  const analysis = { ...base, wealth: { ...base.wealth, financialData } };
+  const vm = selectWealthViewModel(analysis);
+  expect(vm.riskAndSuitability.actualExposure).toBe('AVAILABLE');
+  expect(vm.riskAndSuitability.tradingHistory).toBe('AVAILABLE');
+  expect(vm.riskAndSuitability.suitability).toBe('UNAVAILABLE');
+});
+
+it('does not report actual trading exposure or history from astrology-only records', () => {
+  const base = createProductAnalysis();
+  const dataset = createUnavailableWealthFinancialDataSet();
+  const invalid = {
+    schemaVersion: 'C01-v1' as const,
+    status: 'AVAILABLE' as const,
+    data: dataset.data.map((datum) => datum.concept === 'TRADING_EXPOSURE'
+      ? { id: 'astro-trading', concept: 'TRADING_EXPOSURE' as const, availability: 'AVAILABLE' as const, sourceClassification: 'ASTROLOGICAL_INDICATOR' as const, value: 'strong indication' }
+      : datum)
+  };
+  const analysis = { ...base, wealth: { ...base.wealth, financialData: invalid } };
+  const vm = selectWealthViewModel(analysis);
+  expect(vm.riskAndSuitability.actualExposure).toBe('UNAVAILABLE');
+  expect(vm.riskAndSuitability.tradingHistory).toBe('UNAVAILABLE');
+  expect(vm.financialData.status).toBe('UNAVAILABLE');
 });

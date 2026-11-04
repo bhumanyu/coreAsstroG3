@@ -217,25 +217,15 @@ export function formatSeverity(severity?: 'LOW' | 'MEDIUM' | 'HIGH' | string): s
   }
 }
 
-/**
- * Format speculative risk levels:
- * 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME' | 'UNAVAILABLE'
- */
+/** Descriptive propensity labels only; never a financial risk grade. */
 export function formatSpeculativeRiskLevel(level?: string): string {
-  if (!level || level.toUpperCase() === 'UNAVAILABLE') {
-    return 'Unavailable';
-  }
-  switch (level.toUpperCase()) {
-    case 'LOW':
-      return 'Low Risk';
-    case 'MODERATE':
-      return 'Moderate Risk';
-    case 'HIGH':
-      return 'High Risk';
-    case 'EXTREME':
-      return 'Extreme Risk';
-    default:
-      return 'Unavailable';
+  switch ((level ?? '').toUpperCase()) {
+    case 'VERY_STRONG': return 'Very strong indication';
+    case 'STRONG': return 'Strong indication';
+    case 'MODERATE': return 'Moderate indication';
+    case 'MIXED': return 'Mixed indication';
+    case 'CHALLENGED': return 'Challenged indication';
+    default: return 'Insufficient data';
   }
 }
 
@@ -349,17 +339,7 @@ export function getEvidenceRoleBadgeClass(role?: ProductEvidenceRole | string): 
 /**
  * Tailwind styling helper for Speculative Risk badges
  */
-export function getSpeculativeRiskBadgeClass(level?: string): string {
-  switch (level?.toUpperCase()) {
-    case 'LOW':
-      return 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300';
-    case 'MODERATE':
-      return 'bg-blue-950/60 border-blue-800/80 text-blue-300';
-    case 'HIGH':
-      return 'bg-amber-950/60 border-amber-800/80 text-amber-300';
-    case 'EXTREME':
-      return 'bg-rose-950/60 border-rose-800/80 text-rose-300';
-    default:
-      return 'bg-slate-800/60 border-slate-700/80 text-slate-400';
-  }
+/** Neutral styling for chart propensity states; colors must not imply financial risk. */
+export function getSpeculativeRiskBadgeClass(_status?: string): string {
+  return 'bg-slate-800/60 border-slate-700/80 text-slate-300';
 }
