@@ -394,12 +394,28 @@ export interface ProductCareerEventSpecificTaxonomyItem {
   readonly releaseEnabled: false;
 }
 
+export interface ProductCareerEventSpecificCandidate {
+  readonly candidateId: string;
+  readonly eventType: ProductCareerEventSpecificTaxonomyItem['eventType'];
+  readonly status: 'CANDIDATE';
+  readonly sourceWindowId: string;
+  readonly timing: { readonly type: 'DASHA_PERIOD_WINDOW' | 'UNTIMED'; readonly start?: string; readonly end?: string };
+  readonly evidenceOccurrenceIds: readonly string[];
+  readonly semanticIdentityIds: readonly string[];
+  readonly rootIdentityKeys: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly counterEvidenceOccurrenceIds: readonly string[];
+  readonly limitations: readonly string[];
+  readonly guarantee: 'NONE';
+  readonly numericProbabilityAvailable: false;
+}
+
 export interface ProductCareerEventTimeline {
   readonly reasoningVersion: 'B06';
   readonly methodVersion: string;
   readonly status: 'GENERIC_WINDOWS_ONLY' | 'PARTIAL' | 'UNAVAILABLE';
   readonly taxonomy: readonly ProductCareerEventSpecificTaxonomyItem[];
-  readonly eventCandidates: readonly [];
+  readonly eventCandidates: readonly ProductCareerEventSpecificCandidate[];
   readonly genericWindows: readonly ProductCareerEventTimelineWindow[];
   readonly observedOutcomeReportIds: readonly string[];
   readonly diagnostics: readonly string[];
