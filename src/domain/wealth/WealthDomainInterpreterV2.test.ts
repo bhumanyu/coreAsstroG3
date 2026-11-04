@@ -2813,6 +2813,9 @@ describe('Wealth period activation contracts', () => {
     expect(md?.statement).toContain('complete but no period evidence');
     expect(ad?.statement).toContain('complete but no period evidence');
     expect(pd?.statement).toContain('unavailable');
+    expect(md?.interval).toEqual({ start: completeDasha.mahadasha.start, end: completeDasha.mahadasha.end });
+    expect(ad?.interval).toEqual({ start: completeDasha.antardasha.start, end: completeDasha.antardasha.end });
+    expect(pd?.interval).toBeUndefined();
   });
 
   it('does not treat a partially evaluated reference dataset as authoritative', () => {

@@ -109,21 +109,33 @@ export const WEALTH_LIFECYCLE_RULE_CATALOGUE: readonly WealthLifecycleEventRuleC
   { eventType: 'GAINS', validationStatus: 'UNVALIDATED', natalDimension: 'GAINS', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'A distinct gains-event rule and independent golden fixtures have not been approved; CW-05 Gains remains a natal dimension, not an event.', releaseEnabled: false },
   { eventType: 'ASSET_BUILDING_INDICATION', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No validated asset-acquisition rule exists; ownership/acquisition is not asserted.', releaseEnabled: false },
   { eventType: 'PRESERVATION', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No dedicated preservation evidence family or validated event rule exists.', releaseEnabled: false },
-  { eventType: 'EROSION_CHALLENGE', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE']), validationGap: 'Challenge activation does not establish actual asset erosion or financial loss.', releaseEnabled: false },
+  { eventType: 'EROSION_CHALLENGE', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE' as WealthLifecycleEvidenceRequirement]), validationGap: 'Challenge activation does not establish actual asset erosion or financial loss.', releaseEnabled: false },
   { eventType: 'DEBT_EXPOSURE_INDICATION', validationStatus: 'UNVALIDATED', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'There is no canonical Debt dimension or validated debt-indication evidence contract.', releaseEnabled: false },
   { eventType: 'DEBT_REPAYMENT_REDUCTION_INDICATION', validationStatus: 'UNVALIDATED', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'There is no debt-balance lifecycle rule; actual reduction requires financial facts.', releaseEnabled: false },
-  { eventType: 'LIQUIDITY_PRESSURE', validationStatus: 'UNVALIDATED', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE']), validationGap: 'No liquidity evidence family or validated liquidity-pressure rule exists.', releaseEnabled: false },
+  { eventType: 'LIQUIDITY_PRESSURE', validationStatus: 'UNVALIDATED', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE' as WealthLifecycleEvidenceRequirement]), validationGap: 'No liquidity evidence family or validated liquidity-pressure rule exists.', releaseEnabled: false },
   { eventType: 'LIQUIDITY_RELIEF', validationStatus: 'UNVALIDATED', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No liquidity-relief evidence family or validated rule exists; actual liquidity requires financial facts.', releaseEnabled: false },
-  { eventType: 'RECOVERY', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE']), validationGap: 'No ordered prior-challenge-to-subsequent-support Wealth recovery rule is validated.', releaseEnabled: false },
+  { eventType: 'RECOVERY', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE' as WealthLifecycleEvidenceRequirement]), validationGap: 'No ordered prior-challenge-to-subsequent-support Wealth recovery rule is validated.', releaseEnabled: false },
   { eventType: 'INHERITANCE_INDICATION', validationStatus: 'UNVALIDATED', natalDimension: 'FORTUNE', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No dedicated inheritance rule or golden fixture exists; actual receipt remains an external observed fact.', releaseEnabled: false }
 ]);
 
 const compare = (a: string, b: string): number => a < b ? -1 : a > b ? 1 : 0;
 const uniqueSorted = (values: readonly string[]): readonly string[] => Object.freeze([...new Set(values.filter(value => typeof value === 'string' && value.trim().length > 0))].sort(compare));
-function validDateOnly(value: string): boolean {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
-  const date = new Date(value + 'T00:00:00.000Z');
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+function parsePeriodDate(value: string): number | undefined {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const timestamp = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);
+  const match = dateOnly ?? timestamp;
+  if (!match) return undefined;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const calendarDate = new Date(0);
+  calendarDate.setUTCHours(0, 0, 0, 0);
+  calendarDate.setUTCFullYear(year, month - 1, day);
+  if (calendarDate.getUTCFullYear() !== year || calendarDate.getUTCMonth() !== month - 1 || calendarDate.getUTCDate() !== day) {
+    return undefined;
+  }
+  const parsed = Date.parse(dateOnly ? value + 'T00:00:00.000Z' : value);
+  return Number.isNaN(parsed) ? undefined : parsed;
 }
 function financialFactIds(dataset?: WealthFinancialDataSet): readonly string[] {
   if (!dataset) return Object.freeze([]);
@@ -180,8 +192,12 @@ export function buildWealthLifecycleAnalysis(input: WealthLifecycleInput): Wealt
     }
     for (const period of periods) {
       if (linkedActivation(period, evidence, promiseIds).length === 0) continue;
-      if (!validDateOnly(period.interval.start) || !validDateOnly(period.interval.end) || period.interval.end <= period.interval.start) {
-        diagnostics.push({ code: 'INVALID_PERIOD_INTERVAL', eventType: rule.eventType, message: 'Linked ' + period.period + ' source period has an invalid date-only interval; no dates are emitted.', evidenceOccurrenceIds: period.evidenceIds });
+      if (period.interval) {
+        const start = parsePeriodDate(period.interval.start);
+        const end = parsePeriodDate(period.interval.end);
+        if (start === undefined || end === undefined || end <= start) {
+          diagnostics.push({ code: 'INVALID_PERIOD_INTERVAL', eventType: rule.eventType, message: 'Linked ' + period.period + ' source period has an invalid interval; no dates are emitted.', evidenceOccurrenceIds: period.evidenceIds });
+        }
       }
     }
   }

@@ -79,6 +79,7 @@ export interface WealthPeriodDimensionEffects {
 export interface WealthPeriodTimingActivation {
   readonly period: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
+  readonly interval?: { readonly start: string; readonly end: string };
   readonly dimensions: WealthPeriodDimensionEffects;
   readonly evidenceIds: readonly string[];
   readonly effect?: TimingActivationEffect;

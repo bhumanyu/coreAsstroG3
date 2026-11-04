@@ -296,9 +296,24 @@ export function interpretWealthV2(
   );
 
   const periodTimingActivations: readonly WealthPeriodTimingActivation[] = Object.freeze([
-    mdPeriodTiming,
-    adPeriodTiming,
-    pdPeriodTiming
+    Object.freeze({
+      ...mdPeriodTiming,
+      ...(currentDasha?.mahadasha
+        ? { interval: Object.freeze({ start: currentDasha.mahadasha.start, end: currentDasha.mahadasha.end }) }
+        : {})
+    }),
+    Object.freeze({
+      ...adPeriodTiming,
+      ...(currentDasha?.antardasha
+        ? { interval: Object.freeze({ start: currentDasha.antardasha.start, end: currentDasha.antardasha.end }) }
+        : {})
+    }),
+    Object.freeze({
+      ...pdPeriodTiming,
+      ...(currentDasha?.pratyantardasha
+        ? { interval: Object.freeze({ start: currentDasha.pratyantardasha.start, end: currentDasha.pratyantardasha.end }) }
+        : {})
+    })
   ]);
 
   // CW-01 reasoning hierarchy is the authoritative production reasoning path
@@ -555,7 +570,9 @@ export function interpretWealthV2(
   const wealthLifecycle = evaluateWealthLifecycle({
     evidence: mergedEvidence,
     periodTimingActivations,
-    cw05: wealthFinalSynthesis,
+    cw05: wealthFinalSynthesis.domain === 'WEALTH'
+      ? { ...wealthFinalSynthesis, domain: 'WEALTH' }
+      : undefined,
     // Financial facts are deliberately not sourced from horoscope interpretation.
   });
 
