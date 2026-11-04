@@ -286,7 +286,7 @@ export function validateWealthFinancialDatum(value: unknown): value is WealthFin
     return Boolean(p && ['CONNECTED_ACCOUNT', 'BROKERAGE', 'BANK', 'OTHER_FINANCIAL_PROVIDER'].includes(String(p.sourceType))
       && typeof p.providerId === 'string' && p.providerId.trim()
       && typeof p.connectionId === 'string' && p.connectionId.trim()
-      && typeof p.retrievedAt === 'string' && ISO_INSTANT.test(p.retrievedAt)
+      && typeof p.retrievedAt === 'string' && ISO_INSTANT.test(p.retrievedAt) && !Number.isNaN(Date.parse(p.retrievedAt))
       && !item.userReportedProvenance && !item.calculationProvenance);
   }
   return false;
