@@ -180,12 +180,22 @@ function opportunityOutcome(
       ...promiseOccurrenceIds,
       activation.id
     ]),
-    rootIds
+    rootIds,
+    counterEvidenceOccurrenceIds: sortedUnique(candidate.counterIndications.evidenceOccurrenceIds),
+    conditions: Object.freeze([
+      'C11_D1_NATAL_PROMISE_CONFIRMED',
+      'B01_PROMISE_AND_ACTIVATION_AXES_AVAILABLE',
+      'C9_SUPPORT_ACTIVATION_LINKED_TO_NATAL_ROOT',
+      'B02_CANDIDATE_OUTCOME_QUALIFIED',
+      'PRACTICAL_EXECUTION_NOT_ASSESSED'
+    ])
   };
 }
 interface CareerOutcomeTimelineLink {
   readonly occurrenceIds: readonly string[];
   readonly rootIds: readonly string[];
+  readonly counterEvidenceOccurrenceIds: readonly string[];
+  readonly conditions: readonly string[];
 }
 
 function buildGenericWindow(
@@ -198,7 +208,17 @@ function buildGenericWindow(
   const opportunity = opportunityOutcome(event, input);
   const challenge = isNatalLinkedChallenge(event, input);
   if (!opportunity && !challenge.valid) return undefined;
-  const link = opportunity ?? { occurrenceIds: challenge.occurrenceIds, rootIds: challenge.rootIds };
+  const link = opportunity ?? {
+    occurrenceIds: challenge.occurrenceIds,
+    rootIds: challenge.rootIds,
+    counterEvidenceOccurrenceIds: sortedUnique(input.axes.risk.conflictingEvidenceOccurrenceIds),
+    conditions: Object.freeze([
+      'C11_NATAL_COUNTER_INDICATION_LINKED_TO_C9_ROOT',
+      'B01_RISK_AND_ACTIVATION_OCCURRENCES_LINKED',
+      'C9_CHALLENGE_ACTIVATION_RESOLVED',
+      'SPECIFIC_INTERRUPTION_NOT_INFERRED'
+    ])
+  };
   const basis = opportunity
     ? 'B02_NATAL_PROMISE_AND_LINKED_ACTIVATION'
     : 'B01_NATAL_RISK_AND_LINKED_CHALLENGE_ACTIVATION';
@@ -212,6 +232,8 @@ function buildGenericWindow(
     opportunityId: event.opportunityId,
     activationId: event.activationId,
     qualificationBasis: basis,
+    conditions: Object.freeze([...link.conditions]),
+    counterEvidenceOccurrenceIds: Object.freeze([...link.counterEvidenceOccurrenceIds]),
     evidence: Object.freeze({
       semanticIdentityIds: sortedUnique(event.evidenceIds),
       occurrenceIds: sortedUnique(link.occurrenceIds),
