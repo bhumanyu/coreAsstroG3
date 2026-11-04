@@ -21,6 +21,7 @@ import type {
   LifeAnalysisQualification
 } from '../life-analysis/lifeAnalysisTypes';
 import type { AiExplanationResult } from '../../ai/browser';
+import { validateWealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
 import type { WealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
 import type {
   ProductAnalysis,
@@ -347,7 +348,7 @@ export function mapSpeculativePropensity(val?: string): import('./productAnalysi
   }
 }
 
-const PROHIBITED_SPECULATION_OUTPUT = /\\b(?:buy|sell|hold|options?|leverage|margin|short(?:ing)?|long(?:ing)?|position\\s*size|instrument|expected\\s+return|profit|loss|stop\\s*loss|target\\s*price|portfolio\\s+allocation|recommend(?:ation|ed)?|trade\\s+signal)\\b/i;
+const PROHIBITED_SPECULATION_OUTPUT = /\b(?:buy|sell|hold|options?|leverage|margin|short(?:ing)?|long(?:ing)?|position\s*size|instrument|expected\s+returns?|higher\s+returns?|returns?|investment\s+advice|stocks?|equity\s+recommendation|profit|loss|stop\s*loss|target\s*price|portfolio\s+allocation|recommend(?:ation|ed)?|trade\s+signal)\b/i;
 
 /** Only retain non-prescriptive chart description text. Untrusted engine prose fails closed. */
 export function sanitizeSpeculativePropensityDescription(value?: string): string | undefined {
@@ -903,6 +904,16 @@ function mapWealth(
 ): WealthProductAnalysis {
   const detail = viewModel.wealthDetail;
   const summary = viewModel.domains.find((d) => d.domain === 'WEALTH');
+  const validatedFinancialData = financialData && validateWealthFinancialDataSet(financialData)
+    ? financialData
+    : undefined;
+  const hasExplicitFinancialSource = (concept: 'TRADING_EXPOSURE' | 'TRADING_HISTORY'): boolean =>
+    Boolean(validatedFinancialData?.data.some((datum) =>
+      datum.concept === concept &&
+      datum.availability === 'AVAILABLE' &&
+      (datum.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' ||
+        datum.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE')
+    ));
 
 
   const evidence =
@@ -998,9 +1009,8 @@ function mapWealth(
       adviceAvailable: false
     },
     riskAndSuitability: {
-      // The view-model recomputes availability only after validating the C01 dataset.
-      actualExposure: 'UNAVAILABLE',
-      tradingHistory: 'UNAVAILABLE',
+      actualExposure: hasExplicitFinancialSource('TRADING_EXPOSURE') ? 'AVAILABLE' : 'UNAVAILABLE',
+      tradingHistory: hasExplicitFinancialSource('TRADING_HISTORY') ? 'AVAILABLE' : 'UNAVAILABLE',
       suitability: 'UNAVAILABLE',
       suitabilityReason: 'Suitability requires a separately governed assessment and cannot be inferred from astrology or exposure facts.'
     },

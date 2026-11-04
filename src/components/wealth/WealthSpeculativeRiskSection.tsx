@@ -3,6 +3,8 @@ import type { WealthSpeculativePropensityViewModel, WealthRiskAndSuitabilityView
 import { getSpeculativeRiskBadgeClass } from './wealthFormat';
 import { Flame, AlertCircle, ShieldAlert } from 'lucide-react';
 
+const SPECULATIVE_DISCLAIMER = 'Astrological indication only. It is not a measure of actual trading exposure, trading history, risk capacity, expected return, or probability of profit/loss. It does not provide buy, sell, hold, options, leverage, instrument, or position-size recommendations.';
+
 export interface WealthSpeculativeRiskSectionProps {
   readonly speculativePropensity: WealthSpeculativePropensityViewModel;
   readonly riskAndSuitability: WealthRiskAndSuitabilityViewModel;
@@ -48,9 +50,7 @@ export const WealthSpeculativeRiskSection: React.FC<WealthSpeculativeRiskSection
           {/* Explicit regulatory & methodological disclaimer - visually separated from accumulation */}
           <div className="flex items-start gap-2.5 text-xs text-slate-400 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
             <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
-            <span className="leading-relaxed">
-              Astrological indication only. It is not a measure of actual trading exposure, trading history, risk capacity, expected return, or probability of profit/loss. It does not provide buy, sell, hold, options, leverage, instrument, or position-size recommendations.
-            </span>
+            <span className="leading-relaxed">{SPECULATIVE_DISCLAIMER}</span>
           </div>
         </div>
       ) : (
@@ -60,6 +60,12 @@ export const WealthSpeculativeRiskSection: React.FC<WealthSpeculativeRiskSection
             {speculativePropensity.description ||
               'Astrological speculative propensity is unavailable for this chart calculation.'}
           </span>
+        </div>
+      )}
+      {!isAvailable && (
+        <div className="flex items-start gap-2.5 text-xs text-slate-400 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+          <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
+          <span className="leading-relaxed">{SPECULATIVE_DISCLAIMER}</span>
         </div>
       )}
       <div className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4 text-xs text-slate-400">

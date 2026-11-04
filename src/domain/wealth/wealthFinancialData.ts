@@ -95,8 +95,20 @@ function nonBlank(value: string, field: string): string {
   return result;
 }
 
+function isInstant(value: string): boolean {
+  if (!ISO_INSTANT.test(value) || Number.isNaN(Date.parse(value))) return false;
+
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day);
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day;
+}
+
 function instant(value: string, field: string): string {
-  if (!ISO_INSTANT.test(value) || Number.isNaN(Date.parse(value))) {
+  if (!isInstant(value)) {
     throw new Error(`${field} must be a valid offset-aware ISO-8601 timestamp`);
   }
   return value;
@@ -256,6 +268,7 @@ export function validateWealthFinancialDatum(value: unknown): value is WealthFin
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
   if (typeof item.id !== 'string' || !item.id.trim() || !WEALTH_FINANCIAL_CONCEPTS.includes(item.concept as WealthFinancialConcept)) return false;
+  if (item.asOf !== undefined && (typeof item.asOf !== 'string' || !isInstant(item.asOf))) return false;
   if (item.availability === 'UNAVAILABLE') {
     return item.sourceClassification === 'UNAVAILABLE' && item.value === undefined
       && typeof item.unavailableReason === 'string' && Boolean(item.unavailableReason.trim())
@@ -272,7 +285,7 @@ export function validateWealthFinancialDatum(value: unknown): value is WealthFin
   if (item.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT') {
     const p = item.userReportedProvenance as Record<string, unknown> | undefined;
     return Boolean(p && p.reportedBy === 'USER' && typeof p.reportId === 'string' && p.reportId.trim()
-      && typeof p.reportedAt === 'string' && ISO_INSTANT.test(p.reportedAt)
+      && typeof p.reportedAt === 'string' && isInstant(p.reportedAt)
       && !item.calculationProvenance && !item.connectedSourceProvenance);
   }
   if (item.sourceClassification === 'CALCULATED_FINANCIAL_METRIC') {
@@ -280,7 +293,7 @@ export function validateWealthFinancialDatum(value: unknown): value is WealthFin
     return Boolean(p && typeof p.formulaId === 'string' && p.formulaId.trim()
       && typeof p.formulaVersion === 'string' && p.formulaVersion.trim()
       && typeof p.formulaDescription === 'string' && p.formulaDescription.trim()
-      && typeof p.calculatedAt === 'string' && ISO_INSTANT.test(p.calculatedAt)
+      && typeof p.calculatedAt === 'string' && isInstant(p.calculatedAt)
       && Array.isArray(p.inputs) && p.inputs.length > 0
       && p.inputs.every((i) => Boolean(i && typeof i.datumId === 'string' && i.datumId.trim()
         && WEALTH_FINANCIAL_CONCEPTS.includes(i.concept as WealthFinancialConcept)))
@@ -291,7 +304,7 @@ export function validateWealthFinancialDatum(value: unknown): value is WealthFin
     return Boolean(p && ['CONNECTED_ACCOUNT', 'BROKERAGE', 'BANK', 'OTHER_FINANCIAL_PROVIDER'].includes(String(p.sourceType))
       && typeof p.providerId === 'string' && p.providerId.trim()
       && typeof p.connectionId === 'string' && p.connectionId.trim()
-      && typeof p.retrievedAt === 'string' && ISO_INSTANT.test(p.retrievedAt) && !Number.isNaN(Date.parse(p.retrievedAt))
+      && typeof p.retrievedAt === 'string' && isInstant(p.retrievedAt)
       && !item.userReportedProvenance && !item.calculationProvenance);
   }
   return false;

@@ -114,6 +114,58 @@ describe('C03 trading facts provenance guardrails', () => {
     })).toThrow(/retrievedAt/);
   });
 
+  it('rejects impossible dates in all financial timestamps and persisted provenance', () => {
+    const impossibleDate = '2026-02-31T05:40:00Z';
+    const reportedProvenance = { reportedBy: 'USER' as const, reportId: 'report-1', reportedAt: '2026-11-04T05:30:00Z' };
+    expect(() => createUserReportedFinancialDatum({
+      id: 'bad-reported-at', concept: 'INCOME', value: 1,
+      provenance: { ...reportedProvenance, reportedAt: impossibleDate }
+    })).toThrow(/reportedAt/);
+    expect(() => createUserReportedFinancialDatum({
+      id: 'bad-as-of', concept: 'INCOME', value: 1, asOf: impossibleDate, provenance: reportedProvenance
+    })).toThrow(/asOf/);
+    expect(() => createCalculatedFinancialMetric({
+      id: 'bad-calculated-at', concept: 'NET_WORTH', value: 1,
+      provenance: {
+        formulaId: 'NET_WORTH', formulaVersion: '1', formulaDescription: 'Assets less liabilities',
+        calculatedAt: impossibleDate, inputs: [{ datumId: 'assets-1', concept: 'ASSETS' }]
+      }
+    })).toThrow(/calculatedAt/);
+
+    const validReportedDatum = createUserReportedFinancialDatum({
+      id: 'reported', concept: 'INCOME', value: 1, provenance: reportedProvenance
+    });
+    expect(validateWealthFinancialDatum({
+      ...validReportedDatum,
+      userReportedProvenance: { ...validReportedDatum.userReportedProvenance, reportedAt: impossibleDate }
+    })).toBe(false);
+    expect(validateWealthFinancialDatum({ ...validReportedDatum, asOf: impossibleDate })).toBe(false);
+
+    const validCalculatedDatum = createCalculatedFinancialMetric({
+      id: 'calculated', concept: 'NET_WORTH', value: 1,
+      provenance: {
+        formulaId: 'NET_WORTH', formulaVersion: '1', formulaDescription: 'Assets less liabilities',
+        calculatedAt: '2026-11-04T05:30:00Z', inputs: [{ datumId: 'assets-1', concept: 'ASSETS' }]
+      }
+    });
+    expect(validateWealthFinancialDatum({
+      ...validCalculatedDatum,
+      calculationProvenance: { ...validCalculatedDatum.calculationProvenance!, calculatedAt: impossibleDate }
+    })).toBe(false);
+
+    const validConnectedDatum = createConnectedFinancialDatum({
+      id: 'connected', concept: 'TRADING_HISTORY', value: { count: 1 },
+      provenance: {
+        sourceType: 'BROKERAGE', providerId: 'broker', connectionId: 'connection',
+        retrievedAt: '2026-11-04T05:30:00Z'
+      }
+    });
+    expect(validateWealthFinancialDatum({
+      ...validConnectedDatum,
+      connectedSourceProvenance: { ...validConnectedDatum.connectedSourceProvenance!, retrievedAt: impossibleDate }
+    })).toBe(false);
+  });
+
   it('accepts connected trading history only with provider and connection provenance', () => {
     const item = createConnectedFinancialDatum({
       id: 'broker-history-1', concept: 'TRADING_HISTORY', value: { tradeCount: 12 },
