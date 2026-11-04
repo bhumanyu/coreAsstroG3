@@ -910,6 +910,7 @@ function mapWealth(
   const validatedFinancialData = financialData && validateWealthFinancialDataSet(financialData)
     ? financialData
     : undefined;
+  const lifecycleResult = lifecycle ?? viewModel.wealthDetail?.lifecycle;
   const hasExplicitFinancialSource = (concept: 'TRADING_EXPOSURE' | 'TRADING_HISTORY'): boolean =>
     Boolean(validatedFinancialData?.data.some((datum) =>
       datum.concept === concept &&
@@ -944,7 +945,7 @@ function mapWealth(
 
   return {
     ...(financialData ? { financialData } : {}),
-    ...(lifecycle ? { lifecycle } : {}),
+    ...(lifecycleResult ? { lifecycle: lifecycleResult } : {}),
     overall: {
       status: detail?.status
         ? String(detail.status)
