@@ -151,6 +151,7 @@ import {
 import {
   buildCareerOutcomeAnalysis
 } from './careerOutcomeQualification/careerOutcomeEngine';
+import { buildCareerEventTimeline } from './careerEventTimeline/careerEventTimelineEngine';
 import type {
   CareerObservedOutcomeInput
 } from './careerOutcomeQualification/careerOutcomeTypes';
