@@ -118,5 +118,13 @@ describe('C03 trading facts provenance guardrails', () => {
     expect(() => createAstrologicalFinancialIndicator({
       id: 'astro-history', concept: 'TRADING_HISTORY', value: 'frequent trader'
     })).toThrow(/real-world trading concepts/);
+    expect(validateWealthFinancialDatum({
+      id: 'forged-exposure', concept: 'TRADING_EXPOSURE', availability: 'AVAILABLE',
+      sourceClassification: 'ASTROLOGICAL_INDICATOR', value: 'strong indication'
+    })).toBe(false);
+    expect(validateWealthFinancialDatum({
+      id: 'forged-history', concept: 'TRADING_HISTORY', availability: 'AVAILABLE',
+      sourceClassification: 'ASTROLOGICAL_INDICATOR', value: 'frequent trader'
+    })).toBe(false);
   });
 });
