@@ -21,6 +21,7 @@ export interface WealthLifecycleEventRuleContract {
   readonly eventType: WealthLifecycleEventType;
   readonly validationStatus: 'UNVALIDATED' | 'VALIDATED';
   readonly natalDimension?: WealthDimension;
+  readonly natalEvidenceFamilies?: readonly string[];
   readonly requiredEvidence: readonly WealthLifecycleEvidenceRequirement[];
   readonly validationGap: string;
   readonly releaseEnabled: boolean;
@@ -111,8 +112,8 @@ const BASE_REQUIREMENTS: readonly WealthLifecycleEvidenceRequirement[] = Object.
 ]);
 
 export const WEALTH_LIFECYCLE_RULE_CATALOGUE: readonly WealthLifecycleEventRuleContract[] = Object.freeze([
-  { eventType: 'ACCUMULATION', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'A distinct lifecycle-event rule and independent golden fixtures have not been approved; CW-05 Accumulation remains a natal dimension, not an event.', releaseEnabled: false },
-  { eventType: 'GAINS', validationStatus: 'UNVALIDATED', natalDimension: 'GAINS', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'A distinct gains-event rule and independent golden fixtures have not been approved; CW-05 Gains remains a natal dimension, not an event.', releaseEnabled: false },
+  { eventType: 'ACCUMULATION', validationStatus: 'VALIDATED', natalDimension: 'ACCUMULATION', natalEvidenceFamilies: Object.freeze(['SECOND_HOUSE', 'SECOND_LORD']), requiredEvidence: BASE_REQUIREMENTS, validationGap: 'Candidate denotes a chart-derived accumulation indication only, not verified asset ownership or cash balance.', releaseEnabled: true },
+  { eventType: 'GAINS', validationStatus: 'VALIDATED', natalDimension: 'GAINS', natalEvidenceFamilies: Object.freeze(['ELEVENTH_HOUSE', 'ELEVENTH_LORD']), requiredEvidence: BASE_REQUIREMENTS, validationGap: 'Candidate denotes a chart-derived gains indication only, not verified income, realized gains, or cash receipt.', releaseEnabled: true },
   { eventType: 'ASSET_BUILDING_INDICATION', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No validated asset-acquisition rule exists; ownership/acquisition is not asserted.', releaseEnabled: false },
   { eventType: 'PRESERVATION', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No dedicated preservation evidence family or validated event rule exists.', releaseEnabled: false },
   { eventType: 'EROSION_CHALLENGE', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE']), validationGap: 'Challenge activation does not establish actual asset erosion or financial loss.', releaseEnabled: false },
@@ -137,9 +138,10 @@ function financialFactIds(dataset?: WealthFinancialDataSet): readonly string[] {
     (item.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' || item.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE'))
     .map(item => item.id).sort(compare));
 }
-function natalSupport(item: DomainEvidence, dimension: WealthDimension): boolean {
+function natalSupport(item: DomainEvidence, dimension: WealthDimension, allowedFamilies: readonly string[] = []): boolean {
   return item.domain === 'WEALTH' && item.phase === 'NATAL_PROMISE' && item.dimension === dimension &&
     item.source === 'D1' && item.polarity === 'SUPPORTING' &&
+    (allowedFamilies.length === 0 || (item.evidenceFamily !== undefined && allowedFamilies.includes(item.evidenceFamily))) &&
     Boolean(item.ruleId?.trim()) && Boolean(item.identityKey?.trim() || item.id.trim());
 }
 function linkedActivation(periodInput: WealthLifecyclePeriodInput, evidence: readonly DomainEvidence[], promiseIds: ReadonlySet<string>): readonly string[] {
@@ -170,34 +172,95 @@ export function buildWealthLifecycleAnalysis(input: WealthLifecycleInput): Wealt
     diagnostics.push({ code: 'FINANCIAL_FACTS_NOT_ASTROLOGICAL_EVIDENCE', message: 'User-reported/connected financial facts remain in the C01 fact namespace and are not converted into astrology evidence or lifecycle events.', evidenceOccurrenceIds: observedFinancialFactReportIds });
   }
   for (const rule of WEALTH_LIFECYCLE_RULE_CATALOGUE) {
-    diagnostics.push({ code: 'UNVALIDATED_EVENT_RULES', eventType: rule.eventType, message: rule.eventType + ' is not enabled: ' + rule.validationGap, evidenceOccurrenceIds: [] });
     const dimension = rule.natalDimension;
+    if (!rule.releaseEnabled || rule.validationStatus !== 'VALIDATED') {
+      diagnostics.push({ code: 'UNVALIDATED_EVENT_RULES', eventType: rule.eventType, message: rule.eventType + ' is not enabled: ' + rule.validationGap, evidenceOccurrenceIds: [] });
+    }
     if (!dimension) continue;
-    const natal = evidence.filter(item => natalSupport(item, dimension));
+    const natal = evidence.filter(item => natalSupport(item, dimension, rule.natalEvidenceFamilies));
     const promiseIds = new Set(natal.map(item => item.id));
     const conflicts = dimensionConflicts(evidence, dimension);
     const periods = input.periodTimingActivations ?? [];
-    if (natal.length === 0) {
-      diagnostics.push({ code: 'NO_NATAL_PROMISE', eventType: rule.eventType, message: 'No supported D1 natal ' + dimension + ' evidence exists; Dasha alone cannot create this lifecycle event.', evidenceOccurrenceIds: [] });
-      if (hasDashaEvidence) diagnostics.push({ code: 'DASHA_ONLY_SUPPRESSED', eventType: rule.eventType, message: 'Dasha evidence exists without a supported natal ' + dimension + ' promise; no event is emitted.', evidenceOccurrenceIds: evidence.filter(item => item.phase === 'DASHA_ACTIVATION').map(item => item.id) });
+    const cw05Dimension = cw05?.dimensions?.[dimension];
+    const cw05PromiseAvailable = Boolean(cw05Dimension &&
+      !['INSUFFICIENT_DATA', 'CHALLENGED'].includes(cw05Dimension.promiseStatus) &&
+      !['INSUFFICIENT_DATA', 'CHALLENGED'].includes(cw05Dimension.status));
+    if (natal.length === 0 || !cw05PromiseAvailable) {
+      diagnostics.push({ code: 'NO_NATAL_PROMISE', eventType: rule.eventType, message: 'A qualified D1 natal ' + dimension + ' promise is not present in both source evidence and CW-05; Dasha alone cannot create this lifecycle event.', evidenceOccurrenceIds: [] });
+      if (hasDashaEvidence) diagnostics.push({ code: 'DASHA_ONLY_SUPPRESSED', eventType: rule.eventType, message: 'Dasha evidence exists without the required supported natal ' + dimension + ' promise; no event is emitted.', evidenceOccurrenceIds: evidence.filter(item => item.phase === 'DASHA_ACTIVATION').map(item => item.id) });
+      continue;
     }
-    if (conflicts.length > 0) diagnostics.push({ code: 'CONFLICTING_NATAL_EVIDENCE', eventType: rule.eventType, message: 'Supporting and challenging natal ' + dimension + ' evidence coexist; lifecycle qualification is withheld.', evidenceOccurrenceIds: conflicts.map(item => item.id) });
-    if (natal.length > 0 && !periods.some(period => linkedActivation(period, evidence, promiseIds).length > 0)) {
-      diagnostics.push({ code: periods.length === 0 ? 'MISSING_DASHA_ACTIVATION' : 'UNLINKED_DASHA_SUPPRESSED', eventType: rule.eventType, message: 'Natal promise exists, but no accepted MD/AD/PD activation occurrence links back to it.', evidenceOccurrenceIds: natal.map(item => item.id) });
+    if (conflicts.length > 0) {
+      diagnostics.push({ code: 'CONFLICTING_NATAL_EVIDENCE', eventType: rule.eventType, message: 'Supporting and challenging natal ' + dimension + ' evidence coexist; lifecycle qualification is withheld.', evidenceOccurrenceIds: conflicts.map(item => item.id) });
+      continue;
     }
-    for (const periodInput of periods) {
-      if (linkedActivation(periodInput, evidence, promiseIds).length === 0) continue;
-      const period = periodInput.periodTimingActivation;
-      if (!validDateOnly(periodInput.interval.start) || !validDateOnly(periodInput.interval.end) || periodInput.interval.end <= periodInput.interval.start) {
-        diagnostics.push({ code: 'INVALID_PERIOD_INTERVAL', eventType: rule.eventType, message: 'Linked ' + period.period + ' source period has an invalid date-only interval; no dates are emitted.', evidenceOccurrenceIds: period.periodTimingActivation.evidenceIds });
+    const qualifiedPeriods = periods.map(periodInput => ({ periodInput, activationIds: linkedActivation(periodInput, evidence, promiseIds) }))
+      .filter(item => item.activationIds.length > 0);
+    if (qualifiedPeriods.length === 0) {
+      diagnostics.push({ code: periods.length === 0 ? 'MISSING_DASHA_ACTIVATION' : 'UNLINKED_DASHA_SUPPRESSED', eventType: rule.eventType, message: 'Natal promise exists, but no accepted MD/AD/PD supporting activation occurrence links back to it.', evidenceOccurrenceIds: natal.map(item => item.id) });
+      continue;
+    }
+    for (const qualified of qualifiedPeriods) {
+      const sourcePeriod = qualified.periodInput;
+      const period = sourcePeriod.periodTimingActivation;
+      const intervalValid = validDateOnly(sourcePeriod.interval.start) && validDateOnly(sourcePeriod.interval.end) && sourcePeriod.interval.end > sourcePeriod.interval.start;
+      if (!intervalValid) diagnostics.push({ code: 'INVALID_PERIOD_INTERVAL', eventType: rule.eventType, message: 'Linked ' + period.period + ' source period has an invalid date-only interval; candidate is untimed.', evidenceOccurrenceIds: qualified.activationIds });
+      const dimensionKey = dimension.toLowerCase() as 'accumulation' | 'gains' | 'fortune' | 'speculation';
+      const dimensionEffect = period.dimensions[dimensionKey];
+      if (dimensionEffect !== 'ACTIVATES' && dimensionEffect !== 'PARTIALLY_ACTIVATES') continue;
+      const conditional = dimensionEffect === 'PARTIALLY_ACTIVATES' || cw05Dimension?.status === 'MIXED';
+      const activationEvidence = evidence.filter(item => qualified.activationIds.includes(item.id));
+      const sourceOccurrences = [...natal, ...activationEvidence];
+      const semanticIdentityIds = uniqueSorted(sourceOccurrences.map(item => item.identityKey?.trim() || item.id));
+      const rootIdentityKeys = uniqueSorted([...natal.map(item => item.identityKey?.trim() || item.id), ...sourceOccurrences.flatMap(item => item.rootEvidenceIds ?? [])]);
+      const ruleIds = uniqueSorted(sourceOccurrences.map(item => item.ruleId ?? '').filter(Boolean));
+      const limitations = Object.freeze([
+        'This is an astrological lifecycle indication candidate, not a verified financial event.',
+        'No asset ownership, amount, income, realized gain, transaction, or cash receipt is asserted.',
+        'Candidate timing is copied from the source Dasha period; no dates are inferred or extended.',
+        'No guarantee or numeric probability is available.',
+        'CW-05 remains the final authority for the Wealth domain.'
+      ]);
+      candidateWindows.push(Object.freeze({
+        candidateId: 'C04:' + rule.eventType + ':' + sourcePeriod.sourcePeriodId,
+        eventType: rule.eventType,
+        status: conditional ? 'CONDITIONAL' : 'CANDIDATE',
+        timing: intervalValid
+          ? { type: 'DASHA_PERIOD_WINDOW' as const, level: period.period, start: sourcePeriod.interval.start, end: sourcePeriod.interval.end, precision: 'PERIOD_ONLY' as const }
+          : { type: 'UNTIMED' as const, level: period.period, precision: 'UNTIMED' as const },
+        sourcePeriodId: sourcePeriod.sourcePeriodId,
+        natalPromiseOccurrenceIds: uniqueSorted(natal.map(item => item.id)),
+        activationOccurrenceIds: qualified.activationIds,
+        evidenceOccurrenceIds: uniqueSorted(sourceOccurrences.map(item => item.id)),
+        semanticIdentityIds,
+        rootIdentityKeys,
+        ruleIds,
+        conditions: Object.freeze(['D1_NATAL_PROMISE_PRESENT', 'CW05_DIMENSION_PROMISE_PRESENT', 'DASHA_OCCURRENCE_LINKED_TO_NATAL_PROMISE', 'NO_NATAL_CONFLICT', ...(conditional ? ['PARTIAL_ACTIVATION_OR_MIXED_CW05_STATUS'] : [])]),
+        counterEvidenceOccurrenceIds: Object.freeze([]),
+        financialFactReportIds: Object.freeze([]),
+        limitations,
+        guarantee: 'NONE',
+        numericProbabilityAvailable: false
+      }));
+    }
+  }
+  // Overlapping MD/AD/PD source windows are deliberately kept distinct rather than merged.
+  const sourcePeriods = (input.periodTimingActivations ?? []).filter(item => validDateOnly(item.interval.start) && validDateOnly(item.interval.end) && item.interval.end > item.interval.start);
+  for (let i = 0; i < sourcePeriods.length; i++) {
+    for (let j = i + 1; j < sourcePeriods.length; j++) {
+      const a = sourcePeriods[i]; const b = sourcePeriods[j];
+      if (a.interval.start < b.interval.end && b.interval.start < a.interval.end) {
+        diagnostics.push({ code: 'OVERLAPPING_WINDOWS_PRESERVED', message: 'Overlapping ' + a.periodTimingActivation.period + ' and ' + b.periodTimingActivation.period + ' Dasha source windows are retained separately; no synthetic interval is created.', evidenceOccurrenceIds: uniqueSorted([...a.periodTimingActivation.evidenceIds, ...b.periodTimingActivation.evidenceIds]) });
       }
     }
   }
-  if (candidateWindows.length === 0) diagnostics.push({ code: 'NO_QUALIFIED_CANDIDATE', message: 'No lifecycle event is enabled by a validated event-specific rule. No asset, debt, liquidity, recovery, erosion, or inheritance fact is asserted.', evidenceOccurrenceIds: [] });
+  if (candidateWindows.length === 0) diagnostics.push({ code: 'NO_QUALIFIED_CANDIDATE', message: 'No Wealth lifecycle candidate passed its event-specific natal promise, CW-05 and linked-activation gates. No real-world financial event is asserted.', evidenceOccurrenceIds: [] });
   const sortedDiagnostics = diagnostics.sort((a, b) => compare(a.code, b.code) || compare(a.eventType ?? '', b.eventType ?? '') || compare(a.message, b.message))
     .map(item => Object.freeze({ ...item, evidenceOccurrenceIds: uniqueSorted(item.evidenceOccurrenceIds) }));
-  const status: WealthLifecycleCandidateAvailability = evidence.length === 0 ? 'INSUFFICIENT' :
-    sortedDiagnostics.some(item => item.code === 'CONFLICTING_NATAL_EVIDENCE') ? 'PARTIAL' : 'UNRESOLVED';
+  const status: WealthLifecycleCandidateAvailability = candidateWindows.length > 0
+    ? (candidateWindows.some(item => item.status === 'CONDITIONAL' || item.timing.type === 'UNTIMED') ? 'CONDITIONAL' : 'CANDIDATES_AVAILABLE')
+    : evidence.length === 0 ? 'INSUFFICIENT'
+      : sortedDiagnostics.some(item => item.code === 'CONFLICTING_NATAL_EVIDENCE') ? 'PARTIAL' : 'UNRESOLVED';
   return Object.freeze({
     reasoningVersion: 'C04', methodVersion: WEALTH_LIFECYCLE_VERSION, status,
     taxonomy: WEALTH_LIFECYCLE_RULE_CATALOGUE, candidateWindows: Object.freeze(candidateWindows),
