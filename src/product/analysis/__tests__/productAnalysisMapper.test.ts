@@ -164,6 +164,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
           opportunityId: 'opportunity-1',
           activationId: 'activation-1',
           qualificationBasis: 'B02_NATAL_PROMISE_AND_LINKED_ACTIVATION',
+          conditions: ['B02_CANDIDATE_OUTCOME_QUALIFIED'],
+          counterEvidenceOccurrenceIds: [],
           evidence: {
             semanticIdentityIds: ['natal-identity-1', 'activation-1'],
             occurrenceIds: ['natal-occ-1', 'dasha-occ-1'],
