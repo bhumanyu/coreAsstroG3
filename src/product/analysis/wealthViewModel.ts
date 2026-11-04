@@ -20,6 +20,7 @@ import type {
   ActivationEffect,
   TransitEffect
 } from './productAnalysisTypes';
+import { createUnavailableWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -29,6 +30,11 @@ export interface WealthHeroViewModel {
   readonly status: ProductStatus;
   readonly confidence: ProductConfidence;
   readonly warnings?: readonly ProductWarning[];
+}
+
+export interface WealthFinancialDataViewModel {
+  readonly status: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly data: readonly WealthFinancialDatum<unknown>[];
 }
 
 export interface WealthOverallViewModel {
@@ -140,6 +146,7 @@ export interface WealthConclusionViewModel {
 export interface WealthViewModel {
   readonly hero: WealthHeroViewModel;
   readonly overall: WealthOverallViewModel;
+  readonly financialData: WealthFinancialDataViewModel;
   readonly dimensions: WealthDimensionsViewModel;
   readonly d2: WealthD2ViewModel;
   readonly dasha: WealthDashaViewModel;
@@ -176,6 +183,9 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     warnings: analysis.warnings
   };
 
+  const sourceFinancialData = wealth.financialData ?? createUnavailableWealthFinancialDataSet();
+  const financialData: WealthFinancialDataViewModel = { status: sourceFinancialData.status, data: sourceFinancialData.data };
+
   const overall: WealthOverallViewModel = {
     promise: wealth.overall.promise,
     status: wealth.overall.status,
@@ -187,7 +197,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const accumulation: WealthDimensionItemViewModel = {
     id: 'ACCUMULATION',
     label: 'Accumulation',
-    houseLabel: '2nd House (Liquid Capital & Assets)',
+    houseLabel: '2nd House (Astrological accumulation indication)',
     status: wealth.dimensions.accumulation.status,
     statement: wealth.dimensions.accumulation.statement
   };
@@ -195,7 +205,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const gains: WealthDimensionItemViewModel = {
     id: 'GAINS',
     label: 'Gains & Inflow',
-    houseLabel: '11th House (Income & Profit Streams)',
+    houseLabel: '11th House (Astrological gains indication)',
     status: wealth.dimensions.gains.status,
     statement: wealth.dimensions.gains.statement
   };
@@ -211,7 +221,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const speculation: WealthDimensionItemViewModel = {
     id: 'SPECULATION',
     label: 'Speculation & Venture',
-    houseLabel: '5th House (Risk Capital & Investments)',
+    houseLabel: '5th House (Astrological speculation indication)',
     status: wealth.dimensions.speculation.status,
     statement: wealth.dimensions.speculation.statement
   };
@@ -307,6 +317,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   return {
     hero,
     overall,
+    financialData,
     dimensions,
     d2,
     dasha,
