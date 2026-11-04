@@ -956,6 +956,18 @@ export function interpretCareerV2(
     observedOutcomes: observedCareerOutcomes
   });
 
+  // B06: retain generic windows only when their natal promise/risk and canonical
+  // Dasha activation are linked. No event-specific taxonomy type is enabled until
+  // its own evidence contract has passed validation.
+  const careerEventTimeline = buildCareerEventTimeline({
+    axes: careerAnalyticalAxes,
+    finalSynthesis: canonicalC11Result,
+    trajectory: careerTrajectory,
+    events: careerEvents,
+    dasha: canonicalDashaAnalysis,
+    outcomeAnalysis: careerOutcomeAnalysis
+  });
+
   /**
    * P2-08D: Presentation/Compatibility Adapter
    *
@@ -1217,6 +1229,7 @@ export function interpretCareerV2(
       careerTrajectory, // P2-11G: Career trajectory analysis (downstream consumer of C11)
       careerEvents, // P2-11G: Career events analysis (downstream consumer of trajectory and C9)
       careerOutcomeAnalysis, // B02: qualified candidates + explicitly supplied observed facts
+      careerEventTimeline, // B06: natal-linked generic windows; specific event taxonomy gated
       careerProfessionAnalysis, // P2-11F Gate F: Career profession analysis (downstream consumer of C8, C10, evidence)
       professionAnalysisFailure, // P2-11F Gate F: Profession analysis failure diagnostic (non-fatal)
       internalArtifacts // PBA-07: Internal canonical artifacts for selected-period synthesis
