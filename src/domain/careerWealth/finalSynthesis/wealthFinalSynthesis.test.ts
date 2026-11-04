@@ -203,7 +203,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
     const result = synthesizeWealthFinal(input);
 
     expect(result.status).toBe('INSUFFICIENT_DATA');
-    expect(result.riskProfile).toBe('INSUFFICIENT_DATA');
+    expect(result.speculativePropensity).toBe('INSUFFICIENT_DATA');
     expect(result.dimensions!.ACCUMULATION.status).toBe('INSUFFICIENT_DATA');
     expect(result.dimensions!.SPECULATION.status).toBe('INSUFFICIENT_DATA');
     expect(
@@ -263,7 +263,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.promiseStatus).toBe('STRONG');
       expect(result.divisionalStatus).toBe('UNAVAILABLE');
       expect(result.finalStatus).toBe('STRONG');
-      expect(result.riskProfile).toBe('ELEVATED');
+      expect(result.speculativePropensity).toBe('CHALLENGED');
 
       // Verify per-dimension axes
       const acc = result.dimensions!.ACCUMULATION;
@@ -310,7 +310,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       // Foundational wealth capacity is unaffected by high-variance speculation
       expect(result.status).toBe('STRONG');
       expect(result.finalStatus).toBe('STRONG');
-      expect(result.riskProfile).toBe('ELEVATED');
+      expect(result.speculativePropensity).toBe('CHALLENGED');
       expect(result.strongestAreas).toContain('ACCUMULATION');
       expect(result.strongestAreas).toContain('GAINS');
       expect(result.challengedAreas).toContain('SPECULATION');
