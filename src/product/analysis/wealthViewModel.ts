@@ -20,7 +20,7 @@ import type {
   ActivationEffect,
   TransitEffect
 } from './productAnalysisTypes';
-import { createUnavailableWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
+import { createUnavailableWealthFinancialDataSet, validateWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -194,7 +194,9 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   };
 
   const sourceFinancialData = wealth.financialData ?? createUnavailableWealthFinancialDataSet();
-  const financialData: WealthFinancialDataViewModel = { status: sourceFinancialData.status, data: sourceFinancialData.data };
+  const isValidFinancialData = validateWealthFinancialDataSet(sourceFinancialData);
+  const normalizedFinancialData = isValidFinancialData ? sourceFinancialData : createUnavailableWealthFinancialDataSet('Financial source data failed C01 validation.');
+  const financialData: WealthFinancialDataViewModel = { status: normalizedFinancialData.status, data: normalizedFinancialData.data };
 
   const overall: WealthOverallViewModel = {
     promise: wealth.overall.promise,
@@ -297,11 +299,18 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     source: 'ASTROLOGICAL_INDICATION',
     adviceAvailable: false
   };
+  const hasExplicitFinancialSource = (concept: 'TRADING_EXPOSURE' | 'TRADING_HISTORY'): boolean =>
+    normalizedFinancialData.data.some((datum) =>
+      datum.concept === concept &&
+      datum.availability === 'AVAILABLE' &&
+      (datum.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' ||
+        datum.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE')
+    );
   const riskAndSuitability: WealthRiskAndSuitabilityViewModel = {
-    actualExposure: wealth.riskAndSuitability?.actualExposure ?? 'UNAVAILABLE',
-    tradingHistory: wealth.riskAndSuitability?.tradingHistory ?? 'UNAVAILABLE',
+    actualExposure: hasExplicitFinancialSource('TRADING_EXPOSURE') ? 'AVAILABLE' : 'UNAVAILABLE',
+    tradingHistory: hasExplicitFinancialSource('TRADING_HISTORY') ? 'AVAILABLE' : 'UNAVAILABLE',
     suitability: 'UNAVAILABLE',
-    suitabilityReason: wealth.riskAndSuitability?.suitabilityReason ?? 'Suitability is not assessed from a horoscope.'
+    suitabilityReason: 'Suitability requires a separately governed model; chart-derived propensity and financial exposure data are not suitability assessments.'
   };
 
   const qualifications: WealthQualificationViewModel[] = (wealth.qualifications ?? []).map(
