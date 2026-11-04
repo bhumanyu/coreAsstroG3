@@ -324,6 +324,54 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
 });
 
 
+describe('C04 lifecycle projection', () => {
+  it('defaults lifecycle output safely for legacy ProductAnalysis records', () => {
+    const base = createProductAnalysis();
+    const { lifecycle: _removed, ...wealth } = base.wealth as typeof base.wealth & { lifecycle?: unknown };
+    const legacy = { ...base, wealth };
+    const vm = selectWealthViewModel(legacy);
+    expect(vm.lifecycle.status).toBe('INSUFFICIENT');
+    expect(vm.lifecycle.candidateCount).toBe(0);
+    expect(vm.lifecycle.finalAuthority).toBe('CW-05');
+    expect(vm.lifecycle.actualFinancialEventsInferred).toBe(false);
+    expect(vm.lifecycle.guarantee).toBe('NONE');
+  });
+
+  it('projects only candidate labels and diagnostics without inventing timing', () => {
+    const base = createProductAnalysis();
+    const lifecycle = {
+      reasoningVersion: 'C04' as const,
+      methodVersion: 'C04-WEALTH-LIFECYCLE-v1' as const,
+      status: 'CONDITIONAL' as const,
+      taxonomy: [],
+      candidateWindows: [{
+        candidateId: 'C04:ACCUMULATION:MD:1', eventType: 'ACCUMULATION' as const, status: 'CONDITIONAL' as const,
+        timing: { type: 'DASHA_PERIOD_WINDOW' as const, level: 'MD' as const, start: '2027-01-01', end: '2028-01-01', precision: 'PERIOD_ONLY' as const },
+        sourcePeriodId: 'MD:1', natalPromiseOccurrenceIds: ['N1'], activationOccurrenceIds: ['D1'], evidenceOccurrenceIds: ['N1','D1'],
+        semanticIdentityIds: ['NROOT'], rootIdentityKeys: ['NROOT'], ruleIds: ['RULE1'], conditions: ['LINKED'], counterEvidenceOccurrenceIds: [],
+        financialFactReportIds: [], limitations: ['Indication only'], guarantee: 'NONE' as const, numericProbabilityAvailable: false as const
+      }],
+      diagnostics: [{ code: 'NO_NATAL_PROMISE' as const, message: 'Test diagnostic', evidenceOccurrenceIds: [] }],
+      observedFinancialFactReportIds: [],
+      actualFinancialEventsInferred: false as const,
+      guaranteedEventsAvailable: false as const,
+      numericProbabilityAvailable: false as const,
+      finalAuthority: 'CW-05' as const,
+      statement: 'Indication only'
+    };
+    const analysis = { ...base, wealth: { ...base.wealth, lifecycle } };
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.lifecycle.candidateCount).toBe(1);
+    expect(vm.lifecycle.candidates[0]).toMatchObject({
+      type: 'ACCUMULATION',
+      status: 'CONDITIONAL',
+      timingLabel: 'MD: 2027-01-01 to 2028-01-01 (source period only)'
+    });
+    expect(vm.lifecycle.finalAuthority).toBe('CW-05');
+    expect(vm.lifecycle.actualFinancialEventsInferred).toBe(false);
+  });
+});
+
 describe('C03 separation guardrails', () => {
   it('keeps exposure, trading history, and suitability unavailable without explicit financial source data', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
