@@ -118,14 +118,14 @@ describe('WealthPage (P-UI-05)', () => {
     expect(screen.getByText('No Material Trigger')).toBeInTheDocument();
     expect(screen.getByText('Transits neutral for wealth.')).toBeInTheDocument();
 
-    // Speculative Risk Profile (visually separated)
-    expect(
-      screen.getByText('Speculative Risk & Market Exposure Profile')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Moderate Risk')).toBeInTheDocument();
-    expect(
-      screen.getByText('Disciplined investments recommended.')
-    ).toBeInTheDocument();
+    // C03 separates chart-derived propensity from exposure, trading history, and suitability.
+    expect(screen.getByText('Astrological Speculative Propensity')).toBeInTheDocument();
+    expect(screen.getByText('Moderate indication')).toBeInTheDocument();
+    expect(screen.getByText(/not a measure of actual trading exposure/)).toBeInTheDocument();
+    expect(screen.getByText(/Actual exposure:/)).toBeInTheDocument();
+    expect(screen.getByText(/Trading history:/)).toBeInTheDocument();
+    expect(screen.getByText(/Suitability:/)).toBeInTheDocument();
+    expect(screen.queryByText(/investments recommended/i)).not.toBeInTheDocument();
 
     // Qualifications & Modifiers
     expect(screen.getByText('Qualifications & Modifiers')).toBeInTheDocument();
