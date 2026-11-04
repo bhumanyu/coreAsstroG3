@@ -4,6 +4,12 @@ import { createProductAnalysis } from './testHelpers';
 import type { ProductDashaPeriod } from '../productAnalysisTypes';
 
 describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
+  it('defaults missing actual financial data to unavailable for all declared concepts', () => {
+    const vm = selectWealthViewModel(createProductAnalysis());
+    expect(vm.financialData.status).toBe('UNAVAILABLE');
+    expect(vm.financialData.data).toHaveLength(10);
+    expect(vm.financialData.data.every((datum) => datum.sourceClassification === 'UNAVAILABLE' && datum.value === undefined)).toBe(true);
+  });
   it('defaults all real-world financial concepts to UNAVAILABLE without reported data', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.financialData.status).toBe('UNAVAILABLE');
