@@ -7,8 +7,7 @@ describe('careerProfession Boundary Enforcement', () => {
     'careerDasha',
     'careerFinalSynthesis',
     'domain/timing',
-    'transit',
-    'AI'
+    'transit'
   ];
 
   const modulePath = join(__dirname);

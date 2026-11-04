@@ -38,8 +38,15 @@ describe('careerD10 Boundary Enforcement', () => {
       it('may use career-expression contracts only as types', () => {
         const filePath = join(modulePath, file);
         const content = readFileSync(filePath, 'utf-8');
-        const forbiddenExpressionRuntimeImport = /import\s+(?!type\b)[\s\S]*?from\s+['"][^'"]*careerExpression[^'"]*['"]/i;
-        expect(content).not.toMatch(forbiddenExpressionRuntimeImport);
+        const imports = Array.from(content.matchAll(
+          /^\s*import\b(?:(?!^\s*import\b)[\s\S])*?\s+from\s+(['"])([^'"]+)\1\s*;?/gim
+        ));
+        const forbiddenExpressionRuntimeImports = imports
+          .filter(([statement, , importPath]) =>
+            importPath.includes('careerExpression')
+            && !/^\s*import\s+type\b/i.test(statement)
+          );
+        expect(forbiddenExpressionRuntimeImports).toEqual([]);
       });
 
       it('should not import from AI modules', () => {

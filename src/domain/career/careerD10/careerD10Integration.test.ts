@@ -1613,6 +1613,12 @@ describe('B03 D1/D10 hierarchy acceptance', () => {
     expect(qualification.evidence.every(item =>
       item.sourceIds.some(sourceId => sourceId.includes('D10_'))
     )).toBe(true);
+    expect(qualification.evidence.every(item =>
+      result.evidence.some(canonical =>
+        canonical.id === item.id
+        && canonical.sourceIds.some(sourceId => sourceId.includes('D10_'))
+      )
+    )).toBe(true);
   });
 
   it('produces deterministic golden output for identical D1/D10 inputs', () => {

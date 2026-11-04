@@ -673,7 +673,13 @@ export function buildCareerD10Analysis(
   const result = resolveCareerD10Qualification(context);
 
   // Build raw canonical occurrences (no dedup)
-  const rawOccurrences = buildCanonicalOccurrences(result.evidence, result);
+  const expressionEvidence = result.expressionQualifications.flatMap(
+    qualification => qualification.evidence
+  );
+  const rawOccurrences = buildCanonicalOccurrences(
+    [...result.evidence, ...expressionEvidence],
+    result
+  );
 
   // Build conflicts from raw occurrences (so we can see both SUPPORT and CHALLENGE for same key)
   const conflicts = buildD10Conflicts(rawOccurrences);
