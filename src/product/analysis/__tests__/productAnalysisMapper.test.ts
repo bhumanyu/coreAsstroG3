@@ -8,7 +8,7 @@ import {
   buildFailedProductAnalysis,
   mapD10Relationship,
   mapD2Relationship,
-  mapSpeculativeRisk,
+  mapSpeculativePropensity,
   mapMethodology,
   mapDashaPeriodOptions
 } from '../productAnalysisMapper';
@@ -419,11 +419,13 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(mapD2Relationship('MODIFIES')).toBe('UNAVAILABLE');
     expect(mapD2Relationship(undefined)).toBe('UNAVAILABLE');
 
-    expect(mapSpeculativeRisk('EXTREME')).toBe('EXTREME');
-    expect(mapSpeculativeRisk('HIGH')).toBe('HIGH');
-    expect(mapSpeculativeRisk('MODERATE')).toBe('MODERATE');
-    expect(mapSpeculativeRisk('LOW')).toBe('LOW');
-    expect(mapSpeculativeRisk(undefined)).toBe('UNAVAILABLE');
+    expect(mapSpeculativePropensity('VERY_STRONG')).toBe('VERY_STRONG');
+    expect(mapSpeculativePropensity('STRONG')).toBe('STRONG');
+    expect(mapSpeculativePropensity('MODERATE')).toBe('MODERATE');
+    expect(mapSpeculativePropensity('MIXED')).toBe('MIXED');
+    expect(mapSpeculativePropensity('CHALLENGED')).toBe('CHALLENGED');
+    expect(mapSpeculativePropensity(undefined)).toBe('INSUFFICIENT_DATA');
+    expect(mapSpeculativePropensity('HIGH RISK')).toBe('INSUFFICIENT_DATA');
   });
 
   it('4. Dasha hierarchy mapping: MD -> PRIMARY, AD -> MODIFIER, PD -> REFINEMENT', () => {
