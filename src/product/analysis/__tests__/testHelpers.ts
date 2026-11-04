@@ -156,9 +156,18 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
           statement: 'Transits neutral for wealth.'
         }
       },
-      speculativeRisk: {
-        level: 'MODERATE',
-        description: 'Disciplined investments recommended.'
+      speculativePropensity: {
+        source: 'ASTROLOGICAL_INDICATION',
+        status: 'MODERATE',
+        description: 'The chart indicates a moderate speculative propensity.',
+        evidenceIds: ['wealth-speculation-fixture'],
+        adviceAvailable: false
+      },
+      riskAndSuitability: {
+        actualExposure: 'UNAVAILABLE',
+        tradingHistory: 'UNAVAILABLE',
+        suitability: 'UNAVAILABLE',
+        suitabilityReason: 'No separately governed suitability model is approved.'
       },
       qualifications: [
         {
