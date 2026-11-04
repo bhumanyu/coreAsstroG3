@@ -5,7 +5,6 @@ import type {
   FinalDomainConfidence,
   ManifestationSummary,
   WealthDimensionFinalSynthesis,
-  WealthRiskProfile,
   SynthesisAxisStatus
 } from './careerWealthFinalSynthesisTypes';
 import type { WealthDimension } from '../../wealth/wealthTypes';
@@ -353,28 +352,7 @@ export function synthesizeWealthFinal(
     overallStatus = 'MODERATE';
   }
 
-  // 3. Compute Risk Profile (Speculation isolation and exposure)
-  const specStatus = isolatedDimensions.SPECULATION.status;
-  const specNatal = natalPromise.SPECULATION;
-  const specActivation = isolatedDimensions.SPECULATION.activationStatus;
-  const specTiming = isolatedDimensions.SPECULATION.timingStatus;
-  let riskProfile: WealthRiskProfile;
-
-  if (specStatus === 'INSUFFICIENT_DATA') {
-    riskProfile = 'INSUFFICIENT_DATA';
-  } else if (specStatus === 'CHALLENGED' || specNatal === 'WEAK' || specNatal === 'VERY_WEAK') {
-    riskProfile = overallStatus === 'STRONG' || overallStatus === 'VERY_STRONG' ? 'ELEVATED' : 'HIGH';
-  } else if (specStatus === 'MIXED') {
-    riskProfile = specActivation === 'CHALLENGE' || specTiming === 'CHALLENGE' ? 'ELEVATED' : 'MODERATE';
-  } else if (specStatus === 'STRONG' || specStatus === 'VERY_STRONG') {
-    riskProfile = specActivation === 'CHALLENGE' ? 'MODERATE' : 'LOW';
-  } else if (specStatus === 'MODERATE') {
-    riskProfile = 'MODERATE';
-  } else {
-    riskProfile = 'MODERATE';
-  }
-
-  // 4. Overall Confidence
+undefined  // 4. Overall Confidence
   const allConf = Object.values(isolatedDimensions).map((d) => d.confidence);
   const highConfCount = allConf.filter((c) => c === 'HIGH').length;
   const lowConfCount = allConf.filter((c) => c === 'LOW').length;
@@ -388,12 +366,9 @@ export function synthesizeWealthFinal(
   );
 
   // 6. Build authoritative summary statement
-  let summary = `Wealth domain synthesis evaluates to ${overallStatus} with ${overallConfidence} confidence and ${riskProfile} risk profile.`;
+  let summary = `Wealth domain synthesis evaluates to ${overallStatus} with ${overallConfidence} confidence.`;
   if (isolatedDimensions.ACCUMULATION.status === 'STRONG' || isolatedDimensions.ACCUMULATION.status === 'VERY_STRONG') {
     summary += ` Core accumulation capability remains stable.`;
-  }
-  if (specStatus === 'CHALLENGED') {
-    summary += ` Speculative activities carry structural friction and require risk mitigation.`;
   }
 
   return Object.freeze({
@@ -426,6 +401,6 @@ export function synthesizeWealthFinal(
     natalRuleIds: Object.freeze([...new Set(allNatalRuleIds)]),
     d2Evidence: d2Synthesis ? Object.freeze([...d2Synthesis]) : undefined,
     dimensions: isolatedDimensions,
-    riskProfile
+    speculativePropensity: isolatedDimensions.SPECULATION.status
   });
 }
