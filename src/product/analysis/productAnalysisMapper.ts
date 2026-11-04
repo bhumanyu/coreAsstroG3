@@ -21,6 +21,7 @@ import type {
   LifeAnalysisQualification
 } from '../life-analysis/lifeAnalysisTypes';
 import type { AiExplanationResult } from '../../ai/browser';
+import type { WealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
 import type {
   ProductAnalysis,
   ProductAnalysisStatus,
@@ -91,6 +92,8 @@ export interface ProductAnalysisMapperInput {
   readonly careerEvidence?: readonly ProductEvidence[];
   readonly wealthEvidence?: readonly ProductEvidence[];
   readonly temporalState?: import('../../core/analysis/AnalysisTemporalState').AnalysisTemporalState;
+  /** Explicit user-reported or connected-source financial facts; never derived from horoscope. */
+  readonly wealthFinancialData?: WealthFinancialDataSet;
 }
 
 /**
@@ -895,12 +898,12 @@ function mapCareer(
 
 function mapWealth(
   viewModel: LifeAnalysisViewModel,
-  explicitEvidence?: readonly ProductEvidence[]
+  explicitEvidence?: readonly ProductEvidence[],
+  financialData?: WealthFinancialDataSet
 ): WealthProductAnalysis {
   const detail = viewModel.wealthDetail;
   const summary = viewModel.domains.find((d) => d.domain === 'WEALTH');
 
-  const financialData = (viewModel as LifeAnalysisViewModel & { wealthFinancialData?: import('../../domain/wealth/wealthFinancialData').WealthFinancialDataSet }).wealthFinancialData;
 
   const evidence =
     explicitEvidence && explicitEvidence.length > 0
@@ -1569,7 +1572,7 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
   const chart = mapChartSummary(input.horoscope);
 
   const career = mapCareer(input.lifeAnalysisViewModel, input.careerEvidence);
-  const wealth = mapWealth(input.lifeAnalysisViewModel, input.wealthEvidence);
+  const wealth = mapWealth(input.lifeAnalysisViewModel, input.wealthEvidence, input.wealthFinancialData);
 
   const dasha = mapDashaState(input.horoscope, career, wealth, asOf, input.temporalState);
   const reasoning = mapReasoning(input.lifeAnalysisViewModel, career, wealth, input.aiExplanation);
