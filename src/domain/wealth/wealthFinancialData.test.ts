@@ -47,7 +47,7 @@ describe('C01 Wealth financial data contract', () => {
   it('keeps missing user data unavailable for every financial concept', () => {
     const dataset = createUnavailableWealthFinancialDataSet();
     expect(dataset.status).toBe('UNAVAILABLE');
-    expect(dataset.data).toHaveLength(10);
+    expect(dataset.data).toHaveLength(12);
     expect(dataset.data.every((item) => item.sourceClassification === 'UNAVAILABLE' && item.value === undefined)).toBe(true);
     expect(validateWealthFinancialDataSet(dataset)).toBe(true);
   });
