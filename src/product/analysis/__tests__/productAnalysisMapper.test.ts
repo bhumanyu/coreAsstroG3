@@ -439,8 +439,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       birthDetails: sampleBirth, horoscope: sampleHoroscope, lifeAnalysisViewModel: sampleViewModel, context: sampleContext
     });
     expect(absent.wealth.financialData).toBeUndefined();
-    expect(absent.wealth.speculativePropensity.source).toBe('ASTROLOGICAL_INDICATION');
-    expect(absent.wealth.speculativePropensity.adviceAvailable).toBe(false);
+    expect(absent.wealth.speculativePropensity).toMatchObject({ source: 'ASTROLOGICAL_INDICATION', adviceAvailable: false });
     expect(absent.wealth.riskAndSuitability).toMatchObject({ actualExposure: 'UNAVAILABLE', tradingHistory: 'UNAVAILABLE', suitability: 'UNAVAILABLE' });
 
     const base = createUnavailableWealthFinancialDataSet();
@@ -459,8 +458,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     });
     expect(supplied.wealth.financialData?.status).toBe('AVAILABLE');
     expect(supplied.wealth.financialData?.data).toHaveLength(12);
-    expect(supplied.wealth.speculativePropensity.source).toBe('ASTROLOGICAL_INDICATION');
-    expect(supplied.wealth.speculativePropensity.adviceAvailable).toBe(false);
+    expect(supplied.wealth.speculativePropensity).toMatchObject({ source: 'ASTROLOGICAL_INDICATION', adviceAvailable: false });
     expect(supplied.wealth.riskAndSuitability).toMatchObject({ actualExposure: 'AVAILABLE', tradingHistory: 'AVAILABLE', suitability: 'UNAVAILABLE' });
   });
 
