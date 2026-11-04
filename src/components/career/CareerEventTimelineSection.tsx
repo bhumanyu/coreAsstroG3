@@ -31,6 +31,33 @@ export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProp
       These windows are indicative candidates, not guaranteed events.
     </p>
 
+    {eventTimeline.eventCandidates.length > 0 && (
+      <div className="space-y-2">
+        <h3 className="text-xs font-semibold text-slate-200">Validated event-specific candidates</h3>
+        <ul aria-label="Validated event-specific career candidates" className="space-y-3">
+          {eventTimeline.eventCandidates.map(candidate => (
+            <li key={candidate.candidateId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-medium text-slate-100">{candidate.eventType.replaceAll('_', ' ')}</h4>
+                <span className="text-xs text-slate-300">Candidate only · No guarantee</span>
+              </div>
+              <p className="text-xs text-slate-400">{formatTiming(candidate.timing)}</p>
+              <p className="text-xs text-slate-500">
+                Evidence occurrences: {candidate.evidenceOccurrenceIds.join(', ') || 'None'} · Root identities: {candidate.rootIdentityKeys.join(', ') || 'None'}
+              </p>
+              <p className="text-xs text-slate-500">Rules: {candidate.ruleIds.join(', ') || 'None'}</p>
+              {candidate.counterEvidenceOccurrenceIds.length > 0 && (
+                <p className="text-xs text-amber-300">Counter-evidence: {candidate.counterEvidenceOccurrenceIds.join(', ')}</p>
+              )}
+              <ul className="list-disc pl-4 text-xs text-slate-500">
+                {candidate.limitations.map((item, index) => <li key={index}>{item}</li>)}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
     <div className="space-y-2">
       <h3 className="text-xs font-semibold text-slate-200">Qualified generic windows</h3>
       {eventTimeline.genericWindows.length === 0 ? (
