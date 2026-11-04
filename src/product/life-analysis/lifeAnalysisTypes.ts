@@ -255,6 +255,8 @@ export interface LifeAnalysisWealthDetailViewModel {
   readonly dashaHierarchy?: DashaWealthHierarchySynthesis;
   readonly manifestationSynthesis?: WealthManifestationSynthesis;
   readonly finalSynthesis?: CareerWealthFinalSynthesis;
+  /** C04 downstream lifecycle candidate analysis; not a real-world event ledger. */
+  readonly lifecycle?: import('../../domain/wealth/wealthLifecycleTypes').WealthLifecycleAnalysis;
   readonly diagnostics?: DomainInterpretation['diagnostics'];
   readonly evidenceProduction?: 'PARTIAL' | 'INSUFFICIENT';
 }
