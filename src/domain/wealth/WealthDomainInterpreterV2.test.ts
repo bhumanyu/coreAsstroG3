@@ -2813,6 +2813,15 @@ describe('Wealth period activation contracts', () => {
     expect(md?.statement).toContain('complete but no period evidence');
     expect(ad?.statement).toContain('complete but no period evidence');
     expect(pd?.statement).toContain('unavailable');
+
+    const lifecycle = result.conclusionData?.wealthLifecycle;
+    expect(lifecycle?.reasoningVersion).toBe('C04');
+    expect(lifecycle?.finalAuthority).toBe('CW-05');
+    expect(lifecycle?.guaranteedEventsAvailable).toBe(false);
+    expect(lifecycle?.numericProbabilityAvailable).toBe(false);
+    expect(lifecycle?.actualFinancialEventsInferred).toBe(false);
+    expect(lifecycle?.candidateWindows.every(candidate => candidate.eventType === 'ACCUMULATION' || candidate.eventType === 'GAINS')).toBe(true);
+    expect(lifecycle?.candidateWindows.some(candidate => candidate.eventType === 'INHERITANCE_INDICATION' || candidate.eventType === 'DEBT_EXPOSURE_INDICATION')).toBe(false);
   });
 
   it('does not treat a partially evaluated reference dataset as authoritative', () => {
