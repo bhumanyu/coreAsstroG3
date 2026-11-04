@@ -319,10 +319,10 @@ export function synthesizeWealthFinal(
   const isolatedDimensions = enforceWealthDimensionIsolation(dimensionSyntheses);
 
   // 2. Synthesize Overall Wealth Status (Domain-level, without averaging)
-  // ARCHITECTURAL CONTRACT: Speculation is intentionally excluded from the overall Wealth status
-  // calculation and ONLY drives the riskProfile. Core wealth status is determined strictly by
-  // Accumulation, Gains, and Fortune to prevent high-variance speculative exposure from
-  // distorting foundational wealth capacity.
+  // ARCHITECTURAL CONTRACT: Speculation is intentionally excluded from overall Wealth status.
+  // It is retained only as a separately named chart-derived propensity indication. It is not
+  // actual financial exposure, user trading history, or a suitability/risk-capacity assessment.
+  // Core Wealth status is determined strictly by Accumulation, Gains, and Fortune.
   const coreStatuses = [
     isolatedDimensions.ACCUMULATION.status,
     isolatedDimensions.GAINS.status,
