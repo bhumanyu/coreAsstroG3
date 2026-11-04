@@ -1285,7 +1285,7 @@ function mapCareerWealthFinalSynthesisToFact(
     natalEvidenceIds: syn.natalEvidenceIds ? [...syn.natalEvidenceIds] : undefined,
     natalRuleIds: syn.natalRuleIds ? [...syn.natalRuleIds] : undefined,
     ...(dimensionsFact ? { dimensions: dimensionsFact } : {}),
-    ...(syn.riskProfile ? { riskProfile: syn.riskProfile } : {})
+    ...(syn.speculativePropensity ? { speculativePropensity: syn.speculativePropensity } : {})
   };
 }
 
