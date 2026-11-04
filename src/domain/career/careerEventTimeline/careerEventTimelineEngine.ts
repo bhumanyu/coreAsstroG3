@@ -3,7 +3,6 @@ import type {
   CareerEventTimelineAnalysis,
   CareerEventTimelineWindow,
   CareerEventSpecificRuleContract,
-  CareerEventSpecificType,
   CareerEvent
 } from './careerEventTimelineTypes';
 
@@ -79,10 +78,6 @@ export const CAREER_EVENT_SPECIFIC_RULE_CATALOGUE: readonly CareerEventSpecificR
     releaseEnabled: false
   }
 ] as const);
-
-const TAXONOMY_TYPES: readonly CareerEventSpecificType[] = Object.freeze(
-  CAREER_EVENT_SPECIFIC_RULE_CATALOGUE.map(item => item.eventType)
-);
 
 function sortedUnique(values: readonly string[]): readonly string[] {
   return Object.freeze(
