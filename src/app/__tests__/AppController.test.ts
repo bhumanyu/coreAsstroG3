@@ -66,7 +66,8 @@ const mockProductAnalysis: ProductAnalysis = {
       dasha: { status: 'AVAILABLE', periods: [] },
       transit: { status: 'AVAILABLE', effect: 'NEUTRAL' }
     },
-    speculativeRisk: { level: 'LOW' },
+    speculativePropensity: { source: 'ASTROLOGICAL_INDICATION', status: 'STRONG', evidenceIds: [], adviceAvailable: false },
+    riskAndSuitability: { actualExposure: 'UNAVAILABLE', tradingHistory: 'UNAVAILABLE', suitability: 'UNAVAILABLE', suitabilityReason: 'No suitability model is approved.' },
     qualifications: [],
     evidence: []
   },
