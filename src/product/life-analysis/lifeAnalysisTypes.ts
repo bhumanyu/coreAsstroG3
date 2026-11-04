@@ -212,10 +212,6 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly dashaHierarchy?: DashaCareerHierarchySynthesis;
   readonly manifestationSynthesis?: readonly CareerManifestationSynthesis[];
   readonly finalSynthesis?: CareerWealthFinalSynthesis;
-  /** C04 downstream lifecycle candidate analysis; not a real-world event ledger. */
-  readonly lifecycle?: import('../../domain/wealth/wealthLifecycleTypes').WealthLifecycleAnalysis;
-  /** C04 downstream lifecycle candidate analysis; not a real-world event ledger. */
-  readonly lifecycle?: import('../../domain/wealth/wealthLifecycleTypes').WealthLifecycleAnalysis;
   readonly profession?: CareerProfessionAnalysis;
 }
 
