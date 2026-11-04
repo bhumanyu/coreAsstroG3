@@ -1,6 +1,7 @@
 import type { WealthDimension, WealthPeriodTimingActivation } from './wealthTypes';
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
 import type { WealthFinancialDataSet } from './wealthFinancialData';
+import { validateWealthFinancialDataSet } from './wealthFinancialData';
 
 /** C04: deterministic downstream lifecycle candidate contract; never asserts an observed event. */
 export const WEALTH_LIFECYCLE_VERSION = 'C04-WEALTH-LIFECYCLE-v1' as const;
@@ -57,7 +58,8 @@ export type WealthLifecycleDiagnosticCode =
   | 'NO_NATAL_PROMISE' | 'DASHA_ONLY_SUPPRESSED' | 'MISSING_DASHA_ACTIVATION'
   | 'UNLINKED_DASHA_SUPPRESSED' | 'MISSING_CW05_AUTHORITY' | 'CONFLICTING_NATAL_EVIDENCE'
   | 'UNVALIDATED_EVENT_RULES' | 'FINANCIAL_FACTS_NOT_ASTROLOGICAL_EVIDENCE'
-  | 'INVALID_PERIOD_INTERVAL' | 'OVERLAPPING_WINDOWS_PRESERVED' | 'NO_QUALIFIED_CANDIDATE';
+  | 'INVALID_PERIOD_INTERVAL' | 'OVERLAPPING_WINDOWS_PRESERVED' | 'NO_QUALIFIED_CANDIDATE'
+  | 'INVALID_FINANCIAL_FACT_DATASET';
 export interface WealthLifecycleDiagnostic {
   readonly code: WealthLifecycleDiagnosticCode;
   readonly message: string;
@@ -135,7 +137,7 @@ function validDateOnly(value: string): boolean {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 function financialFactIds(dataset?: WealthFinancialDataSet): readonly string[] {
-  if (!dataset) return Object.freeze([]);
+  if (!dataset || !validateWealthFinancialDataSet(dataset)) return Object.freeze([]);
   return Object.freeze(dataset.data.filter(item => item.availability === 'AVAILABLE' &&
     (item.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' || item.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE'))
     .map(item => item.id).sort(compare));
@@ -169,6 +171,9 @@ export function buildWealthLifecycleAnalysis(input: WealthLifecycleInput): Wealt
   const cw05 = input.cw05;
   if (!cw05 || cw05.reasoningVersion !== 'CW-05' || cw05.domain !== 'WEALTH') {
     diagnostics.push({ code: 'MISSING_CW05_AUTHORITY', message: 'CW-05 Wealth final synthesis is unavailable; C04 will not produce lifecycle candidates.', evidenceOccurrenceIds: [] });
+  }
+  if (input.financialData && !validateWealthFinancialDataSet(input.financialData)) {
+    diagnostics.push({ code: 'INVALID_FINANCIAL_FACT_DATASET', message: 'C01 financial fact dataset failed validation; no financial facts are projected into C04.', evidenceOccurrenceIds: [] });
   }
   if (observedFinancialFactReportIds.length > 0) {
     diagnostics.push({ code: 'FINANCIAL_FACTS_NOT_ASTROLOGICAL_EVIDENCE', message: 'User-reported/connected financial facts remain in the C01 fact namespace and are not converted into astrology evidence or lifecycle events.', evidenceOccurrenceIds: observedFinancialFactReportIds });
