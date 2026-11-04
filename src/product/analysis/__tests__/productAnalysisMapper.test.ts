@@ -141,7 +141,45 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
           description: 'Mercury combust by 8 degrees.'
         }
       ],
-      actionableTakeaways: ['Focus on strategic management']
+      actionableTakeaways: ['Focus on strategic management'],
+      careerEventTimeline: {
+        reasoningVersion: 'B06',
+        methodVersion: 'B06-EVENT-SPECIFIC-TIMELINE-v1',
+        status: 'GENERIC_WINDOWS_ONLY',
+        taxonomy: [{
+          eventType: 'PROMOTION_ROLE_EXPANSION',
+          validationStatus: 'UNVALIDATED',
+          requiredEvidence: ['D1_NATAL_PROMISE', 'D10_SAME_EXPRESSION_QUALIFICATION'],
+          validationGap: 'Authority expression is not evidence of promotion.',
+          releaseEnabled: false
+        }],
+        eventCandidates: [],
+        genericWindows: [{
+          windowId: 'B06_GENERIC_WINDOW:source-event-1',
+          sourceEventId: 'source-event-1',
+          genericType: 'CAREER_OPPORTUNITY_WINDOW',
+          status: 'GENERIC_CANDIDATE_WINDOW',
+          specificEventInference: 'NOT_MADE',
+          timing: { type: 'DASHA_PERIOD_WINDOW', start: '2027-01-01', end: '2027-12-31' },
+          opportunityId: 'opportunity-1',
+          activationId: 'activation-1',
+          qualificationBasis: 'B02_NATAL_PROMISE_AND_LINKED_ACTIVATION',
+          conditions: ['B02_CANDIDATE_OUTCOME_QUALIFIED'],
+          counterEvidenceOccurrenceIds: [],
+          evidence: {
+            semanticIdentityIds: ['natal-identity-1', 'activation-1'],
+            occurrenceIds: ['natal-occ-1', 'dasha-occ-1'],
+            rootIdentityKeys: ['natal-root-1'],
+            ruleIds: ['P2-09B-EVT-01']
+          },
+          limitations: ['Generic candidate window only.']
+        }],
+        observedOutcomeReportIds: ['report-1'],
+        diagnostics: ['EVENT_SPECIFIC_TAXONOMY_NOT_VALIDATED'],
+        guaranteedEventsAvailable: false,
+        numericProbabilityAvailable: false,
+        statement: 'Generic candidate window only.'
+      }
     },
     wealthDetail: {
       status: 'MODERATE',
@@ -222,6 +260,10 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(mappedEvidence.derivedFromIds).toEqual(['ev_astronomy_mars_capricorn', 'ev_house_1_kendra']);
     expect(analysis.wealth.d2.relationship).toBe('UNAVAILABLE');
     expect(analysis.wealth.d2.statement).toContain('independent validation');
+    expect(analysis.career.eventTimeline?.reasoningVersion).toBe('B06');
+    expect(analysis.career.eventTimeline?.genericWindows[0].specificEventInference).toBe('NOT_MADE');
+    expect(analysis.career.eventTimeline?.taxonomy[0].releaseEnabled).toBe(false);
+    expect(analysis.career.eventTimeline?.observedOutcomeReportIds).toEqual(['report-1']);
   });
 
   it('1.1 projects canonical Career analytical axes into the product DTO without sharing mutable arrays', () => {

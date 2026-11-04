@@ -186,6 +186,7 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly canonicalFinalSynthesis?: import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerFinalSynthesisResult;
   readonly analyticalAxes?: import('../../domain/career/careerFinalSynthesis/careerAnalyticalAxes').CareerAnalyticalAxes;
   readonly careerOutcomeAnalysis?: import('../../domain/career/careerOutcomeQualification/careerOutcomeTypes').CareerOutcomeAnalysis;
+  readonly careerEventTimeline?: import('../../domain/career/careerEventTimeline/careerEventTimelineTypes').CareerEventTimelineAnalysis;
   readonly confidenceCoverage?: import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerConfidenceCoverage;
   readonly confidenceReasons?: readonly import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerConfidenceReason[];
   readonly traceCompleteness?: import('../../domain/careerWealth/reasoningTrace/reasoningTraceCompleteness').ReasoningTraceCompleteness;
