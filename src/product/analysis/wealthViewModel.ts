@@ -21,7 +21,6 @@ import type {
   TransitEffect
 } from './productAnalysisTypes';
 import { createUnavailableWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
-import { createUnavailableWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -31,11 +30,6 @@ export interface WealthHeroViewModel {
   readonly status: ProductStatus;
   readonly confidence: ProductConfidence;
   readonly warnings?: readonly ProductWarning[];
-}
-
-export interface WealthFinancialDataViewModel {
-  readonly status: 'AVAILABLE' | 'UNAVAILABLE';
-  readonly data: readonly WealthFinancialDatum<unknown>[];
 }
 
 export interface WealthFinancialDataViewModel {
@@ -152,7 +146,6 @@ export interface WealthConclusionViewModel {
 export interface WealthViewModel {
   readonly hero: WealthHeroViewModel;
   readonly overall: WealthOverallViewModel;
-  readonly financialData: WealthFinancialDataViewModel;
   readonly financialData: WealthFinancialDataViewModel;
   readonly dimensions: WealthDimensionsViewModel;
   readonly d2: WealthD2ViewModel;
