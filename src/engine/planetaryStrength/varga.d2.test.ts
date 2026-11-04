@@ -69,9 +69,10 @@ describe('D2 Hora deterministic calculation contract', () => {
     }
   });
 
-  it('does not leak D2 behavior into other varga mappings', () => {
+  it('keeps D2 isolated from other varga mappings and assigns exact navamsa boundaries to the next segment', () => {
+    expect(getVargaSign(10, 'D2')).toBe(Sign.LEO);
+    expect(getVargaSign(10, 'D9')).toBe(Sign.CANCER);
     expect(getVargaSign(10, 'D3')).toBe(Sign.LEO);
     expect(getVargaSign(10, 'D7')).toBe(Sign.GEMINI);
-    expect(getVargaSign(10, 'D9')).toBe(Sign.GEMINI);
   });
 });

@@ -60,9 +60,9 @@ export function getDivisionalLongitude(longitude: number, chartType: ChartType):
   }
 
   if (chartType === ChartType.NAVAMSA) {
-    // D9: 3°20' divisions (9 per sign)
-    const navamsaSpan = 10 / 3;
-    const navPart = Math.floor(posInSign / navamsaSpan); // 0..8
+    // D9: 3°20' half-open divisions; an exact boundary belongs to the next navamsa.
+    const navamsaPosition = posInSign * 3 / 10;
+    const navPart = Math.floor(navamsaPosition); // 0..8
     let startSignIndex = 0;
     const modality = SIGNS_METADATA[SIGNS_ORDER[signIndex]].modality;
 
@@ -75,7 +75,7 @@ export function getDivisionalLongitude(longitude: number, chartType: ChartType):
     }
 
     const targetSignIndex = (startSignIndex + navPart) % 12;
-    const innerDegree = (posInSign % navamsaSpan) * 9;
+    const innerDegree = (navamsaPosition - navPart) * 30;
     return normalizeDegree(targetSignIndex * 30 + innerDegree);
   }
 
