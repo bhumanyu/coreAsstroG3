@@ -3011,6 +3011,11 @@ describe('CareerDomainInterpreterV2', () => {
       expect(v2.conclusionData?.careerOutcomeAnalysis?.observedOutcomes).toEqual([]);
       expect(v2.conclusionData?.careerOutcomeAnalysis?.guaranteedOutcomeAvailable).toBe(false);
       expect(v2.conclusionData?.careerOutcomeAnalysis?.numericProbabilityAvailable).toBe(false);
+      expect(v2.conclusionData?.careerEventTimeline).toBeDefined();
+      expect(v2.conclusionData?.careerEventTimeline?.eventCandidates).toEqual([]);
+      expect(v2.conclusionData?.careerEventTimeline?.taxonomy.every(item => item.validationStatus === 'UNVALIDATED')).toBe(true);
+      expect(v2.conclusionData?.careerEventTimeline?.guaranteedEventsAvailable).toBe(false);
+      expect(v2.conclusionData?.careerEventTimeline?.numericProbabilityAvailable).toBe(false);
 
       // Verify golden regression test fails if C11 output is perturbed
       // This test should fail if the canonical C11 output changes unexpectedly
