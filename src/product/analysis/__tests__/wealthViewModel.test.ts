@@ -121,17 +121,24 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
           promise: 'STRONG',
           status: 'STRONGLY_SUPPORTED'
         },
-        speculativeRisk: {
-          level: 'EXTREME',
-          description: 'High volatility in 5th house.'
+        speculativePropensity: {
+          source: 'ASTROLOGICAL_INDICATION',
+          status: 'CHALLENGED',
+          description: 'Chart-derived indication only.',
+          evidenceIds: ['spec-1'],
+          adviceAvailable: false
         }
       }
     });
     const vm = selectWealthViewModel(analysis);
 
     expect(vm.overall.promise).toBe('STRONG');
-    expect(vm.speculativeRisk?.level).toBe('EXTREME');
-    expect(vm.speculativeRisk?.description).toBe('High volatility in 5th house.');
+    expect(vm.speculativePropensity.status).toBe('CHALLENGED');
+    expect(vm.speculativePropensity.source).toBe('ASTROLOGICAL_INDICATION');
+    expect(vm.speculativePropensity.adviceAvailable).toBe(false);
+    expect(vm.riskAndSuitability.actualExposure).toBe('UNAVAILABLE');
+    expect(vm.riskAndSuitability.tradingHistory).toBe('UNAVAILABLE');
+    expect(vm.riskAndSuitability.suitability).toBe('UNAVAILABLE');
   });
 
   it('6. preserves MD -> AD -> PD hierarchy: strictly orders periods regardless of input array order', () => {
@@ -304,5 +311,22 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
 
     expect(vm.dimensions.accumulation.status).not.toBe(vm.dimensions.speculation.status);
     expect(vm.dimensions.accumulation.statement).not.toBe(vm.dimensions.speculation.statement);
+  });
+});
+
+
+describe('C03 separation guardrails', () => {
+  it('keeps exposure, trading history, and suitability unavailable without explicit financial source data', () => {
+    const vm = selectWealthViewModel(createProductAnalysis());
+    expect(vm.riskAndSuitability).toMatchObject({ actualExposure: 'UNAVAILABLE', tradingHistory: 'UNAVAILABLE', suitability: 'UNAVAILABLE' });
+  });
+  it('does not derive exposure, history, or suitability from chart propensity', () => {
+    const base = createProductAnalysis();
+    const analysis = { ...base, wealth: { ...base.wealth, speculativePropensity: { source: 'ASTROLOGICAL_INDICATION' as const, status: 'VERY_STRONG' as const, evidenceIds: ['ast-1'], adviceAvailable: false as const } } };
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.speculativePropensity.status).toBe('VERY_STRONG');
+    expect(vm.riskAndSuitability.actualExposure).toBe('UNAVAILABLE');
+    expect(vm.riskAndSuitability.tradingHistory).toBe('UNAVAILABLE');
+    expect(vm.riskAndSuitability.suitability).toBe('UNAVAILABLE');
   });
 });
