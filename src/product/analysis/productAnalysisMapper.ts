@@ -993,14 +993,9 @@ function mapWealth(
       adviceAvailable: false
     },
     riskAndSuitability: {
-      actualExposure: financialData?.data.some((datum) =>
-        datum.concept === 'TRADING_EXPOSURE' && datum.availability === 'AVAILABLE' &&
-        (datum.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' || datum.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE')
-      ) ? 'AVAILABLE' : 'UNAVAILABLE',
-      tradingHistory: financialData?.data.some((datum) =>
-        datum.concept === 'TRADING_HISTORY' && datum.availability === 'AVAILABLE' &&
-        (datum.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' || datum.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE')
-      ) ? 'AVAILABLE' : 'UNAVAILABLE',
+      // The view-model recomputes availability only after validating the C01 dataset.
+      actualExposure: 'UNAVAILABLE',
+      tradingHistory: 'UNAVAILABLE',
       suitability: 'UNAVAILABLE',
       suitabilityReason: 'Suitability requires a separately governed assessment and cannot be inferred from astrology or exposure facts.'
     },
