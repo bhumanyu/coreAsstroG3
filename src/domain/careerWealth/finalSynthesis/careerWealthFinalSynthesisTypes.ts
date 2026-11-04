@@ -30,6 +30,46 @@ export type SynthesisAxisStatus =
   | 'NEUTRAL'
   | 'INSUFFICIENT_DATA';
 
+export type WealthRiskProfile =
+  | 'LOW'
+  | 'MODERATE'
+  | 'ELEVATED'
+  | 'HIGH'
+  | 'INSUFFICIENT_DATA';
+
+/**
+ * CW-05 risk is a qualitative interpretation of the speculation dimension.
+ * It is deliberately not a probability of a financial outcome.
+ */
+export type WealthRiskReasonCode =
+  | 'SPECULATION_NATAL_UNAVAILABLE'
+  | 'SPECULATION_CORROBORATION_UNAVAILABLE'
+  | 'SPECULATION_CHALLENGED'
+  | 'SPECULATION_MIXED'
+  | 'SPECULATION_SUPPORTED'
+  | 'SPECULATION_TIMING_CHALLENGE'
+  | 'D2_UNAVAILABLE'
+  | 'CONFLICTING_SPECULATION_EVIDENCE'
+  | 'EVIDENCE_IDS_UNAVAILABLE';
+
+export interface WealthRiskQualification {
+  readonly classification: WealthRiskProfile;
+  readonly dimension: 'SPECULATION';
+  readonly evidenceCoverage: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly evidenceFamilies: Readonly<{
+    natal: 'AVAILABLE' | 'UNAVAILABLE';
+    timing: 'AVAILABLE' | 'UNAVAILABLE';
+    manifestation: 'AVAILABLE' | 'UNAVAILABLE';
+    d2: 'AVAILABLE' | 'UNAVAILABLE';
+  }>;
+  readonly missingRequiredEvidenceFamilies: readonly ('NATAL' | 'CORROBORATION')[];
+  readonly conflictingEvidence: boolean;
+  readonly d2Availability: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly evidenceIds: readonly string[];
+  readonly reasonCodes: readonly WealthRiskReasonCode[];
+  readonly reasons: readonly string[];
+}
+
 export type AstrologicalSpeculativePropensity =
   | 'VERY_STRONG'
   | 'STRONG'
@@ -144,6 +184,8 @@ export interface CareerWealthFinalSynthesis {
   readonly dimensions?: Readonly<Record<WealthDimension, WealthDimensionFinalSynthesis>>;
   /** Chart-derived indication only; never a measure of actual exposure or suitability. */
   readonly speculativePropensity?: AstrologicalSpeculativePropensity;
+  readonly riskProfile?: WealthRiskProfile;
+  readonly riskQualification?: WealthRiskQualification;
   readonly primaryStrength?: DomainStrength;
   readonly secondaryStrengths?: readonly WealthDimension[];
   readonly d10Evidence?: readonly DomainEvidence[];

@@ -179,6 +179,15 @@ describe('synthesizeWealthFinal (CW-05)', () => {
     // Invariant: Chart-derived propensity is challenged while overall wealth remains separately determined
     expect(result.speculativePropensity).toBe('CHALLENGED');
     expect(result.summary).not.toMatch(/risk profile|market exposure|buy|sell|hold|options|leverage|expected return|profit|loss|recommend/i);
+    // Risk is qualified from speculation, not diluted by strong accumulation promise.
+    expect(result.riskProfile).toBe('HIGH');
+    expect(result.riskQualification).toMatchObject({
+      dimension: 'SPECULATION',
+      classification: 'HIGH',
+      evidenceCoverage: 'HIGH',
+      missingRequiredEvidenceFamilies: []
+    });
+    expect(result.riskQualification?.reasonCodes).toContain('SPECULATION_CHALLENGED');
 
     expect(result.strongestAreas).toContain('ACCUMULATION');
     expect(result.challengedAreas).toContain('SPECULATION');
@@ -231,6 +240,138 @@ describe('synthesizeWealthFinal (CW-05)', () => {
   });
 
   describe('CW-05 Multi-Axis Semantics & Deterministic Matrices', () => {
+    const speculationTiming = (effect: 'SUPPORTS' | 'CHALLENGES'): WealthTimingSynthesis => ({
+      dimensions: {
+        SPECULATION: {
+          dimension: 'SPECULATION',
+          natalPromise: 'MODERATE',
+          overallEffect: effect,
+          dashaEffect: effect,
+          transitEffect: 'NEUTRAL',
+          confidence: 0.8,
+          factors: [],
+          summary: `Speculation timing ${effect.toLowerCase()}`
+        }
+      } as unknown as WealthTimingSynthesis['dimensions'],
+      overallSummary: 'Speculation timing available'
+    });
+
+    it.each([
+      ['LOW', 'STRONG', 'CONFIRMS', 'SUPPORTS'],
+      ['MODERATE', 'STRONG', 'CONFIRMS', 'CHALLENGES'],
+      ['ELEVATED', 'MIXED', 'CONFIRMS', 'CHALLENGES'],
+      ['HIGH', 'WEAK', 'CONFIRMS', 'SUPPORTS']
+    ] as const)('qualifies %s risk using the isolated speculation evidence', (expected, speculation, d2Relationship, timingEffect) => {
+      const result = synthesizeWealthFinal({
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: speculation
+        },
+        d2Relationship,
+        ...(timingEffect ? { timingSynthesis: speculationTiming(timingEffect) } : {})
+      });
+
+      expect(result.riskProfile).toBe(expected);
+      expect(result.riskQualification?.classification).toBe(expected);
+      expect(result.riskQualification?.dimension).toBe('SPECULATION');
+      expect(result.riskQualification?.reasons.length).toBeGreaterThan(0);
+    });
+
+    it('returns INSUFFICIENT_DATA when the required speculation corroboration family is absent', () => {
+      const result = synthesizeWealthFinal({
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'STRONG'
+        },
+        d2Relationship: 'UNAVAILABLE'
+      });
+
+      expect(result.riskProfile).toBe('INSUFFICIENT_DATA');
+      expect(result.riskQualification?.missingRequiredEvidenceFamilies).toEqual(['CORROBORATION']);
+      expect(result.riskQualification?.reasonCodes).toContain('D2_UNAVAILABLE');
+    });
+
+    it('keeps D2 unavailable visible without discarding other sufficient risk evidence', () => {
+      const result = synthesizeWealthFinal({
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'WEAK'
+        },
+        timingSynthesis: speculationTiming('SUPPORTS'),
+        d2Relationship: 'UNAVAILABLE'
+      });
+
+      expect(result.riskProfile).toBe('HIGH');
+      expect(result.riskQualification?.d2Availability).toBe('UNAVAILABLE');
+      expect(result.riskQualification?.evidenceFamilies.timing).toBe('AVAILABLE');
+    });
+
+    it('ignores external D2 declarations while keeping risk qualitative and unprobabilistic', () => {
+      const input: WealthFinalSynthesisInput = {
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'STRONG'
+        },
+        timingSynthesis: speculationTiming('SUPPORTS'),
+        d2Relationship: 'CONFLICTS'
+      };
+      const result = synthesizeWealthFinal(input);
+
+      expect(result.riskProfile).toBe('LOW');
+      expect(result.riskQualification?.conflictingEvidence).toBe(false);
+      expect(result.riskQualification?.reasonCodes).not.toContain('D2_CONFLICT');
+      expect(result).not.toHaveProperty('riskProbability');
+      expect(result.riskQualification).not.toHaveProperty('probability');
+      expect(synthesizeWealthFinal({ ...input, d2Relationship: 'UNAVAILABLE' })).toEqual(result);
+    });
+
+    it('keeps confidence evidence-qualified when D2 remains unavailable', () => {
+      const base: WealthFinalSynthesisInput = {
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'STRONG'
+        },
+        timingSynthesis: speculationTiming('SUPPORTS'),
+        d2Relationship: 'CONFIRMS'
+      };
+      const sparse = synthesizeWealthFinal(base);
+      const wellTraced = synthesizeWealthFinal({
+        ...base,
+        natalEvidenceIds: ['NATAL-ACC-1', 'NATAL-ACC-2'],
+        d2Synthesis: [
+          createDomainEvidence({
+            id: 'D2-RISK-COVERAGE',
+            ruleId: 'D2-RISK-COVERAGE-RULE',
+            sourceType: 'VARGA',
+            domain: 'WEALTH',
+            role: 'CONFIRMATION',
+            phase: 'VARGA_CONFIRMATION',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'D2 confirms the traced wealth evidence.',
+            priority: 1
+          })
+        ]
+      });
+
+      expect(sparse.riskProfile).toBe('LOW');
+      expect(wellTraced.riskProfile).toBe('LOW');
+      expect(sparse.confidence).toBe('LOW');
+      expect(wellTraced.confidence).toBe('LOW');
+      expect(wellTraced.confidenceBreakdown?.divisionalQuality).toBe('NOT_APPLICABLE');
+      expect(wellTraced.confidenceBreakdown?.reasons).toHaveLength(7);
+    });
+
     it('populates multi-axis statuses on both overall synthesis and per-dimension records', () => {
       const input: WealthFinalSynthesisInput = {
         natalPromise: {
@@ -239,6 +380,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
           FORTUNE: 'STRONG',
           SPECULATION: 'WEAK'
         },
+        timingSynthesis: speculationTiming('SUPPORTS'),
         d2Relationship: 'CONFIRMS',
         d2Synthesis: [
           createDomainEvidence({
@@ -265,6 +407,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.divisionalStatus).toBe('UNAVAILABLE');
       expect(result.finalStatus).toBe('STRONG');
       expect(result.speculativePropensity).toBe('CHALLENGED');
+      expect(result.riskProfile).toBe('HIGH');
 
       // Verify per-dimension axes
       const acc = result.dimensions!.ACCUMULATION;
@@ -303,6 +446,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
           FORTUNE: 'STRONG',
           SPECULATION: 'WEAK'
         },
+        timingSynthesis: speculationTiming('SUPPORTS'),
         d2Relationship: 'CONFIRMS'
       };
 
@@ -312,6 +456,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.status).toBe('STRONG');
       expect(result.finalStatus).toBe('STRONG');
       expect(result.speculativePropensity).toBe('CHALLENGED');
+      expect(result.riskProfile).toBe('HIGH');
       expect(result.strongestAreas).toContain('ACCUMULATION');
       expect(result.strongestAreas).toContain('GAINS');
       expect(result.challengedAreas).toContain('SPECULATION');
