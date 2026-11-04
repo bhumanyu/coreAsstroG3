@@ -2233,7 +2233,7 @@ describe('WealthDomainInterpreterV2', () => {
     expect(finalSynthesis?.status).toBe(finalSynthesis?.finalStatus);
     expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'WEAK', 'VERY_WEAK', 'UNDETERMINED']).toContain(finalSynthesis?.primaryPromise);
 
-    // Verify risk profile (driven by speculation, never diluting overall wealth status)
+    // Verify chart-derived speculative propensity (never a financial exposure or suitability verdict)
     expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'MIXED', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.speculativePropensity);
 
     // Verify all 4 dimensions
