@@ -363,3 +363,20 @@ it('derives actual exposure and trading history only from explicit C01 fact sour
   expect(vm.riskAndSuitability.tradingHistory).toBe('AVAILABLE');
   expect(vm.riskAndSuitability.suitability).toBe('UNAVAILABLE');
 });
+
+it('does not report actual trading exposure or history from astrology-only records', () => {
+  const base = createProductAnalysis();
+  const dataset = createUnavailableWealthFinancialDataSet();
+  const invalid = {
+    schemaVersion: 'C01-v1' as const,
+    status: 'AVAILABLE' as const,
+    data: dataset.data.map((datum) => datum.concept === 'TRADING_EXPOSURE'
+      ? { id: 'astro-trading', concept: 'TRADING_EXPOSURE' as const, availability: 'AVAILABLE' as const, sourceClassification: 'ASTROLOGICAL_INDICATOR' as const, value: 'strong indication' }
+      : datum)
+  };
+  const analysis = { ...base, wealth: { ...base.wealth, financialData: invalid } };
+  const vm = selectWealthViewModel(analysis);
+  expect(vm.riskAndSuitability.actualExposure).toBe('UNAVAILABLE');
+  expect(vm.riskAndSuitability.tradingHistory).toBe('UNAVAILABLE');
+  expect(vm.financialData.status).toBe('UNAVAILABLE');
+});
