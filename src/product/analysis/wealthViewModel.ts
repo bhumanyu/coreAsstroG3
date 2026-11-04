@@ -21,6 +21,7 @@ import type {
   TransitEffect
 } from './productAnalysisTypes';
 import { createUnavailableWealthFinancialDataSet, validateWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
+import type { WealthLifecycleAnalysis } from '../../domain/wealth/wealthLifecycleTypes';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -93,6 +94,17 @@ export interface WealthTransitViewModel {
   readonly statement?: string;
 }
 
+export interface WealthLifecycleViewModel {
+  readonly status: 'CANDIDATES_AVAILABLE' | 'CONDITIONAL' | 'PARTIAL' | 'UNRESOLVED' | 'INSUFFICIENT';
+  readonly candidateCount: number;
+  readonly candidates: readonly { readonly id: string; readonly type: string; readonly status: string; readonly timingLabel: string; readonly limitations: readonly string[] }[];
+  readonly diagnostics: readonly { readonly code: string; readonly eventType?: string; readonly message: string }[];
+  readonly observedFactCount: number;
+  readonly guarantee: 'NONE';
+  readonly actualFinancialEventsInferred: false;
+  readonly finalAuthority: 'CW-05';
+  readonly statement: string;
+}
 export interface WealthSpeculativePropensityViewModel {
   readonly status: 'VERY_STRONG' | 'STRONG' | 'MODERATE' | 'MIXED' | 'CHALLENGED' | 'INSUFFICIENT_DATA';
   readonly label: string;
@@ -156,6 +168,7 @@ export interface WealthViewModel {
   readonly hero: WealthHeroViewModel;
   readonly overall: WealthOverallViewModel;
   readonly financialData: WealthFinancialDataViewModel;
+  readonly lifecycle: WealthLifecycleViewModel;
   readonly dimensions: WealthDimensionsViewModel;
   readonly d2: WealthD2ViewModel;
   readonly dasha: WealthDashaViewModel;
@@ -187,6 +200,28 @@ function sanitizePropensityDescription(value?: string): string | undefined {
   return value.trim();
 }
 
+function projectWealthLifecycle(source?: WealthLifecycleAnalysis): WealthLifecycleViewModel {
+  const candidates = (source?.candidateWindows ?? []).map(candidate => ({
+    id: candidate.candidateId,
+    type: candidate.eventType.replaceAll('_', ' '),
+    status: candidate.status,
+    timingLabel: candidate.timing.type === 'DASHA_PERIOD_WINDOW' && candidate.timing.start && candidate.timing.end
+      ? String(candidate.timing.level ?? 'DASHA') + ': ' + candidate.timing.start + ' to ' + candidate.timing.end + ' (source period only)'
+      : 'Untimed candidate window',
+    limitations: candidate.limitations
+  }));
+  return {
+    status: source?.status ?? 'INSUFFICIENT',
+    candidateCount: candidates.length,
+    candidates,
+    diagnostics: (source?.diagnostics ?? []).map(diagnostic => ({ code: diagnostic.code, eventType: diagnostic.eventType, message: diagnostic.message })),
+    observedFactCount: source?.observedFinancialFactReportIds.length ?? 0,
+    guarantee: 'NONE',
+    actualFinancialEventsInferred: false,
+    finalAuthority: 'CW-05',
+    statement: source?.statement ?? 'C04 lifecycle analysis is unavailable. No financial event is inferred; CW-05 remains the final Wealth authority.'
+  };
+}
 export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewModel {
   const wealth = analysis.wealth;
 
@@ -204,6 +239,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const isValidFinancialData = validateWealthFinancialDataSet(sourceFinancialData);
   const normalizedFinancialData = isValidFinancialData ? sourceFinancialData : createUnavailableWealthFinancialDataSet('Financial source data failed C01 validation.');
   const financialData: WealthFinancialDataViewModel = { status: normalizedFinancialData.status, data: normalizedFinancialData.data };
+  const lifecycle = projectWealthLifecycle(wealth.lifecycle);
 
   const overall: WealthOverallViewModel = {
     promise: wealth.overall.promise,
@@ -366,6 +402,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     hero,
     overall,
     financialData,
+    lifecycle,
     dimensions,
     d2,
     dasha,
