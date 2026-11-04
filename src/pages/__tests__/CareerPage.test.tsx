@@ -171,6 +171,8 @@ describe('CareerPage (P-UI-04)', () => {
             opportunityId: 'opportunity-1',
             activationId: 'activation-1',
             qualificationBasis: 'B02_NATAL_PROMISE_AND_LINKED_ACTIVATION' as const,
+            conditions: ['B02_CANDIDATE_OUTCOME_QUALIFIED'],
+            counterEvidenceOccurrenceIds: [],
             evidence: {
               semanticIdentityIds: ['natal-identity-1', 'activation-1'],
               occurrenceIds: ['natal-occ-1', 'dasha-occ-1'],
