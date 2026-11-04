@@ -261,6 +261,8 @@ export function validateWealthFinancialDatum(value: unknown): value is WealthFin
   }
   if (item.availability !== 'AVAILABLE' || item.value === undefined) return false;
   if (item.sourceClassification === 'ASTROLOGICAL_INDICATOR') {
+    // Astrological indications must never be used as real-world financial facts.
+    if (item.concept === 'TRADING_EXPOSURE' || item.concept === 'TRADING_HISTORY') return false;
     return item.userReportedProvenance === undefined && item.calculationProvenance === undefined
       && item.connectedSourceProvenance === undefined;
   }
