@@ -187,7 +187,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const accumulation: WealthDimensionItemViewModel = {
     id: 'ACCUMULATION',
     label: 'Accumulation',
-    houseLabel: '2nd House (Liquid Capital & Assets)',
+    houseLabel: '2nd House (Astrological accumulation indication)',
     status: wealth.dimensions.accumulation.status,
     statement: wealth.dimensions.accumulation.statement
   };
@@ -195,7 +195,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const gains: WealthDimensionItemViewModel = {
     id: 'GAINS',
     label: 'Gains & Inflow',
-    houseLabel: '11th House (Income & Profit Streams)',
+    houseLabel: '11th House (Astrological gains indication)',
     status: wealth.dimensions.gains.status,
     statement: wealth.dimensions.gains.statement
   };
@@ -211,7 +211,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const speculation: WealthDimensionItemViewModel = {
     id: 'SPECULATION',
     label: 'Speculation & Venture',
-    houseLabel: '5th House (Risk Capital & Investments)',
+    houseLabel: '5th House (Astrological speculation indication)',
     status: wealth.dimensions.speculation.status,
     statement: wealth.dimensions.speculation.statement
   };

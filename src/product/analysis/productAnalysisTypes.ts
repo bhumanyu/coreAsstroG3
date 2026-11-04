@@ -6,6 +6,8 @@
  * are placed directly on ProductAnalysis.
  */
 
+import type { ProductMethodology } from '../../core/analysis/AnalysisContext';
+
 export type ProductStatus = 'READY' | 'PARTIAL' | 'ERROR';
 export type ProductAnalysisStatus = ProductStatus;
 
@@ -50,7 +52,6 @@ export interface ProductBirth {
   readonly ayanamsa: string;
 }
 
-import type { ProductMethodology } from '../../core/analysis/AnalysisContext';
 export type { ProductMethodology };
 
 export type PromiseStrength =

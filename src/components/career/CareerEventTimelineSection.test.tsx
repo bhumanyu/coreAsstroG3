@@ -58,7 +58,9 @@ describe('CareerEventTimelineSection', () => {
     expect(screen.getByText(/not a specific career event/i)).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Event-specific taxonomy validation status' })).toHaveTextContent('PROMOTION ROLE EXPANSION');
     expect(screen.getByText('Leadership expression is not evidence of a promotion.')).toBeInTheDocument();
-    expect(screen.getByText(/No promotion, job change, business launch/)).toBeInTheDocument();
+    expect(screen.getByText(
+      /Event-specific predictions are disabled until each event type has its own validated natal and activation evidence rules/
+    )).toBeInTheDocument();
   });
 
   it('does not fabricate observed outcomes when no B02 report references exist', () => {

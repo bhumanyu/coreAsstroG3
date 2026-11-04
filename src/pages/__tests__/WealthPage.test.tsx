@@ -87,16 +87,19 @@ describe('WealthPage (P-UI-05)', () => {
       screen.getByText('Solid 2nd house foundation supporting liquid wealth.')
     ).toBeInTheDocument();
 
-    // Core Financial Dimensions (4 houses)
-    expect(screen.getByText('Core Financial Dimensions')).toBeInTheDocument();
+    // Astrological Wealth Indicators (4 houses)
+    expect(screen.getByText('Astrological Wealth Indicators')).toBeInTheDocument();
+    expect(screen.getByText(
+      'Chart-derived indications only; not verified income, savings, assets, or investment facts.'
+    )).toBeInTheDocument();
     expect(screen.getByText('Accumulation')).toBeInTheDocument();
-    expect(screen.getByText('2nd House (Liquid Capital & Assets)')).toBeInTheDocument();
+    expect(screen.getByText('2nd House (Astrological accumulation indication)')).toBeInTheDocument();
     expect(screen.getByText('Gains & Inflow')).toBeInTheDocument();
-    expect(screen.getByText('11th House (Income & Profit Streams)')).toBeInTheDocument();
+    expect(screen.getByText('11th House (Astrological gains indication)')).toBeInTheDocument();
     expect(screen.getByText('Fortune & Luck')).toBeInTheDocument();
     expect(screen.getByText('9th House (Lakshmi Sthana & Prosperity)')).toBeInTheDocument();
     expect(screen.getByText('Speculation & Venture')).toBeInTheDocument();
-    expect(screen.getByText('5th House (Risk Capital & Investments)')).toBeInTheDocument();
+    expect(screen.getByText('5th House (Astrological speculation indication)')).toBeInTheDocument();
 
     // Hora (D2) Divisional Alignment
     expect(screen.getByText('Hora (D2) Divisional Alignment')).toBeInTheDocument();

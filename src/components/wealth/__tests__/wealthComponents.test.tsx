@@ -91,14 +91,14 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
         accumulation: {
           id: 'ACCUMULATION',
           label: 'Accumulation',
-          houseLabel: '2nd House (Liquid Capital & Assets)',
+          houseLabel: '2nd House (Astrological accumulation indication)',
           status: 'STRONGLY_SUPPORTED',
           statement: '2nd lord Jupiter exalted in Cancer.'
         },
         gains: {
           id: 'GAINS',
           label: 'Gains & Inflow',
-          houseLabel: '11th House (Income & Profit Streams)',
+          houseLabel: '11th House (Astrological gains indication)',
           status: 'SUPPORTED',
           statement: '11th lord situated in 10th house.'
         },
@@ -112,7 +112,7 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
         speculation: {
           id: 'SPECULATION',
           label: 'Speculation & Venture',
-          houseLabel: '5th House (Risk Capital & Investments)',
+          houseLabel: '5th House (Astrological speculation indication)',
           status: 'CHALLENGED',
           statement: '5th house influenced by Rahu.'
         },
@@ -128,19 +128,22 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
 
       render(<WealthDimensionsSection dimensions={dimensions} />);
 
-      expect(screen.getByText('Core Financial Dimensions')).toBeInTheDocument();
+      expect(screen.getByText('Astrological Wealth Indicators')).toBeInTheDocument();
+      expect(screen.getByText(
+        'Chart-derived indications only; not verified income, savings, assets, or investment facts.'
+      )).toBeInTheDocument();
       expect(screen.getByText('Accumulation')).toBeInTheDocument();
-      expect(screen.getByText('2nd House (Liquid Capital & Assets)')).toBeInTheDocument();
+      expect(screen.getByText('2nd House (Astrological accumulation indication)')).toBeInTheDocument();
       expect(screen.getByText('2nd lord Jupiter exalted in Cancer.')).toBeInTheDocument();
 
       expect(screen.getByText('Gains & Inflow')).toBeInTheDocument();
-      expect(screen.getByText('11th House (Income & Profit Streams)')).toBeInTheDocument();
+      expect(screen.getByText('11th House (Astrological gains indication)')).toBeInTheDocument();
 
       expect(screen.getByText('Fortune & Luck')).toBeInTheDocument();
       expect(screen.getByText('9th House (Lakshmi Sthana & Prosperity)')).toBeInTheDocument();
 
       expect(screen.getByText('Speculation & Venture')).toBeInTheDocument();
-      expect(screen.getByText('5th House (Risk Capital & Investments)')).toBeInTheDocument();
+      expect(screen.getByText('5th House (Astrological speculation indication)')).toBeInTheDocument();
       expect(screen.getByText('5th house influenced by Rahu.')).toBeInTheDocument();
     });
   });

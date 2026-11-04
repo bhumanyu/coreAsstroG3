@@ -18,8 +18,10 @@ export const WealthDimensionsSection: React.FC<WealthDimensionsSectionProps> = (
             <PieChart className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Core Financial Dimensions</h2>
-            <p className="text-xs text-slate-400">Analysis across classical houses of wealth, profit, fortune, and speculative ventures</p>
+            <h2 className="text-base font-semibold text-slate-100">Astrological Wealth Indicators</h2>
+            <p className="text-xs text-slate-400">
+              Chart-derived indications only; not verified income, savings, assets, or investment facts.
+            </p>
           </div>
         </div>
 

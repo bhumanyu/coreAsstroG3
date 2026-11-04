@@ -31,12 +31,12 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     const vm = selectWealthViewModel(analysis);
 
     expect(vm.dimensions.accumulation.id).toBe('ACCUMULATION');
-    expect(vm.dimensions.accumulation.houseLabel).toBe('2nd House (Liquid Capital & Assets)');
+    expect(vm.dimensions.accumulation.houseLabel).toBe('2nd House (Astrological accumulation indication)');
     expect(vm.dimensions.accumulation.status).toBe('STRONGLY_SUPPORTED');
     expect(vm.dimensions.accumulation.statement).toBe('2nd lord exalted.');
 
     expect(vm.dimensions.gains.id).toBe('GAINS');
-    expect(vm.dimensions.gains.houseLabel).toBe('11th House (Income & Profit Streams)');
+    expect(vm.dimensions.gains.houseLabel).toBe('11th House (Astrological gains indication)');
     expect(vm.dimensions.gains.status).toBe('SUPPORTED');
 
     expect(vm.dimensions.fortune.id).toBe('FORTUNE');
@@ -44,7 +44,7 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     expect(vm.dimensions.fortune.status).toBe('STRONGLY_SUPPORTED');
 
     expect(vm.dimensions.speculation.id).toBe('SPECULATION');
-    expect(vm.dimensions.speculation.houseLabel).toBe('5th House (Risk Capital & Investments)');
+    expect(vm.dimensions.speculation.houseLabel).toBe('5th House (Astrological speculation indication)');
     expect(vm.dimensions.speculation.status).toBe('SUPPORTED');
 
     expect(vm.dimensions.items).toHaveLength(4);
@@ -56,17 +56,13 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     ]);
   });
 
-  it('3. keeps the unvalidated D2 relationship unavailable', () => {
-    const analysis = createProductAnalysis();
-    const vm = selectWealthViewModel(analysis);
-
-    expect(vm.d2.relationship).toBe('UNAVAILABLE');
-    expect(vm.d2.statement).toBe(
+  it('3. keeps D2 unavailable and preserves unavailable Dasha/transit values without coercion', () => {
+    const defaultViewModel = selectWealthViewModel(createProductAnalysis());
+    expect(defaultViewModel.d2.relationship).toBe('UNAVAILABLE');
+    expect(defaultViewModel.d2.statement).toBe(
       'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
     );
-  });
 
-  it('4. unavailable D2/Dasha/transit preserved: handles UNAVAILABLE values without coercion', () => {
     const defaultAnalysis = createProductAnalysis();
     const analysis = createProductAnalysis({
       wealth: {
