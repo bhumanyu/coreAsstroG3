@@ -303,6 +303,10 @@ export function validateWealthFinancialDataSet(value: unknown): value is WealthF
     if (ids.has(item.id)) return false;
     ids.add(item.id);
   }
-  return dataset.status === (dataset.data.some((item) => (item as WealthFinancialDatum).availability === 'AVAILABLE')
-    ? 'AVAILABLE' : 'UNAVAILABLE');
+  const hasAvailable = dataset.data.some((item) => (item as WealthFinancialDatum).availability === 'AVAILABLE');
+  const hasUnavailable = dataset.data.some((item) => (item as WealthFinancialDatum).availability === 'UNAVAILABLE');
+  if (dataset.status !== (hasAvailable ? 'AVAILABLE' : 'UNAVAILABLE')) return false;
+  if (hasAvailable && hasUnavailable) return false;
+  const uniqueConcepts = new Set((dataset.data as WealthFinancialDatum[]).map((item) => item.concept));
+  return uniqueConcepts.size === dataset.data.length;
 }
