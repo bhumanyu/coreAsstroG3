@@ -38,11 +38,11 @@ export const WealthSpeculativeRiskSection: React.FC<WealthSpeculativeRiskSection
         </div>
       </div>
 
-      {isAvailable && speculativeRisk ? (
+      {isAvailable ? (
         <div className="space-y-3">
           {speculativePropensity.description && (
             <p className="text-xs text-slate-300 leading-relaxed font-sans">
-              {speculativeRisk.description}
+              {speculativePropensity.description}
             </p>
           )}
 
