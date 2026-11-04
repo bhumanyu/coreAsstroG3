@@ -41,6 +41,7 @@ function challengeEvent(eventId = 'event-challenge', activationId = 'activation-
 function makeAxes(overrides: {
   activationConflicts?: string[];
   riskSupport?: string[];
+  riskConflicts?: string[];
 } = {}): CareerAnalyticalAxes {
   return {
     version: 'B01-AXIS-PROJECTION-v1',
@@ -64,7 +65,7 @@ function makeAxes(overrides: {
     },
     risk: {
       axis: 'RISK', status: 'AVAILABLE', result: { assessment: 'ADVERSE_EVIDENCE_PRESENT', conflictCount: 1 },
-      supportingEvidenceOccurrenceIds: overrides.riskSupport ?? [], conflictingEvidenceOccurrenceIds: [],
+      supportingEvidenceOccurrenceIds: overrides.riskSupport ?? [], conflictingEvidenceOccurrenceIds: overrides.riskConflicts ?? [],
       ruleIds: [], coverage: { status: 'COMPLETE', availableSources: ['C4_C7_NATAL', 'C9_DASHA'], missingSources: [], evidenceOccurrenceCount: 1 },
       confidence: { status: 'NOT_ASSESSED', reason: 'test' }, methodVersion: 'B01-AXIS-PROJECTION-v1'
     },
@@ -125,7 +126,7 @@ function makeOutcomeCandidate(event: CareerEvent): Record<string, unknown> {
       practicalExecution: 'NOT_ASSESSED',
       requiredChecks: ['SKILLS_AND_EXPERIENCE_FIT', 'REAL_WORLD_OPPORTUNITY', 'USER_ACTION_AND_EXECUTION', 'EMPLOYER_MARKET_AND_RESOURCE_CONSTRAINTS']
     },
-    counterIndications: { severity: 'NONE', evidenceOccurrenceIds: [], conflicts: [] },
+    counterIndications: { severity: 'LOW', evidenceOccurrenceIds: ['counter-occ-1'], conflicts: [] },
     guarantee: 'NONE'
   };
 }
@@ -195,6 +196,8 @@ describe('B06 Career Event-Specific Timeline', () => {
     expect(result.genericWindows[0].sourceEventId).toBe(event.eventId);
     expect(result.genericWindows[0].specificEventInference).toBe('NOT_MADE');
     expect(result.genericWindows[0].qualificationBasis).toBe('B02_NATAL_PROMISE_AND_LINKED_ACTIVATION');
+    expect(result.genericWindows[0].conditions).toContain('B02_CANDIDATE_OUTCOME_QUALIFIED');
+    expect(result.genericWindows[0].counterEvidenceOccurrenceIds).toEqual(['counter-occ-1']);
     expect(result.eventCandidates).toEqual([]);
   });
 
@@ -236,7 +239,7 @@ describe('B06 Career Event-Specific Timeline', () => {
     const result = buildCareerEventTimeline(makeInput({
       events: [event],
       dashaEvidence: [activationEvidence('activation-challenge-1', 'dasha-occ-challenge', 'CHALLENGES', 'CHALLENGE', ['natal-risk-identity'])],
-      axes: makeAxes({ activationConflicts: ['dasha-occ-challenge'], riskSupport: ['dasha-occ-challenge'] }),
+      axes: makeAxes({ activationConflicts: ['dasha-occ-challenge'], riskSupport: ['dasha-occ-challenge'], riskConflicts: ['dasha-risk-counter'] }),
       conflicts: [{
         source: 'NATAL', direction: 'CHALLENGE', severity: 'HIGH',
         evidenceIds: ['natal-risk-identity'], statement: 'Natal counter-indication fixture.'
@@ -247,6 +250,8 @@ describe('B06 Career Event-Specific Timeline', () => {
     expect(result.genericWindows[0].genericType).toBe('CAREER_CHALLENGE_WINDOW');
     expect(result.genericWindows[0].qualificationBasis).toBe('B01_NATAL_RISK_AND_LINKED_CHALLENGE_ACTIVATION');
     expect(result.genericWindows[0].evidence.rootIdentityKeys).toEqual(['natal-risk-identity']);
+    expect(result.genericWindows[0].conditions).toContain('C9_CHALLENGE_ACTIVATION_RESOLVED');
+    expect(result.genericWindows[0].counterEvidenceOccurrenceIds).toEqual(['dasha-risk-counter']);
     expect(result.eventCandidates).toEqual([]);
   });
 
