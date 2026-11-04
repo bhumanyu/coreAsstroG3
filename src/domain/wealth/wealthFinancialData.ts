@@ -9,6 +9,7 @@ export type WealthFinancialSourceClassification =
   | 'ASTROLOGICAL_INDICATOR'
   | 'USER_REPORTED_FINANCIAL_FACT'
   | 'CALCULATED_FINANCIAL_METRIC'
+  | 'CONNECTED_FINANCIAL_SOURCE'
   | 'UNAVAILABLE';
 
 export type WealthFinancialConcept =
@@ -21,7 +22,9 @@ export type WealthFinancialConcept =
   | 'CASH_FLOW'
   | 'LIQUIDITY'
   | 'NET_WORTH'
-  | 'CONSUMPTION_LUXURY';
+  | 'CONSUMPTION_LUXURY'
+  | 'TRADING_EXPOSURE'
+  | 'TRADING_HISTORY';
 
 export type WealthFinancialAvailability = 'AVAILABLE' | 'UNAVAILABLE';
 export type WealthFinancialPeriod = 'INSTANT' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'CUSTOM';
@@ -32,6 +35,14 @@ export interface WealthFinancialUserProvenance {
   readonly reportedAt: string;
   readonly label?: string;
   readonly sourceNote?: string;
+}
+
+export interface WealthFinancialConnectedSourceProvenance {
+  readonly sourceType: 'CONNECTED_ACCOUNT' | 'BROKERAGE' | 'BANK' | 'OTHER_FINANCIAL_PROVIDER';
+  readonly providerId: string;
+  readonly connectionId: string;
+  readonly retrievedAt: string;
+  readonly externalReference?: string;
 }
 
 export interface WealthFinancialInputReference {
@@ -59,6 +70,7 @@ export interface WealthFinancialDatum<TValue = number> {
   readonly asOf?: string;
   readonly userReportedProvenance?: WealthFinancialUserProvenance;
   readonly calculationProvenance?: WealthFinancialCalculationProvenance;
+  readonly connectedSourceProvenance?: WealthFinancialConnectedSourceProvenance;
   readonly unavailableReason?: string;
 }
 
@@ -70,7 +82,8 @@ export interface WealthFinancialDataSet {
 
 export const WEALTH_FINANCIAL_CONCEPTS: readonly WealthFinancialConcept[] = Object.freeze([
   'INCOME', 'SAVINGS', 'ASSETS', 'ASSET_OWNERSHIP', 'INHERITANCE',
-  'DEBT_LIABILITIES', 'CASH_FLOW', 'LIQUIDITY', 'NET_WORTH', 'CONSUMPTION_LUXURY'
+  'DEBT_LIABILITIES', 'CASH_FLOW', 'LIQUIDITY', 'NET_WORTH', 'CONSUMPTION_LUXURY',
+  'TRADING_EXPOSURE', 'TRADING_HISTORY'
 ]);
 
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -177,6 +190,39 @@ export function createCalculatedFinancialMetric<TValue = number>(input: {
   });
 }
 
+export function createConnectedFinancialDatum<TValue = unknown>(input: {
+  readonly id: string;
+  readonly concept: WealthFinancialConcept;
+  readonly value: TValue;
+  readonly currency?: string;
+  readonly unit?: string;
+  readonly period?: WealthFinancialPeriod;
+  readonly asOf?: string;
+  readonly provenance: WealthFinancialConnectedSourceProvenance;
+}): WealthFinancialDatum<TValue> {
+  if (input.value === null || input.value === undefined) throw new Error('Connected financial datum requires an explicit value');
+  if (input.currency && !CURRENCY.test(input.currency)) throw new Error('currency must be a three-letter uppercase currency code');
+  const p = input.provenance;
+  const provenance = Object.freeze({
+    ...p,
+    providerId: nonBlank(p.providerId, 'providerId'),
+    connectionId: nonBlank(p.connectionId, 'connectionId'),
+    retrievedAt: instant(p.retrievedAt, 'retrievedAt')
+  });
+  return Object.freeze({
+    id: nonBlank(input.id, 'financial datum id'),
+    concept: input.concept,
+    availability: 'AVAILABLE',
+    sourceClassification: 'CONNECTED_FINANCIAL_SOURCE',
+    value: input.value,
+    ...(input.currency ? { currency: input.currency } : {}),
+    ...(input.unit ? { unit: input.unit } : {}),
+    ...(input.period ? { period: input.period } : {}),
+    ...(input.asOf ? { asOf: instant(input.asOf, 'asOf') } : {}),
+    connectedSourceProvenance: provenance
+  });
+}
+
 export function createUnavailableFinancialDatum(input: {
   readonly id: string;
   readonly concept: WealthFinancialConcept;
@@ -210,16 +256,19 @@ export function validateWealthFinancialDatum(value: unknown): value is WealthFin
   if (item.availability === 'UNAVAILABLE') {
     return item.sourceClassification === 'UNAVAILABLE' && item.value === undefined
       && typeof item.unavailableReason === 'string' && Boolean(item.unavailableReason.trim())
-      && item.userReportedProvenance === undefined && item.calculationProvenance === undefined;
+      && item.userReportedProvenance === undefined && item.calculationProvenance === undefined
+      && item.connectedSourceProvenance === undefined;
   }
   if (item.availability !== 'AVAILABLE' || item.value === undefined) return false;
   if (item.sourceClassification === 'ASTROLOGICAL_INDICATOR') {
-    return item.userReportedProvenance === undefined && item.calculationProvenance === undefined;
+    return item.userReportedProvenance === undefined && item.calculationProvenance === undefined
+      && item.connectedSourceProvenance === undefined;
   }
   if (item.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT') {
     const p = item.userReportedProvenance as Record<string, unknown> | undefined;
     return Boolean(p && p.reportedBy === 'USER' && typeof p.reportId === 'string' && p.reportId.trim()
-      && typeof p.reportedAt === 'string' && ISO_INSTANT.test(p.reportedAt) && !item.calculationProvenance);
+      && typeof p.reportedAt === 'string' && ISO_INSTANT.test(p.reportedAt)
+      && !item.calculationProvenance && !item.connectedSourceProvenance);
   }
   if (item.sourceClassification === 'CALCULATED_FINANCIAL_METRIC') {
     const p = item.calculationProvenance as Record<string, unknown> | undefined;
@@ -230,7 +279,15 @@ export function validateWealthFinancialDatum(value: unknown): value is WealthFin
       && Array.isArray(p.inputs) && p.inputs.length > 0
       && p.inputs.every((i) => Boolean(i && typeof i.datumId === 'string' && i.datumId.trim()
         && WEALTH_FINANCIAL_CONCEPTS.includes(i.concept as WealthFinancialConcept)))
-      && !item.userReportedProvenance);
+      && !item.userReportedProvenance && !item.connectedSourceProvenance);
+  }
+  if (item.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE') {
+    const p = item.connectedSourceProvenance as Record<string, unknown> | undefined;
+    return Boolean(p && ['CONNECTED_ACCOUNT', 'BROKERAGE', 'BANK', 'OTHER_FINANCIAL_PROVIDER'].includes(String(p.sourceType))
+      && typeof p.providerId === 'string' && p.providerId.trim()
+      && typeof p.connectionId === 'string' && p.connectionId.trim()
+      && typeof p.retrievedAt === 'string' && ISO_INSTANT.test(p.retrievedAt)
+      && !item.userReportedProvenance && !item.calculationProvenance);
   }
   return false;
 }
