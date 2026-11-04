@@ -599,8 +599,10 @@ export interface WealthProductAnalysis {
   readonly dimensions: WealthDimensionsProduct;
   readonly d2: D2ProductResult;
   readonly activation: WealthActivationProduct;
-  readonly speculativePropensity: AstrologicalSpeculativePropensityProduct;
-  readonly riskAndSuitability: WealthRiskAndSuitabilityProduct;
+  /** Optional for legacy persisted analyses; projection defaults to unavailable. */
+  readonly speculativePropensity?: AstrologicalSpeculativePropensityProduct;
+  /** Optional for legacy persisted analyses; never inferred from horoscope. */
+  readonly riskAndSuitability?: WealthRiskAndSuitabilityProduct;
   readonly qualifications?: readonly ProductQualification[];
   readonly evidence: readonly ProductEvidence[];
   readonly synthesis?: {
