@@ -283,7 +283,11 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     statement: wealth.activation.transit.statement
   };
 
-  const propensityStatus = wealth.speculativePropensity?.status ?? 'INSUFFICIENT_DATA';
+  const rawPropensityStatus = wealth.speculativePropensity?.status ?? 'INSUFFICIENT_DATA';
+  const allowedPropensityStatuses = ['VERY_STRONG', 'STRONG', 'MODERATE', 'MIXED', 'CHALLENGED', 'INSUFFICIENT_DATA'] as const;
+  const propensityStatus = (allowedPropensityStatuses as readonly string[]).includes(rawPropensityStatus)
+    ? rawPropensityStatus as typeof allowedPropensityStatuses[number]
+    : 'INSUFFICIENT_DATA';
   const propensityLabels = {
     VERY_STRONG: 'Very strong indication',
     STRONG: 'Strong indication',
