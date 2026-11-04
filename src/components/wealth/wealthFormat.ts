@@ -217,25 +217,15 @@ export function formatSeverity(severity?: 'LOW' | 'MEDIUM' | 'HIGH' | string): s
   }
 }
 
-/**
- * Format speculative risk levels:
- * 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME' | 'UNAVAILABLE'
- */
+/** Descriptive propensity labels only; never a financial risk grade. */
 export function formatSpeculativeRiskLevel(level?: string): string {
-  if (!level || level.toUpperCase() === 'UNAVAILABLE') {
-    return 'Unavailable';
-  }
-  switch (level.toUpperCase()) {
-    case 'LOW':
-      return 'Low Risk';
-    case 'MODERATE':
-      return 'Moderate Risk';
-    case 'HIGH':
-      return 'High Risk';
-    case 'EXTREME':
-      return 'Extreme Risk';
-    default:
-      return 'Unavailable';
+  switch ((level ?? '').toUpperCase()) {
+    case 'VERY_STRONG': return 'Very strong indication';
+    case 'STRONG': return 'Strong indication';
+    case 'MODERATE': return 'Moderate indication';
+    case 'MIXED': return 'Mixed indication';
+    case 'CHALLENGED': return 'Challenged indication';
+    default: return 'Insufficient data';
   }
 }
 
