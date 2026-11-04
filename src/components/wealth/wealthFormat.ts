@@ -339,17 +339,7 @@ export function getEvidenceRoleBadgeClass(role?: ProductEvidenceRole | string): 
 /**
  * Tailwind styling helper for Speculative Risk badges
  */
-export function getSpeculativeRiskBadgeClass(level?: string): string {
-  switch (level?.toUpperCase()) {
-    case 'LOW':
-      return 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300';
-    case 'MODERATE':
-      return 'bg-blue-950/60 border-blue-800/80 text-blue-300';
-    case 'HIGH':
-      return 'bg-amber-950/60 border-amber-800/80 text-amber-300';
-    case 'EXTREME':
-      return 'bg-rose-950/60 border-rose-800/80 text-rose-300';
-    default:
-      return 'bg-slate-800/60 border-slate-700/80 text-slate-400';
-  }
+/** Neutral styling for chart propensity states; colors must not imply financial risk. */
+export function getSpeculativeRiskBadgeClass(_status?: string): string {
+  return 'bg-slate-800/60 border-slate-700/80 text-slate-300';
 }
