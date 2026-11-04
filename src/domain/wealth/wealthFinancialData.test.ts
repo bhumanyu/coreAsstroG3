@@ -71,6 +71,7 @@ describe('C01 Wealth financial data contract', () => {
 
 
 describe('C03 trading facts provenance guardrails', () => {
+  const tradingProvenance = { reportedBy: 'USER' as const, reportId: 'trading-report', reportedAt: '2026-11-04T05:30:00Z' };
   it('keeps trading exposure and trading history unavailable by default', () => {
     const dataset = createUnavailableWealthFinancialDataSet();
     const exposure = dataset.data.find((item) => item.concept === 'TRADING_EXPOSURE');
@@ -84,7 +85,7 @@ describe('C03 trading facts provenance guardrails', () => {
   it('accepts explicitly user-reported trading exposure only with report provenance', () => {
     const item = createUserReportedFinancialDatum({
       id: 'exposure-report-1', concept: 'TRADING_EXPOSURE',
-      value: { amount: 250000, instruments: ['equity'] }, currency: 'INR', provenance
+      value: { amount: 250000, instruments: ['equity'] }, currency: 'INR', provenance: tradingProvenance
     });
     expect(validateWealthFinancialDatum(item)).toBe(true);
     expect(validateWealthFinancialDatum({ ...item, userReportedProvenance: undefined })).toBe(false);
