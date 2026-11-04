@@ -326,17 +326,15 @@ export function mapD2Relationship(_val?: string): D2ProductResult['relationship'
   return 'UNAVAILABLE';
 }
 
-/**
- * Maps speculative risk level.
- */
-export function mapSpeculativeRisk(val?: string): SpeculativeRiskProduct['level'] {
-  if (!val) return 'UNAVAILABLE';
-  const u = val.toUpperCase();
-  if (u.includes('EXTREME')) return 'EXTREME';
-  if (u.includes('HIGH')) return 'HIGH';
-  if (u.includes('MODERATE') || u.includes('AVERAGE')) return 'MODERATE';
-  if (u.includes('LOW')) return 'LOW';
-  return 'UNAVAILABLE';
+/** Maps legacy dimension status to descriptive chart-propensity vocabulary. */
+export function mapSpeculativePropensity(val?: string): import('./productAnalysisTypes').AstrologicalSpeculativePropensity {
+  const u = (val ?? '').toUpperCase();
+  if (u.includes('VERY_STRONG') || u.includes('STRONGLY_SUPPORTED')) return 'VERY_STRONG';
+  if (u.includes('STRONG') || u.includes('SUPPORTED')) return 'STRONG';
+  if (u.includes('MODERATE')) return 'MODERATE';
+  if (u.includes('MIXED')) return 'MIXED';
+  if (u.includes('CHALLENGE') || u.includes('WEAK') || u.includes('LIMITED')) return 'CHALLENGED';
+  return 'INSUFFICIENT_DATA';
 }
 
 /**
@@ -965,12 +963,19 @@ function mapWealth(
         statement: detail?.timing?.transitStatement
       }
     },
-    speculativeRisk: speculationStatus
-      ? {
-        level: mapSpeculativeRisk(String(speculationStatus)),
-        description: speculationStatement
-      }
-      : undefined,
+    speculativePropensity: {
+      source: 'ASTROLOGICAL_INDICATION',
+      status: speculationStatus ? mapSpeculativePropensity(String(speculationStatus)) : 'INSUFFICIENT_DATA',
+      description: speculationStatement,
+      evidenceIds: evidence.filter((item) => item.source === 'WEALTH_ENGINE').map((item) => item.id),
+      adviceAvailable: false
+    },
+    riskAndSuitability: {
+      actualExposure: 'UNAVAILABLE',
+      tradingHistory: 'UNAVAILABLE',
+      suitability: 'UNAVAILABLE',
+      suitabilityReason: 'Suitability requires a separately governed assessment and cannot be inferred from astrology.'
+    },
     qualifications: mapQualifications(detail?.qualifications),
     evidence,
     synthesis: {
