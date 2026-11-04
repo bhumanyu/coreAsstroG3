@@ -245,17 +245,22 @@ export function buildCareerEventTimeline(input: CareerEventTimelineInput): Caree
 
   const sourceCount = input.events.events.length;
   const suppressedCount = sourceCount - genericWindows.length;
+  const hasPartialRiskCoverage = genericWindows.some(window =>
+    window.genericType === 'CAREER_CHALLENGE_WINDOW'
+  ) && input.axes.risk.status === 'PARTIAL';
   const diagnostics = [
     'EVENT_SPECIFIC_TAXONOMY_NOT_VALIDATED',
     ...(suppressedCount > 0 ? ['UNLINKED_OR_UNQUALIFIED_GENERIC_WINDOWS_SUPPRESSED'] : []),
     ...(genericWindows.length === 0 ? ['NO_NATAL_LINKED_GENERIC_WINDOWS_AVAILABLE'] : []),
+    ...(sourceCount === 0 ? ['NO_P2_09B_SOURCE_WINDOWS_AVAILABLE'] : []),
     ...(input.outcomeAnalysis.observedOutcomes.length > 0 ? ['OBSERVED_OUTCOMES_RETAINED_AS_EXPLICIT_B02_FACTS'] : [])
   ];
-  const status = genericWindows.length === 0
+  const status = sourceCount === 0
     ? 'UNAVAILABLE'
-    : suppressedCount > 0 || input.axes.promise.status === 'PARTIAL' || input.axes.activation.status === 'PARTIAL'
+    : suppressedCount > 0 || input.axes.promise.status === 'PARTIAL' ||
+      input.axes.activation.status === 'PARTIAL' || hasPartialRiskCoverage
       ? 'PARTIAL'
-      : 'GENERIC_WINDOWS_ONLY';
+      : genericWindows.length > 0 ? 'GENERIC_WINDOWS_ONLY' : 'PARTIAL';
 
   return Object.freeze({
     reasoningVersion: 'B06',
