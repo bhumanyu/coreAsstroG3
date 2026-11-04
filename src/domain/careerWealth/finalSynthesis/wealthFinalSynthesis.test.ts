@@ -176,8 +176,8 @@ describe('synthesizeWealthFinal (CW-05)', () => {
     expect(result.dimensions!.ACCUMULATION.status).toBe('STRONG');
     // Invariant: SPECULATION is CHALLENGED due to natal ceiling and dimension isolation
     expect(result.dimensions!.SPECULATION.status).toBe('CHALLENGED');
-    // Invariant: Risk profile is ELEVATED / HIGH because speculation is challenged despite strong accumulation
-    expect(result.riskProfile).toBe('ELEVATED');
+    // Invariant: Chart-derived propensity is challenged while overall wealth remains separately determined
+    expect(result.speculativePropensity).toBe('CHALLENGED');
 
     expect(result.strongestAreas).toContain('ACCUMULATION');
     expect(result.challengedAreas).toContain('SPECULATION');
@@ -294,7 +294,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.ruleIds).not.toContain('D2-R-1');
     });
 
-    it('enforces speculation exclusion: weak speculation drives riskProfile to HIGH/ELEVATED without diluting overall wealth status', () => {
+    it('enforces speculation exclusion: weak speculation yields a chart-derived propensity without diluting overall wealth status', () => {
       const input: WealthFinalSynthesisInput = {
         natalPromise: {
           ACCUMULATION: 'STRONG',
