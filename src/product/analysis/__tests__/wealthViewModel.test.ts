@@ -329,6 +329,19 @@ describe('C03 separation guardrails', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.riskAndSuitability).toMatchObject({ actualExposure: 'UNAVAILABLE', tradingHistory: 'UNAVAILABLE', suitability: 'UNAVAILABLE' });
   });
+  it('fails closed for unrecognized persisted propensity vocabulary', () => {
+    const base = createProductAnalysis();
+    const analysis = { ...base, wealth: { ...base.wealth, speculativePropensity: {
+      source: 'ASTROLOGICAL_INDICATION' as const,
+      status: 'BUY_NOW' as never,
+      evidenceIds: [],
+      adviceAvailable: false as const
+    } } };
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.speculativePropensity.status).toBe('INSUFFICIENT_DATA');
+    expect(vm.speculativePropensity.label).toBe('Insufficient data');
+  });
+
   it('does not derive exposure, history, or suitability from chart propensity', () => {
     const base = createProductAnalysis();
     const analysis = { ...base, wealth: { ...base.wealth, speculativePropensity: { source: 'ASTROLOGICAL_INDICATION' as const, status: 'VERY_STRONG' as const, evidenceIds: ['ast-1'], adviceAvailable: false as const } } };
