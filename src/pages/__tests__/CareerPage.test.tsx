@@ -143,6 +143,58 @@ describe('CareerPage (P-UI-04)', () => {
     expect(screen.getByText(/No outcome candidate is qualified/)).toBeInTheDocument();
   });
 
+  it('4B. B06 timeline: renders generic windows and keeps specific taxonomy gated', () => {
+    const base = createProductAnalysis();
+    const analysis = {
+      ...base,
+      career: {
+        ...base.career,
+        eventTimeline: {
+          reasoningVersion: 'B06' as const,
+          methodVersion: 'B06-EVENT-SPECIFIC-TIMELINE-v1',
+          status: 'GENERIC_WINDOWS_ONLY' as const,
+          taxonomy: [{
+            eventType: 'PROMOTION_ROLE_EXPANSION' as const,
+            validationStatus: 'UNVALIDATED' as const,
+            requiredEvidence: ['D1_NATAL_PROMISE', 'D10_SAME_EXPRESSION_QUALIFICATION'],
+            validationGap: 'Authority expression does not prove a promotion.',
+            releaseEnabled: false as const
+          }],
+          eventCandidates: [],
+          genericWindows: [{
+            windowId: 'B06_GENERIC_WINDOW:event-1',
+            sourceEventId: 'event-1',
+            genericType: 'CAREER_OPPORTUNITY_WINDOW' as const,
+            status: 'GENERIC_CANDIDATE_WINDOW' as const,
+            specificEventInference: 'NOT_MADE' as const,
+            timing: { type: 'DASHA_PERIOD_WINDOW' as const, start: '2027-01-01', end: '2027-12-31' },
+            opportunityId: 'opportunity-1',
+            activationId: 'activation-1',
+            qualificationBasis: 'B02_NATAL_PROMISE_AND_LINKED_ACTIVATION' as const,
+            evidence: {
+              semanticIdentityIds: ['natal-identity-1', 'activation-1'],
+              occurrenceIds: ['natal-occ-1', 'dasha-occ-1'],
+              rootIdentityKeys: ['natal-root-1'],
+              ruleIds: ['P2-09B-EVT-01']
+            },
+            limitations: ['This is a generic candidate window, not a specific career event.']
+          }],
+          observedOutcomeReportIds: [],
+          diagnostics: ['EVENT_SPECIFIC_TAXONOMY_NOT_VALIDATED'],
+          guaranteedEventsAvailable: false as const,
+          numericProbabilityAvailable: false as const,
+          statement: 'One generic window retained. No specific event inferred.'
+        }
+      }
+    };
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
+
+    expect(screen.getByRole('heading', { name: 'Career Event Timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Qualified generic career windows' })).toHaveTextContent('CAREER OPPORTUNITY WINDOW');
+    expect(screen.getByRole('list', { name: 'Event-specific taxonomy validation status' })).toHaveTextContent('PROMOTION ROLE EXPANSION');
+    expect(screen.getByText(/No explicit B02 user-reported outcome references/)).toBeInTheDocument();
+  });
+
   it('5. Navigation to reasoning: invokes onNavigate with reasoning', () => {
     const onNavigate = vi.fn();
     const analysis = createProductAnalysis();
