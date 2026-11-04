@@ -193,9 +193,6 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const sourceFinancialData = wealth.financialData ?? createUnavailableWealthFinancialDataSet();
   const financialData: WealthFinancialDataViewModel = { status: sourceFinancialData.status, data: sourceFinancialData.data };
 
-  const sourceFinancialData = wealth.financialData ?? createUnavailableWealthFinancialDataSet();
-  const financialData: WealthFinancialDataViewModel = { status: sourceFinancialData.status, data: sourceFinancialData.data };
-
   const overall: WealthOverallViewModel = {
     promise: wealth.overall.promise,
     status: wealth.overall.status,
