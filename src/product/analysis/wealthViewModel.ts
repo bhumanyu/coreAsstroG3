@@ -306,11 +306,12 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
       (datum.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' ||
         datum.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE')
     );
+  // Availability is projected only from validated C01 source facts; never trust a precomputed flag.
   const riskAndSuitability: WealthRiskAndSuitabilityViewModel = {
     actualExposure: hasExplicitFinancialSource('TRADING_EXPOSURE') ? 'AVAILABLE' : 'UNAVAILABLE',
     tradingHistory: hasExplicitFinancialSource('TRADING_HISTORY') ? 'AVAILABLE' : 'UNAVAILABLE',
     suitability: 'UNAVAILABLE',
-    suitabilityReason: 'Suitability requires a separately governed model; chart-derived propensity and financial exposure data are not suitability assessments.'
+    suitabilityReason: 'Suitability requires a separately governed model; neither chart-derived propensity nor factual exposure data is a suitability assessment.'
   };
 
   const qualifications: WealthQualificationViewModel[] = (wealth.qualifications ?? []).map(
