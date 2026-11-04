@@ -72,6 +72,18 @@ describe('C01 Wealth financial data contract', () => {
 
 describe('C03 trading facts provenance guardrails', () => {
   const tradingProvenance = { reportedBy: 'USER' as const, reportId: 'trading-report', reportedAt: '2026-11-04T05:30:00Z' };
+  it('rejects a forged AVAILABLE dataset that contains one invalid astrology trading datum', () => {
+    const baseline = createUnavailableWealthFinancialDataSet();
+    const forged = {
+      schemaVersion: 'C01-v1' as const,
+      status: 'AVAILABLE' as const,
+      data: baseline.data.map((item) => item.concept === 'TRADING_EXPOSURE'
+        ? { id: item.id, concept: item.concept, availability: 'AVAILABLE' as const, sourceClassification: 'ASTROLOGICAL_INDICATOR' as const, value: 'speculative chart' }
+        : item)
+    };
+    expect(validateWealthFinancialDataSet(forged)).toBe(false);
+  });
+
   it('keeps trading exposure and trading history unavailable by default', () => {
     const dataset = createUnavailableWealthFinancialDataSet();
     const exposure = dataset.data.find((item) => item.concept === 'TRADING_EXPOSURE');
