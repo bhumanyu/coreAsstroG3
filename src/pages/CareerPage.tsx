@@ -21,6 +21,7 @@ import {
   CareerConclusionSection,
   CareerProfessionStatusSection,
   CareerOutcomeQualificationSection,
+  CareerEventTimelineSection,
   CareerLoadingState,
   CareerUnavailableState,
   CareerErrorState
@@ -81,6 +82,9 @@ export const CareerPage: React.FC<CareerPageProps> = ({
       <CareerProfessionStatusSection profession={viewModel.profession} />
       {viewModel.outcomeQualification && (
         <CareerOutcomeQualificationSection outcomeQualification={viewModel.outcomeQualification} />
+      )}
+      {viewModel.eventTimeline && (
+        <CareerEventTimelineSection eventTimeline={viewModel.eventTimeline} />
       )}
 
       <CareerEvidenceSection
