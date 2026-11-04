@@ -171,6 +171,28 @@ describe('C04 Wealth lifecycle engine', () => {
 
 
 
+  it('suppresses all candidates when CW-05 authority is missing', () => {
+    const n = natal('NATAL-1');
+    const md = dasha('MD-A','SUPPORTING',['NATAL-1']);
+    const result = evaluateWealthLifecycle({ evidence: [n,md], periodTimingActivations: [periodInput(['MD-A'])] });
+    expect(result.candidateWindows).toHaveLength(0);
+    expect(result.diagnostics.some(item => item.code === 'MISSING_CW05_AUTHORITY')).toBe(true);
+  });
+
+  it('rejects invalid connected/user financial datasets instead of treating them as observed facts', () => {
+    const baseline = createUnavailableWealthFinancialDataSet();
+    const forged = {
+      schemaVersion: 'C01-v1' as const,
+      status: 'AVAILABLE' as const,
+      data: baseline.data.map(item => item.concept === 'DEBT_LIABILITIES'
+        ? { id: 'FORGED-DEBT', concept: 'DEBT_LIABILITIES' as const, availability: 'AVAILABLE' as const, sourceClassification: 'ASTROLOGICAL_INDICATOR' as const, value: 'chart shows debt' }
+        : item)
+    };
+    const result = evaluateWealthLifecycle({ evidence: [], cw05, financialData: forged });
+    expect(result.observedFinancialFactReportIds).toEqual([]);
+    expect(result.diagnostics.some(item => item.code === 'INVALID_FINANCIAL_FACT_DATASET')).toBe(true);
+  });
+
   it('preserves CW-05 as final authority and never claims numeric probabilities or guarantees', () => {
     const result = evaluateWealthLifecycle({ evidence: [], cw05 });
     expect(result.finalAuthority).toBe('CW-05');
