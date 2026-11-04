@@ -30,11 +30,12 @@ export type SynthesisAxisStatus =
   | 'NEUTRAL'
   | 'INSUFFICIENT_DATA';
 
-export type WealthRiskProfile =
-  | 'LOW'
+export type AstrologicalSpeculativePropensity =
+  | 'VERY_STRONG'
+  | 'STRONG'
   | 'MODERATE'
-  | 'ELEVATED'
-  | 'HIGH'
+  | 'MIXED'
+  | 'CHALLENGED'
   | 'INSUFFICIENT_DATA';
 
 export interface FinalSynthesisEvidence {
@@ -141,7 +142,8 @@ export interface CareerWealthFinalSynthesis {
   readonly natalEvidenceIds: readonly string[];
   readonly natalRuleIds: readonly string[];
   readonly dimensions?: Readonly<Record<WealthDimension, WealthDimensionFinalSynthesis>>;
-  readonly riskProfile?: WealthRiskProfile;
+  /** Chart-derived indication only; never a measure of actual exposure or suitability. */
+  readonly speculativePropensity?: AstrologicalSpeculativePropensity;
   readonly primaryStrength?: DomainStrength;
   readonly secondaryStrengths?: readonly WealthDimension[];
   readonly d10Evidence?: readonly DomainEvidence[];
