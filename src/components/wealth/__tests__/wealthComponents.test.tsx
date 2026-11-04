@@ -9,6 +9,7 @@ import {
   WealthDashaSection,
   WealthTransitSection,
   WealthSpeculativeRiskSection,
+  WealthLifecycleSection,
   WealthQualificationsSection,
   WealthEvidenceSection,
   WealthConclusionSection
@@ -22,6 +23,7 @@ import type {
   WealthTransitViewModel,
   WealthSpeculativePropensityViewModel,
   WealthRiskAndSuitabilityViewModel,
+  WealthLifecycleViewModel,
   WealthQualificationViewModel,
   WealthEvidenceViewModel,
   WealthConclusionViewModel
@@ -337,6 +339,32 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
       expect(screen.queryByText(/investments recommended/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/risk profile|market exposure profile/i)).not.toBeInTheDocument();
       unmount();
+    });
+  });
+
+  describe('WealthLifecycleSection — C04', () => {
+    const lifecycle: WealthLifecycleViewModel = {
+      status: 'UNRESOLVED',
+      candidateCount: 0,
+      candidates: [],
+      diagnostics: [
+        { code: 'DASHA_ONLY_SUPPRESSED', eventType: 'ACCUMULATION', message: 'Dasha alone cannot create a lifecycle event.' }
+      ],
+      observedFactCount: 0,
+      guarantee: 'NONE',
+      actualFinancialEventsInferred: false,
+      finalAuthority: 'CW-05',
+      statement: 'Candidate rules not enabled.'
+    };
+
+    it('renders non-guarantee wording, separate observed facts, and explicit candidate suppression', () => {
+      render(<WealthLifecycleSection lifecycle={lifecycle} />);
+      expect(screen.getByText('Wealth Lifecycle & Candidate Timing')).toBeInTheDocument();
+      expect(screen.getByText('No event-enabled Wealth lifecycle candidate')).toBeInTheDocument();
+      expect(screen.getByText(/DASHA_ONLY_SUPPRESSED/)).toBeInTheDocument();
+      expect(screen.getByText(/not a verified financial event/)).toBeInTheDocument();
+      expect(screen.getByText(/Actual debt, asset ownership, inheritance receipt/)).toBeInTheDocument();
+      expect(screen.getByText('UNRESOLVED')).toBeInTheDocument();
     });
   });
 
