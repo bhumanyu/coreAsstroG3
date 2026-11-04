@@ -91,6 +91,17 @@ describe('C03 trading facts provenance guardrails', () => {
     expect(validateWealthFinancialDatum({ ...item, userReportedProvenance: undefined })).toBe(false);
   });
 
+  it('rejects invalid or incomplete connected-source metadata', () => {
+    expect(() => createConnectedFinancialDatum({
+      id: 'bad-provider', concept: 'TRADING_EXPOSURE', value: { amount: 1 },
+      provenance: { sourceType: 'BROKERAGE', providerId: ' ', connectionId: 'c', retrievedAt: '2026-11-04T05:40:00Z' }
+    })).toThrow(/providerId/);
+    expect(() => createConnectedFinancialDatum({
+      id: 'bad-date', concept: 'TRADING_EXPOSURE', value: { amount: 1 },
+      provenance: { sourceType: 'BROKERAGE', providerId: 'provider', connectionId: 'c', retrievedAt: '2026-02-31T05:40:00Z' }
+    })).toThrow(/retrievedAt/);
+  });
+
   it('accepts connected trading history only with provider and connection provenance', () => {
     const item = createConnectedFinancialDatum({
       id: 'broker-history-1', concept: 'TRADING_HISTORY', value: { tradeCount: 12 },
