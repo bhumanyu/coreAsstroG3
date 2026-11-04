@@ -993,10 +993,16 @@ function mapWealth(
       adviceAvailable: false
     },
     riskAndSuitability: {
-      actualExposure: 'UNAVAILABLE',
-      tradingHistory: 'UNAVAILABLE',
+      actualExposure: financialData?.data.some((datum) =>
+        datum.concept === 'TRADING_EXPOSURE' && datum.availability === 'AVAILABLE' &&
+        (datum.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' || datum.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE')
+      ) ? 'AVAILABLE' : 'UNAVAILABLE',
+      tradingHistory: financialData?.data.some((datum) =>
+        datum.concept === 'TRADING_HISTORY' && datum.availability === 'AVAILABLE' &&
+        (datum.sourceClassification === 'USER_REPORTED_FINANCIAL_FACT' || datum.sourceClassification === 'CONNECTED_FINANCIAL_SOURCE')
+      ) ? 'AVAILABLE' : 'UNAVAILABLE',
       suitability: 'UNAVAILABLE',
-      suitabilityReason: 'Suitability requires a separately governed assessment and cannot be inferred from astrology.'
+      suitabilityReason: 'Suitability requires a separately governed assessment and cannot be inferred from astrology or exposure facts.'
     },
     qualifications: mapQualifications(detail?.qualifications),
     evidence,
