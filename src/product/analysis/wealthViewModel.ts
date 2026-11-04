@@ -180,6 +180,13 @@ export const DASHA_LEVEL_ORDER: Record<string, number> = {
  * Invariant: Performs no domain calculations, no strength derivation from D2/transit,
  * and maintains role vs direction independence.
  */
+const PROHIBITED_PROPENSITY_DESCRIPTION = /\b(?:buy|sell|hold|options?|leverage|margin|short(?:ing)?|long(?:ing)?|position\s*size|instrument|expected\s+return|profit|loss|stop\s*loss|target\s*price|portfolio\s+allocation|recommend(?:ation|ed)?|trade\s+signal)\b/i;
+
+function sanitizePropensityDescription(value?: string): string | undefined {
+  if (!value?.trim() || PROHIBITED_PROPENSITY_DESCRIPTION.test(value)) return undefined;
+  return value.trim();
+}
+
 export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewModel {
   const wealth = analysis.wealth;
 
@@ -299,7 +306,8 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const speculativePropensity: WealthSpeculativePropensityViewModel = {
     status: propensityStatus,
     label: propensityLabels[propensityStatus],
-    description: wealth.speculativePropensity?.description,
+    // Persisted ProductAnalysis content is untrusted too; fail closed at the final presentation boundary.
+    description: sanitizePropensityDescription(wealth.speculativePropensity?.description),
     source: 'ASTROLOGICAL_INDICATION',
     adviceAvailable: false
   };
