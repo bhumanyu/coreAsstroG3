@@ -329,6 +329,19 @@ describe('C03 separation guardrails', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.riskAndSuitability).toMatchObject({ actualExposure: 'UNAVAILABLE', tradingHistory: 'UNAVAILABLE', suitability: 'UNAVAILABLE' });
   });
+  it('removes prohibited trading language from persisted propensity descriptions', () => {
+    const base = createProductAnalysis();
+    const analysis = { ...base, wealth: { ...base.wealth, speculativePropensity: {
+      source: 'ASTROLOGICAL_INDICATION' as const,
+      status: 'STRONG' as const,
+      description: 'Buy options with leverage for expected profit.',
+      evidenceIds: [],
+      adviceAvailable: false as const
+    } } };
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.speculativePropensity.description).toBeUndefined();
+  });
+
   it('fails closed for unrecognized persisted propensity vocabulary', () => {
     const base = createProductAnalysis();
     const analysis = { ...base, wealth: { ...base.wealth, speculativePropensity: {
