@@ -9,6 +9,7 @@ import {
   mapD10Relationship,
   mapD2Relationship,
   mapSpeculativePropensity,
+  sanitizeSpeculativePropensityDescription,
   mapMethodology,
   mapDashaPeriodOptions
 } from '../productAnalysisMapper';
@@ -426,6 +427,10 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(mapSpeculativePropensity('CHALLENGED')).toBe('CHALLENGED');
     expect(mapSpeculativePropensity(undefined)).toBe('INSUFFICIENT_DATA');
     expect(mapSpeculativePropensity('HIGH RISK')).toBe('INSUFFICIENT_DATA');
+    expect(sanitizeSpeculativePropensityDescription('Fifth house indicates speculative interest.')).toBe('Fifth house indicates speculative interest.');
+    expect(sanitizeSpeculativePropensityDescription('Options may provide higher returns.')).toBeUndefined();
+    expect(sanitizeSpeculativePropensityDescription('Buy shares during this period.')).toBeUndefined();
+    expect(sanitizeSpeculativePropensityDescription('Expected profit is high.')).toBeUndefined();
   });
 
   it('4. Dasha hierarchy mapping: MD -> PRIMARY, AD -> MODIFIER, PD -> REFINEMENT', () => {
