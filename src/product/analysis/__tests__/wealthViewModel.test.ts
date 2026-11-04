@@ -25,7 +25,7 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
   it('defaults all real-world financial concepts to UNAVAILABLE without reported data', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.financialData.status).toBe('UNAVAILABLE');
-    expect(vm.financialData.data).toHaveLength(10);
+    expect(vm.financialData.data).toHaveLength(12);
     expect(vm.financialData.data.every((item) => item.sourceClassification === 'UNAVAILABLE' && item.value === undefined)).toBe(true);
   });
   it('1. promise vs conclusion vs confidence separation: preserves distinct fields on overall', () => {
