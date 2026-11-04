@@ -149,4 +149,6 @@ export interface WealthConclusionData {
   readonly wealthManifestationSynthesis?: WealthManifestationSynthesis;
   readonly wealthFinalSynthesis?: CareerWealthFinalSynthesis;
   readonly reasoningTraceGraph?: ReasoningTraceGraph;
+  /** C04 downstream candidate analysis; CW-05 remains the final Wealth authority. */
+  readonly wealthLifecycle?: import('./wealthLifecycleTypes').WealthLifecycleAnalysis;
 }

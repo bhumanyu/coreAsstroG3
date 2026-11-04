@@ -11,3 +11,6 @@ export * from './WealthDomainInterpreter';
 export * from './wealth-v2-golden.fixture';
 export * from './selectedWealthDashaActivation';
 export * from './wealthFinancialData';
+
+export * from './wealthLifecycleTypes';
+export * from './wealthLifecycleEngine';

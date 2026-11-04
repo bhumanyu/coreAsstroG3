@@ -17,6 +17,7 @@ import {
   WealthDashaSection,
   WealthTransitSection,
   WealthSpeculativeRiskSection,
+  WealthLifecycleSection,
   WealthQualificationsSection,
   WealthEvidenceSection,
   WealthConclusionSection,
@@ -76,6 +77,8 @@ export const WealthPage: React.FC<WealthPageProps> = ({
       <WealthTransitSection transit={viewModel.transit} />
 
       <WealthSpeculativeRiskSection speculativePropensity={viewModel.speculativePropensity} riskAndSuitability={viewModel.riskAndSuitability} />
+
+      <WealthLifecycleSection lifecycle={viewModel.lifecycle} />
 
       <WealthQualificationsSection qualifications={viewModel.qualifications} />
 
