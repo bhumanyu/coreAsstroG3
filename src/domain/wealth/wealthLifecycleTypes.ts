@@ -189,7 +189,7 @@ export function buildWealthLifecycleAnalysis(input: WealthLifecycleInput): Wealt
       if (linkedActivation(periodInput, evidence, promiseIds).length === 0) continue;
       const period = periodInput.periodTimingActivation;
       if (!validDateOnly(periodInput.interval.start) || !validDateOnly(periodInput.interval.end) || periodInput.interval.end <= periodInput.interval.start) {
-        diagnostics.push({ code: 'INVALID_PERIOD_INTERVAL', eventType: rule.eventType, message: 'Linked ' + period.periodTimingActivation.period + ' source period has an invalid date-only interval; no dates are emitted.', evidenceOccurrenceIds: period.periodTimingActivation.evidenceIds });
+        diagnostics.push({ code: 'INVALID_PERIOD_INTERVAL', eventType: rule.eventType, message: 'Linked ' + period.period + ' source period has an invalid date-only interval; no dates are emitted.', evidenceOccurrenceIds: period.periodTimingActivation.evidenceIds });
       }
     }
   }
