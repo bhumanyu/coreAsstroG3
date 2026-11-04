@@ -39,7 +39,6 @@ import type {
   ProductWarning,
   D10ProductResult,
   D2ProductResult,
-  SpeculativeRiskProduct,
   ProductQualification,
   ProductCareerAnalyticalAxes,
   ProductCareerOutcomeAnalysis,
@@ -328,13 +327,30 @@ export function mapD2Relationship(_val?: string): D2ProductResult['relationship'
 
 /** Maps legacy dimension status to descriptive chart-propensity vocabulary. */
 export function mapSpeculativePropensity(val?: string): import('./productAnalysisTypes').AstrologicalSpeculativePropensity {
-  const u = (val ?? '').toUpperCase();
-  if (u.includes('VERY_STRONG') || u.includes('STRONGLY_SUPPORTED')) return 'VERY_STRONG';
-  if (u.includes('STRONG') || u.includes('SUPPORTED')) return 'STRONG';
-  if (u.includes('MODERATE')) return 'MODERATE';
-  if (u.includes('MIXED')) return 'MIXED';
-  if (u.includes('CHALLENGE') || u.includes('WEAK') || u.includes('LIMITED')) return 'CHALLENGED';
-  return 'INSUFFICIENT_DATA';
+  const u = (val ?? '').trim().toUpperCase();
+  switch (u) {
+    case 'VERY_STRONG':
+    case 'STRONGLY_SUPPORTED': return 'VERY_STRONG';
+    case 'STRONG':
+    case 'SUPPORTED': return 'STRONG';
+    case 'MODERATE': return 'MODERATE';
+    case 'MIXED': return 'MIXED';
+    case 'CHALLENGED':
+    case 'CHALLENGE':
+    case 'WEAK':
+    case 'VERY_WEAK':
+    case 'LIMITED': return 'CHALLENGED';
+    default: return 'INSUFFICIENT_DATA';
+  }
+}
+
+const PROHIBITED_SPECULATION_OUTPUT = /\\b(?:buy|sell|hold|options?|leverage|margin|short(?:ing)?|long(?:ing)?|position\\s*size|instrument|expected\\s+return|profit|loss|stop\\s*loss|target\\s*price|portfolio\\s+allocation|recommend(?:ation|ed)?|trade\\s+signal)\\b/i;
+
+/** Only retain non-prescriptive chart description text. Untrusted engine prose fails closed. */
+export function sanitizeSpeculativePropensityDescription(value?: string): string | undefined {
+  if (!value?.trim()) return undefined;
+  if (PROHIBITED_SPECULATION_OUTPUT.test(value)) return undefined;
+  return value.trim();
 }
 
 /**
@@ -966,7 +982,7 @@ function mapWealth(
     speculativePropensity: {
       source: 'ASTROLOGICAL_INDICATION',
       status: speculationStatus ? mapSpeculativePropensity(String(speculationStatus)) : 'INSUFFICIENT_DATA',
-      description: speculationStatement,
+      description: sanitizeSpeculativePropensityDescription(speculationStatement),
       evidenceIds: evidence.filter((item) => item.source === 'WEALTH_ENGINE').map((item) => item.id),
       adviceAvailable: false
     },
