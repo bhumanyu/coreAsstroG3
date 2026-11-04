@@ -576,7 +576,11 @@ export interface SpeculativeRiskProduct {
   readonly description?: string;
 }
 
+import type { WealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
+
 export interface WealthProductAnalysis {
+  /** Optional to preserve old saved analyses; absence means all real-world data is unavailable. */
+  readonly financialData?: WealthFinancialDataSet;
   readonly overall: WealthOverallProduct;
   readonly dimensions: WealthDimensionsProduct;
   readonly d2: D2ProductResult;
