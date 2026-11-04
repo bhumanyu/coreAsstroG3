@@ -900,6 +900,8 @@ function mapWealth(
   const detail = viewModel.wealthDetail;
   const summary = viewModel.domains.find((d) => d.domain === 'WEALTH');
 
+  const financialData = (viewModel as LifeAnalysisViewModel & { wealthFinancialData?: import('../../domain/wealth/wealthFinancialData').WealthFinancialDataSet }).wealthFinancialData;
+
   const evidence =
     explicitEvidence && explicitEvidence.length > 0
       ? explicitEvidence
@@ -924,7 +926,7 @@ function mapWealth(
   const speculationStatement = detail?.speculation?.statement;
 
   return {
-    financialData: undefined,
+    ...(financialData ? { financialData } : {}),
     overall: {
       status: detail?.status
         ? String(detail.status)
