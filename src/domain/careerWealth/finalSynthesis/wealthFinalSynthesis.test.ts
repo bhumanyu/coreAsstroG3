@@ -178,6 +178,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
     expect(result.dimensions!.SPECULATION.status).toBe('CHALLENGED');
     // Invariant: Chart-derived propensity is challenged while overall wealth remains separately determined
     expect(result.speculativePropensity).toBe('CHALLENGED');
+    expect(result.summary).not.toMatch(/risk profile|market exposure|buy|sell|hold|options|leverage|expected return|profit|loss|recommend/i);
 
     expect(result.strongestAreas).toContain('ACCUMULATION');
     expect(result.challengedAreas).toContain('SPECULATION');
