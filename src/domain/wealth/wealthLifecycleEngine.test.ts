@@ -7,9 +7,8 @@ import type { WealthLifecycleInput, WealthLifecyclePeriodInput } from './wealthL
 import type { WealthPeriodTimingActivation } from './wealthTypes';
 
 function natal(id: string, dimension: 'ACCUMULATION' | 'GAINS' = 'ACCUMULATION', polarity: 'SUPPORTING' | 'CHALLENGING' = 'SUPPORTING'): DomainEvidence {
-  const families = dimension === 'ACCUMULATION' ? ['SECOND_HOUSE', 'SECOND_LORD'] : ['ELEVENTH_HOUSE', 'ELEVENTH_LORD'];
-  const family = families[0];
-  const ruleId = dimension === 'ACCUMULATION' ? 'WEALTH_2H_STRONG_001' : 'WEALTH_11H_STRONG_001';
+  const family = dimension === 'ACCUMULATION' ? 'SECOND_HOUSE' : 'ELEVENTH_HOUSE';
+  const ruleId = dimension === 'ACCUMULATION' ? 'WEALTH_HOUSE_PROMISE_2H_001' : 'WEALTH_HOUSE_PROMISE_11H_001';
   return createDomainEvidence({
     id, sourceType: 'HOUSE', domain: 'WEALTH', role: 'PRIMARY', phase: 'NATAL_PROMISE', source: 'D1',
     statement: 'Test-only natal Wealth lifecycle indication.', polarity, strength: 'STRONG', priority: 90,
