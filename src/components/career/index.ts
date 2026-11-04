@@ -13,3 +13,5 @@ export * from './CareerLoadingState';
 export * from './CareerUnavailableState';
 export * from './CareerErrorState';
 export * from './CareerOutcomeQualificationSection';
+
+export * from './CareerEventTimelineSection';
