@@ -43,6 +43,7 @@ import type {
   ProductQualification,
   ProductCareerAnalyticalAxes,
   ProductCareerOutcomeAnalysis,
+  ProductCareerEventTimeline,
   ProductCareerProfessionRanking,
   ProductConfidence,
   ActivationEffect,
@@ -65,6 +66,7 @@ import type {
 } from './productAnalysisTypes';
 import type { CareerAnalyticalAxes } from '../../domain/career/careerFinalSynthesis/careerAnalyticalAxes';
 import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
+import type { CareerEventTimelineAnalysis } from '../../domain/career/careerEventTimeline/careerEventTimelineTypes';
 import type { CareerProfessionAnalysis, CareerProfessionRanking } from '../../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
@@ -692,6 +694,59 @@ function mapCareerProfessionRanking(value?: CareerProfessionRanking): ProductCar
   };
 }
 
+function mapCareerEventTimeline(value: CareerEventTimelineAnalysis): ProductCareerEventTimeline {
+  return {
+    reasoningVersion: value.reasoningVersion,
+    methodVersion: value.methodVersion,
+    status: value.status,
+    taxonomy: value.taxonomy.map(item => ({
+      eventType: item.eventType,
+      validationStatus: item.validationStatus,
+      requiredEvidence: [...item.requiredEvidence],
+      validationGap: item.validationGap,
+      releaseEnabled: false
+    })),
+    eventCandidates: value.eventCandidates.map(candidate => ({
+      candidateId: candidate.candidateId,
+      eventType: candidate.eventType,
+      status: candidate.status,
+      sourceWindowId: candidate.sourceWindowId,
+      timing: { ...candidate.timing },
+      evidenceOccurrenceIds: [...candidate.evidenceOccurrenceIds],
+      semanticIdentityIds: [...candidate.semanticIdentityIds],
+      rootIdentityKeys: [...candidate.rootIdentityKeys],
+      ruleIds: [...candidate.ruleIds],
+      counterEvidenceOccurrenceIds: [...candidate.counterEvidenceOccurrenceIds],
+      limitations: [...candidate.limitations],
+      guarantee: 'NONE',
+      numericProbabilityAvailable: false
+    })),
+    genericWindows: value.genericWindows.map(window => ({
+      windowId: window.windowId,
+      sourceEventId: window.sourceEventId,
+      genericType: window.genericType,
+      status: window.status,
+      specificEventInference: window.specificEventInference,
+      timing: { ...window.timing },
+      opportunityId: window.opportunityId,
+      activationId: window.activationId,
+      qualificationBasis: window.qualificationBasis,
+      evidence: {
+        semanticIdentityIds: [...window.evidence.semanticIdentityIds],
+        occurrenceIds: [...window.evidence.occurrenceIds],
+        rootIdentityKeys: [...window.evidence.rootIdentityKeys],
+        ruleIds: [...window.evidence.ruleIds]
+      },
+      limitations: [...window.limitations]
+    })),
+    observedOutcomeReportIds: [...value.observedOutcomeReportIds],
+    diagnostics: [...value.diagnostics],
+    guaranteedEventsAvailable: false,
+    numericProbabilityAvailable: false,
+    statement: value.statement
+  };
+}
+
 function mapCareer(
   viewModel: LifeAnalysisViewModel,
   explicitEvidence?: readonly ProductEvidence[]
@@ -726,6 +781,9 @@ function mapCareer(
       : undefined,
     outcomeQualification: detail?.careerOutcomeAnalysis
       ? mapCareerOutcomeAnalysis(detail.careerOutcomeAnalysis)
+      : undefined,
+    eventTimeline: detail?.careerEventTimeline
+      ? mapCareerEventTimeline(detail.careerEventTimeline)
       : undefined,
     promise: {
       status: careerStatus,
