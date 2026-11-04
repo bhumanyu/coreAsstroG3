@@ -1,13 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { selectWealthViewModel } from '../wealthViewModel';
 import { createProductAnalysis } from './testHelpers';
+import { createUserReportedFinancialDatum, createUnavailableWealthFinancialDataSet } from '../../../domain/wealth/wealthFinancialData';
+function createUserReportedFinancialDataFixture() {
+  const data = [...createUnavailableWealthFinancialDataSet().data];
+  const provenance = { reportedBy: 'USER' as const, reportId: 'trade-report', reportedAt: '2026-11-04T05:30:00Z' };
+  data[data.findIndex((item) => item.concept === 'TRADING_EXPOSURE')] = createUserReportedFinancialDatum({ id: 'trading-exposure', concept: 'TRADING_EXPOSURE', value: { gross: 1000 }, provenance });
+  data[data.findIndex((item) => item.concept === 'TRADING_HISTORY')] = createUserReportedFinancialDatum({ id: 'trading-history', concept: 'TRADING_HISTORY', value: { trades: 2 }, provenance });
+  return { schemaVersion: 'C01-v1' as const, status: 'AVAILABLE' as const, data };
+}
+
 import type { ProductDashaPeriod } from '../productAnalysisTypes';
 
 describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
   it('defaults real-world financial data to UNAVAILABLE when none is supplied', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.financialData.status).toBe('UNAVAILABLE');
-    expect(vm.financialData.data).toHaveLength(10);
+    expect(vm.financialData.data).toHaveLength(12);
     expect(vm.financialData.data.every((datum) =>
       datum.sourceClassification === 'UNAVAILABLE' && datum.value === undefined
     )).toBe(true);
@@ -329,4 +338,15 @@ describe('C03 separation guardrails', () => {
     expect(vm.riskAndSuitability.tradingHistory).toBe('UNAVAILABLE');
     expect(vm.riskAndSuitability.suitability).toBe('UNAVAILABLE');
   });
+});
+
+
+it('derives actual exposure and trading history only from explicit C01 fact sources', () => {
+  const base = createProductAnalysis();
+  const financialData = createUserReportedFinancialDataFixture();
+  const analysis = { ...base, wealth: { ...base.wealth, financialData } };
+  const vm = selectWealthViewModel(analysis);
+  expect(vm.riskAndSuitability.actualExposure).toBe('AVAILABLE');
+  expect(vm.riskAndSuitability.tradingHistory).toBe('AVAILABLE');
+  expect(vm.riskAndSuitability.suitability).toBe('UNAVAILABLE');
 });
