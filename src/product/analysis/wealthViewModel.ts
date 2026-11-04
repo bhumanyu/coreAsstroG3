@@ -20,6 +20,7 @@ import type {
   ActivationEffect,
   TransitEffect
 } from './productAnalysisTypes';
+import { createUnavailableWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -29,6 +30,11 @@ export interface WealthHeroViewModel {
   readonly status: ProductStatus;
   readonly confidence: ProductConfidence;
   readonly warnings?: readonly ProductWarning[];
+}
+
+export interface WealthFinancialDataViewModel {
+  readonly status: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly data: readonly WealthFinancialDatum<unknown>[];
 }
 
 export interface WealthOverallViewModel {
@@ -140,6 +146,7 @@ export interface WealthConclusionViewModel {
 export interface WealthViewModel {
   readonly hero: WealthHeroViewModel;
   readonly overall: WealthOverallViewModel;
+  readonly financialData: WealthFinancialDataViewModel;
   readonly dimensions: WealthDimensionsViewModel;
   readonly d2: WealthD2ViewModel;
   readonly dasha: WealthDashaViewModel;
@@ -175,6 +182,9 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     confidence: wealth.overall.confidence,
     warnings: analysis.warnings
   };
+
+  const sourceFinancialData = wealth.financialData ?? createUnavailableWealthFinancialDataSet();
+  const financialData: WealthFinancialDataViewModel = { status: sourceFinancialData.status, data: sourceFinancialData.data };
 
   const overall: WealthOverallViewModel = {
     promise: wealth.overall.promise,
@@ -307,6 +317,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   return {
     hero,
     overall,
+    financialData,
     dimensions,
     d2,
     dasha,
