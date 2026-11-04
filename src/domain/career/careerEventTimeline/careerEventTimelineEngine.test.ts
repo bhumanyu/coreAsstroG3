@@ -203,7 +203,7 @@ describe('B06 Career Event-Specific Timeline', () => {
     const result = buildCareerEventTimeline(makeInput({ events: [event], outcomeCandidates: [] }));
 
     expect(result.genericWindows).toEqual([]);
-    expect(result.status).toBe('UNAVAILABLE');
+    expect(result.status).toBe('PARTIAL');
     expect(result.diagnostics).toContain('NO_NATAL_LINKED_GENERIC_WINDOWS_AVAILABLE');
   });
 
