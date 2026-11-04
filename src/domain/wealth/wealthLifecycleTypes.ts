@@ -99,6 +99,8 @@ export interface WealthLifecycleInput {
       readonly activationStatus: string;
       readonly timingStatus: string;
       readonly evidenceIds?: readonly string[];
+      readonly natalEvidenceIds: readonly string[];
+      readonly natalRuleIds: readonly string[];
     }>>;
     readonly natalEvidenceIds: readonly string[];
     readonly ruleIds: readonly string[];
@@ -177,14 +179,24 @@ export function buildWealthLifecycleAnalysis(input: WealthLifecycleInput): Wealt
       diagnostics.push({ code: 'UNVALIDATED_EVENT_RULES', eventType: rule.eventType, message: rule.eventType + ' is not enabled: ' + rule.validationGap, evidenceOccurrenceIds: [] });
     }
     if (!dimension) continue;
-    const natal = evidence.filter(item => natalSupport(item, dimension, rule.natalEvidenceFamilies));
-    const promiseIds = new Set(natal.map(item => item.id));
-    const conflicts = dimensionConflicts(evidence, dimension);
     const periods = input.periodTimingActivations ?? [];
     const cw05Dimension = cw05?.dimensions?.[dimension];
+    const canonicalNatalIds = new Set([
+      ...(cw05?.natalEvidenceIds ?? []),
+      ...(cw05Dimension?.natalEvidenceIds ?? [])
+    ]);
+    const canonicalNatalRules = new Set(cw05Dimension?.natalRuleIds ?? []);
+    const natal = evidence.filter(item =>
+      natalSupport(item, dimension, rule.natalEvidenceFamilies) &&
+      canonicalNatalIds.has(item.id) &&
+      Boolean(item.ruleId && canonicalNatalRules.has(item.ruleId))
+    );
+    const promiseIds = new Set(natal.map(item => item.id));
+    const conflicts = dimensionConflicts(evidence, dimension);
     const cw05PromiseAvailable = Boolean(cw05Dimension &&
       !['INSUFFICIENT_DATA', 'CHALLENGED'].includes(cw05Dimension.promiseStatus) &&
-      !['INSUFFICIENT_DATA', 'CHALLENGED'].includes(cw05Dimension.status));
+      !['INSUFFICIENT_DATA', 'CHALLENGED'].includes(cw05Dimension.status) &&
+      ['SUPPORT', 'MIXED'].includes(cw05Dimension.activationStatus));
     if (natal.length === 0 || !cw05PromiseAvailable) {
       diagnostics.push({ code: 'NO_NATAL_PROMISE', eventType: rule.eventType, message: 'A qualified D1 natal ' + dimension + ' promise is not present in both source evidence and CW-05; Dasha alone cannot create this lifecycle event.', evidenceOccurrenceIds: [] });
       if (hasDashaEvidence) diagnostics.push({ code: 'DASHA_ONLY_SUPPRESSED', eventType: rule.eventType, message: 'Dasha evidence exists without the required supported natal ' + dimension + ' promise; no event is emitted.', evidenceOccurrenceIds: evidence.filter(item => item.phase === 'DASHA_ACTIVATION').map(item => item.id) });
