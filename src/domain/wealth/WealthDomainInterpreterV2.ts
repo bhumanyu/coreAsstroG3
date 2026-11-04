@@ -105,6 +105,7 @@ import {
   type ReasoningTraceEvidenceReference
 } from '../careerWealth/reasoningTrace';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
+import { evaluateWealthLifecycle } from './wealthLifecycleEngine';
 
 export function interpretWealthV2(
   horoscope: Horoscope,
@@ -549,6 +550,15 @@ export function interpretWealthV2(
 
   const mergedEvidence = Object.freeze([...evidence, ...dashaFactorsEvidence]);
 
+  // C04 is a downstream consumer of existing Wealth evidence/activation and CW-05.
+  // Its output is stored separately; it does not alter the canonical CW-05 synthesis.
+  const wealthLifecycle = evaluateWealthLifecycle({
+    evidence: mergedEvidence,
+    periodTimingActivations,
+    cw05: wealthFinalSynthesis,
+    // Financial facts are deliberately not sourced from horoscope interpretation.
+  });
+
   const reasoningTraceGraph = buildWealthReasoningTraceGraph({
     evidence: mergedEvidence,
     overallStatus,
@@ -581,6 +591,7 @@ export function interpretWealthV2(
       wealthTimingSynthesis,
       wealthManifestationSynthesis,
       wealthFinalSynthesis,
+      wealthLifecycle,
       reasoningTraceGraph
     },
     reasoningTrace: cw01Result.reasoningTrace,
