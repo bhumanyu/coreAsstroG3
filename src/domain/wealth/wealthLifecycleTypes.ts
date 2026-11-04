@@ -93,7 +93,7 @@ export interface WealthLifecycleInput {
   readonly periodTimingActivations?: readonly WealthLifecyclePeriodInput[];
   readonly cw05?: {
     readonly reasoningVersion: 'CW-05';
-    readonly domain: 'WEALTH';
+    readonly domain: 'CAREER' | 'WEALTH';
     readonly finalStatus: string;
     readonly dimensions?: Readonly<Record<WealthDimension, {
       readonly status: string;
@@ -120,12 +120,12 @@ export const WEALTH_LIFECYCLE_RULE_CATALOGUE: readonly WealthLifecycleEventRuleC
   { eventType: 'GAINS', validationStatus: 'VALIDATED', natalDimension: 'GAINS', natalEvidenceFamilies: Object.freeze(['ELEVENTH_HOUSE', 'ELEVENTH_LORD']), requiredEvidence: BASE_REQUIREMENTS, validationGap: 'Candidate denotes a chart-derived gains indication only, not verified income, realized gains, or cash receipt.', releaseEnabled: true },
   { eventType: 'ASSET_BUILDING_INDICATION', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No validated asset-acquisition rule exists; ownership/acquisition is not asserted.', releaseEnabled: false },
   { eventType: 'PRESERVATION', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No dedicated preservation evidence family or validated event rule exists.', releaseEnabled: false },
-  { eventType: 'EROSION_CHALLENGE', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE']), validationGap: 'Challenge activation does not establish actual asset erosion or financial loss.', releaseEnabled: false },
+  { eventType: 'EROSION_CHALLENGE', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE'] as WealthLifecycleEvidenceRequirement[]), validationGap: 'Challenge activation does not establish actual asset erosion or financial loss.', releaseEnabled: false },
   { eventType: 'DEBT_EXPOSURE_INDICATION', validationStatus: 'UNVALIDATED', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'There is no canonical Debt dimension or validated debt-indication evidence contract.', releaseEnabled: false },
   { eventType: 'DEBT_REPAYMENT_REDUCTION_INDICATION', validationStatus: 'UNVALIDATED', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'There is no debt-balance lifecycle rule; actual reduction requires financial facts.', releaseEnabled: false },
-  { eventType: 'LIQUIDITY_PRESSURE', validationStatus: 'UNVALIDATED', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE']), validationGap: 'No liquidity evidence family or validated liquidity-pressure rule exists.', releaseEnabled: false },
+  { eventType: 'LIQUIDITY_PRESSURE', validationStatus: 'UNVALIDATED', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE'] as WealthLifecycleEvidenceRequirement[]), validationGap: 'No liquidity evidence family or validated liquidity-pressure rule exists.', releaseEnabled: false },
   { eventType: 'LIQUIDITY_RELIEF', validationStatus: 'UNVALIDATED', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No liquidity-relief evidence family or validated rule exists; actual liquidity requires financial facts.', releaseEnabled: false },
-  { eventType: 'RECOVERY', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE']), validationGap: 'No ordered prior-challenge-to-subsequent-support Wealth recovery rule is validated.', releaseEnabled: false },
+  { eventType: 'RECOVERY', validationStatus: 'UNVALIDATED', natalDimension: 'ACCUMULATION', requiredEvidence: Object.freeze([...BASE_REQUIREMENTS, 'LINKED_DASHA_CHALLENGE'] as WealthLifecycleEvidenceRequirement[]), validationGap: 'No ordered prior-challenge-to-subsequent-support Wealth recovery rule is validated.', releaseEnabled: false },
   { eventType: 'INHERITANCE_INDICATION', validationStatus: 'UNVALIDATED', natalDimension: 'FORTUNE', requiredEvidence: BASE_REQUIREMENTS, validationGap: 'No dedicated inheritance rule or golden fixture exists; actual receipt remains an external observed fact.', releaseEnabled: false }
 ]);
 
