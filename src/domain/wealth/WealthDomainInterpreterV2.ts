@@ -552,10 +552,28 @@ export function interpretWealthV2(
 
   // C04 is a downstream consumer of existing Wealth evidence/activation and CW-05.
   // Its output is stored separately; it does not alter the canonical CW-05 synthesis.
+  const wealthLifecyclePeriods = [
+    currentDasha?.mahadasha ? {
+      periodTimingActivation: mdPeriodTiming,
+      interval: { start: currentDasha.mahadasha.start, end: currentDasha.mahadasha.end },
+      sourcePeriodId: 'MD:' + currentDasha.mahadasha.planet + ':' + currentDasha.mahadasha.start + ':' + currentDasha.mahadasha.end
+    } : undefined,
+    currentDasha?.antardasha ? {
+      periodTimingActivation: adPeriodTiming,
+      interval: { start: currentDasha.antardasha.start, end: currentDasha.antardasha.end },
+      sourcePeriodId: 'AD:' + currentDasha.antardasha.planet + ':' + currentDasha.antardasha.start + ':' + currentDasha.antardasha.end
+    } : undefined,
+    currentDasha?.pratyantardasha ? {
+      periodTimingActivation: pdPeriodTiming,
+      interval: { start: currentDasha.pratyantardasha.start, end: currentDasha.pratyantardasha.end },
+      sourcePeriodId: 'PD:' + currentDasha.pratyantardasha.planet + ':' + currentDasha.pratyantardasha.start + ':' + currentDasha.pratyantardasha.end
+    } : undefined
+  ].filter((item): item is NonNullable<typeof item> => item !== undefined);
+
   const wealthLifecycle = evaluateWealthLifecycle({
     evidence: mergedEvidence,
-    periodTimingActivations,
-    cw05: wealthFinalSynthesis,
+    periodTimingActivations: wealthLifecyclePeriods,
+    cw05: wealthFinalSynthesis
     // Financial facts are deliberately not sourced from horoscope interpretation.
   });
 
