@@ -441,7 +441,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(absent.wealth.financialData).toBeUndefined();
     expect(absent.wealth.speculativePropensity.source).toBe('ASTROLOGICAL_INDICATION');
     expect(absent.wealth.speculativePropensity.adviceAvailable).toBe(false);
-    expect(absent.wealth.riskAndSuitability.suitability).toBe('UNAVAILABLE');
+    expect(absent.wealth.riskAndSuitability).toMatchObject({ actualExposure: 'UNAVAILABLE', tradingHistory: 'UNAVAILABLE', suitability: 'UNAVAILABLE' });
 
     const base = createUnavailableWealthFinancialDataSet();
     const p = { reportedBy: 'USER' as const, reportId: 'rep-1', reportedAt: '2026-11-04T06:00:00Z' };
@@ -461,7 +461,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(supplied.wealth.financialData?.data).toHaveLength(12);
     expect(supplied.wealth.speculativePropensity.source).toBe('ASTROLOGICAL_INDICATION');
     expect(supplied.wealth.speculativePropensity.adviceAvailable).toBe(false);
-    expect(supplied.wealth.riskAndSuitability.suitability).toBe('UNAVAILABLE');
+    expect(supplied.wealth.riskAndSuitability).toMatchObject({ actualExposure: 'AVAILABLE', tradingHistory: 'AVAILABLE', suitability: 'UNAVAILABLE' });
   });
 
   it('4. Dasha hierarchy mapping: MD -> PRIMARY, AD -> MODIFIER, PD -> REFINEMENT', () => {
