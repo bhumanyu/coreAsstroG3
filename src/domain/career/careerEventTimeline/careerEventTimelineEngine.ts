@@ -127,6 +127,8 @@ function opportunityOutcome(
   input: CareerEventTimelineInput
 ): CareerOutcomeTimelineLink | undefined {
   if (event.eventType !== 'CAREER_OPPORTUNITY_WINDOW' && event.eventType !== 'CAREER_CONDITIONAL_WINDOW') return undefined;
+  if (!event.activationId || !event.opportunityId) return undefined;
+
   const candidate = input.outcomeAnalysis.candidateOutcomes.find(item =>
     item.sourceEventId === event.eventId &&
     item.opportunityId === event.opportunityId &&
@@ -137,17 +139,42 @@ function opportunityOutcome(
     item.supportingEvidence.activationOccurrenceIds.length > 0
   );
   if (!candidate) return undefined;
+
+  // Re-check the B02 links at the B06 boundary: the natal occurrences must be
+  // present on B01 Promise, and the exact canonical C9 occurrence must be
+  // present on both B01 Activation and the B02 candidate.
+  const promiseOccurrenceIds = candidate.supportingEvidence.natalPromiseOccurrenceIds
+    .filter(id => input.axes.promise.supportingEvidenceOccurrenceIds.includes(id));
+  if (promiseOccurrenceIds.length === 0) return undefined;
+
+  const activationRecords = input.dasha.evidence.filter(item =>
+    item.identityKey === candidate.activationId &&
+    item.direction === 'SUPPORT' &&
+    (item.effect === 'ACTIVATES' || item.effect === 'PARTIALLY_ACTIVATES') &&
+    input.axes.activation.supportingEvidenceOccurrenceIds.includes(item.id) &&
+    candidate.supportingEvidence.activationOccurrenceIds.includes(item.id)
+  );
+  if (activationRecords.length !== 1) return undefined;
+  const activation = activationRecords[0];
+
+  const opportunity = input.trajectory.opportunities.find(item => item.opportunityId === candidate.opportunityId);
+  if (!opportunity || !opportunity.qualified ||
+      (opportunity.direction !== 'SUPPORT' && opportunity.direction !== 'CONDITIONAL') ||
+      opportunity.evidenceIds.length === 0) return undefined;
+
+  const rootIds = sortedUnique(activation.provenance.natalRootIds);
+  if (rootIds.length === 0 || !rootIds.some(root => opportunity.evidenceIds.includes(root))) return undefined;
+  if (!event.evidenceIds.includes(activation.identityKey) ||
+      !opportunity.evidenceIds.some(id => event.evidenceIds.includes(id))) return undefined;
+
   return {
     occurrenceIds: sortedUnique([
-      ...candidate.supportingEvidence.natalPromiseOccurrenceIds,
-      ...candidate.supportingEvidence.activationOccurrenceIds
+      ...promiseOccurrenceIds,
+      activation.id
     ]),
-    rootIds: sortedUnique(input.dasha.evidence
-      .filter(item => item.identityKey === candidate.activationId)
-      .flatMap(item => item.provenance.natalRootIds))
+    rootIds
   };
 }
-
 interface CareerOutcomeTimelineLink {
   readonly occurrenceIds: readonly string[];
   readonly rootIds: readonly string[];
