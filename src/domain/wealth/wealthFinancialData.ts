@@ -107,6 +107,9 @@ export function createAstrologicalFinancialIndicator<TValue = string>(input: {
   readonly concept: WealthFinancialConcept;
   readonly value: TValue;
 }): WealthFinancialDatum<TValue> {
+  if (input.concept === 'TRADING_EXPOSURE' || input.concept === 'TRADING_HISTORY') {
+    throw new Error('Astrological indicators cannot populate real-world trading concepts');
+  }
   if (input.value === null || input.value === undefined) throw new Error('Astrological indicator requires a descriptive value');
   return Object.freeze({
     id: nonBlank(input.id, 'financial datum id'),
