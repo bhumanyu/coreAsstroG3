@@ -50,7 +50,7 @@ describe('CareerEventTimelineSection', () => {
 
     expect(screen.getByRole('heading', { name: 'Career Event Timeline' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Qualified generic career windows' })).toHaveTextContent('CAREER OPPORTUNITY WINDOW');
-    expect(screen.getByText(/Event-specific inference: NOT_MADE/)).toBeInTheDocument();
+    expect(screen.getByText(/Event-specific inference: NOT MADE/)).toBeInTheDocument();
     expect(screen.getByText(/not a specific career event/i)).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Event-specific taxonomy validation status' })).toHaveTextContent('PROMOTION ROLE EXPANSION');
     expect(screen.getByText('Leadership expression is not evidence of a promotion.')).toBeInTheDocument();
