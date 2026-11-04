@@ -75,7 +75,7 @@ export const WealthPage: React.FC<WealthPageProps> = ({
 
       <WealthTransitSection transit={viewModel.transit} />
 
-      <WealthSpeculativeRiskSection speculativeRisk={viewModel.speculativeRisk} />
+      <WealthSpeculativeRiskSection speculativePropensity={viewModel.speculativePropensity} riskAndSuitability={viewModel.riskAndSuitability} />
 
       <WealthQualificationsSection qualifications={viewModel.qualifications} />
 
