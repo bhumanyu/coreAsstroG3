@@ -989,7 +989,7 @@ function mapWealth(
       source: 'ASTROLOGICAL_INDICATION',
       status: speculationStatus ? mapSpeculativePropensity(String(speculationStatus)) : 'INSUFFICIENT_DATA',
       description: sanitizeSpeculativePropensityDescription(speculationStatement),
-      evidenceIds: evidence.filter((item) => item.source === 'WEALTH_ENGINE').map((item) => item.id),
+      evidenceIds: [],
       adviceAvailable: false
     },
     riskAndSuitability: {
