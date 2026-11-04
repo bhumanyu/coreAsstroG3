@@ -93,9 +93,18 @@ export interface WealthTransitViewModel {
   readonly statement?: string;
 }
 
-export interface WealthSpeculativeRiskViewModel {
-  readonly level: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME' | 'UNAVAILABLE' | string;
+export interface WealthSpeculativePropensityViewModel {
+  readonly status: 'VERY_STRONG' | 'STRONG' | 'MODERATE' | 'MIXED' | 'CHALLENGED' | 'INSUFFICIENT_DATA';
+  readonly label: string;
   readonly description?: string;
+  readonly source: 'ASTROLOGICAL_INDICATION';
+  readonly adviceAvailable: false;
+}
+export interface WealthRiskAndSuitabilityViewModel {
+  readonly actualExposure: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly tradingHistory: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly suitability: 'UNAVAILABLE';
+  readonly suitabilityReason: string;
 }
 
 export interface WealthQualificationViewModel {
@@ -151,7 +160,8 @@ export interface WealthViewModel {
   readonly d2: WealthD2ViewModel;
   readonly dasha: WealthDashaViewModel;
   readonly transit: WealthTransitViewModel;
-  readonly speculativeRisk?: WealthSpeculativeRiskViewModel;
+  readonly speculativePropensity: WealthSpeculativePropensityViewModel;
+  readonly riskAndSuitability: WealthRiskAndSuitabilityViewModel;
   readonly qualifications: readonly WealthQualificationViewModel[];
   readonly evidence: readonly WealthEvidenceViewModel[];
   readonly conclusion: WealthConclusionViewModel;
@@ -271,12 +281,28 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     statement: wealth.activation.transit.statement
   };
 
-  const speculativeRisk: WealthSpeculativeRiskViewModel | undefined = wealth.speculativeRisk
-    ? {
-        level: wealth.speculativeRisk.level,
-        description: wealth.speculativeRisk.description
-      }
-    : undefined;
+  const propensityStatus = wealth.speculativePropensity?.status ?? 'INSUFFICIENT_DATA';
+  const propensityLabels = {
+    VERY_STRONG: 'Very strong indication',
+    STRONG: 'Strong indication',
+    MODERATE: 'Moderate indication',
+    MIXED: 'Mixed indication',
+    CHALLENGED: 'Challenged indication',
+    INSUFFICIENT_DATA: 'Insufficient data'
+  } as const;
+  const speculativePropensity: WealthSpeculativePropensityViewModel = {
+    status: propensityStatus,
+    label: propensityLabels[propensityStatus],
+    description: wealth.speculativePropensity?.description,
+    source: 'ASTROLOGICAL_INDICATION',
+    adviceAvailable: false
+  };
+  const riskAndSuitability: WealthRiskAndSuitabilityViewModel = {
+    actualExposure: wealth.riskAndSuitability?.actualExposure ?? 'UNAVAILABLE',
+    tradingHistory: wealth.riskAndSuitability?.tradingHistory ?? 'UNAVAILABLE',
+    suitability: 'UNAVAILABLE',
+    suitabilityReason: wealth.riskAndSuitability?.suitabilityReason ?? 'Suitability is not assessed from a horoscope.'
+  };
 
   const qualifications: WealthQualificationViewModel[] = (wealth.qualifications ?? []).map(
     (q) => ({
@@ -322,7 +348,8 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     d2,
     dasha,
     transit,
-    speculativeRisk,
+    speculativePropensity,
+    riskAndSuitability,
     qualifications,
     evidence,
     conclusion,
