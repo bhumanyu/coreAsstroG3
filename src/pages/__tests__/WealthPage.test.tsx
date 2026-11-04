@@ -127,6 +127,13 @@ describe('WealthPage (P-UI-05)', () => {
     expect(screen.getByText(/Suitability:/)).toBeInTheDocument();
     expect(screen.queryByText(/investments recommended/i)).not.toBeInTheDocument();
 
+    // C04 — candidate windows are not actual events or guarantees.
+    expect(screen.getByText('Wealth Lifecycle & Candidate Timing')).toBeInTheDocument();
+    expect(screen.getByText(/Candidate windows are not guaranteed events or verified financial facts/)).toBeInTheDocument();
+    expect(screen.getByText('No event-enabled Wealth lifecycle candidate')).toBeInTheDocument();
+    expect(screen.getByText(/CW-05 remains the final Wealth authority/)).toBeInTheDocument();
+    expect(screen.getByText(/Actual debt, asset ownership, inheritance receipt/)).toBeInTheDocument();
+
     // Qualifications & Modifiers
     expect(screen.getByText('Qualifications & Modifiers')).toBeInTheDocument();
     expect(screen.getByText('EXPENDITURE_PRESSURE')).toBeInTheDocument();
