@@ -591,10 +591,13 @@ export interface WealthRiskAndSuitabilityProduct {
 }
 
 import type { WealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
+import type { WealthLifecycleAnalysis } from '../../domain/wealth/wealthLifecycleTypes';
 
 export interface WealthProductAnalysis {
   /** Optional for older persisted analyses; absence means real-world data is unavailable. */
   readonly financialData?: WealthFinancialDataSet;
+  /** Optional C04 downstream candidate analysis. CW-05 remains final authority. */
+  readonly lifecycle?: WealthLifecycleAnalysis;
   readonly overall: WealthOverallProduct;
   readonly dimensions: WealthDimensionsProduct;
   readonly d2: D2ProductResult;
