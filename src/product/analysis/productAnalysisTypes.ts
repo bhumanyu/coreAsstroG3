@@ -357,6 +357,57 @@ export interface ProductCareerOutcomeAnalysis {
   readonly statement: string;
 }
 
+export interface ProductCareerEventTimelineWindow {
+  readonly windowId: string;
+  readonly sourceEventId: string;
+  readonly genericType: 'CAREER_OPPORTUNITY_WINDOW' | 'CAREER_CHALLENGE_WINDOW' | 'CAREER_CONDITIONAL_WINDOW';
+  readonly status: 'GENERIC_CANDIDATE_WINDOW';
+  readonly specificEventInference: 'NOT_MADE';
+  readonly timing: { readonly type: 'DASHA_PERIOD_WINDOW' | 'UNTIMED'; readonly start?: string; readonly end?: string };
+  readonly opportunityId: string | null;
+  readonly activationId: string;
+  readonly qualificationBasis: 'B02_NATAL_PROMISE_AND_LINKED_ACTIVATION' | 'B01_NATAL_RISK_AND_LINKED_CHALLENGE_ACTIVATION';
+  readonly evidence: {
+    readonly semanticIdentityIds: readonly string[];
+    readonly occurrenceIds: readonly string[];
+    readonly rootIdentityKeys: readonly string[];
+    readonly ruleIds: readonly string[];
+  };
+  readonly limitations: readonly string[];
+}
+
+export interface ProductCareerEventSpecificTaxonomyItem {
+  readonly eventType:
+    | 'CAREER_ENTRY_START'
+    | 'JOB_CHANGE_TRANSITION'
+    | 'PROMOTION_ROLE_EXPANSION'
+    | 'LEADERSHIP_RESPONSIBILITY'
+    | 'ENTREPRENEURSHIP_BUSINESS_INITIATION'
+    | 'FOREIGN_REMOTE_OPPORTUNITY'
+    | 'CHALLENGE_INTERRUPTION'
+    | 'RECOVERY_REENTRY'
+    | 'PEAK_CONSOLIDATION'
+    | 'RETIREMENT_TRANSITION';
+  readonly validationStatus: 'UNVALIDATED';
+  readonly requiredEvidence: readonly string[];
+  readonly validationGap: string;
+  readonly releaseEnabled: false;
+}
+
+export interface ProductCareerEventTimeline {
+  readonly reasoningVersion: 'B06';
+  readonly methodVersion: string;
+  readonly status: 'GENERIC_WINDOWS_ONLY' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly taxonomy: readonly ProductCareerEventSpecificTaxonomyItem[];
+  readonly eventCandidates: readonly [];
+  readonly genericWindows: readonly ProductCareerEventTimelineWindow[];
+  readonly observedOutcomeReportIds: readonly string[];
+  readonly diagnostics: readonly string[];
+  readonly guaranteedEventsAvailable: false;
+  readonly numericProbabilityAvailable: false;
+  readonly statement: string;
+}
+
 export interface ProductQualification {
   readonly type: string;
   readonly severity: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -416,6 +467,8 @@ export interface CareerProductAnalysis {
   readonly analyticalAxes?: ProductCareerAnalyticalAxes;
   /** B02: Outcome candidates qualified by Promise + Activation; observed facts stay separate. */
   readonly outcomeQualification?: ProductCareerOutcomeAnalysis;
+  /** B06: specific event taxonomy is gated; only qualified generic windows are projected. */
+  readonly eventTimeline?: ProductCareerEventTimeline;
   readonly promise: CareerPromiseProduct;
   readonly expression?: CareerExpressionProduct;
   readonly d10: D10ProductResult;
