@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createAstrologicalFinancialIndicator,
   createCalculatedFinancialMetric,
+  createConnectedFinancialDatum,
   createUnavailableWealthFinancialDataSet,
   createUserReportedFinancialDatum,
   validateWealthFinancialDataSet,
@@ -65,5 +66,45 @@ describe('C01 Wealth financial data contract', () => {
   it('rejects duplicate datum IDs and inconsistent set status', () => {
     const set = createUnavailableWealthFinancialDataSet();
     expect(validateWealthFinancialDataSet({ ...set, status:'AVAILABLE' })).toBe(false);
+  });
+});
+
+
+describe('C03 trading facts provenance guardrails', () => {
+  it('keeps trading exposure and trading history unavailable by default', () => {
+    const dataset = createUnavailableWealthFinancialDataSet();
+    const exposure = dataset.data.find((item) => item.concept === 'TRADING_EXPOSURE');
+    const history = dataset.data.find((item) => item.concept === 'TRADING_HISTORY');
+    expect(exposure?.availability).toBe('UNAVAILABLE');
+    expect(history?.availability).toBe('UNAVAILABLE');
+    expect(exposure?.value).toBeUndefined();
+    expect(history?.value).toBeUndefined();
+  });
+
+  it('accepts explicitly user-reported trading exposure only with report provenance', () => {
+    const item = createUserReportedFinancialDatum({
+      id: 'exposure-report-1', concept: 'TRADING_EXPOSURE',
+      value: { amount: 250000, instruments: ['equity'] }, currency: 'INR', provenance
+    });
+    expect(validateWealthFinancialDatum(item)).toBe(true);
+    expect(validateWealthFinancialDatum({ ...item, userReportedProvenance: undefined })).toBe(false);
+  });
+
+  it('accepts connected trading history only with provider and connection provenance', () => {
+    const item = createConnectedFinancialDatum({
+      id: 'broker-history-1', concept: 'TRADING_HISTORY', value: { tradeCount: 12 },
+      provenance: { sourceType: 'BROKERAGE', providerId: 'broker-x', connectionId: 'conn-1', retrievedAt: '2026-11-04T05:40:00Z' }
+    });
+    expect(validateWealthFinancialDatum(item)).toBe(true);
+    expect(validateWealthFinancialDatum({ ...item, connectedSourceProvenance: undefined })).toBe(false);
+  });
+
+  it('does not accept astrology-only data as actual trading exposure or history', () => {
+    const astro = createAstrologicalFinancialIndicator({ id: 'astro', concept: 'TRADING_EXPOSURE', value: 'strong chart indication' });
+    expect(astro.sourceClassification).toBe('ASTROLOGICAL_INDICATOR');
+    expect(astro.userReportedProvenance).toBeUndefined();
+    expect(astro.connectedSourceProvenance).toBeUndefined();
+    expect(validateWealthFinancialDatum({ ...astro, sourceClassification: 'USER_REPORTED_FINANCIAL_FACT' })).toBe(false);
+    expect(validateWealthFinancialDatum({ ...astro, sourceClassification: 'CONNECTED_FINANCIAL_SOURCE' })).toBe(false);
   });
 });
