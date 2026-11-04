@@ -76,6 +76,14 @@ export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProp
               <p className="text-xs text-slate-400">
                 Qualification: {window.qualificationBasis.replaceAll('_', ' ')}
               </p>
+              <p className="text-xs text-slate-400">
+                Conditions: {window.conditions.join(', ').replaceAll('_', ' ')}
+              </p>
+              {window.counterEvidenceOccurrenceIds.length > 0 && (
+                <p className="text-xs text-amber-300">
+                  Counter-evidence occurrences: {window.counterEvidenceOccurrenceIds.join(', ')}
+                </p>
+              )}
               <p className="text-xs text-slate-500">
                 Event-specific inference: NOT MADE · No guaranteed outcome · No probability
               </p>
