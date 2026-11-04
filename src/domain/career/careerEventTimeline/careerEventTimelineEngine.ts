@@ -104,6 +104,10 @@ function isNatalLinkedChallenge(
     item.provenance.natalRootIds.length > 0
   );
   if (matching.length !== 1) return { valid: false, occurrenceIds: [], rootIds: [] };
+  if ((input.axes.activation.status !== 'AVAILABLE' && input.axes.activation.status !== 'PARTIAL') ||
+      (input.axes.risk.status !== 'AVAILABLE' && input.axes.risk.status !== 'PARTIAL')) {
+    return { valid: false, occurrenceIds: [], rootIds: [] };
+  }
   const activation = matching[0];
   if (!event.evidenceIds.includes(activation.identityKey)) {
     return { valid: false, occurrenceIds: [], rootIds: [] };
@@ -139,6 +143,10 @@ function opportunityOutcome(
     item.supportingEvidence.activationOccurrenceIds.length > 0
   );
   if (!candidate) return undefined;
+  if (input.axes.promise.status !== 'AVAILABLE' || input.axes.activation.status !== 'AVAILABLE') return undefined;
+  if (input.finalSynthesis.natalDirection !== 'SUPPORT' && input.finalSynthesis.natalDirection !== 'CONDITIONAL') return undefined;
+  if (input.finalSynthesis.finalDirection !== 'SUPPORT' && input.finalSynthesis.finalDirection !== 'CONDITIONAL') return undefined;
+  if (input.finalSynthesis.finalStatus !== 'SUPPORTED' && input.finalSynthesis.finalStatus !== 'CONDITIONALLY_SUPPORTED') return undefined;
 
   // Re-check the B02 links at the B06 boundary: the natal occurrences must be
   // present on B01 Promise, and the exact canonical C9 occurrence must be
