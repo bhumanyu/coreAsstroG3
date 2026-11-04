@@ -924,6 +924,7 @@ function mapWealth(
   const speculationStatement = detail?.speculation?.statement;
 
   return {
+    financialData: undefined,
     overall: {
       status: detail?.status
         ? String(detail.status)
