@@ -13,3 +13,5 @@ export * from './WealthConclusionSection';
 export * from './WealthLoadingState';
 export * from './WealthUnavailableState';
 export * from './WealthErrorState';
+
+export * from './WealthLifecycleSection';
