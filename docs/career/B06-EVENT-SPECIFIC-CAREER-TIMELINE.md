@@ -66,6 +66,7 @@ Every retained window has:
 - source-backed timing copied without modification;
 - opportunity and activation references;
 - semantic identity IDs, occurrence IDs, root identity keys and rule IDs in separate namespaces;
+- explicit qualification conditions and counter-evidence occurrence IDs from B02/B01; and
 - an explicit `specificEventInference = NOT_MADE` field; and
 - limitations stating that the window is indicative, not a specific or guaranteed outcome.
 
