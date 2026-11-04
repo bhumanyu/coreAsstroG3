@@ -2820,8 +2820,8 @@ describe('Wealth period activation contracts', () => {
     expect(lifecycle?.guaranteedEventsAvailable).toBe(false);
     expect(lifecycle?.numericProbabilityAvailable).toBe(false);
     expect(lifecycle?.actualFinancialEventsInferred).toBe(false);
-    expect(lifecycle?.candidateWindows.every(candidate => candidate.eventType === 'ACCUMULATION' || candidate.eventType === 'GAINS')).toBe(true);
-    expect(lifecycle?.candidateWindows.some(candidate => candidate.eventType === 'INHERITANCE_INDICATION' || candidate.eventType === 'DEBT_EXPOSURE_INDICATION')).toBe(false);
+    expect(lifecycle?.candidateWindows.every((candidate: import('./wealthLifecycleTypes').WealthLifecycleCandidateWindow) => candidate.eventType === 'ACCUMULATION' || candidate.eventType === 'GAINS')).toBe(true);
+    expect(lifecycle?.candidateWindows.some((candidate: import('./wealthLifecycleTypes').WealthLifecycleCandidateWindow) => candidate.eventType === 'INHERITANCE_INDICATION' || candidate.eventType === 'DEBT_EXPOSURE_INDICATION')).toBe(false);
   });
 
   it('does not treat a partially evaluated reference dataset as authoritative', () => {
