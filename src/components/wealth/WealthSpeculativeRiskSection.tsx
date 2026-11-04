@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WealthSpeculativePropensityViewModel, WealthRiskAndSuitabilityViewModel } from '../../product/analysis/wealthViewModel';
-import { formatSpeculativeRiskLevel, getSpeculativeRiskBadgeClass } from './wealthFormat';
+import { getSpeculativeRiskBadgeClass } from './wealthFormat';
 import { Flame, AlertCircle, ShieldAlert } from 'lucide-react';
 
 export interface WealthSpeculativeRiskSectionProps {
@@ -13,7 +13,6 @@ export const WealthSpeculativeRiskSection: React.FC<WealthSpeculativeRiskSection
   riskAndSuitability
 }) => {
   const isAvailable = speculativePropensity.status !== 'INSUFFICIENT_DATA';
-  const formattedLevel = formatSpeculativeRiskLevel(speculativePropensity.status);
   const badgeClass = getSpeculativeRiskBadgeClass(speculativePropensity.status);
 
   return (
