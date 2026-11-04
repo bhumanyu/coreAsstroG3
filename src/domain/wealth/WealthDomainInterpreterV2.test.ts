@@ -2208,7 +2208,7 @@ describe('WealthDomainInterpreterV2', () => {
   });
 
   // End-to-end CW-05 Wealth Final Synthesis Pipeline Test
-  it('CW-05 end-to-end pipeline: produces deterministic wealth final synthesis with multi-axis dimensions, riskProfile, and provenance', () => {
+  it('CW-05 end-to-end pipeline: produces deterministic wealth final synthesis with multi-axis dimensions, speculative propensity, and provenance', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
     const domainOptions = makeDomainOptions(asOf);
     const result1 = interpretWealthV2(horoscope, domainOptions);
@@ -2234,7 +2234,7 @@ describe('WealthDomainInterpreterV2', () => {
     expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'WEAK', 'VERY_WEAK', 'UNDETERMINED']).toContain(finalSynthesis?.primaryPromise);
 
     // Verify risk profile (driven by speculation, never diluting overall wealth status)
-    expect(['LOW', 'MODERATE', 'ELEVATED', 'HIGH', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.riskProfile);
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'MIXED', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.speculativePropensity);
 
     // Verify all 4 dimensions
     expect(finalSynthesis?.dimensions).toBeDefined();
