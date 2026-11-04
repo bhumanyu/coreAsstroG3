@@ -5,7 +5,6 @@ import type {
   CareerEventSpecificRuleContract
 } from './careerEventTimelineTypes';
 import type { CareerEvent } from '../careerEvents/careerEventTypes';
-import type { CareerEventEvidenceRequirement } from './careerEventTimelineTypes';
 
 export const CAREER_EVENT_SPECIFIC_RULE_CATALOGUE: readonly CareerEventSpecificRuleContract[] = Object.freeze([
   {
