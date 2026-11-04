@@ -2,78 +2,79 @@ import type {
   CareerEventTimelineInput,
   CareerEventTimelineAnalysis,
   CareerEventTimelineWindow,
-  CareerEventSpecificRuleContract,
-  CareerEvent
+  CareerEventSpecificRuleContract
 } from './careerEventTimelineTypes';
+import type { CareerEvent } from '../careerEvents/careerEventTypes';
+import type { CareerEventEvidenceRequirement } from './careerEventTimelineTypes';
 
 export const CAREER_EVENT_SPECIFIC_RULE_CATALOGUE: readonly CareerEventSpecificRuleContract[] = Object.freeze([
   {
     eventType: 'CAREER_ENTRY_START',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'LINKED_C9_SUPPORT_ACTIVATION']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'LINKED_C9_SUPPORT_ACTIVATION'] as const),
     validationGap: 'Current C11 expressions describe broad career modes, not an explicit first-entry/start event; no event-specific rule family or independently validated event fixture exists.',
     releaseEnabled: false
   },
   {
     eventType: 'JOB_CHANGE_TRANSITION',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'LINKED_C9_SUPPORT_ACTIVATION', 'D10_SAME_EXPRESSION_QUALIFICATION']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'LINKED_C9_SUPPORT_ACTIVATION', 'D10_SAME_EXPRESSION_QUALIFICATION'] as const),
     validationGap: 'No canonical D1 transition/mobility event rule is available. Employment/service or foreign/independent modes cannot be re-labelled as a job change.',
     releaseEnabled: false
   },
   {
     eventType: 'PROMOTION_ROLE_EXPANSION',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION'] as const),
     validationGap: 'Authority/leadership expression is not evidence of a promotion. A validated promotion/role-expansion rule and same-expression D10 qualification are absent.',
     releaseEnabled: false
   },
   {
     eventType: 'LEADERSHIP_RESPONSIBILITY',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION'] as const),
     validationGap: 'Broad leadership/management expression does not establish an appointment or assignment of leadership responsibility.',
     releaseEnabled: false
   },
   {
     eventType: 'ENTREPRENEURSHIP_BUSINESS_INITIATION',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION'] as const),
     validationGap: 'Independent/business manifestation modes do not prove business initiation; no event-specific initiation rule is validated.',
     releaseEnabled: false
   },
   {
     eventType: 'FOREIGN_REMOTE_OPPORTUNITY',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION'] as const),
     validationGap: 'Foreign/remote expression labels do not establish a concrete foreign or remote career opportunity; event-specific source evidence is not validated.',
     releaseEnabled: false
   },
   {
     eventType: 'CHALLENGE_INTERRUPTION',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'C11_NATAL_COUNTER_INDICATION', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'LINKED_C9_CHALLENGE_ACTIVATION']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'C11_NATAL_COUNTER_INDICATION', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'LINKED_C9_CHALLENGE_ACTIVATION'] as const),
     validationGap: 'A Dasha challenge is not an interruption. A natal-linked, event-specific interruption rule and positive/negative fixtures are not present.',
     releaseEnabled: false
   },
   {
     eventType: 'RECOVERY_REENTRY',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'PRIOR_CHALLENGE_WINDOW', 'SUBSEQUENT_SUPPORT_ACTIVATION', 'SOURCE_DATED_TEMPORAL_ORDER']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'PRIOR_CHALLENGE_WINDOW', 'SUBSEQUENT_SUPPORT_ACTIVATION', 'SOURCE_DATED_TEMPORAL_ORDER'] as const),
     validationGap: 'No validated recovery/continuity evidence family or ordered challenge-to-recovery event rule exists; B01 Sustainability is explicitly NOT_ASSESSED.',
     releaseEnabled: false
   },
   {
     eventType: 'PEAK_CONSOLIDATION',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'VALIDATED_SUSTAINABILITY_EVIDENCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'VALIDATED_SUSTAINABILITY_EVIDENCE', 'D10_SAME_EXPRESSION_QUALIFICATION', 'LINKED_C9_SUPPORT_ACTIVATION'] as const),
     validationGap: 'No validated sustainability/continuity evidence family exists; peak or consolidation cannot be inferred from strong promise or rank.',
     releaseEnabled: false
   },
   {
     eventType: 'RETIREMENT_TRANSITION',
     validationStatus: 'UNVALIDATED',
-    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'USER_CONFIRMED_ACTIVE_CAREER_CONTEXT', 'SOURCE_DATED_TEMPORAL_ORDER']),
+    requiredEvidence: Object.freeze(['D1_NATAL_PROMISE', 'EVENT_SPECIFIC_D1_EXPRESSION', 'EVENT_SPECIFIC_RULE_PROVENANCE', 'USER_CONFIRMED_ACTIVE_CAREER_CONTEXT', 'SOURCE_DATED_TEMPORAL_ORDER'] as const),
     validationGap: 'No retirement/exit rule or independently confirmed active-career context exists. Age or Dasha alone cannot establish retirement.',
     releaseEnabled: false
   }
