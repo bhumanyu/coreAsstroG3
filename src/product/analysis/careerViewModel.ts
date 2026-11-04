@@ -16,6 +16,7 @@ import type {
   ProductWarning,
   ProductCareerAnalyticalAxes,
   ProductCareerOutcomeAnalysis,
+  ProductCareerEventTimeline,
   ProductCareerProfessionRanking,
   PromiseStrength,
   ActivationEffect,
@@ -180,6 +181,8 @@ export interface CareerViewModel {
   readonly analyticalAxes?: ProductCareerAnalyticalAxes;
   /** B02: Candidate-only outcome qualification plus explicitly user-reported observed facts. */
   readonly outcomeQualification?: ProductCareerOutcomeAnalysis;
+  /** B06: source-backed generic windows and explicit unvalidated event taxonomy. */
+  readonly eventTimeline?: ProductCareerEventTimeline;
   readonly hero: CareerHeroViewModel;
   readonly promise: CareerPromiseViewModel;
   readonly expression: CareerExpressionViewModel;
@@ -373,6 +376,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
   return {
     analyticalAxes: career.analyticalAxes,
     outcomeQualification: career.outcomeQualification,
+    eventTimeline: career.eventTimeline,
     hero,
     promise,
     expression,
