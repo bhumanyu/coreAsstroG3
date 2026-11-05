@@ -165,7 +165,6 @@ export function assessWealthRiskAndConfidence(input: {
   const dimensions = {} as Record<WealthDimension, WealthRiskAssessment>;
   const allPresent = new Set<WealthEvidenceFamily>();
   const allRequired = new Set<WealthEvidenceFamily>();
-  const missing: WealthEvidenceFamily[] = [];
 
   (Object.keys(REQUIRED_FAMILIES) as WealthDimension[]).forEach((dimension) => {
     const required = REQUIRED_FAMILIES[dimension];
@@ -177,7 +176,6 @@ export function assessWealthRiskAndConfidence(input: {
     ));
     present.forEach((family) => allPresent.add(family));
     const missingForDimension = required.filter((family) => !present.includes(family));
-    missing.push(...missingForDimension);
     dimensions[dimension] = riskForEvidence(dimension, evidence, missingForDimension);
   });
 
