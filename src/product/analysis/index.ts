@@ -12,3 +12,5 @@ export * from './AnalysisEmptyState';
 export * from './selectedPeriodProductService';
 export * from './selectedPeriodViewModel';
 export * from './confidenceCompletenessProjection';
+
+export * from './analysisVersioning';
