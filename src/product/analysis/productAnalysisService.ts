@@ -115,6 +115,10 @@ export class ProductAnalysisService {
       methodology,
       engineVersion: methodology.calculationEngine,
       rulesVersion: methodology.rulesEngine,
+      ...(options?.versionConfiguration ? { versionConfiguration: {
+        ...options.versionConfiguration,
+        calculationEngine: options.versionConfiguration.calculationEngine || methodology.calculationEngine
+      } } : {})
     }, this.deps.clock ?? systemClock);
     const context: AnalysisContext = options?.context && options.versionConfiguration
       ? Object.freeze({
