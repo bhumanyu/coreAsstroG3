@@ -1309,7 +1309,7 @@ function mapAiState(aiExplanation?: AiExplanationResult): AiProductState {
 }
 
 
-function buildAiVersionManifest(aiExplanation?: AiExplanationResult): readonly ProductAiExplanationVersionManifest[] {
+export function buildAiVersionManifest(aiExplanation?: AiExplanationResult): readonly ProductAiExplanationVersionManifest[] {
   if (!aiExplanation || aiExplanation.kind !== 'SUCCESS') return Object.freeze([]);
   const component = (value: string | undefined, reason: string): ProductVersionComponent =>
     value && value.trim()
@@ -1340,7 +1340,6 @@ function buildDeterministicVersionManifest(context: AnalysisContext): ProductDet
       make(version, 'ANALYSIS_CONTEXT', 'REFERENCE_DATASET_VERSION_NOT_SUPPLIED')
     ])
   ));
-  const hasRefData = Object.keys(referenceDatasets).length > 0;
   const replayReasons: string[] = [];
   const inputRetention = config?.inputRetention ?? 'UNKNOWN';
   const requiredCodeAvailable = config?.requiredCodeAvailable ?? null;
@@ -1361,7 +1360,7 @@ function buildDeterministicVersionManifest(context: AnalysisContext): ProductDet
   return Object.freeze({
     manifestVersion: 'D02-v1',
     calculationEngine: make(context.engineVersion, 'ANALYSIS_CONTEXT', 'ENGINE_VERSION_NOT_SUPPLIED'),
-    referenceDatasets: Object.freeze(hasRefData ? referenceDatasets : {
+    referenceDatasets: Object.freeze(Object.keys(referenceDatasets).length > 0 ? referenceDatasets : {
       DEFAULT: make(undefined, 'ANALYSIS_CONTEXT', 'REFERENCE_DATASET_VERSIONS_NOT_SUPPLIED')
     }),
     ruleCatalogue: make(context.rulesVersion, 'ANALYSIS_CONTEXT', 'RULE_CATALOGUE_VERSION_NOT_SUPPLIED'),
@@ -1369,7 +1368,7 @@ function buildDeterministicVersionManifest(context: AnalysisContext): ProductDet
     wealthLogic: make(config?.wealthLogic, 'ANALYSIS_CONTEXT', 'WEALTH_LOGIC_VERSION_NOT_SUPPLIED'),
     careerSynthesis: make(config?.careerSynthesis, 'ANALYSIS_CONTEXT', 'C11_VERSION_NOT_SUPPLIED'),
     wealthSynthesis: make(config?.wealthSynthesis, 'ANALYSIS_CONTEXT', 'CW05_VERSION_NOT_SUPPLIED'),
-    outputSchema: make(config?.outputSchema ?? 'ProductAnalysis-v1', 'PRODUCT_AGGREGATE_SCHEMA', 'OUTPUT_SCHEMA_VERSION_NOT_SUPPLIED'),
+    outputSchema: make(config?.outputSchema, 'ANALYSIS_CONTEXT', 'OUTPUT_SCHEMA_VERSION_NOT_SUPPLIED'),
     methodology: Object.freeze({
       zodiacSystem: context.methodology.zodiacSystem,
       houseSystem: context.methodology.houseSystem,
