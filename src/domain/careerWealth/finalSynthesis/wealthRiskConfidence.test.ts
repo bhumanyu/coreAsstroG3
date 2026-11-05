@@ -88,6 +88,15 @@ describe('CW-05C Wealth risk and confidence qualification', () => {
     expect(JSON.stringify(first)).not.toMatch(/probability|percent|percentage|likelihoodScore/i);
   });
 
+  it('classifies complete dimensions with multiple corroborated adverse occurrences as HIGH', () => {
+    const result = assessWealthRiskAndConfidence({ evidence: [
+      ev('h1', 'SECOND_HOUSE', 'CHALLENGING'),
+      ev('h2', 'SECOND_HOUSE', 'CHALLENGING'),
+      ev('h3', 'SECOND_LORD', 'CHALLENGING')
+    ] });
+    expect(result.dimensions.ACCUMULATION.classification).toBe('HIGH');
+  });
+
   it('surfaces producer errors as confidence blockers, not risk evidence', () => {
     const result = assessWealthRiskAndConfidence({
       evidence: completeAccumulation,
