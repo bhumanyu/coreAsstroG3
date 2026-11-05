@@ -21,7 +21,7 @@ import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { DomainEvidence } from '../../domain/interpretation';
 import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis, mapCareerConfidenceMetadata, mapWealthConfidenceMetadata } from './productAnalysisMapper';
-import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
+import type { AnalysisContext, AnalysisVersionConfiguration } from '../../core/analysis/AnalysisContext';
 import { createAnalysisContext, normalizeAsOf } from '../../core/analysis/analysisContextFactory';
 import { systemClock } from '../../core/analysis/Clock';
 import type { Clock } from '../../core/analysis/Clock';
@@ -51,6 +51,8 @@ export interface AnalyzeOptions {
   readonly includeAiExplanation?: boolean;
   readonly asOf?: Date | string;
   readonly context?: AnalysisContext;
+  /** Independent deterministic component versions and non-personal config IDs. */
+  readonly versionConfiguration?: AnalysisVersionConfiguration;
   readonly selectedPeriod?: {
     readonly mahadashaId: string;
     readonly antardashaId: string;
@@ -112,7 +114,8 @@ export class ProductAnalysisService {
       asOf: options?.asOf,
       methodology,
       engineVersion: methodology.calculationEngine,
-      rulesVersion: methodology.rulesEngine
+      rulesVersion: methodology.rulesEngine,
+      versionConfiguration: options?.versionConfiguration
     }, this.deps.clock ?? systemClock);
 
     let horoscope: Horoscope | undefined;
