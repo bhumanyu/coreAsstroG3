@@ -27,6 +27,7 @@ import {
   type CareerProfessionStatus,
   type CareerProfessionStatusCopy
 } from './careerQualificationPresentation';
+import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 
 export interface CareerHeroViewModel {
   readonly ascendantSign?: string;
@@ -177,6 +178,7 @@ export interface CareerProfessionViewModel {
 }
 
 export interface CareerViewModel {
+  readonly confidenceCompleteness: import('./productAnalysisTypes').ProductUnifiedConfidenceProjection;
   /** B01: Five orthogonal, evidence-traceable Career axes from the canonical product projection. */
   readonly analyticalAxes?: ProductCareerAnalyticalAxes;
   /** B02: Candidate-only outcome qualification plus explicitly user-reported observed facts. */
@@ -374,6 +376,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
   })();
 
   return {
+    confidenceCompleteness: selectUnifiedConfidenceProjection(analysis),
     analyticalAxes: career.analyticalAxes,
     outcomeQualification: career.outcomeQualification,
     eventTimeline: career.eventTimeline,

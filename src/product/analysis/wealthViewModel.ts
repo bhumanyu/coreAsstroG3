@@ -22,6 +22,7 @@ import type {
 } from './productAnalysisTypes';
 import { createUnavailableWealthFinancialDataSet, validateWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
 import type { WealthLifecycleAnalysis } from '../../domain/wealth/wealthLifecycleTypes';
+import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -165,6 +166,7 @@ export interface WealthConclusionViewModel {
 }
 
 export interface WealthViewModel {
+  readonly confidenceCompleteness: import('./productAnalysisTypes').ProductUnifiedConfidenceProjection;
   readonly hero: WealthHeroViewModel;
   readonly overall: WealthOverallViewModel;
   readonly financialData: WealthFinancialDataViewModel;
@@ -399,6 +401,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   };
 
   return {
+    confidenceCompleteness: selectUnifiedConfidenceProjection(analysis),
     hero,
     overall,
     financialData,

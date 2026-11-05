@@ -20,7 +20,7 @@ import type { ProductAnalysis } from './productAnalysisTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { DomainEvidence } from '../../domain/interpretation';
-import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis } from './productAnalysisMapper';
+import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis, mapCareerConfidenceMetadata, mapWealthConfidenceMetadata } from './productAnalysisMapper';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import { createAnalysisContext, normalizeAsOf } from '../../core/analysis/analysisContextFactory';
 import { systemClock } from '../../core/analysis/Clock';
@@ -164,7 +164,11 @@ export class ProductAnalysisService {
           ? mapEvidenceItems(pipelineState.wealth.evidence, 'WEALTH')
           : undefined,
         context,
-        temporalState: pipelineState.temporalState
+        temporalState: pipelineState.temporalState,
+        confidenceMetadata: Object.freeze({
+          career: mapCareerConfidenceMetadata(pipelineState.career?.conclusionData as CareerConclusionData | undefined),
+          wealth: mapWealthConfidenceMetadata(pipelineState.wealth?.conclusionData as WealthConclusionData | undefined)
+        })
       });
 
       // PBA-07: Build selected-period synthesis if selection is provided
@@ -404,7 +408,11 @@ export class ProductAnalysisService {
         ? mapEvidenceItems(pipelineState.wealth.evidence, 'WEALTH')
         : undefined,
       context,
-      temporalState
+      temporalState,
+      confidenceMetadata: Object.freeze({
+        career: mapCareerConfidenceMetadata(pipelineState.career?.conclusionData as CareerConclusionData | undefined),
+        wealth: mapWealthConfidenceMetadata(pipelineState.wealth?.conclusionData as WealthConclusionData | undefined)
+      })
     });
 
     const selection = { mahadashaId, antardashaId };

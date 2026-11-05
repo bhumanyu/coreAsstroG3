@@ -63,7 +63,9 @@ import type {
   ProductDashaPeriodOptions,
   ProductSelectableMahadasha,
   ProductSelectableAntardasha,
-  ProductTemporalRelation
+  ProductTemporalRelation,
+  ProductDomainConfidenceMetadata,
+  ProductConfidenceLayerState
 } from './productAnalysisTypes';
 import type { CareerAnalyticalAxes } from '../../domain/career/careerFinalSynthesis/careerAnalyticalAxes';
 import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
@@ -97,6 +99,8 @@ export interface ProductAnalysisMapperInput {
   readonly wealthFinancialData?: WealthFinancialDataSet;
   /** Existing C04 result supplied by the domain pipeline; mapper does not calculate lifecycle. */
   readonly wealthLifecycle?: import('../../domain/wealth/wealthLifecycleTypes').WealthLifecycleAnalysis;
+  /** Already-derived C11/CW-05 presentation metadata; the mapper never computes confidence. */
+  readonly confidenceMetadata?: Readonly<{ career?: ProductDomainConfidenceMetadata; wealth?: ProductDomainConfidenceMetadata }>;
 }
 
 /**
@@ -368,6 +372,95 @@ export function mapConfidence(val?: string): ProductConfidence {
   if (u.includes('HIGH')) return 'HIGH';
   if (u.includes('LOW')) return 'LOW';
   return 'MEDIUM';
+}
+
+/**
+ * Maps Career C11 confidence metadata to ProductDomainConfidenceMetadata.
+ * Returns undefined if canonical C11 metadata is not available (fail-closed).
+ */
+export function mapCareerConfidenceMetadata(
+  conclusionData?: import('../../domain/career/careerTypes').CareerConclusionData
+): ProductDomainConfidenceMetadata | undefined {
+  const canonicalC11 = conclusionData?.canonicalCareerFinalSynthesis;
+  if (!canonicalC11) return undefined;
+
+  const coverage = canonicalC11.confidenceCoverage;
+  const reasons = canonicalC11.confidenceReasons;
+
+  return Object.freeze({
+    confidence: mapConfidence(canonicalC11.confidence),
+    coverage: (() => {
+      switch (coverage.status) {
+        case 'COMPLETE': return 'COMPLETE' as const;
+        case 'PARTIAL': return 'PARTIAL' as const;
+        case 'INSUFFICIENT': return 'INSUFFICIENT' as const;
+        default: return 'UNAVAILABLE' as const;
+      }
+    })(),
+    layers: Object.freeze(coverage.layers.map(layer => Object.freeze({
+      id: layer.layer,
+      state: ((): ProductConfidenceLayerState => {
+        switch (layer.availability) {
+          case 'AVAILABLE': return 'AVAILABLE';
+          case 'UNAVAILABLE': return 'UNAVAILABLE';
+          default: return 'UNAVAILABLE';
+        }
+      })(),
+      required: layer.requirement === 'REQUIRED',
+      reason: undefined,
+      evidenceIds: undefined
+    } as const))),
+    reasons: Object.freeze(reasons.map(r => r.message)),
+    diagnostics: Object.freeze([]),
+    evidenceIds: Object.freeze(canonicalC11.evidenceIds),
+    ruleIds: Object.freeze(canonicalC11.ruleIds),
+    owner: 'C11' as const,
+    metadataSource: 'DOMAIN_CANONICAL' as const
+  });
+}
+
+/**
+ * Maps Wealth CW-05 confidence metadata to ProductDomainConfidenceMetadata.
+ * Returns undefined if CW-05 confidenceBreakdown is not available (fail-closed).
+ */
+export function mapWealthConfidenceMetadata(
+  conclusionData?: import('../../domain/wealth/wealthTypes').WealthConclusionData
+): ProductDomainConfidenceMetadata | undefined {
+  const wealthFinalSynthesis = conclusionData?.wealthFinalSynthesis;
+  if (!wealthFinalSynthesis || !wealthFinalSynthesis.confidenceBreakdown) return undefined;
+
+  const breakdown = wealthFinalSynthesis.confidenceBreakdown;
+
+  return Object.freeze({
+    confidence: (() => {
+      switch (breakdown.final) {
+        case 'HIGH': return 'HIGH' as const;
+        case 'MEDIUM': return 'MEDIUM' as const;
+        case 'LOW': return 'LOW' as const;
+        default: return 'MEDIUM' as const;
+      }
+    })(),
+    coverage: (() => {
+      switch (breakdown.evidenceCoverage) {
+        case 'HIGH': return 'COMPLETE' as const;
+        case 'MEDIUM': return 'PARTIAL' as const;
+        case 'LOW': return 'INSUFFICIENT' as const;
+        default: return 'UNAVAILABLE' as const;
+      }
+    })(),
+    layers: Object.freeze([
+      { id: 'NATAL_PROMISE', state: 'AVAILABLE' as const, required: true, reason: undefined, evidenceIds: wealthFinalSynthesis.natalEvidenceIds },
+      { id: 'DASHA', state: 'AVAILABLE' as const, required: true, reason: undefined, evidenceIds: [] },
+      { id: 'D2', state: 'UNAVAILABLE' as const, required: false, reason: 'D2 calculation and interpretation have not passed independent validation.', evidenceIds: [] },
+      { id: 'TRANSIT', state: 'UNAVAILABLE' as const, required: false, reason: 'Transit layer not included in CW-05 confidence breakdown.', evidenceIds: [] }
+    ]),
+    reasons: Object.freeze(breakdown.reasons),
+    diagnostics: Object.freeze([]),
+    evidenceIds: Object.freeze(wealthFinalSynthesis.evidenceIds),
+    ruleIds: Object.freeze(wealthFinalSynthesis.ruleIds),
+    owner: 'CW-05' as const,
+    metadataSource: 'DOMAIN_CANONICAL' as const
+  });
 }
 
 function mapBirth(birth: BirthDetails): ProductBirth {
@@ -1629,6 +1722,7 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
     reasoning,
     ai,
     warnings,
-    dashPeriodOptions
+    dashPeriodOptions,
+    confidenceMetadata: input.confidenceMetadata
   };
 }

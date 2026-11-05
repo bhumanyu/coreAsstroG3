@@ -11,3 +11,4 @@ export * from './dashaViewModel';
 export * from './AnalysisEmptyState';
 export * from './selectedPeriodProductService';
 export * from './selectedPeriodViewModel';
+export * from './confidenceCompletenessProjection';
