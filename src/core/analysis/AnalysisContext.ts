@@ -24,6 +24,8 @@ export interface AnalysisVersionConfiguration {
   readonly outputSchema?: string;
   readonly configuration?: Readonly<Record<string, string | number | boolean | null>>;
   readonly inputRetention?: 'RETAINED_BY_CALLER' | 'NOT_RETAINED' | 'UNKNOWN';
+  /** Opaque caller-owned reference to an independently retained input snapshot; never raw input values. */
+  readonly retainedInputSnapshotRef?: string;
   readonly requiredCodeAvailable?: boolean | null;
   readonly requiredDatasetsAvailable?: boolean | null;
 }
