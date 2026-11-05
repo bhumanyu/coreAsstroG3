@@ -58,13 +58,6 @@ const REQUIRED_FAMILIES: Readonly<Record<WealthDimension, readonly WealthEvidenc
   SPECULATION: Object.freeze(['FIFTH_HOUSE', 'FIFTH_LORD'])
 });
 
-const DIMENSION_EVIDENCE_FAMILIES: Readonly<Record<WealthDimension, ReadonlySet<string>>> = Object.freeze({
-  ACCUMULATION: new Set(['SECOND_HOUSE', 'SECOND_LORD']),
-  GAINS: new Set(['ELEVENTH_HOUSE', 'ELEVENTH_LORD']),
-  FORTUNE: new Set(['NINTH_HOUSE', 'NINTH_LORD']),
-  SPECULATION: new Set(['FIFTH_HOUSE', 'FIFTH_LORD'])
-});
-
 function sortedUnique(values: readonly string[]): readonly string[] {
   return Object.freeze([...new Set(values.filter((value) => typeof value === 'string' && value.trim()))].sort());
 }
