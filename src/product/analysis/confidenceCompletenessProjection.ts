@@ -114,7 +114,8 @@ function deriveMetadata(
     diagnostics: Object.freeze(diagnostics),
     evidenceIds: Object.freeze(evidenceIds),
     ruleIds: Object.freeze(ruleIds),
-    owner: domain === 'CAREER' ? 'C11' : 'CW-05'
+    owner: domain === 'CAREER' ? 'C11' : 'CW-05',
+    metadataSource: 'LEGACY_PRODUCT_FALLBACK'
   });
 }
 
