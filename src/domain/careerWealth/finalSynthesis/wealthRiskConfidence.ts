@@ -175,7 +175,19 @@ export function assessWealthRiskAndConfidence(input: {
     ));
     present.forEach((family) => allPresent.add(family));
     const missingForDimension = required.filter((family) => !present.includes(family));
-    dimensions[dimension] = riskForEvidence(dimension, evidence, missingForDimension);
+    const assessment = riskForEvidence(dimension, evidence, missingForDimension);
+    const hasDimensionConflict = conflictsByDimension[dimension].size > 0;
+    dimensions[dimension] = hasDimensionConflict
+      ? Object.freeze({
+          ...assessment,
+          classification: assessment.classification === 'INSUFFICIENT_DATA' ? 'INSUFFICIENT_DATA' : 'ELEVATED',
+          reasons: Object.freeze([...assessment.reasons, Object.freeze({
+            code: 'CANONICAL_EVIDENCE_CONFLICT',
+            message: 'CW-05 detected a conflict between supporting and challenging evidence within this dimension.',
+            evidenceIds: sortedUnique([...conflictsByDimension[dimension]])
+          })])
+        })
+      : assessment;
   });
 
   const presentFamilies = [...allPresent].sort() as WealthEvidenceFamily[];
@@ -191,6 +203,22 @@ export function assessWealthRiskAndConfidence(input: {
     ...conflict.positiveEvidenceIds,
     ...conflict.negativeEvidenceIds
   ]));
+  const conflictsByDimension = (Object.keys(REQUIRED_FAMILIES) as WealthDimension[]).reduce(
+    (result, dimension) => {
+      const evidenceIds = new Set(
+        natalWealthEvidence
+          .filter((item) => item.dimension === dimension)
+          .map((item) => item.id)
+      );
+      const dimensionConflictIds = conflicts
+        .filter((conflict) => conflict.positiveEvidenceIds.some((id) => evidenceIds.has(id)) &&
+          conflict.negativeEvidenceIds.some((id) => evidenceIds.has(id)))
+        .flatMap((conflict) => [...conflict.positiveEvidenceIds, ...conflict.negativeEvidenceIds]);
+      result[dimension] = new Set(dimensionConflictIds);
+      return result;
+    },
+    {} as Record<WealthDimension, Set<string>>
+  );
   const blockingDiagnostics = diagnostics
     .filter((diagnostic) => diagnostic.severity === 'ERROR')
     .map((diagnostic) => diagnostic.code);
