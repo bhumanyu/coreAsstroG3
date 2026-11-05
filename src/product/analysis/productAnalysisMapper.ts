@@ -1351,6 +1351,7 @@ function buildDeterministicVersionManifest(context: AnalysisContext): ProductDet
   if (requiredDatasetsAvailable !== true) replayReasons.push('REQUIRED_DATASETS_NOT_CONFIRMED_AVAILABLE');
   const completeRequiredVersions = [
     context.engineVersion, context.rulesVersion,
+    ...Object.values(referenceDatasets).map(component => component.status === 'RECORDED' ? component.version : undefined),
     config?.careerLogic, config?.wealthLogic,
     config?.careerSynthesis, config?.wealthSynthesis,
     config?.outputSchema
