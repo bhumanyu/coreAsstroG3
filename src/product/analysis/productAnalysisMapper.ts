@@ -1381,6 +1381,7 @@ function buildDeterministicVersionManifest(context: AnalysisContext): ProductDet
     }),
     configuration: Object.freeze({ ...(config?.configuration ?? {}) }),
     inputRetention,
+    ...(retainedInputSnapshotRef ? { retainedInputSnapshotRef } : {}),
     replay: Object.freeze({
       status: replayable ? 'REPLAYABLE_WITH_RETAINED_INPUTS' : 'NOT_REPLAYABLE',
       requiredInputsRetained,
