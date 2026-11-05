@@ -887,6 +887,62 @@ export type ProductSelectedPeriodResult =
 /**
  * Root Canonical ProductAnalysis Aggregate
  */
+export type ProductConfidenceCoverageStatus =
+  | 'COMPLETE'
+  | 'PARTIAL'
+  | 'INSUFFICIENT'
+  | 'UNAVAILABLE'
+  | 'BLOCKED'
+  | 'NOT_APPLICABLE';
+
+export type ProductConfidenceLayerState =
+  | 'AVAILABLE'
+  | 'PARTIAL'
+  | 'UNAVAILABLE'
+  | 'BLOCKED'
+  | 'NOT_APPLICABLE';
+
+export interface ProductConfidenceDiagnostic {
+  readonly code: string;
+  readonly severity: 'INFO' | 'WARNING' | 'ERROR';
+  readonly message: string;
+  readonly evidenceIds?: readonly string[];
+  readonly ruleIds?: readonly string[];
+}
+
+export interface ProductDomainConfidenceMetadata {
+  /** Exact domain-owned confidence; D01 never recalculates it. */
+  readonly confidence: ProductConfidence;
+  readonly coverage: ProductConfidenceCoverageStatus;
+  readonly layers: readonly {
+    readonly id: string;
+    readonly state: ProductConfidenceLayerState;
+    readonly required: boolean;
+    readonly reason?: string;
+    readonly evidenceIds?: readonly string[];
+  }[];
+  readonly reasons: readonly string[];
+  readonly diagnostics: readonly ProductConfidenceDiagnostic[];
+  readonly evidenceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  /** The domain engine that owns the confidence result. */
+  readonly owner: 'C11' | 'CW-05';
+}
+
+export interface ProductUnifiedConfidenceProjection {
+  readonly version: 'D01-v1';
+  readonly domains: Readonly<{
+    readonly CAREER: ProductDomainConfidenceMetadata;
+    readonly WEALTH: ProductDomainConfidenceMetadata;
+  }>;
+  readonly diagnostics: readonly (ProductConfidenceDiagnostic & { readonly domain: 'CAREER' | 'WEALTH' | 'PRODUCT' })[];
+  readonly unavailableLayers: readonly {
+    readonly domain: 'CAREER' | 'WEALTH';
+    readonly layer: string;
+    readonly reason: string;
+  }[];
+}
+
 export interface ProductAnalysis {
   readonly analysisId: string;
   readonly asOf: string;
@@ -898,6 +954,11 @@ export interface ProductAnalysis {
   readonly chart: ProductChartSummary;
   readonly career: CareerProductAnalysis;
   readonly wealth: WealthProductAnalysis;
+  /** Optional source-owned metadata for D01; omitted on legacy persisted records. */
+  readonly confidenceMetadata?: Readonly<{
+    readonly career?: ProductDomainConfidenceMetadata;
+    readonly wealth?: ProductDomainConfidenceMetadata;
+  }>;
   readonly dasha: ProductDashaState;
   readonly reasoning: ReasoningProductAnalysis;
   readonly ai: AiProductState;
