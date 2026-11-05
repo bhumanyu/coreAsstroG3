@@ -539,7 +539,7 @@ function isD02VersionManifest(value: unknown): boolean {
   const d = value.deterministic;
   if (!onlyKeys(d, ['manifestVersion', 'calculationEngine', 'referenceDatasets', 'ruleCatalogue',
     'careerLogic', 'wealthLogic', 'careerSynthesis', 'wealthSynthesis', 'outputSchema',
-    'methodology', 'configuration', 'inputRetention', 'replay']) || d.manifestVersion !== 'D02-v1') return false;
+    'methodology', 'configuration', 'inputRetention', 'retainedInputSnapshotRef', 'replay']) || d.manifestVersion !== 'D02-v1') return false;
   if (!isVersionComponent(d.calculationEngine) || !isVersionComponent(d.ruleCatalogue)
     || !isVersionComponent(d.careerLogic) || !isVersionComponent(d.wealthLogic)
     || !isVersionComponent(d.careerSynthesis) || !isVersionComponent(d.wealthSynthesis)
@@ -550,6 +550,7 @@ function isD02VersionManifest(value: unknown): boolean {
     || !isRecord(d.configuration)
     || !Object.values(d.configuration).every(v => v === null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
     || !isOneOf(d.inputRetention, ['RETAINED_BY_CALLER', 'NOT_RETAINED', 'UNKNOWN'])
+    || (d.retainedInputSnapshotRef !== undefined && (!isString(d.retainedInputSnapshotRef) || d.retainedInputSnapshotRef.length === 0))
     || !isRecord(d.replay) || !onlyKeys(d.replay, ['status', 'requiredInputsRetained', 'requiredCodeAvailable', 'requiredDatasetsAvailable', 'reasonCodes'])
     || !isOneOf(d.replay.status, ['REPLAYABLE_WITH_RETAINED_INPUTS', 'NOT_REPLAYABLE', 'UNKNOWN'])
     || ![d.replay.requiredInputsRetained, d.replay.requiredCodeAvailable, d.replay.requiredDatasetsAvailable].every(x => x === true || x === false || x === null)
