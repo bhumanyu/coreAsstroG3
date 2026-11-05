@@ -165,6 +165,29 @@ export function assessWealthRiskAndConfidence(input: {
   const allPresent = new Set<WealthEvidenceFamily>();
   const allRequired = new Set<WealthEvidenceFamily>();
 
+  const natalWealthEvidence = evidence.filter((item) => item.domain === 'WEALTH' && item.phase === 'NATAL_PROMISE');
+  const conflicts = detectDomainConflicts('WEALTH', natalWealthEvidence);
+  const conflictIds = sortedUnique(conflicts.flatMap((conflict) => [
+    ...conflict.positiveEvidenceIds,
+    ...conflict.negativeEvidenceIds
+  ]));
+  const conflictsByDimension = (Object.keys(REQUIRED_FAMILIES) as WealthDimension[]).reduce(
+    (result, dimension) => {
+      const evidenceIds = new Set(
+        natalWealthEvidence
+          .filter((item) => item.dimension === dimension)
+          .map((item) => item.id)
+      );
+      const dimensionConflictIds = conflicts
+        .filter((conflict) => conflict.positiveEvidenceIds.some((id) => evidenceIds.has(id)) &&
+          conflict.negativeEvidenceIds.some((id) => evidenceIds.has(id)))
+        .flatMap((conflict) => [...conflict.positiveEvidenceIds, ...conflict.negativeEvidenceIds]);
+      result[dimension] = new Set(dimensionConflictIds);
+      return result;
+    },
+    {} as Record<WealthDimension, Set<string>>
+  );
+
   (Object.keys(REQUIRED_FAMILIES) as WealthDimension[]).forEach((dimension) => {
     const required = REQUIRED_FAMILIES[dimension];
     required.forEach((family) => allRequired.add(family));
@@ -197,28 +220,6 @@ export function assessWealthRiskAndConfidence(input: {
     ? 'AVAILABLE'
     : presentFamilies.length > 0 ? 'PARTIAL' : 'UNAVAILABLE';
 
-  const natalWealthEvidence = evidence.filter((item) => item.domain === 'WEALTH' && item.phase === 'NATAL_PROMISE');
-  const conflicts = detectDomainConflicts('WEALTH', natalWealthEvidence);
-  const conflictIds = sortedUnique(conflicts.flatMap((conflict) => [
-    ...conflict.positiveEvidenceIds,
-    ...conflict.negativeEvidenceIds
-  ]));
-  const conflictsByDimension = (Object.keys(REQUIRED_FAMILIES) as WealthDimension[]).reduce(
-    (result, dimension) => {
-      const evidenceIds = new Set(
-        natalWealthEvidence
-          .filter((item) => item.dimension === dimension)
-          .map((item) => item.id)
-      );
-      const dimensionConflictIds = conflicts
-        .filter((conflict) => conflict.positiveEvidenceIds.some((id) => evidenceIds.has(id)) &&
-          conflict.negativeEvidenceIds.some((id) => evidenceIds.has(id)))
-        .flatMap((conflict) => [...conflict.positiveEvidenceIds, ...conflict.negativeEvidenceIds]);
-      result[dimension] = new Set(dimensionConflictIds);
-      return result;
-    },
-    {} as Record<WealthDimension, Set<string>>
-  );
   const blockingDiagnostics = diagnostics
     .filter((diagnostic) => diagnostic.severity === 'ERROR')
     .map((diagnostic) => diagnostic.code);
