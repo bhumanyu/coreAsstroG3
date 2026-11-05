@@ -186,7 +186,7 @@ export function assessWealthRiskAndConfidence(input: {
     ? 'AVAILABLE'
     : presentFamilies.length > 0 ? 'PARTIAL' : 'UNAVAILABLE';
 
-  const conflicts = evidence.filter((item) => item.domain === 'WEALTH' && (
+  const conflicts = evidence.filter((item) => item.domain === 'WEALTH' && item.phase === 'NATAL_PROMISE' && (
     item.polarity === 'CONFLICTING'
   ));
   const conflictIds = sortedUnique(conflicts.map((item) => item.id));
