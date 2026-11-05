@@ -110,16 +110,25 @@ export class ProductAnalysisService {
     options?: AnalyzeOptions
   ): Promise<ProductAnalysisRun> {
     const methodology = mapMethodology(birthDetails);
-    const context = options?.context ?? createAnalysisContext({
+    const baseContext = options?.context ?? createAnalysisContext({
       asOf: options?.asOf,
       methodology,
       engineVersion: methodology.calculationEngine,
       rulesVersion: methodology.rulesEngine,
-      ...(options?.versionConfiguration ? { versionConfiguration: {
-        ...options.versionConfiguration,
-        calculationEngine: options.versionConfiguration.calculationEngine || methodology.calculationEngine
-      } } : {})
     }, this.deps.clock ?? systemClock);
+    const context: AnalysisContext = options?.context && options.versionConfiguration
+      ? Object.freeze({
+        ...baseContext,
+        versionConfiguration: Object.freeze({
+          ...options.versionConfiguration,
+          calculationEngine: options.versionConfiguration.calculationEngine || baseContext.engineVersion,
+          ...(options.versionConfiguration.referenceDatasets
+            ? { referenceDatasets: Object.freeze({ ...options.versionConfiguration.referenceDatasets }) } : {}),
+          ...(options.versionConfiguration.configuration
+            ? { configuration: Object.freeze({ ...options.versionConfiguration.configuration }) } : {})
+        })
+      })
+      : baseContext;
 
     let horoscope: Horoscope | undefined;
     let pipelineState: LifeAnalysisProductState | undefined;
