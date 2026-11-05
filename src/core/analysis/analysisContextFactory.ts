@@ -101,6 +101,13 @@ export function createAnalysisContext(
     asOf,
     methodology,
     engineVersion,
-    rulesVersion
+    rulesVersion,
+    ...(input?.versionConfiguration ? { versionConfiguration: Object.freeze({
+      ...input.versionConfiguration,
+      ...(input.versionConfiguration.referenceDatasets
+        ? { referenceDatasets: Object.freeze({ ...input.versionConfiguration.referenceDatasets }) } : {}),
+      ...(input.versionConfiguration.configuration
+        ? { configuration: Object.freeze({ ...input.versionConfiguration.configuration }) } : {})
+    }) } : {})
   });
 }
