@@ -529,6 +529,7 @@ function isVersionComponent(value: unknown): boolean {
   if (!isRecord(value) || !onlyKeys(value, ['status', 'version', 'reason', 'source'])) return false;
   if (!isOneOf(value.status, ['RECORDED', 'NOT_RECORDED', 'NOT_APPLICABLE'])) return false;
   if (value.status === 'RECORDED') return isString(value.version) && value.version.length > 0;
+  if (value.status === 'NOT_RECORDED') return value.version === undefined && isString(value.reason) && value.reason.length > 0 && isOptionalString(value.source);
   return value.version === undefined && isOptionalString(value.reason) && isOptionalString(value.source);
 }
 
