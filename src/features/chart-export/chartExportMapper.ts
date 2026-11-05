@@ -267,7 +267,7 @@ function selectedPeriodValue(
   };
 }
 
-export function buildChartExport(selection: ChartExportSelection, exportedAt: string | Date): ChartExportV1 {
+export function buildChartExport(selection: ChartExportSelection, exportedAt: string | Date): ChartExportV1 | import('./chartExportSchema').ChartExportV2 {
   const { analysis, selectedPeriod } = selection;
   const exportTimestamp = exportedAt instanceof Date ? exportedAt.toISOString() : exportedAt;
   const output: ChartExportV1 = {
