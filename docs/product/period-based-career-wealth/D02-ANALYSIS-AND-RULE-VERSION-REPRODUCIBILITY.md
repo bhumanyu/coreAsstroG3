@@ -38,14 +38,14 @@ AI explanations are attached as execution records, not as part of the determinis
 A historical analysis can be identified by `analysisId`, `asOf`, calculation engine, rule catalogue, independent logic/synthesis versions, methodology, configuration identifiers and output schema.
 
 A manifest alone does not make an analysis replayable. Replay is only classified as `REPLAYABLE_WITH_RETAINED_INPUTS` when all of these are explicitly confirmed:
-1. Required inputs are retained by the caller.
+1. Required inputs are retained by the caller and an opaque retained-input snapshot reference is present.
 2. Required code is available.
 3. Required reference datasets are available.
 4. The manifest contains all required independent version dimensions.
 
 Unknown or false prerequisites produce `NOT_REPLAYABLE` with reason codes. The repository currently creates an in-memory run snapshot; it does not supply durable historical input retention or immutable code/dataset archives. Therefore the default runtime assessment remains non-replayable. Callers are responsible for approved, privacy-aware retention and can later provide these capability confirmations.
 
-The manifest stores methodology and non-personal configuration identifiers only. It does not copy raw birth details, personal facts, or source payloads into the version manifest.
+The manifest stores methodology, non-personal configuration identifiers and an opaque caller-owned snapshot reference only. It does not copy raw birth details, personal facts, or source payloads into the version manifest.
 
 ## Compatibility and migration
 
