@@ -19,6 +19,7 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
       longitude: 77.209,
       ayanamsa: 'LAHIRI'
     },
+    versionManifest: undefined,
     methodology: {
       zodiacSystem: 'SIDEREAL',
       houseSystem: 'PLACIDUS',
