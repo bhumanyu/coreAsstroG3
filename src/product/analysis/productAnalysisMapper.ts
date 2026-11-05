@@ -1309,11 +1309,6 @@ function mapAiState(aiExplanation?: AiExplanationResult): AiProductState {
 }
 
 
-const recordedVersion = (version: string | undefined, source: string): ProductVersionComponent =>
-  typeof version === 'string' && version.trim().length > 0
-    ? Object.freeze({ status: 'RECORDED', version: version.trim(), source })
-    : Object.freeze({ status: 'NOT_RECORDED', reason: 'VERSION_IDENTIFIER_NOT_EXPOSED_BY_RUNTIME', source });
-
 function buildAiVersionManifest(aiExplanation?: AiExplanationResult): readonly ProductAiExplanationVersionManifest[] {
   if (!aiExplanation || aiExplanation.kind !== 'SUCCESS') return Object.freeze([]);
   const component = (value: string | undefined, reason: string): ProductVersionComponent =>
@@ -1349,7 +1344,7 @@ function buildDeterministicVersionManifest(context: AnalysisContext): ProductDet
   const replayReasons: string[] = [];
   const inputRetention = config?.inputRetention ?? 'UNKNOWN';
   const requiredCodeAvailable = config?.requiredCodeAvailable ?? null;
-  const requiredDatasetsAvailable = config?.requiredDatasetsAvailable ?? (hasRefData ? true : null);
+  const requiredDatasetsAvailable = config?.requiredDatasetsAvailable ?? null;
   const requiredInputsRetained = inputRetention === 'RETAINED_BY_CALLER' ? true
     : inputRetention === 'NOT_RETAINED' ? false : null;
   if (requiredInputsRetained !== true) replayReasons.push('REQUIRED_INPUTS_NOT_CONFIRMED_RETAINED');
