@@ -134,7 +134,7 @@ export function synthesizeWealthFinal(
   const d2Relationship: VargaRelationship = 'UNAVAILABLE';
   const riskConfidence: WealthRiskConfidenceAssessment = assessWealthRiskAndConfidence({
     evidence: input.evidence ?? [],
-    producerDiagnostics: diagnostics,
+    producerDiagnostics: [...(input.producerDiagnostics ?? []), ...diagnostics],
     d2Availability: 'UNAVAILABLE'
   });
   const dimensionSyntheses: Partial<Record<WealthDimension, WealthDimensionFinalSynthesis>> = {};
