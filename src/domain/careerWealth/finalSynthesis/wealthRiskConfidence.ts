@@ -82,7 +82,8 @@ function riskForEvidence(
   const relevant = evidence.filter((item) =>
     item.domain === 'WEALTH' &&
     item.dimension === dimension &&
-    item.phase === 'NATAL_PROMISE'
+    item.phase === 'NATAL_PROMISE' &&
+    REQUIRED_FAMILIES[dimension].includes(item.evidenceFamily as WealthEvidenceFamily)
   );
   const ids = sortedUnique(relevant.map((item) => item.id));
   const challenges = relevant.filter((item) => item.polarity === 'CHALLENGING');
