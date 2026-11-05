@@ -569,9 +569,9 @@ function isChartExportV2(value: unknown): value is ChartExportV2 {
       ? Object.fromEntries(Object.entries(value.provenance as Record<string, unknown>).filter(([key]) => key !== 'versionManifest'))
       : value.provenance };
   if (!isChartExportV1(legacyShape)) return false;
-  return isRecord(value.provenance) && onlyKeys(value.provenance,
-    ['analysisId', 'asOf', 'exportedAt', 'engineVersion', 'rulesVersion', 'methodology', 'versionManifest'])
-    && (value.provenance.versionManifest === undefined || isD02VersionManifest(value.provenance.versionManifest));
+  if (!isRecord(value.provenance) || !onlyKeys(value.provenance,
+    ['analysisId', 'asOf', 'exportedAt', 'engineVersion', 'rulesVersion', 'methodology', 'versionManifest'])) return false;
+  return value.provenance.versionManifest !== undefined && isD02VersionManifest(value.provenance.versionManifest);
 }
 
 export function validateChartExport(value: unknown): ChartExportValidationResult {
