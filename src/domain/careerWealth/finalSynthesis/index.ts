@@ -7,3 +7,5 @@ export * from './finalSynthesisEvidence';
 export * from './careerFinalSynthesis';
 export * from './wealthFinalSynthesis';
 export * from './careerWealthFinalSynthesisService';
+
+export * from './wealthRiskConfidence';

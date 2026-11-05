@@ -518,7 +518,9 @@ export function interpretWealthV2(
     d2Synthesis: d2Evidence,
     d2Relationship,
     natalEvidenceIds: natalPromiseEvidenceIds,
-    natalRuleIds: natalEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
+    natalRuleIds: natalEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean),
+    evidence,
+    producerDiagnostics
   });
 
   // INVARIANT & ARCHITECTURAL CONTRACT:

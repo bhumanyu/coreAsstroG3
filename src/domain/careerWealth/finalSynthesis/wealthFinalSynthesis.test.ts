@@ -578,4 +578,23 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.dimensions!.ACCUMULATION.activationStrength).toBeUndefined();
     });
   });
+
+  it('attaches C05 risk assessments and separate confidence metadata to CW-05 output', () => {
+    const result = synthesizeWealthFinal({
+      natalPromise: { ACCUMULATION: 'STRONG', GAINS: 'STRONG', FORTUNE: 'STRONG', SPECULATION: 'WEAK' },
+      natalEvidenceIds: {
+        ACCUMULATION: ['A-HOUSE', 'A-LORD'],
+        GAINS: ['G-HOUSE', 'G-LORD'],
+        FORTUNE: ['F-HOUSE', 'F-LORD'],
+        SPECULATION: ['S-HOUSE', 'S-LORD']
+      }
+    });
+    expect(result.reasoningVersion).toBe('CW-05');
+    expect(result.riskConfidence).toBeDefined();
+    expect(result.riskConfidence?.d2Availability).toBe('UNAVAILABLE');
+    expect(result.riskAssessments?.SPECULATION).toBeDefined();
+    expect(result.dimensions?.ACCUMULATION.riskAssessment).toBeDefined();
+    expect(result.riskConfidence).not.toHaveProperty('probability');
+    expect(result.riskConfidence).not.toHaveProperty('probabilityPercent');
+  });
 });
