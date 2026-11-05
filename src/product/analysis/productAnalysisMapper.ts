@@ -96,7 +96,7 @@ export interface ProductAnalysisMapperInput {
   /** Explicit user-reported or connected-source financial facts; never derived from horoscope. */
   readonly wealthFinancialData?: WealthFinancialDataSet;
   /** Existing C04 result supplied by the domain pipeline; mapper does not calculate lifecycle. */
-  readonly wealthLifecycle?: import('../../domain/wealth/wealthLifecycleTypes').WealthLifecycleAnalysis;
+  readonly wealthLifecycle?: import('../../domain/wealth/wealthLifecycleTypes').WealthLifecycleAnalysis;\n  /** Already-derived C11/CW-05 presentation metadata; the mapper never computes confidence. */\n  readonly confidenceMetadata?: Readonly<{ career?: ProductDomainConfidenceMetadata; wealth?: ProductDomainConfidenceMetadata }>;
 }
 
 /**
