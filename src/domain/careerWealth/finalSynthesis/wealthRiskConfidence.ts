@@ -108,7 +108,6 @@ function riskForEvidence(
     });
   }
 
-  const conflictingIds: string[] = [];
   if (supports.length > 0 && challenges.length > 0) {
     reasons.push({
       code: 'CONFLICTING_EVIDENCE_PRESENT',
@@ -125,10 +124,6 @@ function riskForEvidence(
   let classification: WealthRiskLevel;
   if (evidenceCoverage !== 'AVAILABLE' || ids.length === 0) {
     classification = 'INSUFFICIENT_DATA';
-  } else if (conflictingIds.length > 0) {
-    classification = 'ELEVATED';
-  } else if (supports.length > 0 && challenges.length > 0) {
-    classification = 'ELEVATED';
   } else if (challenges.length >= 3) {
     classification = 'HIGH';
   } else if (challenges.length >= 2) {
@@ -141,7 +136,7 @@ function riskForEvidence(
 
   reasons.push({
     code: 'QUALITATIVE_RISK_POLICY',
-    message: `Risk classified as ${classification} using available dimension-specific evidence only; this is a qualitative classification, not a probability.`,
+    message: `Risk classified as ${classification} using available dimension-specific evidence only; this is a qualitative classification, not a statistical estimate.`,
     evidenceIds: ids
   });
 
@@ -166,7 +161,18 @@ export function assessWealthRiskAndConfidence(input: {
   const allRequired = new Set<WealthEvidenceFamily>();
 
   const natalWealthEvidence = evidence.filter((item) => item.domain === 'WEALTH' && item.phase === 'NATAL_PROMISE');
-  const conflicts = detectDomainConflicts('WEALTH', natalWealthEvidence);
+  const evidenceById = new Map(natalWealthEvidence.map((item) => [item.id, item]));
+  const conflicts = detectDomainConflicts('WEALTH', natalWealthEvidence).filter((conflict) =>
+    conflict.positiveEvidenceIds.some((positiveId) => {
+      const positive = evidenceById.get(positiveId);
+      return positive?.dimension !== undefined && positive.evidenceFamily !== undefined &&
+        conflict.negativeEvidenceIds.some((negativeId) => {
+          const negative = evidenceById.get(negativeId);
+          return negative !== undefined && negative.dimension === positive.dimension &&
+            negative.evidenceFamily === positive.evidenceFamily;
+        });
+    })
+  );
   const conflictIds = sortedUnique(conflicts.flatMap((conflict) => [
     ...conflict.positiveEvidenceIds,
     ...conflict.negativeEvidenceIds
@@ -229,7 +235,7 @@ export function assessWealthRiskAndConfidence(input: {
     `Required Wealth evidence-family coverage is ${coverage} (${presentFamilies.length}/${requiredFamilies.length}).`,
     `Missing required families: ${missingFamilies.length ? missingFamilies.join(', ') : 'none'}.`,
     'D2 is UNAVAILABLE under the committed A08/C02B validation gate and is excluded from risk evidence and coverage.',
-    'Risk classification is qualitative and is not a calibrated statistical probability.'
+    'Risk classification is qualitative and is not a calibrated statistical estimate.'
   ];
   if (conflictIds.length) reasonList.push(`Conflicting evidence occurrences: ${conflictIds.join(', ')}.`);
   if (blockingDiagnostics.length) reasonList.push(`Blocking producer diagnostics: ${sortedUnique(blockingDiagnostics).join(', ')}.`);
