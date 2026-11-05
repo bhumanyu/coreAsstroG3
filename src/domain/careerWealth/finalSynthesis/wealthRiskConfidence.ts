@@ -1,6 +1,7 @@
 import type { WealthDimension } from '../../wealth/wealthTypes';
 import type { DomainEvidence } from '../../interpretation/DomainEvidence';
 import type { FinalDomainConfidence } from './careerWealthFinalSynthesisTypes';
+import { detectDomainConflicts } from '../../interpretation';
 
 export type WealthRiskLevel = 'LOW' | 'MODERATE' | 'ELEVATED' | 'HIGH' | 'INSUFFICIENT_DATA';
 export type WealthEvidenceFamily =
@@ -52,10 +53,10 @@ export interface WealthRiskConfidenceAssessment {
 }
 
 const REQUIRED_FAMILIES: Readonly<Record<WealthDimension, readonly WealthEvidenceFamily[]>> = Object.freeze({
-  ACCUMULATION: Object.freeze(['SECOND_HOUSE', 'SECOND_LORD']),
-  GAINS: Object.freeze(['ELEVENTH_HOUSE', 'ELEVENTH_LORD']),
-  FORTUNE: Object.freeze(['NINTH_HOUSE', 'NINTH_LORD']),
-  SPECULATION: Object.freeze(['FIFTH_HOUSE', 'FIFTH_LORD'])
+  ACCUMULATION: Object.freeze(['SECOND_HOUSE', 'SECOND_LORD'] as WealthEvidenceFamily[]),
+  GAINS: Object.freeze(['ELEVENTH_HOUSE', 'ELEVENTH_LORD'] as WealthEvidenceFamily[]),
+  FORTUNE: Object.freeze(['NINTH_HOUSE', 'NINTH_LORD'] as WealthEvidenceFamily[]),
+  SPECULATION: Object.freeze(['FIFTH_HOUSE', 'FIFTH_LORD'] as WealthEvidenceFamily[])
 });
 
 function sortedUnique(values: readonly string[]): readonly string[] {
@@ -107,14 +108,12 @@ function riskForEvidence(
     });
   }
 
-  const conflictingIds = relevant
-    .filter((item) => item.polarity === 'CONFLICTING')
-    .map((item) => item.id);
-  if (conflictingIds.length > 0) {
+  const conflictingIds: string[] = [];
+  if (supports.length > 0 && challenges.length > 0) {
     reasons.push({
       code: 'CONFLICTING_EVIDENCE_PRESENT',
-      message: 'Conflicting evidence is retained explicitly and prevents a one-sided reading.',
-      evidenceIds: sortedUnique(conflictingIds)
+      message: 'Supporting and challenging evidence coexist and are retained as an explicit evidence conflict.',
+      evidenceIds: sortedUnique([...supports.map((item) => item.id), ...challenges.map((item) => item.id)])
     });
   }
 
@@ -186,10 +185,12 @@ export function assessWealthRiskAndConfidence(input: {
     ? 'AVAILABLE'
     : presentFamilies.length > 0 ? 'PARTIAL' : 'UNAVAILABLE';
 
-  const conflicts = evidence.filter((item) => item.domain === 'WEALTH' && item.phase === 'NATAL_PROMISE' && (
-    item.polarity === 'CONFLICTING'
-  ));
-  const conflictIds = sortedUnique(conflicts.map((item) => item.id));
+  const natalWealthEvidence = evidence.filter((item) => item.domain === 'WEALTH' && item.phase === 'NATAL_PROMISE');
+  const conflicts = detectDomainConflicts('WEALTH', natalWealthEvidence);
+  const conflictIds = sortedUnique(conflicts.flatMap((conflict) => [
+    ...conflict.positiveEvidenceIds,
+    ...conflict.negativeEvidenceIds
+  ]));
   const blockingDiagnostics = diagnostics
     .filter((diagnostic) => diagnostic.severity === 'ERROR')
     .map((diagnostic) => diagnostic.code);
