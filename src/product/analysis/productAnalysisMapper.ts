@@ -1344,9 +1344,11 @@ function buildDeterministicVersionManifest(context: AnalysisContext): ProductDet
   const inputRetention = config?.inputRetention ?? 'UNKNOWN';
   const requiredCodeAvailable = config?.requiredCodeAvailable ?? null;
   const requiredDatasetsAvailable = config?.requiredDatasetsAvailable ?? null;
-  const requiredInputsRetained = inputRetention === 'RETAINED_BY_CALLER' ? true
-    : inputRetention === 'NOT_RETAINED' ? false : null;
-  if (requiredInputsRetained !== true) replayReasons.push('REQUIRED_INPUTS_NOT_CONFIRMED_RETAINED');
+  const retainedInputSnapshotRef = config?.retainedInputSnapshotRef?.trim();
+  const requiredInputsRetained = inputRetention === 'NOT_RETAINED' ? false
+    : inputRetention === 'RETAINED_BY_CALLER' && retainedInputSnapshotRef ? true : null;
+  if (requiredInputsRetained !== true) replayReasons.push(retainedInputSnapshotRef
+    ? 'REQUIRED_INPUT_SNAPSHOT_NOT_CONFIRMED_RETAINED' : 'RETAINED_INPUT_SNAPSHOT_REFERENCE_MISSING');
   if (requiredCodeAvailable !== true) replayReasons.push('REQUIRED_CODE_NOT_CONFIRMED_AVAILABLE');
   if (requiredDatasetsAvailable !== true) replayReasons.push('REQUIRED_DATASETS_NOT_CONFIRMED_AVAILABLE');
   const completeRequiredVersions = [
