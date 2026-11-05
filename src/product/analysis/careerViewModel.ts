@@ -176,7 +176,8 @@ export interface CareerProfessionViewModel {
   readonly ranking: ProductCareerProfessionRanking;
 }
 
-export interface CareerViewModel {\n  readonly confidenceCompleteness: import('./productAnalysisTypes').ProductUnifiedConfidenceProjection;
+export interface CareerViewModel {
+  readonly confidenceCompleteness: import('./productAnalysisTypes').ProductUnifiedConfidenceProjection;
   /** B01: Five orthogonal, evidence-traceable Career axes from the canonical product projection. */
   readonly analyticalAxes?: ProductCareerAnalyticalAxes;
   /** B02: Candidate-only outcome qualification plus explicitly user-reported observed facts. */
