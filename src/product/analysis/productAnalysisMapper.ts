@@ -65,7 +65,11 @@ import type {
   ProductSelectableAntardasha,
   ProductTemporalRelation,
   ProductDomainConfidenceMetadata,
-  ProductConfidenceLayerState
+  ProductConfidenceLayerState,
+  ProductAnalysisVersionManifest,
+  ProductVersionComponent,
+  ProductDeterministicVersionManifest,
+  ProductAiExplanationVersionManifest
 } from './productAnalysisTypes';
 import type { CareerAnalyticalAxes } from '../../domain/career/careerFinalSynthesis/careerAnalyticalAxes';
 import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
@@ -1304,6 +1308,99 @@ function mapAiState(aiExplanation?: AiExplanationResult): AiProductState {
   };
 }
 
+
+const recordedVersion = (version: string | undefined, source: string): ProductVersionComponent =>
+  typeof version === 'string' && version.trim().length > 0
+    ? Object.freeze({ status: 'RECORDED', version: version.trim(), source })
+    : Object.freeze({ status: 'NOT_RECORDED', reason: 'VERSION_IDENTIFIER_NOT_EXPOSED_BY_RUNTIME', source });
+
+function buildAiVersionManifest(aiExplanation?: AiExplanationResult): readonly ProductAiExplanationVersionManifest[] {
+  if (!aiExplanation || aiExplanation.kind !== 'SUCCESS') return Object.freeze([]);
+  const component = (value: string | undefined, reason: string): ProductVersionComponent =>
+    value && value.trim()
+      ? Object.freeze({ status: 'RECORDED', version: value.trim(), source: 'AI_EXPLANATION_RESULT' })
+      : Object.freeze({ status: 'NOT_RECORDED', reason, source: 'AI_EXPLANATION_RESULT' });
+  return Object.freeze([Object.freeze({
+    manifestVersion: 'D02-AI-v1' as const,
+    providerId: component(aiExplanation.providerId, 'PROVIDER_ID_NOT_RETURNED'),
+    providerVersion: component(aiExplanation.providerVersion, 'PROVIDER_VERSION_NOT_RETURNED'),
+    model: component(aiExplanation.model, 'MODEL_NOT_RETURNED'),
+    promptTemplate: component(aiExplanation.promptVersion, 'PROMPT_VERSION_NOT_RETURNED'),
+    outputSchema: component(undefined, 'AI_OUTPUT_SCHEMA_VERSION_NOT_EXPOSED'),
+    routingMode: component(aiExplanation.routingMode, 'ROUTING_MODE_NOT_RETURNED'),
+    generatedAt: aiExplanation.generatedAt,
+    task: aiExplanation.task
+  })]);
+}
+
+function buildDeterministicVersionManifest(context: AnalysisContext): ProductDeterministicVersionManifest {
+  const config = context.versionConfiguration;
+  const make = (value: string | undefined, source: string, reason: string): ProductVersionComponent =>
+    value && value.trim()
+      ? Object.freeze({ status: 'RECORDED', version: value.trim(), source })
+      : Object.freeze({ status: 'NOT_RECORDED', reason, source });
+  const referenceDatasets = Object.freeze(Object.fromEntries(
+    Object.entries(config?.referenceDatasets ?? {}).map(([key, version]) => [
+      key,
+      make(version, 'ANALYSIS_CONTEXT', 'REFERENCE_DATASET_VERSION_NOT_SUPPLIED')
+    ])
+  ));
+  const hasRefData = Object.keys(referenceDatasets).length > 0;
+  const replayReasons: string[] = [];
+  const inputRetention = config?.inputRetention ?? 'UNKNOWN';
+  const requiredCodeAvailable = config?.requiredCodeAvailable ?? null;
+  const requiredDatasetsAvailable = config?.requiredDatasetsAvailable ?? (hasRefData ? true : null);
+  const requiredInputsRetained = inputRetention === 'RETAINED_BY_CALLER' ? true
+    : inputRetention === 'NOT_RETAINED' ? false : null;
+  if (requiredInputsRetained !== true) replayReasons.push('REQUIRED_INPUTS_NOT_CONFIRMED_RETAINED');
+  if (requiredCodeAvailable !== true) replayReasons.push('REQUIRED_CODE_NOT_CONFIRMED_AVAILABLE');
+  if (requiredDatasetsAvailable !== true) replayReasons.push('REQUIRED_DATASETS_NOT_CONFIRMED_AVAILABLE');
+  const completeRequiredVersions = [
+    context.engineVersion, context.rulesVersion,
+    config?.careerLogic, config?.wealthLogic,
+    config?.careerSynthesis, config?.wealthSynthesis,
+    config?.outputSchema
+  ].every(value => typeof value === 'string' && value.trim().length > 0);
+  if (!completeRequiredVersions) replayReasons.push('VERSION_MANIFEST_INCOMPLETE');
+  const replayable = replayReasons.length === 0;
+  return Object.freeze({
+    manifestVersion: 'D02-v1',
+    calculationEngine: make(context.engineVersion, 'ANALYSIS_CONTEXT', 'ENGINE_VERSION_NOT_SUPPLIED'),
+    referenceDatasets: Object.freeze(hasRefData ? referenceDatasets : {
+      DEFAULT: make(undefined, 'ANALYSIS_CONTEXT', 'REFERENCE_DATASET_VERSIONS_NOT_SUPPLIED')
+    }),
+    ruleCatalogue: make(context.rulesVersion, 'ANALYSIS_CONTEXT', 'RULE_CATALOGUE_VERSION_NOT_SUPPLIED'),
+    careerLogic: make(config?.careerLogic, 'ANALYSIS_CONTEXT', 'CAREER_LOGIC_VERSION_NOT_SUPPLIED'),
+    wealthLogic: make(config?.wealthLogic, 'ANALYSIS_CONTEXT', 'WEALTH_LOGIC_VERSION_NOT_SUPPLIED'),
+    careerSynthesis: make(config?.careerSynthesis, 'ANALYSIS_CONTEXT', 'C11_VERSION_NOT_SUPPLIED'),
+    wealthSynthesis: make(config?.wealthSynthesis, 'ANALYSIS_CONTEXT', 'CW05_VERSION_NOT_SUPPLIED'),
+    outputSchema: make(config?.outputSchema ?? 'ProductAnalysis-v1', 'PRODUCT_AGGREGATE_SCHEMA', 'OUTPUT_SCHEMA_VERSION_NOT_SUPPLIED'),
+    methodology: Object.freeze({
+      zodiacSystem: context.methodology.zodiacSystem,
+      houseSystem: context.methodology.houseSystem,
+      ayanamsa: context.methodology.ayanamsa,
+      vargaRules: context.methodology.vargaRules,
+      dashaSystem: context.methodology.dashaSystem
+    }),
+    configuration: Object.freeze({ ...(config?.configuration ?? {}) }),
+    inputRetention,
+    replay: Object.freeze({
+      status: replayable ? 'REPLAYABLE_WITH_RETAINED_INPUTS' : 'NOT_REPLAYABLE',
+      requiredInputsRetained,
+      requiredCodeAvailable,
+      requiredDatasetsAvailable,
+      reasonCodes: Object.freeze(replayReasons)
+    })
+  });
+}
+
+function buildAnalysisVersionManifest(context: AnalysisContext, aiExplanation?: AiExplanationResult): ProductAnalysisVersionManifest {
+  return Object.freeze({
+    deterministic: buildDeterministicVersionManifest(context),
+    aiExplanations: buildAiVersionManifest(aiExplanation)
+  });
+}
+
 /**
  * Builds a fallback ProductAnalysis for pipeline or engine errors.
  */
@@ -1334,6 +1431,7 @@ export function buildFailedProductAnalysis(
     status: 'ERROR',
     birth,
     methodology,
+    versionManifest: buildAnalysisVersionManifest(context),
     chart: {
       ascendantSign: 'UNAVAILABLE',
       ascendantDegree: undefined,
@@ -1715,6 +1813,7 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
     status,
     birth,
     methodology,
+    versionManifest: buildAnalysisVersionManifest(input.context, input.aiExplanation),
     chart,
     career,
     wealth,
