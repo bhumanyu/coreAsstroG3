@@ -132,6 +132,30 @@ export function synthesizeWealthFinal(
 
   // Canonical Wealth containment: external D2 declarations cannot upgrade availability.
   const d2Relationship: VargaRelationship = 'UNAVAILABLE';
+  const riskEvidence: readonly DomainEvidence[] = [
+    ...(Array.isArray(natalEvidenceIds)
+      ? []
+      : WEALTH_DIMENSIONS.flatMap((dimension) =>
+          ((natalEvidenceIds as Partial<Record<WealthDimension, readonly string[]>>)[dimension] ?? [])
+            .map((id) => ({
+              id,
+              domain: 'WEALTH',
+              dimension,
+              phase: 'NATAL_PROMISE',
+              evidenceFamily: dimension === 'ACCUMULATION' ? 'SECOND_HOUSE' :
+                dimension === 'GAINS' ? 'ELEVENTH_HOUSE' :
+                dimension === 'FORTUNE' ? 'NINTH_HOUSE' : 'FIFTH_HOUSE',
+              polarity: 'SUPPORTING'
+            } as unknown as DomainEvidence))
+        )
+    ),
+    ...(d2Synthesis ?? [])
+  ];
+  const riskConfidence: WealthRiskConfidenceAssessment = assessWealthRiskAndConfidence({
+    evidence: riskEvidence,
+    producerDiagnostics: diagnostics,
+    d2Availability: 'UNAVAILABLE'
+  });
   const riskConfidence: WealthRiskConfidenceAssessment = assessWealthRiskAndConfidence({
     evidence: d2Synthesis ? [...d2Synthesis, ...([] as DomainEvidence[])] : [],
     producerDiagnostics: diagnostics,
