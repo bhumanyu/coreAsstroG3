@@ -548,6 +548,7 @@ function isD02VersionManifest(value: unknown): boolean {
     || !isRecord(d.methodology) || !onlyKeys(d.methodology, ['zodiacSystem', 'houseSystem', 'ayanamsa', 'vargaRules', 'dashaSystem'])
     || !Object.values(d.methodology).every(isString)
     || !isRecord(d.configuration)
+    || !Object.values(d.configuration).every(v => v === null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
     || !isOneOf(d.inputRetention, ['RETAINED_BY_CALLER', 'NOT_RETAINED', 'UNKNOWN'])
     || !isRecord(d.replay) || !onlyKeys(d.replay, ['status', 'requiredInputsRetained', 'requiredCodeAvailable', 'requiredDatasetsAvailable', 'reasonCodes'])
     || !isOneOf(d.replay.status, ['REPLAYABLE_WITH_RETAINED_INPUTS', 'NOT_REPLAYABLE', 'UNKNOWN'])
