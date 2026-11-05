@@ -3,7 +3,7 @@ import { createDomainEvidence } from '../../interpretation/DomainEvidence';
 import { assessWealthRiskAndConfidence } from './wealthRiskConfidence';
 import type { DomainEvidence } from '../../interpretation/DomainEvidence';
 
-function ev(id: string, family: string, polarity: 'SUPPORTING' | 'CHALLENGING' | 'CONFLICTING', dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION' = 'ACCUMULATION'): DomainEvidence {
+function ev(id: string, family: string, polarity: 'SUPPORTING' | 'CHALLENGING', dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION' = 'ACCUMULATION'): DomainEvidence {
   return createDomainEvidence({
     id,
     sourceType: 'HOUSE',
@@ -71,13 +71,14 @@ describe('CW-05C Wealth risk and confidence qualification', () => {
     expect(result.dimensions.SPECULATION.classification).toBe('INSUFFICIENT_DATA');
   });
 
-  it('reflects conflicting evidence in reasons and confidence diagnostics', () => {
+  it('reflects canonical supporting/challenging conflicts in reasons and confidence diagnostics', () => {
     const result = assessWealthRiskAndConfidence({ evidence: [
       ...completeAccumulation,
-      ev('acc-conflict', 'SECOND_LORD', 'CONFLICTING')
+      ev('acc-challenge', 'SECOND_LORD', 'CHALLENGING')
     ] });
     expect(result.dimensions.ACCUMULATION.classification).toBe('ELEVATED');
-    expect(result.confidence.conflictEvidenceIds).toContain('acc-conflict');
+    expect(result.confidence.conflictEvidenceIds).toContain('acc-house');
+    expect(result.confidence.conflictEvidenceIds).toContain('acc-challenge');
   });
 
   it('is deterministic for identical inputs and does not project probability fields', () => {
