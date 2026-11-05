@@ -115,7 +115,10 @@ export class ProductAnalysisService {
       methodology,
       engineVersion: methodology.calculationEngine,
       rulesVersion: methodology.rulesEngine,
-      versionConfiguration: options?.versionConfiguration
+      ...(options?.versionConfiguration ? { versionConfiguration: {
+        ...options.versionConfiguration,
+        calculationEngine: options.versionConfiguration.calculationEngine || methodology.calculationEngine
+      } } : {})
     }, this.deps.clock ?? systemClock);
 
     let horoscope: Horoscope | undefined;
