@@ -164,7 +164,8 @@ export interface WealthConclusionViewModel {
   readonly challengingFactorCount: number;
 }
 
-export interface WealthViewModel {\n  readonly confidenceCompleteness: import('./productAnalysisTypes').ProductUnifiedConfidenceProjection;
+export interface WealthViewModel {
+  readonly confidenceCompleteness: import('./productAnalysisTypes').ProductUnifiedConfidenceProjection;
   readonly hero: WealthHeroViewModel;
   readonly overall: WealthOverallViewModel;
   readonly financialData: WealthFinancialDataViewModel;
