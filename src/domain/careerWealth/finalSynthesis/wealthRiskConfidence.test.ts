@@ -34,18 +34,18 @@ describe('CW-05C Wealth risk and confidence qualification', () => {
     expect(result.dimensions.ACCUMULATION.reasons.length).toBeGreaterThan(0);
   });
 
-  it('classifies one challenge as MODERATE risk', () => {
+  it('classifies one challenge among otherwise supportive evidence as MODERATE risk', () => {
     const result = assessWealthRiskAndConfidence({ evidence: [
-      ...completeAccumulation,
-      ev('acc-challenge', 'SECOND_LORD', 'CHALLENGING')
+      completeAccumulation[0],
+      ev('acc-lord-challenge', 'SECOND_LORD', 'CHALLENGING')
     ] });
     expect(result.dimensions.ACCUMULATION.classification).toBe('MODERATE');
   });
 
-  it('classifies mixed support/challenge as ELEVATED risk', () => {
+  it('classifies a genuinely mixed evidence set as ELEVATED risk', () => {
     const result = assessWealthRiskAndConfidence({ evidence: [
       ...completeAccumulation,
-      ev('acc-challenge', 'SECOND_LORD', 'CHALLENGING')
+      ev('acc-house-challenge', 'SECOND_HOUSE', 'CHALLENGING')
     ] });
     expect(result.dimensions.ACCUMULATION.classification).toBe('ELEVATED');
   });
