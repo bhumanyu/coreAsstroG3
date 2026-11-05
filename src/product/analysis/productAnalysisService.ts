@@ -20,7 +20,7 @@ import type { ProductAnalysis } from './productAnalysisTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { DomainEvidence } from '../../domain/interpretation';
-import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis, mapCareerConfidenceMetadata, mapWealthConfidenceMetadata } from './productAnalysisMapper';
+import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis, mapCareerConfidenceMetadata, mapWealthConfidenceMetadata, appendAiExplanationVersion } from './productAnalysisMapper';
 import type { AnalysisContext, AnalysisVersionConfiguration } from '../../core/analysis/AnalysisContext';
 import { createAnalysisContext, normalizeAsOf } from '../../core/analysis/analysisContextFactory';
 import { systemClock } from '../../core/analysis/Clock';
@@ -287,6 +287,8 @@ export class ProductAnalysisService {
 
           return finish({
             ...productAnalysis,
+            ...(aiExplanation && productAnalysis.versionManifest
+              ? { versionManifest: appendAiExplanationVersion(productAnalysis.versionManifest, aiExplanation) } : {}),
             selectedPeriod: {
               status: 'OK',
               synthesis: {
