@@ -182,4 +182,8 @@ export interface WealthFinalSynthesisInput {
   readonly d2Relationship?: VargaRelationship;
   readonly natalEvidenceIds?: Partial<Record<WealthDimension, readonly string[]>> | readonly string[];
   readonly natalRuleIds?: Partial<Record<WealthDimension, readonly string[]>> | readonly string[];
+  /** Validated occurrence-level evidence for C05 risk and confidence qualification. */
+  readonly evidence?: readonly DomainEvidence[];
+  /** Producer failures/warnings retained for confidence qualification. */
+  readonly producerDiagnostics?: readonly import('./wealthRiskConfidence').WealthProducerDiagnostic[];
 }
