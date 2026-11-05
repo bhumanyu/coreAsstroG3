@@ -926,7 +926,7 @@ export interface ProductDomainConfidenceMetadata {
   readonly evidenceIds: readonly string[];
   readonly ruleIds: readonly string[];
   /** The domain engine that owns the confidence result. */
-  readonly owner: 'C11' | 'CW-05';
+  readonly owner: 'C11' | 'CW-05';\n  readonly metadataSource?: 'DOMAIN_CANONICAL' | 'LEGACY_PRODUCT_FALLBACK';
 }
 
 export interface ProductUnifiedConfidenceProjection {
