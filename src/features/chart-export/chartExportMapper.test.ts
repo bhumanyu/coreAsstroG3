@@ -86,6 +86,7 @@ describe('chart export projection', () => {
         methodology: { zodiacSystem: 'SIDEREAL', houseSystem: 'WHOLE_SIGN', ayanamsa: 'LAHIRI', vargaRules: 'PARASHARA_D10_D2', dashaSystem: 'VIMSHOTTARI' },
         configuration: {},
         inputRetention: 'UNKNOWN' as const,
+        retainedInputSnapshotRef: 'snapshot://opaque/export-fixture-1',
         replay: { status: 'NOT_REPLAYABLE' as const, requiredInputsRetained: null, requiredCodeAvailable: null, requiredDatasetsAvailable: null, reasonCodes: ['required inputs unknown'] }
       },
       aiExplanations: []
