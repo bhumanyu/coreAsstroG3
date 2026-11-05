@@ -1395,6 +1395,20 @@ function buildAnalysisVersionManifest(context: AnalysisContext, aiExplanation?: 
   });
 }
 
+export function appendAiExplanationVersion(
+  manifest: ProductAnalysisVersionManifest,
+  aiExplanation?: AiExplanationResult
+): ProductAnalysisVersionManifest {
+  if (!aiExplanation || aiExplanation.kind !== 'SUCCESS') return manifest;
+  return Object.freeze({
+    ...manifest,
+    aiExplanations: Object.freeze([
+      ...manifest.aiExplanations,
+      ...buildAiVersionManifest(aiExplanation)
+    ])
+  });
+}
+
 /**
  * Builds a fallback ProductAnalysis for pipeline or engine errors.
  */
