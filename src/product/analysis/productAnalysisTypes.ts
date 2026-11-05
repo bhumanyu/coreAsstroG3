@@ -982,6 +982,8 @@ export interface ProductDeterministicVersionManifest {
   /** Non-personal configuration identifiers only; never raw birth/user inputs. */
   readonly configuration: Readonly<Record<string, string | number | boolean | null>>;
   readonly inputRetention: 'RETAINED_BY_CALLER' | 'NOT_RETAINED' | 'UNKNOWN';
+  /** Opaque external locator; the snapshot itself is retained outside this aggregate. */
+  readonly retainedInputSnapshotRef?: string;
   readonly replay: ProductReplayAssessment;
 }
 
