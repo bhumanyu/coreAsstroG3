@@ -17,6 +17,7 @@ import type {
   ProductAvailability
 } from './productAnalysisTypes';
 import { selectDashaHierarchy, selectAllEvidence } from './productAnalysisSelectors';
+import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 
 export interface OverviewOverall {
   readonly status: ProductStatus;
@@ -262,6 +263,7 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
   };
 
   return {
+    confidenceCompleteness: selectUnifiedConfidenceProjection(analysis),
     overall,
     chart,
     career: careerDomain,

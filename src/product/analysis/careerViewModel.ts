@@ -27,6 +27,7 @@ import {
   type CareerProfessionStatus,
   type CareerProfessionStatusCopy
 } from './careerQualificationPresentation';
+import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 
 export interface CareerHeroViewModel {
   readonly ascendantSign?: string;
@@ -375,6 +376,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
   })();
 
   return {
+    confidenceCompleteness: selectUnifiedConfidenceProjection(analysis),
     analyticalAxes: career.analyticalAxes,
     outcomeQualification: career.outcomeQualification,
     eventTimeline: career.eventTimeline,
