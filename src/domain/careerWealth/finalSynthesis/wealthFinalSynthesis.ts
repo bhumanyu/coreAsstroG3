@@ -13,6 +13,7 @@ import type { VargaRelationship } from '../../interpretation/DomainInterpretatio
 import type { WealthTransitDimensionSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
 import type { WealthDimensionManifestationSynthesis } from '../../wealth/manifestation/wealthManifestationTypes';
 import type { DomainEvidence } from '../../interpretation/DomainEvidence';
+import { assessWealthRiskAndConfidence, type WealthProducerDiagnostic, type WealthRiskConfidenceAssessment } from './wealthRiskConfidence';
 import {
   enforceWealthNatalCeiling,
   enforceWealthDimensionIsolation
@@ -117,7 +118,8 @@ function calculateWealthEvidenceSourceCount(input: {
 }
 
 export function synthesizeWealthFinal(
-  input: WealthFinalSynthesisInput
+  input: WealthFinalSynthesisInput,
+  diagnostics: readonly WealthProducerDiagnostic[] = []
 ): CareerWealthFinalSynthesis {
   const {
     natalPromise,
@@ -130,6 +132,11 @@ export function synthesizeWealthFinal(
 
   // Canonical Wealth containment: external D2 declarations cannot upgrade availability.
   const d2Relationship: VargaRelationship = 'UNAVAILABLE';
+  const riskConfidence: WealthRiskConfidenceAssessment = assessWealthRiskAndConfidence({
+    evidence: d2Synthesis ? [...d2Synthesis, ...([] as DomainEvidence[])] : [],
+    producerDiagnostics: diagnostics,
+    d2Availability: 'UNAVAILABLE'
+  });
   const dimensionSyntheses: Partial<Record<WealthDimension, WealthDimensionFinalSynthesis>> = {};
   const manifestationSummaryList: ManifestationSummary[] = [];
   const strongestAreas: string[] = [];
@@ -308,7 +315,8 @@ export function synthesizeWealthFinal(
       ruleIds: Object.freeze([...dimRuleIdSet]),
       evidenceIds: Object.freeze([...dimEvidenceIdSet]),
       natalEvidenceIds: Object.freeze([...new Set(dimNatalEv)]),
-      natalRuleIds: Object.freeze([...new Set(dimNatalR)])
+      natalRuleIds: Object.freeze([...new Set(dimNatalR)]),
+      riskAssessment: riskConfidence.dimensions[dim]
     });
   }
 
@@ -383,6 +391,8 @@ undefined  // 4. Overall Confidence
     d2AvailabilityReason: 'D2 calculation and interpretation have not passed independent validation; canonical Wealth reasoning keeps D2 UNAVAILABLE.',
     manifestationStatus: isolatedDimensions.ACCUMULATION.manifestationStatus,
     confidence: overallConfidence,
+    riskConfidence: riskConfidence.confidence,
+    riskAssessments: riskConfidence.dimensions,
     primaryPromise: natalPromise.ACCUMULATION ?? 'UNDETERMINED',
     primaryStrength: natalPromise.ACCUMULATION ?? 'UNDETERMINED',
     secondaryStrengths,
