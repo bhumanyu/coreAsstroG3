@@ -83,6 +83,7 @@ export interface CreateAnalysisContextInput {
   readonly methodology?: ProductMethodology;
   readonly engineVersion?: string;
   readonly rulesVersion?: string;
+  readonly versionConfiguration?: import('./AnalysisContext').AnalysisVersionConfiguration;
 }
 
 export function createAnalysisContext(
