@@ -132,7 +132,9 @@ function riskForEvidence(
   let classification: WealthRiskLevel;
   if (evidenceCoverage !== 'AVAILABLE' || ids.length === 0) {
     classification = 'INSUFFICIENT_DATA';
-  } else if (conflictingIds.length > 0 || (supports.length > 0 && challenges.length > 0)) {
+  } else if (conflictingIds.length > 0) {
+    classification = 'ELEVATED';
+  } else if (supports.length > 0 && challenges.length > 0) {
     classification = 'ELEVATED';
   } else if (challenges.length >= 3) {
     classification = 'HIGH';
