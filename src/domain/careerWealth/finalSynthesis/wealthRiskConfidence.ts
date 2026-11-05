@@ -82,7 +82,7 @@ function riskForEvidence(
   const relevant = evidence.filter((item) =>
     item.domain === 'WEALTH' &&
     item.dimension === dimension &&
-    (item.phase === 'NATAL_PROMISE' || item.phase === 'VARGA_CONFIRMATION')
+    item.phase === 'NATAL_PROMISE'
   );
   const ids = sortedUnique(relevant.map((item) => item.id));
   const challenges = relevant.filter((item) => item.polarity === 'CHALLENGING');
