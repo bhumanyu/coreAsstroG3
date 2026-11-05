@@ -34,6 +34,7 @@ describe('D02 analysis version manifest', () => {
         outputSchema: 'ProductAnalysis-v2',
         configuration: { housePolicy: 'WHOLE_SIGN', strictDashaValidation: true },
         inputRetention: 'RETAINED_BY_CALLER',
+        retainedInputSnapshotRef: 'snapshot://opaque/test-fixture-1',
         requiredCodeAvailable: true,
         requiredDatasetsAvailable: true
       }
@@ -89,6 +90,7 @@ describe('D02 analysis version manifest', () => {
         careerSynthesis: 'C11-1', wealthSynthesis: 'CW05-1',
         outputSchema: 'PRODUCT-1',
         inputRetention: 'RETAINED_BY_CALLER' as const,
+        retainedInputSnapshotRef: 'snapshot://opaque/replay-fixture-1',
         requiredCodeAvailable: true, requiredDatasetsAvailable: true
       }
     };
