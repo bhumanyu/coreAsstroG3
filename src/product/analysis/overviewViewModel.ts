@@ -67,7 +67,7 @@ export interface OverviewQualification {
   readonly severity: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
-export interface OverviewViewModel {
+export interface OverviewViewModel {\n  readonly confidenceCompleteness: import('./productAnalysisTypes').ProductUnifiedConfidenceProjection;
   readonly overall: OverviewOverall;
   readonly chart: OverviewChart;
   readonly career: OverviewDomain;
