@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { migrateLegacyProductAnalysis, assessHistoricalReplay, sameDeterministicVersionManifest, aiExplanationVersionChanged } from './analysisVersioning';
 import { buildFailedProductAnalysis } from './productAnalysisMapper';
-import { createProductAnalysis } from './__tests__/testHelpers';
 import type { ProductAnalysisVersionManifest } from './productAnalysisTypes';
 
 describe('D02 analysis version manifest', () => {
@@ -42,17 +41,28 @@ describe('D02 analysis version manifest', () => {
     expect(context.versionConfiguration?.referenceDatasets?.ephemeris).toBe('SE-2026.2');
     expect(Object.isFrozen(context.versionConfiguration)).toBe(true);
     expect(Object.isFrozen(context.versionConfiguration?.configuration)).toBe(true);
+    const projected = buildFailedProductAnalysis({
+      dateTimeStr: '1990-01-01T00:00:00Z', timeZone: 'Asia/Kolkata',
+      latitude: 12.9, longitude: 77.6, ayanamsa: 'LAHIRI'
+    } as any, 'fixture failure', context).versionManifest?.deterministic;
+    expect(projected?.referenceDatasets.ephemeris).toMatchObject({ status: 'RECORDED', version: 'SE-2026.2' });
+    expect(projected?.careerSynthesis).toMatchObject({ status: 'RECORDED', version: 'C11-3' });
+    expect(projected?.wealthSynthesis).toMatchObject({ status: 'RECORDED', version: 'CW05-2' });
   });
 
   it('migrates legacy records without inventing missing historical versions', () => {
-    const legacy = createProductAnalysis();
-    const migrated = migrateLegacyProductAnalysis(legacy);
+    const legacy = buildFailedProductAnalysis({
+      dateTimeStr: '1990-01-01T00:00:00Z', timeZone: 'Asia/Kolkata',
+      latitude: 12.9, longitude: 77.6, ayanamsa: 'LAHIRI'
+    } as any, 'legacy fixture', createAnalysisContext({ asOf: '2025-01-01T00:00:00Z' }));
+    const legacyWithoutManifest = { ...legacy, versionManifest: undefined };
+    const migrated = migrateLegacyProductAnalysis(legacyWithoutManifest);
     expect(migrated.versionManifest?.deterministic.calculationEngine)
       .toMatchObject({ status: 'RECORDED', version: legacy.engineVersion });
     expect(migrated.versionManifest?.deterministic.careerSynthesis)
       .toMatchObject({ status: 'NOT_RECORDED', reason: 'PRE_D02_RECORD_DID_NOT_CAPTURE_THIS_VERSION' });
     expect(migrated.versionManifest?.deterministic.replay.status).toBe('NOT_REPLAYABLE');
-    expect(legacy.versionManifest).toBeUndefined();
+    expect(legacyWithoutManifest.versionManifest).toBeUndefined();
     expect(migrateLegacyProductAnalysis(migrated)).toBe(migrated);
   });
 
@@ -70,9 +80,36 @@ describe('D02 analysis version manifest', () => {
     expect(limited.reasonCodes).toContain('REQUIRED_DATASETS_NOT_CONFIRMED_AVAILABLE');
   });
 
+  it('produces the same deterministic manifest for the same context and retained identifiers', () => {
+    const input = {
+      asOf: '2026-11-05T00:00:00Z',
+      versionConfiguration: {
+        referenceDatasets: { ephemeris: 'EPH-1' },
+        careerLogic: 'CAREER-1', wealthLogic: 'WEALTH-1',
+        careerSynthesis: 'C11-1', wealthSynthesis: 'CW05-1',
+        outputSchema: 'PRODUCT-1',
+        inputRetention: 'RETAINED_BY_CALLER' as const,
+        requiredCodeAvailable: true, requiredDatasetsAvailable: true
+      }
+    };
+    const first = createAnalysisContext(input);
+    const second = createAnalysisContext(input);
+    const birth = {
+      dateTimeStr: '1990-01-01T00:00:00Z', timeZone: 'Asia/Kolkata',
+      latitude: 12.9, longitude: 77.6, ayanamsa: 'LAHIRI'
+    };
+    const firstManifest = buildFailedProductAnalysis(birth as any, 'fixture', first).versionManifest!.deterministic;
+    const secondManifest = buildFailedProductAnalysis(birth as any, 'fixture', second).versionManifest!.deterministic;
+    expect(firstManifest).toEqual(secondManifest);
+    expect(firstManifest.replay.status).toBe('REPLAYABLE_WITH_RETAINED_INPUTS');
+  });
+
   it('keeps AI explanation version changes outside deterministic identity', () => {
-    const base = createProductAnalysis().versionManifest;
-    if (!base) throw new Error('test fixture unexpectedly has version manifest');
+    const base = buildFailedProductAnalysis({
+      dateTimeStr: '1990-01-01T00:00:00Z', timeZone: 'Asia/Kolkata',
+      latitude: 12.9, longitude: 77.6, ayanamsa: 'LAHIRI'
+    } as any, 'fixture failure', createAnalysisContext({ asOf: '2026-11-05T00:00:00Z' })).versionManifest;
+    if (!base) throw new Error('expected D02 version manifest');
     const withAiA: ProductAnalysisVersionManifest = {
       ...base,
       aiExplanations: [{
