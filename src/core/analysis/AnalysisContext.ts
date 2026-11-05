@@ -14,7 +14,7 @@ export interface ProductMethodology {
  * Missing identifiers are explicit; consumers must not infer them from defaults.
  */
 export interface AnalysisVersionConfiguration {
-  readonly calculationEngine: string;
+  readonly calculationEngine?: string;
   readonly referenceDatasets?: Readonly<Record<string, string>>;
   readonly ruleCatalogue?: string;
   readonly careerLogic?: string;
