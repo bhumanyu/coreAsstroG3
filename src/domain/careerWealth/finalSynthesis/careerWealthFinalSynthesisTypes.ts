@@ -85,6 +85,8 @@ export interface ManifestationSummary {
 }
 
 export interface WealthDimensionFinalSynthesis {
+  /** C05 qualitative, dimension-isolated risk qualification. */
+  readonly riskAssessment?: import('./wealthRiskConfidence').WealthRiskAssessment;
   readonly dimension?: WealthDimension;
   readonly status: FinalDomainStatus;
   readonly finalStatus: FinalDomainStatus;
@@ -126,6 +128,9 @@ export interface CareerWealthFinalSynthesis {
   readonly d2AvailabilityReason?: string;
   readonly manifestationStatus: FinalDomainStatus;
   readonly confidence: FinalDomainConfidence;
+  /** C05 confidence is separate from promise status and risk classification. */
+  readonly riskConfidence?: import('./wealthRiskConfidence').WealthConfidenceAssessment;
+  readonly riskAssessments?: Readonly<Record<WealthDimension, import('./wealthRiskConfidence').WealthRiskAssessment>>;
   readonly confidenceBreakdown?: FinalConfidenceBreakdownSummary;
   readonly primaryPromise: DomainStrength | string;
   readonly manifestationSummary: readonly ManifestationSummary[];
