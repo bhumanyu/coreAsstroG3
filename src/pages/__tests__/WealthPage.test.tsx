@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { WealthPage } from '../WealthPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 
@@ -138,7 +138,8 @@ describe('WealthPage (P-UI-05)', () => {
     // D03 evidence diagnostics: preserve D2 unavailable state and distinguish confidence from promise
     expect(screen.getByRole('heading', { name: 'Evidence, confidence & limitations' })).toBeInTheDocument();
     expect(screen.getByText('D2 wealth confirmation')).toBeInTheDocument();
-    expect(screen.getByText('Unavailable', { selector: 'span' })).toBeInTheDocument();
+    const evidencePanel = screen.getByRole('region', { name: /Evidence, confidence & limitations/i });
+    expect(within(evidencePanel).getByText('Unavailable')).toBeInTheDocument();
 
     // Integrated Conclusion
     expect(screen.getByText('Integrated Wealth Synthesis')).toBeInTheDocument();
