@@ -944,6 +944,75 @@ export interface ProductUnifiedConfidenceProjection {
   }[];
 }
 
+
+
+/**
+ * D02 version provenance.
+ *
+ * A component is explicitly NOT_RECORDED when the active pipeline does not
+ * expose an independently versioned identifier. This must never be filled
+ * with a guessed/default value.
+ */
+export type ProductVersionRecordStatus = 'RECORDED' | 'NOT_RECORDED' | 'NOT_APPLICABLE';
+
+export interface ProductVersionComponent {
+  readonly status: ProductVersionRecordStatus;
+  readonly version?: string;
+  readonly reason?: string;
+  readonly source?: string;
+}
+
+export interface ProductDeterministicVersionManifest {
+  readonly manifestVersion: 'D02-v1';
+  readonly calculationEngine: ProductVersionComponent;
+  readonly referenceDatasets: Readonly<Record<string, ProductVersionComponent>>;
+  readonly ruleCatalogue: ProductVersionComponent;
+  readonly careerLogic: ProductVersionComponent;
+  readonly wealthLogic: ProductVersionComponent;
+  readonly careerSynthesis: ProductVersionComponent;
+  readonly wealthSynthesis: ProductVersionComponent;
+  readonly outputSchema: ProductVersionComponent;
+  readonly methodology: Readonly<{
+    readonly zodiacSystem: string;
+    readonly houseSystem: string;
+    readonly ayanamsa: string;
+    readonly vargaRules: string;
+    readonly dashaSystem: string;
+  }>;
+  /** Non-personal configuration identifiers only; never raw birth/user inputs. */
+  readonly configuration: Readonly<Record<string, string | number | boolean | null>>;
+  readonly inputRetention: 'RETAINED_BY_CALLER' | 'NOT_RETAINED' | 'UNKNOWN';
+  /** Opaque external locator; the snapshot itself is retained outside this aggregate. */
+  readonly retainedInputSnapshotRef?: string;
+  readonly replay: ProductReplayAssessment;
+}
+
+export interface ProductReplayAssessment {
+  readonly status: 'REPLAYABLE_WITH_RETAINED_INPUTS' | 'NOT_REPLAYABLE' | 'UNKNOWN';
+  readonly requiredInputsRetained: boolean | null;
+  readonly requiredCodeAvailable: boolean | null;
+  readonly requiredDatasetsAvailable: boolean | null;
+  readonly reasonCodes: readonly string[];
+}
+
+export interface ProductAiExplanationVersionManifest {
+  readonly manifestVersion: 'D02-AI-v1';
+  readonly providerId: ProductVersionComponent;
+  readonly providerVersion: ProductVersionComponent;
+  readonly model: ProductVersionComponent;
+  readonly promptTemplate: ProductVersionComponent;
+  readonly outputSchema: ProductVersionComponent;
+  readonly routingMode: ProductVersionComponent;
+  readonly generatedAt?: string;
+  readonly task?: string;
+}
+
+export interface ProductAnalysisVersionManifest {
+  readonly deterministic: ProductDeterministicVersionManifest;
+  /** AI metadata belongs to each explanation execution, not to deterministic calculation identity. */
+  readonly aiExplanations: readonly ProductAiExplanationVersionManifest[];
+}
+
 export interface ProductAnalysis {
   readonly analysisId: string;
   readonly asOf: string;
@@ -952,6 +1021,8 @@ export interface ProductAnalysis {
   readonly status: ProductAnalysisStatus;
   readonly birth: ProductBirth;
   readonly methodology: ProductMethodology;
+  /** Optional for old stored aggregates; absent means pre-D02/unmigrated, not inferred. */
+  readonly versionManifest?: ProductAnalysisVersionManifest;
   readonly chart: ProductChartSummary;
   readonly career: CareerProductAnalysis;
   readonly wealth: WealthProductAnalysis;

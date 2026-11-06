@@ -267,18 +267,19 @@ function selectedPeriodValue(
   };
 }
 
-export function buildChartExport(selection: ChartExportSelection, exportedAt: string | Date): ChartExportV1 {
+export function buildChartExport(selection: ChartExportSelection, exportedAt: string | Date): ChartExportV1 | import('./chartExportSchema').ChartExportV2 {
   const { analysis, selectedPeriod } = selection;
   const exportTimestamp = exportedAt instanceof Date ? exportedAt.toISOString() : exportedAt;
-  const output: ChartExportV1 = {
-    schemaVersion: 1,
+  const output: ChartExportV1 | import('./chartExportSchema').ChartExportV2 = {
+    schemaVersion: analysis.versionManifest ? 2 : 1,
     provenance: {
       analysisId: analysis.analysisId,
       asOf: analysis.asOf,
       exportedAt: exportTimestamp,
       engineVersion: analysis.engineVersion,
       rulesVersion: analysis.rulesVersion,
-      methodology: { ...analysis.methodology }
+      methodology: { ...analysis.methodology },
+      ...(analysis.versionManifest ? { versionManifest: analysis.versionManifest } : {})
     },
     birth: {
       dateTime: analysis.birth.dateTime,

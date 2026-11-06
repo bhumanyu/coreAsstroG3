@@ -17,6 +17,11 @@ export interface ExportProvenanceV1 {
   readonly methodology: ProductMethodology;
 }
 
+
+export interface ExportProvenanceV2 extends ExportProvenanceV1 {
+  readonly versionManifest?: import('../../product/analysis/productAnalysisTypes').ProductAnalysisVersionManifest;
+}
+
 export interface ExportedPeriodV1 {
   readonly selectedPeriodId: string;
   readonly mahadashaId: string;
@@ -180,6 +185,15 @@ export interface ExportedInterpretationV1 {
   readonly wealth: ExportedValue<ExportedWealthInterpretationV1>;
 }
 
+export interface ChartExportV2 {
+  readonly schemaVersion: 2;
+  readonly provenance: ExportProvenanceV2;
+  readonly birth: ChartExportV1['birth'];
+  readonly selectedPeriod: ChartExportV1['selectedPeriod'];
+  readonly chartFacts: ChartExportV1['chartFacts'];
+  readonly interpretation: ChartExportV1['interpretation'];
+}
+
 export interface ChartExportV1 {
   readonly schemaVersion: 1;
   readonly provenance: ExportProvenanceV1;
@@ -196,7 +210,7 @@ export interface ChartExportV1 {
 }
 
 export type ChartExportValidationResult =
-  | { readonly ok: true; readonly value: ChartExportV1 }
+  | { readonly ok: true; readonly value: ChartExportV1 | ChartExportV2 }
   | { readonly ok: false; readonly error: 'INVALID_SHAPE' | 'UNSUPPORTED_VERSION' };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -510,11 +524,65 @@ function isChartExportV1(value: unknown): value is ChartExportV1 {
     || value.selectedPeriod.value.analysisAsOf === provenance.asOf;
 }
 
+
+function isVersionComponent(value: unknown): boolean {
+  if (!isRecord(value) || !onlyKeys(value, ['status', 'version', 'reason', 'source'])) return false;
+  if (!isOneOf(value.status, ['RECORDED', 'NOT_RECORDED', 'NOT_APPLICABLE'])) return false;
+  if (value.status === 'RECORDED') return isString(value.version) && value.version.length > 0;
+  if (value.status === 'NOT_RECORDED') return value.version === undefined && isString(value.reason) && value.reason.length > 0 && isOptionalString(value.source);
+  return value.version === undefined && isOptionalString(value.reason) && isOptionalString(value.source);
+}
+
+function isD02VersionManifest(value: unknown): boolean {
+  if (!isRecord(value) || !onlyKeys(value, ['deterministic', 'aiExplanations'])
+    || !isRecord(value.deterministic) || !Array.isArray(value.aiExplanations)) return false;
+  const d = value.deterministic;
+  if (!onlyKeys(d, ['manifestVersion', 'calculationEngine', 'referenceDatasets', 'ruleCatalogue',
+    'careerLogic', 'wealthLogic', 'careerSynthesis', 'wealthSynthesis', 'outputSchema',
+    'methodology', 'configuration', 'inputRetention', 'retainedInputSnapshotRef', 'replay']) || d.manifestVersion !== 'D02-v1') return false;
+  if (!isVersionComponent(d.calculationEngine) || !isVersionComponent(d.ruleCatalogue)
+    || !isVersionComponent(d.careerLogic) || !isVersionComponent(d.wealthLogic)
+    || !isVersionComponent(d.careerSynthesis) || !isVersionComponent(d.wealthSynthesis)
+    || !isVersionComponent(d.outputSchema) || !isRecord(d.referenceDatasets)
+    || !Object.values(d.referenceDatasets).every(isVersionComponent)
+    || !isRecord(d.methodology) || !onlyKeys(d.methodology, ['zodiacSystem', 'houseSystem', 'ayanamsa', 'vargaRules', 'dashaSystem'])
+    || !Object.values(d.methodology).every(isString)
+    || !isRecord(d.configuration)
+    || !Object.values(d.configuration).every(v => v === null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
+    || !isOneOf(d.inputRetention, ['RETAINED_BY_CALLER', 'NOT_RETAINED', 'UNKNOWN'])
+    || (d.retainedInputSnapshotRef !== undefined && (!isString(d.retainedInputSnapshotRef) || d.retainedInputSnapshotRef.length === 0))
+    || !isRecord(d.replay) || !onlyKeys(d.replay, ['status', 'requiredInputsRetained', 'requiredCodeAvailable', 'requiredDatasetsAvailable', 'reasonCodes'])
+    || !isOneOf(d.replay.status, ['REPLAYABLE_WITH_RETAINED_INPUTS', 'NOT_REPLAYABLE', 'UNKNOWN'])
+    || ![d.replay.requiredInputsRetained, d.replay.requiredCodeAvailable, d.replay.requiredDatasetsAvailable].every(x => x === true || x === false || x === null)
+    || !Array.isArray(d.replay.reasonCodes) || !d.replay.reasonCodes.every(isString)) return false;
+  return value.aiExplanations.every((entry: unknown) => {
+    if (!isRecord(entry) || entry.manifestVersion !== 'D02-AI-v1') return false;
+    return ['providerId', 'providerVersion', 'model', 'promptTemplate', 'outputSchema', 'routingMode']
+      .every(key => isVersionComponent(entry[key]))
+      && (entry.generatedAt === undefined || isString(entry.generatedAt))
+      && (entry.task === undefined || isString(entry.task));
+  });
+}
+
+function isChartExportV2(value: unknown): value is ChartExportV2 {
+  if (!isRecord(value) || value.schemaVersion !== 2 || !onlyKeys(value,
+    ['schemaVersion', 'provenance', 'birth', 'selectedPeriod', 'chartFacts', 'interpretation'])) return false;
+  const legacyShape = { ...value, schemaVersion: 1,
+    provenance: value.provenance && typeof value.provenance === 'object'
+      ? Object.fromEntries(Object.entries(value.provenance as Record<string, unknown>).filter(([key]) => key !== 'versionManifest'))
+      : value.provenance };
+  if (!isChartExportV1(legacyShape)) return false;
+  if (!isRecord(value.provenance) || !onlyKeys(value.provenance,
+    ['analysisId', 'asOf', 'exportedAt', 'engineVersion', 'rulesVersion', 'methodology', 'versionManifest'])) return false;
+  return value.provenance.versionManifest !== undefined && isD02VersionManifest(value.provenance.versionManifest);
+}
+
 export function validateChartExport(value: unknown): ChartExportValidationResult {
+  if (isChartExportV2(value)) return { ok: true, value };
   if (isChartExportV1(value)) return { ok: true, value };
   return {
     ok: false,
-    error: isRecord(value) && typeof value.schemaVersion === 'number' && value.schemaVersion !== 1
+    error: isRecord(value) && typeof value.schemaVersion === 'number' && value.schemaVersion !== 1 && value.schemaVersion !== 2
       ? 'UNSUPPORTED_VERSION' : 'INVALID_SHAPE'
   };
 }

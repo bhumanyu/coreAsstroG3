@@ -3,6 +3,7 @@ import { createProductAnalysis } from '../../product/analysis/__tests__/testHelp
 import { ProductAnalysisService } from '../../product/analysis/productAnalysisService';
 import type { ProductSelectedPeriodResult } from '../../product/analysis/productAnalysisTypes';
 import { buildChartExport, buildExportedChartFacts, buildExportedInterpretation } from './chartExportMapper';
+import { validateChartExport } from './chartExportSchema';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 
 const period: Extract<ProductSelectedPeriodResult, { status: 'OK' }> = {
@@ -67,6 +68,38 @@ describe('chart export projection', () => {
         level: 'MD',
         matchedHouse: 2
       }]);
+  });
+
+  it('writes V2 exports with the D02 manifest while V1 remains readable', () => {
+    const base = createProductAnalysis();
+    const versionManifest = {
+      deterministic: {
+        manifestVersion: 'D02-v1' as const,
+        calculationEngine: { status: 'RECORDED' as const, version: 'ENGINE-1' },
+        referenceDatasets: { DEFAULT: { status: 'NOT_RECORDED' as const, reason: 'not exposed' } },
+        ruleCatalogue: { status: 'RECORDED' as const, version: 'RULES-1' },
+        careerLogic: { status: 'NOT_RECORDED' as const, reason: 'not exposed' },
+        wealthLogic: { status: 'NOT_RECORDED' as const, reason: 'not exposed' },
+        careerSynthesis: { status: 'NOT_RECORDED' as const, reason: 'not exposed' },
+        wealthSynthesis: { status: 'NOT_RECORDED' as const, reason: 'not exposed' },
+        outputSchema: { status: 'RECORDED' as const, version: 'ProductAnalysis-v1' },
+        methodology: { zodiacSystem: 'SIDEREAL', houseSystem: 'WHOLE_SIGN', ayanamsa: 'LAHIRI', vargaRules: 'PARASHARA_D10_D2', dashaSystem: 'VIMSHOTTARI' },
+        configuration: {},
+        inputRetention: 'UNKNOWN' as const,
+        retainedInputSnapshotRef: 'snapshot://opaque/export-fixture-1',
+        replay: { status: 'NOT_REPLAYABLE' as const, requiredInputsRetained: null, requiredCodeAvailable: null, requiredDatasetsAvailable: null, reasonCodes: ['required inputs unknown'] }
+      },
+      aiExplanations: []
+    };
+    const withManifest = { ...base, versionManifest };
+    const v2 = buildChartExport({ analysis: withManifest }, '2026-10-26T00:00:00Z');
+    expect(v2.schemaVersion).toBe(2);
+    expect(v2.provenance.versionManifest).toEqual(versionManifest);
+    expect(validateChartExport(v2).ok).toBe(true);
+
+    const v1 = buildChartExport({ analysis: base }, '2026-10-26T00:00:00Z');
+    expect(v1.schemaVersion).toBe(1);
+    expect(validateChartExport(v1).ok).toBe(true);
   });
 
   it('projects birth inputs without names or place and preserves missing result states', () => {

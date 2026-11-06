@@ -20,8 +20,8 @@ import type { ProductAnalysis } from './productAnalysisTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { DomainEvidence } from '../../domain/interpretation';
-import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis, mapCareerConfidenceMetadata, mapWealthConfidenceMetadata } from './productAnalysisMapper';
-import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
+import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis, mapCareerConfidenceMetadata, mapWealthConfidenceMetadata, appendAiExplanationVersion } from './productAnalysisMapper';
+import type { AnalysisContext, AnalysisVersionConfiguration } from '../../core/analysis/AnalysisContext';
 import { createAnalysisContext, normalizeAsOf } from '../../core/analysis/analysisContextFactory';
 import { systemClock } from '../../core/analysis/Clock';
 import type { Clock } from '../../core/analysis/Clock';
@@ -51,6 +51,8 @@ export interface AnalyzeOptions {
   readonly includeAiExplanation?: boolean;
   readonly asOf?: Date | string;
   readonly context?: AnalysisContext;
+  /** Independent deterministic component versions and non-personal config IDs. */
+  readonly versionConfiguration?: AnalysisVersionConfiguration;
   readonly selectedPeriod?: {
     readonly mahadashaId: string;
     readonly antardashaId: string;
@@ -108,12 +110,29 @@ export class ProductAnalysisService {
     options?: AnalyzeOptions
   ): Promise<ProductAnalysisRun> {
     const methodology = mapMethodology(birthDetails);
-    const context = options?.context ?? createAnalysisContext({
+    const baseContext = options?.context ?? createAnalysisContext({
       asOf: options?.asOf,
       methodology,
       engineVersion: methodology.calculationEngine,
-      rulesVersion: methodology.rulesEngine
+      rulesVersion: methodology.rulesEngine,
+      ...(options?.versionConfiguration ? { versionConfiguration: {
+        ...options.versionConfiguration,
+        calculationEngine: options.versionConfiguration.calculationEngine || methodology.calculationEngine
+      } } : {})
     }, this.deps.clock ?? systemClock);
+    const context: AnalysisContext = options?.context && options.versionConfiguration
+      ? Object.freeze({
+        ...baseContext,
+        versionConfiguration: Object.freeze({
+          ...options.versionConfiguration,
+          calculationEngine: options.versionConfiguration.calculationEngine || baseContext.engineVersion,
+          ...(options.versionConfiguration.referenceDatasets
+            ? { referenceDatasets: Object.freeze({ ...options.versionConfiguration.referenceDatasets }) } : {}),
+          ...(options.versionConfiguration.configuration
+            ? { configuration: Object.freeze({ ...options.versionConfiguration.configuration }) } : {})
+        })
+      })
+      : baseContext;
 
     let horoscope: Horoscope | undefined;
     let pipelineState: LifeAnalysisProductState | undefined;
@@ -272,6 +291,8 @@ export class ProductAnalysisService {
 
           return finish({
             ...productAnalysis,
+            ...(aiExplanation && productAnalysis.versionManifest
+              ? { versionManifest: appendAiExplanationVersion(productAnalysis.versionManifest, aiExplanation) } : {}),
             selectedPeriod: {
               status: 'OK',
               synthesis: {
