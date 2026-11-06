@@ -1013,6 +1013,51 @@ export interface ProductAnalysisVersionManifest {
   readonly aiExplanations: readonly ProductAiExplanationVersionManifest[];
 }
 
+
+export type ProductDiagnosticPresentationState = 'INFO' | 'WARNING' | 'BLOCKED' | 'UNAVAILABLE' | 'CONFLICT';
+
+export interface ProductEvidenceExperienceItem {
+  readonly id: string;
+  readonly title: string;
+  readonly statement: string;
+  readonly direction: ProductDirection;
+  readonly role: ProductEvidenceRole;
+  readonly sourceLabel: string;
+  readonly ruleId?: string;
+  readonly derivedFromIds: readonly string[];
+  readonly resolvedRelatedEvidence: readonly { readonly id: string; readonly title: string }[];
+  readonly unresolvedRelatedCount: number;
+}
+
+export interface ProductEvidenceExperienceViewModel {
+  readonly domain: 'CAREER' | 'WEALTH';
+  readonly confidence: ProductConfidence;
+  readonly confidenceLabel: string;
+  readonly promiseStrengthLabel: string;
+  readonly coverage: ProductConfidenceCoverageStatus;
+  readonly coverageLabel: string;
+  readonly owner: 'C11' | 'CW-05';
+  readonly confidenceReasons: readonly string[];
+  readonly layers: readonly {
+    readonly id: string;
+    readonly label: string;
+    readonly state: ProductConfidenceLayerState;
+    readonly stateLabel: string;
+    readonly reason?: string;
+    readonly required: boolean;
+  }[];
+  readonly diagnostics: readonly {
+    readonly id: string;
+    readonly state: ProductDiagnosticPresentationState;
+    readonly title: string;
+    readonly message: string;
+    readonly technicalCode?: string;
+  }[];
+  readonly conflicts: readonly ProductEvidenceExperienceItem[];
+  readonly evidence: readonly ProductEvidenceExperienceItem[];
+  readonly missingEvidenceCount: number;
+}
+
 export interface ProductAnalysis {
   readonly analysisId: string;
   readonly asOf: string;
