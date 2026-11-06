@@ -138,7 +138,7 @@ export const CareerPage: React.FC<CareerPageProps> = ({
           : <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">B06 event timeline is unavailable. No event window is inferred by the page.</div>}
       </section>
 
-      <section id="career-risk-content" aria-label="Career risks and sustainability" className="scroll-mt-6 space-y-4">
+      <section aria-label="Career risks and sustainability" className="scroll-mt-6 space-y-4">
         <CareerAnalyticalAxesSection axes={viewModel.analyticalAxes} />
         <CareerQualificationsSection qualifications={viewModel.qualifications} />
       </section>
