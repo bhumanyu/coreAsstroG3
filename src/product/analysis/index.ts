@@ -14,3 +14,5 @@ export * from './selectedPeriodViewModel';
 export * from './confidenceCompletenessProjection';
 
 export * from './analysisVersioning';
+
+export * from './evidenceExperienceViewModel';
