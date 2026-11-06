@@ -6,6 +6,8 @@
  */
 
 import React, { useMemo } from 'react';
+import { EvidenceConfidencePanel } from '../components/lifeAnalysis/EvidenceConfidencePanel';
+import { selectEvidenceExperience } from '../product/analysis/evidenceExperienceViewModel';
 import type { ProductAnalysisState } from '../app/AppState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectCareerViewModel } from '../product/analysis/careerViewModel';
@@ -45,6 +47,12 @@ export const CareerPage: React.FC<CareerPageProps> = ({
   const viewModel = useMemo(
     () => (analysis ? selectCareerViewModel(analysis) : undefined),
     [analysis]
+  );
+  const evidenceExperience = useMemo(
+    () => (analysis && viewModel
+      ? selectEvidenceExperience(analysis, 'CAREER', viewModel.confidenceCompleteness)
+      : undefined),
+    [analysis, viewModel]
   );
 
   // 1. Error state when no analysis is available
@@ -91,6 +99,8 @@ export const CareerPage: React.FC<CareerPageProps> = ({
         evidence={viewModel.evidence}
         onOpenReasoning={() => onNavigate?.('reasoning')}
       />
+
+      {evidenceExperience && <EvidenceConfidencePanel model={evidenceExperience} />}
 
       <CareerConclusionSection
         conclusion={viewModel.conclusion}
