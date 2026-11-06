@@ -62,6 +62,11 @@ describe('CareerPage (P-UI-04)', () => {
       />
     );
 
+    // D03 evidence, confidence and diagnostic experience
+    expect(screen.getByRole('heading', { name: 'Evidence, confidence & limitations' })).toBeInTheDocument();
+    expect(screen.getByText(/Evidence confidence/)).toBeInTheDocument();
+    expect(screen.getByText('D10 divisional confirmation')).toBeInTheDocument();
+
     // Hero
     expect(screen.getByText('Career & Professional Trajectory')).toBeInTheDocument();
     expect(screen.getAllByText('Capricorn').length).toBeGreaterThanOrEqual(1);
