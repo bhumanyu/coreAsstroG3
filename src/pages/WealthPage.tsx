@@ -102,7 +102,7 @@ export const WealthPage: React.FC<WealthPageProps> = ({
         <WealthOverallSection overall={viewModel.overall} />
       </section>
 
-      <section id="wealth-dimensions" aria-label="Astrological wealth dimensions" className="scroll-mt-6 space-y-4">
+      <section aria-label="Astrological wealth dimensions" className="scroll-mt-6 space-y-4">
         <WealthDimensionsSection dimensions={viewModel.dimensions} />
       </section>
 
