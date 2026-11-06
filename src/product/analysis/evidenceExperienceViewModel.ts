@@ -8,6 +8,7 @@ import type {
   ProductEvidenceExperienceViewModel,
   ProductUnifiedConfidenceProjection
 } from './productAnalysisTypes';
+import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 
 function humanize(value: string): string {
   return value.replace(/[_-]+/g, ' ').toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase());
