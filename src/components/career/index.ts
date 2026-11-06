@@ -15,3 +15,7 @@ export * from './CareerErrorState';
 export * from './CareerOutcomeQualificationSection';
 
 export * from './CareerEventTimelineSection';
+
+export * from './CareerJourney';
+export * from './CareerAnalyticalAxesSection';
+export * from './CareerPathwayComparisonSection';
