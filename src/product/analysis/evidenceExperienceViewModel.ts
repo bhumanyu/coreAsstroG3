@@ -116,8 +116,7 @@ export function selectEvidenceExperience(
     ...unavailableDiagnostics
   ];
   const conflictEvidence = evidence.filter(item =>
-    item.direction === 'MIXED' || item.direction === 'UNAVAILABLE' ||
-    item.role === 'CONFLICTING' || item.direction === 'CHALLENGE' && item.role === 'SUPPORTING'
+    item.direction === 'MIXED' || item.role === 'CONFLICTING'
   );
   const promiseStrength = domain === 'CAREER' ? analysis.career.promise.strength : analysis.wealth.overall.promise;
   return Object.freeze({
