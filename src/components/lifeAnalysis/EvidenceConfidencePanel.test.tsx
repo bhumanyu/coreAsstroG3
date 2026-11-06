@@ -87,6 +87,14 @@ describe('EvidenceConfidencePanel (D03)', () => {
     expect(screen.getByText('40 available')).toBeInTheDocument();
   });
 
+  it('provides semantic headings, a labelled region, and responsive content structure', () => {
+    render(<EvidenceConfidencePanel model={model()} />);
+    expect(screen.getByRole('region', { name: /Evidence, confidence & limitations/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Evidence occurrences' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Evidence coverage' })).toBeInTheDocument();
+    expect(screen.getByText('Evidence occurrences').closest('section')).toHaveClass('space-y-5');
+  });
+
   it('keeps technical identifiers behind a keyboard-operable disclosure', () => {
     render(<EvidenceConfidencePanel model={model()} />);
     const details = screen.getByText('Evidence provenance').closest('details');
