@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { CareerPage } from '../CareerPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 
@@ -200,6 +200,124 @@ describe('CareerPage (P-UI-04)', () => {
     expect(screen.getByRole('list', { name: 'Qualified generic career windows' })).toHaveTextContent('CAREER OPPORTUNITY WINDOW');
     expect(screen.getByRole('list', { name: 'Event-specific taxonomy validation status' })).toHaveTextContent('PROMOTION ROLE EXPANSION');
     expect(screen.getByText(/No explicit B02 user-reported outcome references/)).toBeInTheDocument();
+  });
+
+  it('D05: renders the ten-step guided journey and anchors each step to canonical sections', () => {
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis: createProductAnalysis() }} />);
+    const journey = screen.getByRole('navigation', { name: 'Guided career journey' });
+    expect(within(journey).getAllByRole('link')).toHaveLength(10);
+    expect(within(journey).getByRole('link', { name: /Natal promise/ })).toHaveAttribute('href', '#career-promise');
+    expect(within(journey).getByRole('link', { name: /Candidate timeline/ })).toHaveAttribute('href', '#career-events');
+    expect(screen.getByRole('region', { name: 'Career overview' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Career evidence and confidence' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Career Sustainability, Risk & Timing Context' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Corporate & Independent Pathways' })).toBeInTheDocument();
+  });
+
+  it('D05: missing Dasha, partial D10 and absent event timeline remain explicit', () => {
+    const base = createProductAnalysis();
+    const analysis = {
+      ...base,
+      career: {
+        ...base.career,
+        d10: { relationship: 'UNAVAILABLE' as const, statement: 'Partial D10 inputs are unavailable.' },
+        activation: {
+          ...base.career.activation,
+          dasha: { status: 'UNAVAILABLE' as const, periods: [] }
+        },
+        eventTimeline: undefined
+      }
+    };
+    render(<CareerPage productAnalysisState={{ status: 'PARTIAL', analysis }} />);
+    const journey = screen.getByRole('navigation', { name: 'Guided career journey' });
+    expect(within(journey).getByRole('link', { name: /D10 qualification/ })).toHaveTextContent('Unavailable');
+    expect(within(journey).getByRole('link', { name: /Activation & timing/ })).toHaveTextContent('Unavailable');
+    expect(screen.getByText('B06 event timeline is unavailable. No event window is inferred by the page.')).toBeInTheDocument();
+    expect(screen.getByText(/Vimshottari dasha timing calculations are currently unavailable/)).toBeInTheDocument();
+  });
+
+  it('D05: dual pathway candidates are only shown from canonical B04/B02 candidates', () => {
+    const base = createProductAnalysis();
+    const analysis = {
+      ...base,
+      career: {
+        ...base.career,
+        outcomeQualification: {
+          reasoningVersion: 'B02' as const,
+          methodVersion: 'B02-test',
+          status: 'CANDIDATES_AVAILABLE' as const,
+          candidateOutcomes: [
+            {
+              candidateId: 'employment-candidate',
+              outcomeType: 'EMPLOYMENT_OR_SERVICE_OPPORTUNITY' as const,
+              status: 'CANDIDATE' as const,
+              qualification: 'SUPPORTED_CANDIDATE' as const,
+              qualificationBasis: 'NATAL_PROMISE_AND_LINKED_DASHA_ACTIVATION' as const,
+              sourceEventId: 'event-employment',
+              opportunityId: 'opp-employment',
+              activationId: 'activation-employment',
+              timing: { type: 'UNTIMED' as const },
+              supportingEvidence: { natalPromiseOccurrenceIds: [], activationOccurrenceIds: [], candidateEventEvidenceIds: [], ruleIds: [] },
+              executionConditions: { professionAnalysisStatus: 'PARTIAL' as const, d10Qualification: 'UNAVAILABLE' as const, practicalExecution: 'NOT_ASSESSED' as const, requiredChecks: [] },
+              counterIndications: { severity: 'NONE' as const, evidenceOccurrenceIds: [], conflicts: [] },
+              guarantee: 'NONE' as const
+            },
+            {
+              candidateId: 'business-candidate',
+              outcomeType: 'INDEPENDENT_OR_BUSINESS_ACTIVITY' as const,
+              status: 'CANDIDATE' as const,
+              qualification: 'CONDITIONALLY_SUPPORTED_CANDIDATE' as const,
+              qualificationBasis: 'NATAL_PROMISE_AND_LINKED_DASHA_ACTIVATION' as const,
+              sourceEventId: 'event-business',
+              opportunityId: 'opp-business',
+              activationId: 'activation-business',
+              timing: { type: 'UNTIMED' as const },
+              supportingEvidence: { natalPromiseOccurrenceIds: [], activationOccurrenceIds: [], candidateEventEvidenceIds: [], ruleIds: [] },
+              executionConditions: { professionAnalysisStatus: 'PARTIAL' as const, d10Qualification: 'PARTIAL' as const, practicalExecution: 'NOT_ASSESSED' as const, requiredChecks: [] },
+              counterIndications: { severity: 'NONE' as const, evidenceOccurrenceIds: [], conflicts: [] },
+              guarantee: 'NONE' as const
+            }
+          ],
+          observedOutcomes: [],
+          diagnostics: [],
+          guaranteedOutcomeAvailable: false as const,
+          numericProbabilityAvailable: false as const,
+          statement: 'Both pathway types are candidates only.'
+        }
+      }
+    };
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
+    const comparison = screen.getByRole('region', { name: 'Corporate & Independent Pathways' });
+    expect(within(comparison).getByText(/Employment or service opportunity/)).toBeInTheDocument();
+    expect(within(comparison).getByText(/Independent or business activity/)).toBeInTheDocument();
+    expect(within(comparison).getByText(/not a recommendation or decision/i)).toBeInTheDocument();
+  });
+
+  it('D05: no timeline candidates remain unavailable rather than inferred from Dasha alone', () => {
+    const base = createProductAnalysis();
+    const analysis = {
+      ...base,
+      career: {
+        ...base.career,
+        eventTimeline: {
+          reasoningVersion: 'B06' as const,
+          methodVersion: 'B06-test',
+          status: 'UNAVAILABLE' as const,
+          taxonomy: [],
+          eventCandidates: [],
+          genericWindows: [],
+          observedOutcomeReportIds: [],
+          diagnostics: ['NO_LINKED_EVENT_EVIDENCE'],
+          guaranteedEventsAvailable: false as const,
+          numericProbabilityAvailable: false as const,
+          statement: 'No event-specific or generic window is qualified.'
+        }
+      }
+    };
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
+    expect(screen.getByText(/No event-specific or generic window is qualified/)).toBeInTheDocument();
+    expect(screen.getByText(/No generic window passed the B06 natal-linkage checks/)).toBeInTheDocument();
+    expect(screen.getByText(/indicative candidates, never guarantees/i)).toBeInTheDocument();
   });
 
   it('5. Navigation to reasoning: invokes onNavigate with reasoning', () => {
