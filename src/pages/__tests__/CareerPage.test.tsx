@@ -317,7 +317,7 @@ describe('CareerPage (P-UI-04)', () => {
     render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
     expect(screen.getByText(/No event-specific or generic window is qualified/)).toBeInTheDocument();
     expect(screen.getByText(/No generic window passed the B06 natal-linkage checks/)).toBeInTheDocument();
-    expect(screen.getByText(/These windows are indicative candidates, not guaranteed events/i)).toBeInTheDocument();
+    expect(screen.getByText(/These windows are indicative candidates, never guarantees/i)).toBeInTheDocument();
   });
 
   it('5. Navigation to reasoning: invokes onNavigate with reasoning', () => {

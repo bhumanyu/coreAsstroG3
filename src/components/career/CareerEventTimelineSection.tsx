@@ -28,7 +28,7 @@ export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProp
     <p className="text-sm text-slate-300">{eventTimeline.statement}</p>
     <p className="text-xs text-amber-300">
       Event-specific predictions are disabled until each event type has its own validated natal and activation evidence rules.
-      These windows are indicative candidates, not guaranteed events.
+      These windows are indicative candidates, never guarantees.
     </p>
 
     {eventTimeline.eventCandidates.length > 0 && (
