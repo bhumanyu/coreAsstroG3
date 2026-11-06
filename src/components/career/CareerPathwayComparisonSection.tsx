@@ -30,7 +30,7 @@ export const CareerPathwayComparisonSection: React.FC<CareerPathwayComparisonSec
             <div key={candidate.candidateId} className="space-y-1">
               <p className="text-sm text-slate-100">{candidate.domain} · {candidate.family}</p>
               <p className="text-xs text-slate-400">{candidate.alternativeExplanation}</p>
-              <p className="text-xs text-slate-500">C11 rank {candidate.rank} · {candidate.confidence} confidence · D10 {candidate.d10Status}</p>
+              <p className="text-xs text-slate-500">C11 confidence {candidate.confidence} · D10 {candidate.d10Status}</p>
             </div>
           )) : <p className="text-xs text-slate-400">No separately identified corporate/employment pathway candidate in the canonical profession ranking.</p>}
           {outcomeModes.filter(candidate=>candidate.outcomeType==='EMPLOYMENT_OR_SERVICE_OPPORTUNITY').map(candidate=>(
