@@ -1,10 +1,9 @@
 /**
- * Career Page (P-UI-04)
+ * Career Page (P-UI-04 / D05)
  *
- * Pure presentation projection over canonical ProductAnalysis aggregate.
- * Does NOT perform any astrology/domain/D10/Dasha/transit/AI calculations.
+ * Guided presentation over canonical ProductAnalysis. Does not calculate
+ * astrology, score, profession fit, Dasha timing, or event outcomes.
  */
-
 import React, { useMemo } from 'react';
 import { EvidenceConfidencePanel } from '../components/lifeAnalysis/EvidenceConfidencePanel';
 import { selectEvidenceExperience } from '../product/analysis/evidenceExperienceViewModel';
@@ -26,7 +25,10 @@ import {
   CareerEventTimelineSection,
   CareerLoadingState,
   CareerUnavailableState,
-  CareerErrorState
+  CareerErrorState,
+  CareerJourney,
+  CareerAnalyticalAxesSection,
+  CareerPathwayComparisonSection
 } from '../components/career';
 
 export interface CareerPageProps {
@@ -55,57 +57,106 @@ export const CareerPage: React.FC<CareerPageProps> = ({
     [analysis, viewModel]
   );
 
-  // 1. Error state when no analysis is available
   if (status === 'ERROR' && !analysis) {
     return <CareerErrorState errorMessage={errorMessage} onRetry={onRetry} />;
   }
-
-  // 2. Loading state when calculation is actively running or idle
   if (status === 'LOADING' || (status === 'IDLE' && !analysis)) {
     return <CareerLoadingState />;
   }
-
-  // 3. Unavailable state when no analysis can be projected
   if (!analysis || !viewModel) {
     return <CareerUnavailableState onRetry={onRetry} />;
   }
 
-  // 4. Render pure presentation sections
+  const professionState = viewModel.profession.ranking.status === 'AVAILABLE'
+    && viewModel.profession.status === 'COMPLETE'
+    ? 'AVAILABLE' as const
+    : viewModel.profession.ranking.status === 'PARTIAL'
+      || viewModel.profession.status === 'PARTIAL'
+      ? 'PARTIAL' as const
+      : 'UNAVAILABLE' as const;
+  const eventState = viewModel.eventTimeline?.status === 'GENERIC_WINDOWS_ONLY'
+    && viewModel.eventTimeline.genericWindows.length > 0
+    ? 'AVAILABLE' as const
+    : viewModel.eventTimeline?.status === 'PARTIAL'
+      ? 'PARTIAL' as const
+      : 'UNAVAILABLE' as const;
+  const axesState = viewModel.analyticalAxes
+    && [viewModel.analyticalAxes.promise, viewModel.analyticalAxes.activation,
+      viewModel.analyticalAxes.sustainability, viewModel.analyticalAxes.risk,
+      viewModel.analyticalAxes.timing].some(axis => axis.status === 'AVAILABLE' || axis.status === 'PARTIAL')
+    ? 'AVAILABLE' as const : 'UNAVAILABLE' as const;
+
+  const journeySteps = [
+    { id: 'career-overview', title: 'Overview', description: 'Canonical career summary and natal context.', state: 'AVAILABLE' as const },
+    { id: 'career-promise', title: 'Natal promise', description: 'C11 promise and dominant manifestations.', state: 'AVAILABLE' as const },
+    { id: 'career-expressions', title: 'Career expressions', description: 'Canonical working style and expressions.', state: viewModel.expression.available ? 'AVAILABLE' as const : 'UNAVAILABLE' as const },
+    { id: 'career-professions', title: 'Profession families', description: 'B04 ranked families and unresolved candidates.', state: professionState },
+    { id: 'career-pathways', title: 'Pathway comparison', description: 'Corporate and independent candidates where supplied.', state: professionState },
+    { id: 'career-d10', title: 'D10 qualification', description: 'D10 qualifies an existing expression; it does not create promise.', state: viewModel.d10.relationship === 'UNAVAILABLE' ? 'UNAVAILABLE' as const : viewModel.d10.relationship === 'PARTIALLY_CONFIRMS' ? 'PARTIAL' as const : 'AVAILABLE' as const },
+    { id: 'career-activation', title: 'Activation & timing', description: 'Canonical Dasha and transit activation.', state: viewModel.dasha.status === 'AVAILABLE' ? 'AVAILABLE' as const : viewModel.dasha.status === 'PARTIAL' ? 'PARTIAL' as const : 'UNAVAILABLE' as const },
+    { id: 'career-events', title: 'Candidate timeline', description: 'Indicative B02/B06 candidates, never guarantees.', state: eventState },
+    { id: 'career-risks', title: 'Risk & sustainability', description: 'B01 axes, evidence gaps, risks and conflicts.', state: axesState },
+    { id: 'career-evidence', title: 'Evidence & confidence', description: 'C11 ownership, D01 confidence and D03 trace.', state: evidenceExperience ? 'AVAILABLE' as const : 'UNAVAILABLE' as const }
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      <CareerHero hero={viewModel.hero} />
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <section id="career-overview" aria-label="Career overview" className="scroll-mt-6 space-y-4">
+        <CareerHero hero={viewModel.hero} />
+        <CareerJourney steps={journeySteps} />
+      </section>
 
-      <CareerPromiseSection promise={viewModel.promise} />
+      <section id="career-promise" aria-label="Natal promise" className="scroll-mt-6 space-y-4">
+        <CareerPromiseSection promise={viewModel.promise} />
+      </section>
 
-      <CareerExpressionSection expression={viewModel.expression} />
+      <section id="career-expressions" aria-label="Career expressions" className="scroll-mt-6 space-y-4">
+        <CareerExpressionSection expression={viewModel.expression} />
+      </section>
 
-      <CareerD10Section d10={viewModel.d10} />
+      <section id="career-professions" aria-label="Profession family candidates" className="scroll-mt-6 space-y-4">
+        <CareerProfessionStatusSection profession={viewModel.profession} />
+      </section>
 
-      <CareerDashaSection dasha={viewModel.dasha} />
+      <CareerPathwayComparisonSection profession={viewModel.profession} outcomeQualification={viewModel.outcomeQualification} />
 
-      <CareerTransitSection transit={viewModel.transit} />
+      <section id="career-d10" aria-label="D10 qualification" className="scroll-mt-6 space-y-4">
+        <CareerD10Section d10={viewModel.d10} />
+      </section>
 
-      <CareerQualificationsSection qualifications={viewModel.qualifications} />
+      <section id="career-activation" aria-label="Career activation and timing" className="scroll-mt-6 space-y-4">
+        <CareerDashaSection dasha={viewModel.dasha} />
+        <CareerTransitSection transit={viewModel.transit} />
+      </section>
 
-      <CareerProfessionStatusSection profession={viewModel.profession} />
-      {viewModel.outcomeQualification && (
-        <CareerOutcomeQualificationSection outcomeQualification={viewModel.outcomeQualification} />
-      )}
-      {viewModel.eventTimeline && (
-        <CareerEventTimelineSection eventTimeline={viewModel.eventTimeline} />
-      )}
+      <section id="career-events" aria-label="Candidate event timeline" className="scroll-mt-6 space-y-4">
+        {viewModel.outcomeQualification
+          ? <CareerOutcomeQualificationSection outcomeQualification={viewModel.outcomeQualification} />
+          : <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">B02 outcome qualification is unavailable for this analysis.</div>}
+        {viewModel.eventTimeline
+          ? <CareerEventTimelineSection eventTimeline={viewModel.eventTimeline} />
+          : <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">B06 event timeline is unavailable. No event window is inferred by the page.</div>}
+      </section>
 
-      <CareerEvidenceSection
-        evidence={viewModel.evidence}
-        onOpenReasoning={() => onNavigate?.('reasoning')}
-      />
+      <section aria-label="Career risks and sustainability" className="scroll-mt-6 space-y-4">
+        <CareerAnalyticalAxesSection axes={viewModel.analyticalAxes} />
+        <CareerQualificationsSection qualifications={viewModel.qualifications} />
+      </section>
 
-      {evidenceExperience && <EvidenceConfidencePanel model={evidenceExperience} />}
+      <section id="career-evidence" aria-label="Career evidence and confidence" className="scroll-mt-6 space-y-4">
+        <CareerEvidenceSection
+          evidence={viewModel.evidence}
+          onOpenReasoning={() => onNavigate?.('reasoning')}
+        />
+        {evidenceExperience
+          ? <EvidenceConfidencePanel model={evidenceExperience} />
+          : <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">Career confidence/evidence projection is unavailable.</div>}
+      </section>
 
       <CareerConclusionSection
         conclusion={viewModel.conclusion}
         onOpenReasoning={() => onNavigate?.('reasoning')}
       />
-    </div>
+    </main>
   );
 };
