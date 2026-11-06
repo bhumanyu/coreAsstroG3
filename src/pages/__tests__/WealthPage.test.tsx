@@ -135,6 +135,11 @@ describe('WealthPage (P-UI-05)', () => {
     expect(screen.getByText('Evidential Reasoning Provenance')).toBeInTheDocument();
     expect(screen.getByText('2nd Lord Exalted')).toBeInTheDocument();
 
+    // D03 evidence diagnostics: preserve D2 unavailable state and distinguish confidence from promise
+    expect(screen.getByRole('heading', { name: 'Evidence, confidence & limitations' })).toBeInTheDocument();
+    expect(screen.getByText('D2 wealth confirmation')).toBeInTheDocument();
+    expect(screen.getByText('Unavailable', { selector: 'span' })).toBeInTheDocument();
+
     // Integrated Conclusion
     expect(screen.getByText('Integrated Wealth Synthesis')).toBeInTheDocument();
     expect(screen.getByText('Favorable Wealth Outlook')).toBeInTheDocument();
