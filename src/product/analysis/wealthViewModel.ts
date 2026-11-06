@@ -34,9 +34,97 @@ export interface WealthHeroViewModel {
   readonly warnings?: readonly ProductWarning[];
 }
 
+
+export type WealthFinancialPresentationGroup = 'ASTROLOGICAL_INDICATION' | 'FINANCIAL_FACT' | 'UNAVAILABLE';
+
+export interface WealthFinancialItemViewModel {
+  readonly id: string;
+  readonly concept: WealthFinancialDatum<unknown>['concept'];
+  readonly label: string;
+  readonly group: WealthFinancialPresentationGroup;
+  readonly availability: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly sourceClassification: WealthFinancialDatum<unknown>['sourceClassification'];
+  readonly value?: unknown;
+  readonly currency?: string;
+  readonly unit?: string;
+  readonly period?: string;
+  readonly asOf?: string;
+  readonly provenanceLabel: string;
+  readonly provenanceDetails: readonly string[];
+  readonly unavailableReason?: string;
+}
+
 export interface WealthFinancialDataViewModel {
   readonly status: 'AVAILABLE' | 'UNAVAILABLE';
   readonly data: readonly WealthFinancialDatum<unknown>[];
+  readonly items: readonly WealthFinancialItemViewModel[];
+  readonly factCount: number;
+  readonly indicationCount: number;
+  readonly unavailableCount: number;
+  readonly classificationValid: boolean;
+}
+
+const FINANCIAL_CONCEPT_LABELS: Record<WealthFinancialDatum['concept'], string> = {
+  INCOME: 'Income',
+  SAVINGS: 'Savings',
+  ASSETS: 'Assets',
+  ASSET_OWNERSHIP: 'Asset ownership',
+  INHERITANCE: 'Inheritance',
+  DEBT_LIABILITIES: 'Debt / liabilities',
+  CASH_FLOW: 'Cash flow',
+  LIQUIDITY: 'Liquidity',
+  NET_WORTH: 'Net worth',
+  CONSUMPTION_LUXURY: 'Consumption / luxury',
+  TRADING_EXPOSURE: 'Trading exposure',
+  TRADING_HISTORY: 'Trading history'
+};
+
+function projectFinancialDatum(datum: WealthFinancialDatum<unknown>): WealthFinancialItemViewModel {
+  const isUnavailable = datum.availability === 'UNAVAILABLE';
+  const group: WealthFinancialPresentationGroup = isUnavailable
+    ? 'UNAVAILABLE'
+    : datum.sourceClassification === 'ASTROLOGICAL_INDICATOR'
+      ? 'ASTROLOGICAL_INDICATION'
+      : 'FINANCIAL_FACT';
+  const provenanceDetails: string[] = [];
+  if (datum.userReportedProvenance) {
+    provenanceDetails.push('Reported by user');
+    provenanceDetails.push('Report reference: ' + datum.userReportedProvenance.reportId);
+    provenanceDetails.push('Reported at: ' + datum.userReportedProvenance.reportedAt);
+    if (datum.userReportedProvenance.label) provenanceDetails.push('Label: ' + datum.userReportedProvenance.label);
+    if (datum.userReportedProvenance.sourceNote) provenanceDetails.push('Source note: ' + datum.userReportedProvenance.sourceNote);
+  }
+  if (datum.calculationProvenance) {
+    provenanceDetails.push('Formula: ' + datum.calculationProvenance.formulaId + ' (' + datum.calculationProvenance.formulaVersion + ')');
+    provenanceDetails.push(datum.calculationProvenance.formulaDescription);
+    provenanceDetails.push('Calculated at: ' + datum.calculationProvenance.calculatedAt);
+    provenanceDetails.push('Input references: ' + datum.calculationProvenance.inputs.map(item => item.concept + ' [' + item.datumId + ']').join(', '));
+  }
+  if (datum.connectedSourceProvenance) {
+    provenanceDetails.push('Provider: ' + datum.connectedSourceProvenance.providerId);
+    provenanceDetails.push('Source type: ' + datum.connectedSourceProvenance.sourceType);
+    provenanceDetails.push('Retrieved at: ' + datum.connectedSourceProvenance.retrievedAt);
+    if (datum.connectedSourceProvenance.externalReference) provenanceDetails.push('External reference: ' + datum.connectedSourceProvenance.externalReference);
+  }
+  if (datum.sourceClassification === 'ASTROLOGICAL_INDICATOR') {
+    provenanceDetails.push('Chart-derived indication; not a real-world financial record.');
+  }
+  return {
+    id: datum.id,
+    concept: datum.concept,
+    label: FINANCIAL_CONCEPT_LABELS[datum.concept],
+    group,
+    availability: datum.availability,
+    sourceClassification: datum.sourceClassification,
+    ...(datum.availability === 'AVAILABLE' ? { value: datum.value } : {}),
+    ...(datum.currency ? { currency: datum.currency } : {}),
+    ...(datum.unit ? { unit: datum.unit } : {}),
+    ...(datum.period ? { period: datum.period } : {}),
+    ...(datum.asOf ? { asOf: datum.asOf } : {}),
+    provenanceLabel: datum.sourceClassification.replaceAll('_', ' '),
+    provenanceDetails,
+    ...(datum.unavailableReason ? { unavailableReason: datum.unavailableReason } : {})
+  };
 }
 
 export interface WealthOverallViewModel {
@@ -240,7 +328,16 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const sourceFinancialData = wealth.financialData ?? createUnavailableWealthFinancialDataSet();
   const isValidFinancialData = validateWealthFinancialDataSet(sourceFinancialData);
   const normalizedFinancialData = isValidFinancialData ? sourceFinancialData : createUnavailableWealthFinancialDataSet('Financial source data failed C01 validation.');
-  const financialData: WealthFinancialDataViewModel = { status: normalizedFinancialData.status, data: normalizedFinancialData.data };
+  const financialItems = normalizedFinancialData.data.map(projectFinancialDatum);
+  const financialData: WealthFinancialDataViewModel = {
+    status: normalizedFinancialData.status,
+    data: normalizedFinancialData.data,
+    items: financialItems,
+    factCount: financialItems.filter(item => item.group === 'FINANCIAL_FACT').length,
+    indicationCount: financialItems.filter(item => item.group === 'ASTROLOGICAL_INDICATION').length,
+    unavailableCount: financialItems.filter(item => item.group === 'UNAVAILABLE').length,
+    classificationValid: isValidFinancialData
+  };
   const lifecycle = projectWealthLifecycle(wealth.lifecycle);
 
   const overall: WealthOverallViewModel = {
