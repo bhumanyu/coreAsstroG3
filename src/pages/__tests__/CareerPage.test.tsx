@@ -228,7 +228,7 @@ describe('CareerPage (P-UI-04)', () => {
         eventTimeline: undefined
       }
     };
-    render(<CareerPage productAnalysisState={{ status: 'PARTIAL', analysis }} />);
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
     const journey = screen.getByRole('navigation', { name: 'Guided career journey' });
     expect(within(journey).getByRole('link', { name: /D10 qualification/ })).toHaveTextContent('Unavailable');
     expect(within(journey).getByRole('link', { name: /Activation & timing/ })).toHaveTextContent('Unavailable');
