@@ -28,6 +28,64 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     expect(vm.financialData.data).toHaveLength(12);
     expect(vm.financialData.data.every((item) => item.sourceClassification === 'UNAVAILABLE' && item.value === undefined)).toBe(true);
   });
+  it('D06: maps C01 user facts, calculated metrics and connected source to the financial-fact group', () => {
+    const base = createProductAnalysis();
+    const unavailable = createUnavailableWealthFinancialDataSet();
+    const userDatum = createUserReportedFinancialDatum({
+      id: 'd06-user-income',
+      concept: 'INCOME',
+      value: 95000,
+      currency: 'INR',
+      period: 'MONTHLY',
+      provenance: { reportedBy: 'USER', reportId: 'd06-income-report', reportedAt: '2026-11-06T10:00:00+05:30' }
+    });
+    const dataset = {
+      schemaVersion: 'C01-v1' as const,
+      status: 'AVAILABLE' as const,
+      data: unavailable.data.map(item => item.concept === 'INCOME' ? userDatum : item)
+    };
+    const vm = selectWealthViewModel({ ...base, wealth: { ...base.wealth, financialData: dataset } });
+    expect(vm.financialData.classificationValid).toBe(true);
+    expect(vm.financialData.factCount).toBe(1);
+    expect(vm.financialData.items.find(item => item.concept === 'INCOME')).toMatchObject({
+      group: 'FINANCIAL_FACT', availability: 'AVAILABLE',
+      sourceClassification: 'USER_REPORTED_FINANCIAL_FACT'
+    });
+  });
+
+  it('D06: keeps astrological indicators separate from user financial facts', () => {
+    const base = createProductAnalysis();
+    const unavailable = createUnavailableWealthFinancialDataSet();
+    const dataset = {
+      schemaVersion: 'C01-v1' as const,
+      status: 'AVAILABLE' as const,
+      data: unavailable.data.map(item => item.concept === 'INCOME'
+        ? { id: 'd06-astro-income', concept: 'INCOME' as const, availability: 'AVAILABLE' as const, sourceClassification: 'ASTROLOGICAL_INDICATOR' as const, value: 'Income potential indication' }
+        : item)
+    };
+    const vm = selectWealthViewModel({ ...base, wealth: { ...base.wealth, financialData: dataset } });
+    expect(vm.financialData.indicationCount).toBe(1);
+    expect(vm.financialData.factCount).toBe(0);
+    expect(vm.financialData.items.find(item => item.concept === 'INCOME')?.group).toBe('ASTROLOGICAL_INDICATION');
+  });
+
+  it('D06: invalid financial classification fails closed to unavailable C01 values', () => {
+    const base = createProductAnalysis();
+    const invalid = {
+      schemaVersion: 'C01-v1' as const,
+      status: 'AVAILABLE' as const,
+      data: [{
+        id: 'bad-d06-fact', concept: 'INCOME' as const, availability: 'AVAILABLE' as const,
+        sourceClassification: 'USER_REPORTED_FINANCIAL_FACT' as const, value: 90000
+      }]
+    };
+    const vm = selectWealthViewModel({ ...base, wealth: { ...base.wealth, financialData: invalid } });
+    expect(vm.financialData.classificationValid).toBe(false);
+    expect(vm.financialData.status).toBe('UNAVAILABLE');
+    expect(vm.financialData.factCount).toBe(0);
+    expect(vm.financialData.unavailableCount).toBe(12);
+  });
+
   it('1. promise vs conclusion vs confidence separation: preserves distinct fields on overall', () => {
     const analysis = createProductAnalysis({
       wealth: {
