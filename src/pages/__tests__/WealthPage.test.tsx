@@ -146,6 +146,87 @@ describe('WealthPage (P-UI-05)', () => {
     expect(screen.getByText('Favorable Wealth Outlook')).toBeInTheDocument();
   });
 
+  it('D06: renders the ten-step Wealth journey with real anchors and separate financial facts', () => {
+    render(<WealthPage productAnalysisState={{ status: 'READY', analysis: createProductAnalysis() }} />);
+    const journey = screen.getByRole('navigation', { name: 'Guided wealth journey' });
+    expect(within(journey).getAllByRole('link')).toHaveLength(10);
+    expect(within(journey).getByRole('link', { name: /Accumulation/ })).toHaveAttribute('href', '#wealth-accumulation');
+    expect(within(journey).getByRole('link', { name: /Financial facts/ })).toHaveAttribute('href', '#wealth-financial-facts');
+    expect(within(journey).getByRole('link', { name: /D2 qualification/ })).toHaveTextContent('Unavailable');
+    expect(screen.getByRole('region', { name: 'Accumulation detail' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Gains & Inflow detail' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Fortune & Luck detail' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Speculation and limitations' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'D2 status and qualification' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Wealth evidence and provenance' })).toBeInTheDocument();
+    expect(screen.getByText('No validated financial facts supplied')).toBeInTheDocument();
+    expect(screen.getByText(/does not collect new financial information/)).toBeInTheDocument();
+  });
+
+  it('D06: keeps the four canonical Wealth dimensions separate and visible', () => {
+    render(<WealthPage productAnalysisState={{ status: 'READY', analysis: createProductAnalysis() }} />);
+    const dimensions = screen.getByRole('region', { name: 'Astrological wealth dimensions' });
+    expect(within(dimensions).getByText('Accumulation')).toBeInTheDocument();
+    expect(within(dimensions).getByText('Gains & Inflow')).toBeInTheDocument();
+    expect(within(dimensions).getByText('Fortune & Luck')).toBeInTheDocument();
+    expect(within(dimensions).getByText('Speculation & Venture')).toBeInTheDocument();
+  });
+
+  it('D06: D2 remains unavailable even if an incoming ProductAnalysis declares a relationship', () => {
+    const base = createProductAnalysis();
+    const analysis = {
+      ...base,
+      wealth: {
+        ...base.wealth,
+        d2: { relationship: 'CONFIRMS' as const, statement: 'Unvalidated D2 assertion.' }
+      }
+    };
+    render(<WealthPage productAnalysisState={{ status: 'READY', analysis }} />);
+    const d2 = screen.getByRole('region', { name: 'D2 status and qualification' });
+    expect(within(d2).getByText('Unavailable')).toBeInTheDocument();
+    expect(within(d2).getByText(/D2 calculation and interpretation have not passed independent validation/)).toBeInTheDocument();
+  });
+
+  it('D06: displays only validated user-reported financial facts with C01 provenance', () => {
+    const base = createProductAnalysis();
+    const financialData = {
+      schemaVersion: 'C01-v1' as const,
+      status: 'AVAILABLE' as const,
+      data: [
+        {
+          id: 'income-report-d06',
+          concept: 'INCOME' as const,
+          availability: 'AVAILABLE' as const,
+          sourceClassification: 'USER_REPORTED_FINANCIAL_FACT' as const,
+          value: 125000,
+          currency: 'INR',
+          period: 'MONTHLY' as const,
+          userReportedProvenance: {
+            reportedBy: 'USER' as const,
+            reportId: 'report-income-d06',
+            reportedAt: '2026-11-06T10:00:00+05:30'
+          }
+        },
+        ...base.wealth.financialData!.data.filter(datum => datum.concept !== 'INCOME')
+      ]
+    };
+    const analysis = { ...base, wealth: { ...base.wealth, financialData } };
+    render(<WealthPage productAnalysisState={{ status: 'READY', analysis }} />);
+    const facts = screen.getByRole('region', { name: 'Financial facts (C01)' });
+    expect(within(facts).getByText('Income')).toBeInTheDocument();
+    expect(within(facts).getByText('125000 INR')).toBeInTheDocument();
+    fireEvent.click(within(facts).getByText('Source and provenance'));
+    expect(within(facts).getByText(/report-income-d06/)).toBeInTheDocument();
+    expect(within(facts).getByText(/Reported by user/)).toBeInTheDocument();
+  });
+
+  it('D06: keeps risk qualitative and speculation explicitly non-advisory', () => {
+    render(<WealthPage productAnalysisState={{ status: 'READY', analysis: createProductAnalysis() }} />);
+    expect(screen.getByText(/Astrological indication only. It is not a measure of actual trading exposure/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Risk and confidence are separate' })).toBeInTheDocument();
+    expect(screen.getByText(/No risk score, capacity, suitability, expected return, or financial recommendation is calculated/)).toBeInTheDocument();
+  });
+
   it('6. Navigation to reasoning: invokes onNavigate with "reasoning" from evidence and conclusion buttons', () => {
     const onNavigate = vi.fn();
     const analysis = createProductAnalysis();
