@@ -44,6 +44,13 @@ function deriveMetadata(
     : analysis.confidenceMetadata?.wealth;
 
   if (supplied) {
+    const reasons = [...supplied.reasons];
+    const d2Unavailable = domain === 'WEALTH' && supplied.layers.some(
+      layer => layer.id === 'D2' && layer.state === 'UNAVAILABLE'
+    );
+    if (d2Unavailable && !reasons.some(reason => /not negative evidence/i.test(reason))) {
+      reasons.push('D2 is intentionally unavailable and is not negative evidence.');
+    }
     return Object.freeze({
       ...supplied,
       confidence: asConfidence(supplied.confidence),
@@ -52,7 +59,7 @@ function deriveMetadata(
         state: layerState(layer.state),
         evidenceIds: layer.evidenceIds ? Object.freeze([...layer.evidenceIds]) : undefined
       }))),
-      reasons: Object.freeze([...supplied.reasons]),
+      reasons: Object.freeze(reasons),
       diagnostics: Object.freeze(supplied.diagnostics.map(d => Object.freeze({ ...d }))),
       evidenceIds: Object.freeze([...new Set(supplied.evidenceIds)].sort()),
       ruleIds: Object.freeze([...new Set(supplied.ruleIds)].sort())
@@ -104,7 +111,7 @@ function deriveMetadata(
         coverage === 'BLOCKED' ? 'A blocking diagnostic or required blocked layer is present.' :
           'One or more required presentation layers are unavailable or missing.'
   ];
-  if (domain === 'WEALTH') reasons.push('D2 is intentionally unavailable and is not treated as negative evidence.');
+  if (domain === 'WEALTH') reasons.push('D2 is intentionally unavailable and is not negative evidence.');
   if (diagnostics.length) reasons.push(`${diagnostics.length} domain warning/error diagnostic(s) are available.`);
   return Object.freeze({
     confidence,

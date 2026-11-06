@@ -110,7 +110,12 @@ describe('D01 unified confidence and completeness projection', () => {
       ...base,
       confidenceMetadata: {
         career: metadata,
-        wealth: { ...metadata, confidence: 'HIGH' as const, owner: 'CW-05' as const }
+        wealth: {
+          ...metadata,
+          confidence: 'HIGH' as const,
+          owner: 'CW-05' as const,
+          layers: [...metadata.layers, { id: 'D2', state: 'UNAVAILABLE' as const, required: false }]
+        }
       }
     };
     const projection = selectUnifiedConfidenceProjection(analysis);
@@ -124,6 +129,8 @@ describe('D01 unified confidence and completeness projection', () => {
       owner: 'C11'
     });
     expect(projection.domains.WEALTH.confidence).toBe('HIGH');
+    expect(projection.domains.WEALTH.reasons).toContain(metadata.reasons[0]);
+    expect(projection.domains.WEALTH.reasons).toContain('D2 is intentionally unavailable and is not negative evidence.');
     expect(projection.diagnostics).toContainEqual(expect.objectContaining({
       domain: 'CAREER',
       code: 'CONFLICT-01',
