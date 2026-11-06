@@ -28,7 +28,8 @@ describe('ChartExportV1 runtime schema', () => {
 
   it('rejects version mismatch and unexpected fields rather than accepting hidden state', () => {
     const output = buildChartExport({ analysis: createProductAnalysis() }, '2026-10-26T00:00:00Z');
-    expect(validateChartExport({ ...output, schemaVersion: 2 })).toEqual({ ok: false, error: 'UNSUPPORTED_VERSION' });
+    expect(validateChartExport({ ...output, schemaVersion: 2 })).toEqual({ ok: false, error: 'INVALID_SHAPE' });
+    expect(validateChartExport({ ...output, schemaVersion: 3 })).toEqual({ ok: false, error: 'UNSUPPORTED_VERSION' });
     expect(validateChartExport({ ...output, privateData: 'must not pass' })).toEqual({ ok: false, error: 'INVALID_SHAPE' });
   });
 

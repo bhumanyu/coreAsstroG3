@@ -19,7 +19,7 @@ export interface ExportProvenanceV1 {
 
 
 export interface ExportProvenanceV2 extends ExportProvenanceV1 {
-  readonly versionManifest?: import('../../product/analysis/productAnalysisTypes').ProductAnalysisVersionManifest;
+  readonly versionManifest: import('../../product/analysis/productAnalysisTypes').ProductAnalysisVersionManifest;
 }
 
 export interface ExportedPeriodV1 {

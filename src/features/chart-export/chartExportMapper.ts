@@ -4,6 +4,7 @@ import type {
   ProductSelectedPeriodSynthesis
 } from '../../product/analysis/productAnalysisTypes';
 import type {
+  ChartExportV2,
   ChartExportV1,
   ExportedCareerInterpretationV1,
   ExportedCareerSynthesisV1,
@@ -17,9 +18,11 @@ import type {
   ExportedSelectedPeriodSynthesisV1,
   ExportedSynthesisProvenanceV1,
   ExportedValue,
+  ExportProvenanceV1,
   ExportedWealthInterpretationV1,
   ExportedWealthSynthesisV1
 } from './chartExportSchema';
+import type { ProductAnalysisVersionManifest } from '../../product/analysis/productAnalysisTypes';
 import { validateChartExport } from './chartExportSchema';
 
 export interface ChartExportSelection {
@@ -28,6 +31,10 @@ export interface ChartExportSelection {
   /** The exact selected-period result associated with that aggregate, if any. */
   readonly selectedPeriod?: ProductSelectedPeriodResult;
 }
+
+type VersionedChartExportSelection = Omit<ChartExportSelection, 'analysis'> & {
+  readonly analysis: ProductAnalysis & { readonly versionManifest: ProductAnalysisVersionManifest };
+};
 
 function projectEvidence(
   evidence: ProductAnalysis['career']['evidence'] | ProductAnalysis['wealth']['evidence']
@@ -267,20 +274,29 @@ function selectedPeriodValue(
   };
 }
 
-export function buildChartExport(selection: ChartExportSelection, exportedAt: string | Date): ChartExportV1 | import('./chartExportSchema').ChartExportV2 {
+export function buildChartExport(
+  selection: VersionedChartExportSelection,
+  exportedAt: string | Date
+): ChartExportV2;
+export function buildChartExport(
+  selection: ChartExportSelection,
+  exportedAt: string | Date
+): ChartExportV1 | ChartExportV2;
+export function buildChartExport(
+  selection: ChartExportSelection,
+  exportedAt: string | Date
+): ChartExportV1 | ChartExportV2 {
   const { analysis, selectedPeriod } = selection;
   const exportTimestamp = exportedAt instanceof Date ? exportedAt.toISOString() : exportedAt;
-  const output: ChartExportV1 | import('./chartExportSchema').ChartExportV2 = {
-    schemaVersion: analysis.versionManifest ? 2 : 1,
-    provenance: {
-      analysisId: analysis.analysisId,
-      asOf: analysis.asOf,
-      exportedAt: exportTimestamp,
-      engineVersion: analysis.engineVersion,
-      rulesVersion: analysis.rulesVersion,
-      methodology: { ...analysis.methodology },
-      ...(analysis.versionManifest ? { versionManifest: analysis.versionManifest } : {})
-    },
+  const provenance: ExportProvenanceV1 = {
+    analysisId: analysis.analysisId,
+    asOf: analysis.asOf,
+    exportedAt: exportTimestamp,
+    engineVersion: analysis.engineVersion,
+    rulesVersion: analysis.rulesVersion,
+    methodology: { ...analysis.methodology }
+  };
+  const sharedFields = {
     birth: {
       dateTime: analysis.birth.dateTime,
       timezone: analysis.birth.timezone,
@@ -292,6 +308,17 @@ export function buildChartExport(selection: ChartExportSelection, exportedAt: st
     chartFacts: buildExportedChartFacts(analysis),
     interpretation: buildExportedInterpretation(analysis)
   };
+  const output: ChartExportV1 | ChartExportV2 = analysis.versionManifest
+    ? {
+      schemaVersion: 2,
+      provenance: { ...provenance, versionManifest: analysis.versionManifest },
+      ...sharedFields
+    }
+    : {
+      schemaVersion: 1,
+      provenance,
+      ...sharedFields
+    };
   if (output.selectedPeriod.status === 'AVAILABLE'
     && output.selectedPeriod.value.analysisAsOf !== output.provenance.asOf) {
     throw new Error('Selected period analysisAsOf does not match export provenance asOf.');
