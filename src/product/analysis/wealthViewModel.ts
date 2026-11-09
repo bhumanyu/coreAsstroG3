@@ -21,7 +21,7 @@ import type {
   TransitEffect
 } from './productAnalysisTypes';
 import { createUnavailableWealthFinancialDataSet, validateWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
-import type { WealthLifecycleAnalysis } from '../../domain/wealth/wealthLifecycleTypes';
+import { WEALTH_LIFECYCLE_RULE_CATALOGUE, type WealthLifecycleAnalysis } from '../../domain/wealth/wealthLifecycleTypes';
 import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 
 export interface WealthHeroViewModel {
@@ -291,6 +291,10 @@ function sanitizePropensityDescription(value?: string): string | undefined {
 }
 
 function projectWealthLifecycle(source?: WealthLifecycleAnalysis): WealthLifecycleViewModel {
+  const releaseRuleAvailable = WEALTH_LIFECYCLE_RULE_CATALOGUE.some(
+    rule => rule.releaseEnabled && rule.validationStatus === 'VALIDATED'
+  );
+  const releaseBlocked = !releaseRuleAvailable;
   const candidates = (source?.candidateWindows ?? []).map(candidate => ({
     id: candidate.candidateId,
     type: candidate.eventType.replaceAll('_', ' '),
@@ -301,15 +305,21 @@ function projectWealthLifecycle(source?: WealthLifecycleAnalysis): WealthLifecyc
     limitations: candidate.limitations
   }));
   return {
-    status: source?.status ?? 'INSUFFICIENT',
+    status: source?.status ?? (releaseBlocked ? 'BLOCKED' : 'INSUFFICIENT'),
     candidateCount: candidates.length,
     candidates,
-    diagnostics: (source?.diagnostics ?? []).map(diagnostic => ({ code: diagnostic.code, eventType: diagnostic.eventType, message: diagnostic.message })),
+    diagnostics: (source?.diagnostics ?? (releaseBlocked ? WEALTH_LIFECYCLE_RULE_CATALOGUE.filter(rule => !rule.releaseEnabled || rule.validationStatus !== 'VALIDATED').map(rule => ({
+      code: 'UNVALIDATED_EVENT_RULES',
+      eventType: rule.eventType,
+      message: rule.eventType + ' is not enabled: ' + rule.validationGap
+    })) : [])).map(diagnostic => ({ code: diagnostic.code, eventType: diagnostic.eventType, message: diagnostic.message })),
     observedFactCount: source?.observedFinancialFactReportIds.length ?? 0,
     guarantee: 'NONE',
     actualFinancialEventsInferred: false,
     finalAuthority: 'CW-05',
-    statement: source?.statement ?? 'C04 lifecycle analysis is unavailable. No financial event is inferred; CW-05 remains the final Wealth authority.'
+    statement: source?.statement ?? (releaseBlocked
+      ? 'C04 lifecycle candidate generation is blocked: no event-specific rule has passed its independent validation and release gate. No candidate window is emitted. C01 financial facts remain separate, and CW-05 remains the final Wealth authority.'
+      : 'C04 lifecycle analysis is unavailable. No financial event is inferred; CW-05 remains the final Wealth authority.')
   };
 }
 export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewModel {
