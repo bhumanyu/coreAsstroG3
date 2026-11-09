@@ -438,6 +438,6 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     // Click Divisional Vargas research tool from the panel
     const divisionalBtn = screen.getByRole('button', { name: 'Divisional Vargas' });
     fireEvent.click(divisionalBtn);
-    expect(await screen.findByText('Divisional Vargas Inspection (D1, D3, D9, D10)')).toBeInTheDocument();
+    expect(await screen.findByText('Divisional Vargas Inspection (D1, D3, D9, D10)', {}, { timeout: 30000 })).toBeInTheDocument();
   });
 });

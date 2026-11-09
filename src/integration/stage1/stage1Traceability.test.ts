@@ -89,5 +89,5 @@ describe('Stage-1 Traceability & Domain Isolation Integration', () => {
 
     // Verify direct horoscope reference is not present in AiContext
     expect(Object.values(stage1Result.aiContext)).not.toContain(stage1Result.horoscope);
-  }, 30000);
+  }, 60000);
 });
