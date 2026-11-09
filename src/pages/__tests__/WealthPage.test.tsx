@@ -146,6 +146,14 @@ describe('WealthPage (P-UI-05)', () => {
     expect(screen.getByText('Favorable Wealth Outlook')).toBeInTheDocument();
   });
 
+  it('D06: renders the C04 lifecycle rule gate as BLOCKED', () => {
+    render(<WealthPage productAnalysisState={{ status: 'READY', analysis: createProductAnalysis() }} />);
+    expect(screen.getByText('BLOCKED')).toBeInTheDocument();
+    expect(screen.getByText('Lifecycle event rules are not release-approved')).toBeInTheDocument();
+    expect(screen.getByText(/No lifecycle event category is currently release-enabled/)).toBeInTheDocument();
+    expect(screen.getByText(/C04 lifecycle candidate generation is blocked/)).toBeInTheDocument();
+  });
+
   it('D06: renders the ten-step Wealth journey with real anchors and separate financial facts', () => {
     render(<WealthPage productAnalysisState={{ status: 'READY', analysis: createProductAnalysis() }} />);
     const journey = screen.getByRole('navigation', { name: 'Guided wealth journey' });
