@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WealthLifecycleViewModel } from '../../product/analysis/wealthViewModel';
-import { Clock3, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Clock3, AlertCircle, ShieldCheck, Lock } from 'lucide-react';
 
 export interface WealthLifecycleSectionProps { readonly lifecycle: WealthLifecycleViewModel; }
 
@@ -34,7 +34,7 @@ export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ 
         </div>
       ) : (
         <div className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+          {lifecycle.status === 'BLOCKED' ? <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />}
           <div><p className="text-sm font-medium text-slate-200">Lifecycle event rules are not release-approved</p><p className="mt-1 text-xs text-slate-400">No lifecycle event category is currently release-enabled. Independent event-specific rules and golden fixtures must be approved before candidate generation can start.</p></div>
         </div>
       )}
