@@ -4,6 +4,21 @@ import { buildWealthLifecycleAnalysis } from './wealthLifecycleTypes';
 import type { WealthPeriodTimingActivation } from './wealthTypes';
 
 describe('Wealth lifecycle source intervals', () => {
+  it('reports release gating as BLOCKED even when natal and Dasha evidence exist', () => {
+    const result = buildWealthLifecycleAnalysis({ evidence, periodTimingActivations: [{
+      period: 'MD',
+      interval: { start: '2026-01-01', end: '2027-01-01' },
+      dimensions: { accumulation: 'ACTIVATES', gains: 'INSUFFICIENT_DATA', fortune: 'INSUFFICIENT_DATA', speculation: 'INSUFFICIENT_DATA' },
+      evidenceIds: ['MD_ACTIVATION']
+    }], cw05 });
+
+    expect(result.status).toBe('BLOCKED');
+    expect(result.candidateWindows).toHaveLength(0);
+    expect(result.taxonomy.every(rule => rule.validationStatus === 'UNVALIDATED' && !rule.releaseEnabled)).toBe(true);
+    expect(result.diagnostics.some(item => item.code === 'UNVALIDATED_EVENT_RULES')).toBe(true);
+    expect(result.finalAuthority).toBe('CW-05');
+  });
+
   const evidence = [
     createDomainEvidence({
       id: 'NATAL_ACCUMULATION',

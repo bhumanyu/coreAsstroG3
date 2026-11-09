@@ -13,6 +13,13 @@ function createUserReportedFinancialDataFixture() {
 import type { ProductDashaPeriod } from '../productAnalysisTypes';
 
 describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
+  it('projects the C04 release gate as BLOCKED instead of missing input', () => {
+    const vm = selectWealthViewModel(createProductAnalysis());
+    expect(vm.lifecycle.status).toBe('BLOCKED');
+    expect(vm.lifecycle.candidateCount).toBe(0);
+    expect(vm.lifecycle.statement).toMatch(/blocked/i);
+    expect(vm.lifecycle.diagnostics.some(item => item.code === 'UNVALIDATED_EVENT_RULES')).toBe(true);
+  });
   it('defaults real-world financial data to UNAVAILABLE when none is supplied', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.financialData.status).toBe('UNAVAILABLE');

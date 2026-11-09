@@ -184,7 +184,7 @@ export interface WealthTransitViewModel {
 }
 
 export interface WealthLifecycleViewModel {
-  readonly status: 'CANDIDATES_AVAILABLE' | 'CONDITIONAL' | 'PARTIAL' | 'UNRESOLVED' | 'INSUFFICIENT';
+  readonly status: 'CANDIDATES_AVAILABLE' | 'CONDITIONAL' | 'PARTIAL' | 'UNRESOLVED' | 'INSUFFICIENT' | 'BLOCKED';
   readonly candidateCount: number;
   readonly candidates: readonly { readonly id: string; readonly type: string; readonly status: string; readonly timingLabel: string; readonly limitations: readonly string[] }[];
   readonly diagnostics: readonly { readonly code: string; readonly eventType?: string; readonly message: string }[];
