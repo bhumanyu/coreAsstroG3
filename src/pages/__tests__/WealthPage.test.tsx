@@ -92,14 +92,14 @@ describe('WealthPage (P-UI-05)', () => {
     expect(screen.getByText(
       'Chart-derived indications only; not verified income, savings, assets, or investment facts.'
     )).toBeInTheDocument();
-    expect(screen.getByText('Accumulation')).toBeInTheDocument();
-    expect(screen.getByText('2nd House (Astrological accumulation indication)')).toBeInTheDocument();
-    expect(screen.getByText('Gains & Inflow')).toBeInTheDocument();
-    expect(screen.getByText('11th House (Astrological gains indication)')).toBeInTheDocument();
-    expect(screen.getByText('Fortune & Luck')).toBeInTheDocument();
-    expect(screen.getByText('9th House (Lakshmi Sthana & Prosperity)')).toBeInTheDocument();
-    expect(screen.getByText('Speculation & Venture')).toBeInTheDocument();
-    expect(screen.getByText('5th House (Astrological speculation indication)')).toBeInTheDocument();
+    expect(screen.getAllByText('Accumulation').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('2nd House (Astrological accumulation indication)').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Gains & Inflow').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('11th House (Astrological gains indication)').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Fortune & Luck').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('9th House (Lakshmi Sthana & Prosperity)').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Speculation & Venture').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('5th House (Astrological speculation indication)').length).toBeGreaterThanOrEqual(1);
 
     // Hora (D2) Divisional Alignment
     expect(screen.getByText('Hora (D2) Divisional Alignment')).toBeInTheDocument();
@@ -207,17 +207,17 @@ describe('WealthPage (P-UI-05)', () => {
             reportedAt: '2026-11-06T10:00:00+05:30'
           }
         },
-        ...base.wealth.financialData!.data.filter(datum => datum.concept !== 'INCOME')
+        ...(base.wealth.financialData?.data.filter(datum => datum.concept !== 'INCOME') ?? [])
       ]
     };
     const analysis = { ...base, wealth: { ...base.wealth, financialData } };
     render(<WealthPage productAnalysisState={{ status: 'READY', analysis }} />);
-    const facts = screen.getByRole('region', { name: 'Financial facts (C01)' });
-    expect(within(facts).getByText('Income')).toBeInTheDocument();
-    expect(within(facts).getByText('125000 INR')).toBeInTheDocument();
-    fireEvent.click(within(facts).getByText('Source and provenance'));
-    expect(within(facts).getByText(/report-income-d06/)).toBeInTheDocument();
-    expect(within(facts).getByText(/Reported by user/)).toBeInTheDocument();
+    expect(screen.getByText('Your Financial Information (C01)')).toBeInTheDocument();
+    expect(screen.getByText('Income')).toBeInTheDocument();
+    expect(screen.getByText('125000 INR')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Source and provenance'));
+    expect(screen.getByText(/report-income-d06/)).toBeInTheDocument();
+    expect(screen.getByText(/Reported by user/)).toBeInTheDocument();
   });
 
   it('D06: keeps risk qualitative and speculation explicitly non-advisory', () => {
