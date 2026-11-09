@@ -35,7 +35,7 @@ export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ 
       ) : (
         <div className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
-          <div><p className="text-sm font-medium text-slate-200">No event-enabled Wealth lifecycle candidate</p><p className="mt-1 text-xs text-slate-400">Event categories remain registered but disabled until their natal evidence, linked activation rules and independent fixtures are validated.</p></div>
+          <div><p className="text-sm font-medium text-slate-200">Lifecycle event rules are not release-approved</p><p className="mt-1 text-xs text-slate-400">No lifecycle event category is currently release-enabled. Independent event-specific rules and golden fixtures must be approved before candidate generation can start.</p></div>
         </div>
       )}
 
