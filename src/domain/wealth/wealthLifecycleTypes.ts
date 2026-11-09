@@ -10,7 +10,7 @@ export type WealthLifecycleEventType =
   | 'EROSION_CHALLENGE' | 'DEBT_EXPOSURE_INDICATION' | 'DEBT_REPAYMENT_REDUCTION_INDICATION'
   | 'LIQUIDITY_PRESSURE' | 'LIQUIDITY_RELIEF' | 'RECOVERY' | 'INHERITANCE_INDICATION';
 export type WealthLifecycleEventStatus = 'CANDIDATE' | 'CONDITIONAL' | 'CONFLICTED' | 'UNAVAILABLE';
-export type WealthLifecycleCandidateAvailability = 'CANDIDATES_AVAILABLE' | 'CONDITIONAL' | 'PARTIAL' | 'UNRESOLVED' | 'INSUFFICIENT';
+export type WealthLifecycleCandidateAvailability = 'CANDIDATES_AVAILABLE' | 'CONDITIONAL' | 'PARTIAL' | 'UNRESOLVED' | 'INSUFFICIENT' | 'BLOCKED';
 export type WealthLifecycleWindowPrecision = 'EXACT_SOURCE_INTERVAL' | 'PERIOD_ONLY' | 'UNTIMED';
 export type WealthLifecycleEvidenceRequirement =
   | 'NATAL_WEALTH_INDICATION' | 'DIMENSION_MATCHED_NATAL_EVIDENCE' | 'LINKED_DASHA_ACTIVATION'
@@ -204,14 +204,20 @@ export function buildWealthLifecycleAnalysis(input: WealthLifecycleInput): Wealt
   if (candidateWindows.length === 0) diagnostics.push({ code: 'NO_QUALIFIED_CANDIDATE', message: 'No lifecycle event is enabled by a validated event-specific rule. No asset, debt, liquidity, recovery, erosion, or inheritance fact is asserted.', evidenceOccurrenceIds: [] });
   const sortedDiagnostics = diagnostics.sort((a, b) => compare(a.code, b.code) || compare(a.eventType ?? '', b.eventType ?? '') || compare(a.message, b.message))
     .map(item => Object.freeze({ ...item, evidenceOccurrenceIds: uniqueSorted(item.evidenceOccurrenceIds) }));
-  const status: WealthLifecycleCandidateAvailability = evidence.length === 0 ? 'INSUFFICIENT' :
-    sortedDiagnostics.some(item => item.code === 'CONFLICTING_NATAL_EVIDENCE') ? 'PARTIAL' : 'UNRESOLVED';
+  const releaseRules = WEALTH_LIFECYCLE_RULE_CATALOGUE.filter(rule => rule.releaseEnabled && rule.validationStatus === 'VALIDATED');
+  const hasUnvalidatedRules = WEALTH_LIFECYCLE_RULE_CATALOGUE.some(rule => !rule.releaseEnabled || rule.validationStatus !== 'VALIDATED');
+  const status: WealthLifecycleCandidateAvailability = releaseRules.length === 0 && hasUnvalidatedRules
+    ? 'BLOCKED'
+    : evidence.length === 0 ? 'INSUFFICIENT'
+      : sortedDiagnostics.some(item => item.code === 'CONFLICTING_NATAL_EVIDENCE') ? 'PARTIAL' : 'UNRESOLVED';
   return Object.freeze({
     reasoningVersion: 'C04', methodVersion: WEALTH_LIFECYCLE_VERSION, status,
     taxonomy: WEALTH_LIFECYCLE_RULE_CATALOGUE, candidateWindows: Object.freeze(candidateWindows),
     diagnostics: Object.freeze(sortedDiagnostics), observedFinancialFactReportIds,
     actualFinancialEventsInferred: false, guaranteedEventsAvailable: false, numericProbabilityAvailable: false,
     finalAuthority: 'CW-05',
-    statement: 'C04 reports qualified lifecycle indications and candidate windows only. It does not assert real-world assets, debt, liquidity, inheritance, gains, repayment, loss, or recovery. CW-05 remains the final Wealth authority.'
+    statement: hasUnvalidatedRules
+      ? 'C04 lifecycle candidate generation is blocked: no event-specific rule has passed its independent validation and release gate. No candidate window is emitted. C01 financial facts remain separate, and CW-05 remains the final Wealth authority.'
+      : 'C04 reports qualified lifecycle indications and candidate windows only. It does not assert real-world assets, debt, liquidity, inheritance, gains, repayment, loss, or recovery. CW-05 remains the final Wealth authority.'
   });
 }
