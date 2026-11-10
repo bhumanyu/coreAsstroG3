@@ -77,11 +77,14 @@ describe('AiExplanationPage Integration', () => {
     productAnalysis: {
       status: 'READY',
       analysis: productAnalysis,
-      horoscope
+      horoscope,
+      analysisId: productAnalysis.analysisId,
+      sourceAnalysisId: productAnalysis.analysisId
     },
     lifeAnalysisState: validLifeAnalysisState,
     horoscope,
-    selectionState: { status: 'IDLE' }
+    selectionState: { status: 'IDLE' },
+    dashaTimingProjectionState: { status: 'IDLE' }
   });
 
   beforeEach(() => {
