@@ -5,7 +5,8 @@ import type {
   CalculationReferenceFixture,
   CalculationReferenceGate
 } from './calculationReferenceTypes.ts';
-import { Nakshatra, Pada, Sign } from '../../types.ts';
+// Keep this module executable under Node's built-in TypeScript strip-only loader.
+// Runtime enum parity is asserted in calculationValidation.test.ts under Vitest.
 
 /**
  * RG-09 calculation reference fixtures.
@@ -104,6 +105,13 @@ export const NAKSHATRAS_ORDER = Object.freeze([
   'REVATI'
 ] as const);
 
+const SIGN_ENUM_CONTRACT = Object.freeze(Object.fromEntries(
+  ZODIAC_SIGNS_ORDER.map(value => [value, value])
+));
+const NAKSHATRA_ENUM_CONTRACT = Object.freeze(Object.fromEntries(
+  NAKSHATRAS_ORDER.map(value => [value, value])
+));
+
 function sameEnumSet(values: readonly string[], enumeration: object): boolean {
   const enumValues = [...new Set(Object.values(enumeration)
     .filter((value): value is string => typeof value === 'string'))].sort();
@@ -116,10 +124,10 @@ export function inspectBoundaryCoverage(
   enums: { readonly sign?: object; readonly nakshatra?: object } = {}
 ): readonly string[] {
   const issues: string[] = [];
-  if (!sameEnumSet(ZODIAC_SIGNS_ORDER, enums.sign ?? Sign)) {
+  if (!sameEnumSet(ZODIAC_SIGNS_ORDER, enums.sign ?? SIGN_ENUM_CONTRACT)) {
     issues.push('ENUM_DRIFT:ZODIAC_SIGNS_ORDER must match the Sign enum set.');
   }
-  if (!sameEnumSet(NAKSHATRAS_ORDER, enums.nakshatra ?? Nakshatra)) {
+  if (!sameEnumSet(NAKSHATRAS_ORDER, enums.nakshatra ?? NAKSHATRA_ENUM_CONTRACT)) {
     issues.push('ENUM_DRIFT:NAKSHATRAS_ORDER must match the Nakshatra enum set.');
   }
   const epsilon = policy.boundaryEpsilonDegrees;
