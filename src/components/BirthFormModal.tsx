@@ -16,8 +16,6 @@ interface BirthFormModalProps {
   currentDetails: BirthDetails;
   onSave: (details: BirthDetails) => void;
   service?: ChartProfileService;
-  /** Overrides the preset-profile visibility flag (defaults to VITE_SHOW_PRESETS env). */
-  showPresetProfiles?: boolean;
 }
 
 const PROFILE_SAVE_WARNING_CLOSE_DELAY_MS = 1600;
@@ -65,55 +63,12 @@ export function utcISOToZonedWallClock(iso: string, timeZone: string): string {
   return [value('year'), '-', value('month'), '-', value('day'), 'T', value('hour'), ':', value('minute')].join('');
 }
 
-export const PRESET_PROFILES: { name: string; details: BirthDetails; desc: string }[] = [
-  {
-    name: 'Standard CoreAstro Test Vector',
-    desc: 'Default test epoch (2024-05-15 12:00 UTC, Ujjain 23.17° N, 75.78° E)',
-    details: {
-      name: 'CoreAstro Test Chart',
-      placeOfBirth: 'Ujjain, MP, India',
-      dateTimeStr: '2024-05-15T12:00:00Z',
-      timeZone: 'UTC',
-      latitude: 23.1793,
-      longitude: 75.7849,
-      ayanamsa: AyanamsaType.LAHIRI
-    }
-  },
-  {
-    name: 'J2000 Astronomical Epoch',
-    desc: 'Standard astronomical reference epoch (2000-01-01 12:00 UTC, Greenwich)',
-    details: {
-      name: 'J2000 Epoch',
-      placeOfBirth: 'Greenwich, London, UK',
-      dateTimeStr: '2000-01-01T12:00:00Z',
-      timeZone: 'UTC',
-      latitude: 51.4769,
-      longitude: 0.0005,
-      ayanamsa: AyanamsaType.LAHIRI
-    }
-  },
-  {
-    name: 'New Delhi Birth Chart',
-    desc: 'Sample chart generated for New Delhi, India (28.61° N, 77.20° E)',
-    details: {
-      name: 'Sample New Delhi',
-      placeOfBirth: 'New Delhi, India',
-      dateTimeStr: '1995-10-24T06:30:00Z',
-      timeZone: 'Asia/Kolkata',
-      latitude: 28.6139,
-      longitude: 77.2090,
-      ayanamsa: AyanamsaType.LAHIRI
-    }
-  }
-];
-
 export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   isOpen,
   onClose,
   currentDetails,
   onSave,
-  service: suppliedService,
-  showPresetProfiles: showPresetProfilesOverride
+  service: suppliedService
 }) => {
   const profileService = useMemo(
     () => suppliedService ?? new ChartProfileService(),
@@ -140,8 +95,6 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [profileSaveWarning, setProfileSaveWarning] = useState('');
   const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
   const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
-  const showPresetProfiles = showPresetProfilesOverride
-    ?? import.meta.env.VITE_SHOW_PRESETS === 'true';
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -294,10 +247,6 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     setValidationErrors([]);
   };
 
-  const handleApplyPreset = (preset: typeof PRESET_PROFILES[0]) => {
-    applyBirthDetails(preset.details);
-  };
-
   const handleDeleteProfile = (profile: ChartProfile) => {
     const result = profileService.deleteProfile(profile.id);
     if (result.ok) {
@@ -361,34 +310,6 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
 
             {/* Content Body */}
             <div className="p-5 sm:p-6 space-y-5 max-h-[calc(85vh-7rem)] overflow-y-auto scrollbar-none">
-              {/* Quick Presets (dev/e2e only) */}
-              {showPresetProfiles && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 dark:text-slate-400 light:text-slate-500 uppercase tracking-wider mb-2 font-mono-code">
-                  Select Preset Test Profile
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {PRESET_PROFILES.map((preset, idx) => (
-                    <motion.button
-                      key={idx}
-                      type="button"
-                      whileHover={{ scale: 1.02, y: -1 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleApplyPreset(preset)}
-                      className="p-3 bg-slate-800/60 dark:bg-slate-800/60 light:bg-slate-50 hover:bg-slate-800 dark:hover:bg-slate-750 light:hover:bg-slate-100 border border-slate-700/60 dark:border-slate-700/60 light:border-slate-200 hover:border-indigo-500/50 rounded-xl text-left transition-all cursor-pointer group"
-                    >
-                      <p className="text-xs font-bold text-slate-200 dark:text-slate-200 light:text-slate-800 group-hover:text-indigo-400 light:group-hover:text-indigo-600">
-                        {preset.name}
-                      </p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-400 light:text-slate-500 mt-1 line-clamp-2">
-                        {preset.desc}
-                      </p>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-              )}
-
               {/* Saved Chart Profiles */}
               <div>
                 <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-400 light:text-slate-500 uppercase tracking-wider mb-2 font-mono-code">
@@ -427,14 +348,6 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     No saved profiles on this browser/device.
                   </p>
                 ) : null}
-              </div>
-
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-slate-800 dark:border-slate-800 light:border-slate-200"></div>
-                <span className="flex-shrink mx-3 text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-500 light:text-slate-400 font-mono-code">
-                  Or Customize Details
-                </span>
-                <div className="flex-grow border-t border-slate-800 dark:border-slate-800 light:border-slate-200"></div>
               </div>
 
               {/* Form */}

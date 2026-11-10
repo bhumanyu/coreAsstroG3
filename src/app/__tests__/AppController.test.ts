@@ -178,27 +178,6 @@ describe('AppController', () => {
     expect(currentState.isBirthFormOpen).toBe(false);
   });
 
-  it('navigates to overview when resetPreset is called', () => {
-    let currentState: AppState = {
-      ...INITIAL_APP_STATE,
-      activePage: 'wealth'
-    };
-    const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
-      (update: SetStateAction<AppState>) => {
-        currentState =
-          typeof update === 'function'
-            ? (update as (prev: AppState) => AppState)(currentState)
-            : update;
-      }
-    );
-
-    const controller = createAppController(setState);
-    controller.resetPreset();
-
-    expect(setState).toHaveBeenCalledTimes(1);
-    expect(currentState.activePage).toBe('overview');
-  });
-
   it('uses functional update pattern preserving other state properties', () => {
     const setState = vi.fn();
     const controller = createAppController(setState);

@@ -8,14 +8,12 @@ describe('Header Component', () => {
   it('renders all expected product navigation tabs with Overview first and Detailed Analysis present', () => {
     const handleNavigate = vi.fn();
     const handleOpenModal = vi.fn();
-    const handleResetPreset = vi.fn();
 
     render(
       <Header
         activePage="overview"
         onNavigate={handleNavigate}
         onOpenBirthForm={handleOpenModal}
-        onResetPreset={handleResetPreset}
       />
     );
 
@@ -52,7 +50,6 @@ describe('Header Component', () => {
         activePage="overview"
         onNavigate={handleNavigate}
         onOpenBirthForm={vi.fn()}
-        onResetPreset={vi.fn()}
       />
     );
 

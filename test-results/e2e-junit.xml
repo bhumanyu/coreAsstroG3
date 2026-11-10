@@ -1,0 +1,44 @@
+<testsuites id="" name="" tests="20" failures="0" skipped="0" errors="0" time="57.794258">
+<testsuite name="journeys\critical-user-journeys.spec.ts" timestamp="2026-11-10T16:50:51.818Z" hostname="chromium" tests="20" failures="0" skipped="0" time="303.41" errors="0">
+<testcase name="E08-S01 first-time user enters exact birth details and reaches the canonical overview" classname="journeys\critical-user-journeys.spec.ts" time="21.043">
+</testcase>
+<testcase name="E08-S02 editing birth details recalculates rather than retaining the previous chart" classname="journeys\critical-user-journeys.spec.ts" time="27.607">
+</testcase>
+<testcase name="E08-S03 manual IANA timezone resolution is explicit before chart calculation" classname="journeys\critical-user-journeys.spec.ts" time="20.919">
+</testcase>
+<testcase name="E08-S04 invalid birth date is blocked before analysis" classname="journeys\critical-user-journeys.spec.ts" time="20.313">
+</testcase>
+<testcase name="E08-S05 ambiguous daylight-saving birth time requires the user to select the recorded offset" classname="journeys\critical-user-journeys.spec.ts" time="21.226">
+</testcase>
+<testcase name="E08-EXTRA-01 completed chart is shown in Overview with its natal sign positions" classname="journeys\critical-user-journeys.spec.ts" time="16.841">
+</testcase>
+<testcase name="E08-S06 Career page renders the canonical C11 conclusion and evidence" classname="journeys\critical-user-journeys.spec.ts" time="17.806">
+</testcase>
+<testcase name="E08-S07 Wealth page keeps D2 explicitly unavailable and shows canonical dimensions" classname="journeys\critical-user-journeys.spec.ts" time="18.166">
+</testcase>
+<testcase name="E08-S08 Dasha page exposes the active temporal state" classname="journeys\critical-user-journeys.spec.ts" time="10.569">
+</testcase>
+<testcase name="E08-S09 past Mahadasha–Antardasha selection produces a qualified period report" classname="journeys\critical-user-journeys.spec.ts" time="17.183">
+</testcase>
+<testcase name="E08-S10 current Mahadasha–Antardasha selection produces a qualified period report" classname="journeys\critical-user-journeys.spec.ts" time="11.997">
+</testcase>
+<testcase name="E08-S11 future Mahadasha–Antardasha selection produces a qualified period report" classname="journeys\critical-user-journeys.spec.ts" time="9.776">
+</testcase>
+<testcase name="E08-S12 Career-only partial evidence remains visible without requiring Wealth conclusions" classname="journeys\critical-user-journeys.spec.ts" time="13.908">
+</testcase>
+<testcase name="E08-S13 Wealth-only partial evidence remains visible without requiring Career conclusions" classname="journeys\critical-user-journeys.spec.ts" time="15.132">
+</testcase>
+<testcase name="E08-S14 AI narrative unavailability does not replace selected-period deterministic analysis" classname="journeys\critical-user-journeys.spec.ts" time="10.487">
+</testcase>
+<testcase name="E08-S15 saved chart profiles survive reload and can be restored" classname="journeys\critical-user-journeys.spec.ts" time="12.382">
+</testcase>
+<testcase name="E08-S16 share-link recipient preview requires explicit load before replacing chart inputs" classname="journeys\critical-user-journeys.spec.ts" time="10.326">
+</testcase>
+<testcase name="E08-S17 canonical chart and report JSON export produces a validated download" classname="journeys\critical-user-journeys.spec.ts" time="7.643">
+</testcase>
+<testcase name="E08-S18 Detailed Analysis includes the canonical Career and Wealth product report" classname="journeys\critical-user-journeys.spec.ts" time="11.926">
+</testcase>
+<testcase name="E08-EXTRA-02 out-of-range birth coordinates are blocked and can be corrected" classname="journeys\critical-user-journeys.spec.ts" time="8.16">
+</testcase>
+</testsuite>
+</testsuites>

@@ -1,13 +1,14 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { BirthFormModal, PRESET_PROFILES } from './BirthFormModal';
+import { BirthFormModal } from './BirthFormModal';
 import { ChartProfileService } from '../features/chart-profiles/chartProfileService';
+import { DEFAULT_BIRTH_DETAILS } from '../app/AppState';
 import { AyanamsaType, type BirthDetails } from '../types';
 
-const currentDetails = PRESET_PROFILES[0].details;
+const currentDetails = DEFAULT_BIRTH_DETAILS;
 
-function renderModal(service?: ChartProfileService, showPresetProfiles?: boolean) {
+function renderModal(service?: ChartProfileService) {
   const onSave = vi.fn();
   const onClose = vi.fn();
   render(
@@ -17,31 +18,13 @@ function renderModal(service?: ChartProfileService, showPresetProfiles?: boolean
       currentDetails={currentDetails}
       onSave={onSave}
       service={service}
-      showPresetProfiles={showPresetProfiles}
     />
   );
   return { onSave, onClose };
 }
 
 afterEach(() => {
-  vi.unstubAllEnvs();
   window.localStorage.clear();
-});
-
-describe('BirthFormModal preset profile visibility', () => {
-  it('shows preset test profiles when the dev flag is on', () => {
-    renderModal();
-    expect(screen.getByText('Select Preset Test Profile')).toBeInTheDocument();
-    expect(screen.getByText('J2000 Astronomical Epoch')).toBeInTheDocument();
-  });
-
-  it('hides preset test profiles when the dev flag is off', () => {
-    renderModal(undefined, false);
-    expect(screen.queryByText('Select Preset Test Profile')).not.toBeInTheDocument();
-    expect(screen.queryByText('J2000 Astronomical Epoch')).not.toBeInTheDocument();
-    // Saved profiles section is unaffected.
-    expect(screen.getByRole('heading', { name: 'Saved Chart Profiles' })).toBeInTheDocument();
-  });
 });
 
 describe('BirthFormModal saved chart profiles', () => {

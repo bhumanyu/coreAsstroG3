@@ -145,7 +145,15 @@ test('E08-S08 Dasha page exposes the active temporal state', async ({ page }) =>
 test('E08-S09 past Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
-  await page.getByRole('button', { name: 'J2000 Astronomical Epoch' }).click();
+  // J2000 Astronomical Epoch values (previously a preset test profile)
+  await page.getByPlaceholder('e.g. CoreAstro Test Vector 1').fill('J2000 Epoch');
+  await page.getByLabel('Birth date and time').fill('2000-01-01T12:00');
+  await page.locator('#birth-time-zone').fill('UTC');
+  await page.getByPlaceholder('e.g. 23.1793').fill('51.4769');
+  await page.getByPlaceholder('e.g. 75.7849').fill('0.0005');
+  await page.getByRole('dialog').locator('select').selectOption('LAHIRI');
+  // Fill place last: autocomplete results may overlay fields below it.
+  await page.getByPlaceholder('e.g. Ujjain, Muzaffarpur, London...').fill('Greenwich, London, UK');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
   await selectPeriodByRelation(page, 'Past');
@@ -167,7 +175,15 @@ test('E08-S11 future Mahadasha–Antardasha selection produces a qualified perio
 test('E08-S12 Career-only partial evidence remains visible without requiring Wealth conclusions', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
-  await page.getByRole('button', { name: 'New Delhi Birth Chart' }).click();
+  // New Delhi Birth Chart values (previously a preset test profile)
+  await page.getByPlaceholder('e.g. CoreAstro Test Vector 1').fill('Sample New Delhi');
+  await page.getByLabel('Birth date and time').fill('1995-10-24T12:00');
+  await page.locator('#birth-time-zone').fill('Asia/Kolkata');
+  await page.getByPlaceholder('e.g. 23.1793').fill('28.6139');
+  await page.getByPlaceholder('e.g. 75.7849').fill('77.2090');
+  await page.getByRole('dialog').locator('select').selectOption('LAHIRI');
+  // Fill place last: autocomplete results may overlay fields below it.
+  await page.getByPlaceholder('e.g. Ujjain, Muzaffarpur, London...').fill('New Delhi, India');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
   await navigate(page, 'Career');
@@ -178,7 +194,15 @@ test('E08-S12 Career-only partial evidence remains visible without requiring Wea
 test('E08-S13 Wealth-only partial evidence remains visible without requiring Career conclusions', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
-  await page.getByRole('button', { name: 'J2000 Astronomical Epoch' }).click();
+  // J2000 Astronomical Epoch values (previously a preset test profile)
+  await page.getByPlaceholder('e.g. CoreAstro Test Vector 1').fill('J2000 Epoch');
+  await page.getByLabel('Birth date and time').fill('2000-01-01T12:00');
+  await page.locator('#birth-time-zone').fill('UTC');
+  await page.getByPlaceholder('e.g. 23.1793').fill('51.4769');
+  await page.getByPlaceholder('e.g. 75.7849').fill('0.0005');
+  await page.getByRole('dialog').locator('select').selectOption('LAHIRI');
+  // Fill place last: autocomplete results may overlay fields below it.
+  await page.getByPlaceholder('e.g. Ujjain, Muzaffarpur, London...').fill('Greenwich, London, UK');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
   await navigate(page, 'Wealth');
@@ -213,7 +237,7 @@ test('E08-S15 saved chart profiles survive reload and can be restored', async ({
 
 test('E08-S16 share-link recipient preview requires explicit load before replacing chart inputs', async ({ page }) => {
   // v1 payload: { version: 1, dateTimeStr: '2024-05-15T12:00:00Z', timeZone: 'UTC',
-  //   latitude: 23.1793, longitude: 75.7849, ayanamsa: 'LAHIRI' } (default preset chart)
+  //   latitude: 23.1793, longitude: 75.7849, ayanamsa: 'LAHIRI' } (default chart)
   const shareUrl = '/#chart=v1.eyJ2ZXJzaW9uIjoxLCJkYXRlVGltZVN0ciI6IjIwMjQtMDUtMTVUMTI6MDA6MDBaIiwidGltZVpvbmUiOiJVVEMiLCJsYXRpdHVkZSI6MjMuMTc5MywibG9uZ2l0dWRlIjo3NS43ODQ5LCJheWFuYW1zYSI6IkxBSElSSSJ9';
   const recipient = await page.context().newPage();
   await recipient.goto(shareUrl);

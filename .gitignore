@@ -10,7 +10,6 @@ dist/
 # Environment files
 .env
 .env.*
-!.env.development
 
 # Editor/OS files
 .DS_Store

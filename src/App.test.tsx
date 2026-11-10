@@ -11,8 +11,41 @@ import { buildLifeAnalysis } from './domain/synthesis';
 import { buildLifeAnalysisViewModel } from './product/life-analysis/lifeAnalysisMapper';
 import type { LifeAnalysisProductState, LifeAnalysisViewModel } from './product/life-analysis/lifeAnalysisTypes';
 import { calculateHoroscope } from './engine/astroEngine';
-import { PRESET_PROFILES } from './components/BirthFormModal';
+import { DEFAULT_BIRTH_DETAILS } from './app/AppState';
 import type { BirthDetails } from './types';
+
+const fillBirthForm = (fields: {
+  name?: string;
+  placeOfBirth?: string;
+  dateTime?: string;
+  timeZone?: string;
+  latitude?: string;
+  longitude?: string;
+  ayanamsa?: string;
+}) => {
+  if (fields.name !== undefined) {
+    fireEvent.change(screen.getByPlaceholderText('e.g. CoreAstro Test Vector 1'), { target: { value: fields.name } });
+  }
+  if (fields.placeOfBirth !== undefined) {
+    fireEvent.change(screen.getByPlaceholderText('e.g. Ujjain, Muzaffarpur, London...'), { target: { value: fields.placeOfBirth } });
+  }
+  if (fields.dateTime !== undefined) {
+    fireEvent.change(screen.getByLabelText('Birth date and time'), { target: { value: fields.dateTime } });
+  }
+  if (fields.timeZone !== undefined) {
+    fireEvent.change(screen.getByPlaceholderText('Enter IANA timezone, e.g. Asia/Kolkata'), { target: { value: fields.timeZone } });
+  }
+  if (fields.latitude !== undefined) {
+    fireEvent.change(screen.getByPlaceholderText('e.g. 23.1793'), { target: { value: fields.latitude } });
+  }
+  if (fields.longitude !== undefined) {
+    fireEvent.change(screen.getByPlaceholderText('e.g. 75.7849'), { target: { value: fields.longitude } });
+  }
+  if (fields.ayanamsa !== undefined) {
+    const select = screen.getByRole('dialog').querySelector('select') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: fields.ayanamsa } });
+  }
+};
 
 describe('App - Life Analysis UI Integration & Navigation', () => {
   const sampleSynthesis = buildLifeAnalysis([STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]);
@@ -47,13 +80,13 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     }
   };
 
-  const defaultHoroscope = calculateHoroscope(PRESET_PROFILES[0].details);
+  const defaultHoroscope = calculateHoroscope(DEFAULT_BIRTH_DETAILS);
   const sampleContext = createAnalysisContext({
     asOf: '2026-01-01T00:00:00.000Z',
-    methodology: mapMethodology(PRESET_PROFILES[0].details)
+    methodology: mapMethodology(DEFAULT_BIRTH_DETAILS)
   });
   const readyProductAnalysis: ProductAnalysis = mapProductAnalysis({
-    birthDetails: PRESET_PROFILES[0].details,
+    birthDetails: DEFAULT_BIRTH_DETAILS,
     horoscope: defaultHoroscope,
     lifeAnalysisViewModel: sampleViewModel,
     aiExplanation: readyProductState.aiExplanation,
@@ -63,7 +96,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
   const makeProductRun = (
     analysis: ProductAnalysis,
     pipelineState: LifeAnalysisProductState | undefined,
-    birthDetails = PRESET_PROFILES[0].details,
+    birthDetails = DEFAULT_BIRTH_DETAILS,
     horoscope = defaultHoroscope
   ): ProductAnalysisRun => Object.freeze({
     analysis,
@@ -138,9 +171,16 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     const editBtn = screen.getByTitle('Edit Birth Details & Ayanamsa');
     fireEvent.click(editBtn);
 
-    // Select New Delhi preset
-    const delhiPresetBtn = screen.getByText('New Delhi Birth Chart');
-    fireEvent.click(delhiPresetBtn);
+    // Fill in the New Delhi birth details previously provided by the preset
+    fillBirthForm({
+      name: 'Sample New Delhi',
+      placeOfBirth: 'New Delhi, India',
+      dateTime: '1995-10-24T12:00',
+      timeZone: 'Asia/Kolkata',
+      latitude: '28.6139',
+      longitude: '77.2090',
+      ayanamsa: 'LAHIRI'
+    });
 
     // Submit chart
     const calcBtn = screen.getByRole('button', { name: /calculate chart/i });
@@ -199,8 +239,16 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     const editBtn = screen.getByTitle('Edit Birth Details & Ayanamsa');
     fireEvent.click(editBtn);
 
-    const j2000PresetBtn = screen.getByText('J2000 Astronomical Epoch');
-    fireEvent.click(j2000PresetBtn);
+    // Fill in the J2000 birth details previously provided by the preset
+    fillBirthForm({
+      name: 'J2000 Epoch',
+      placeOfBirth: 'Greenwich, London, UK',
+      dateTime: '2000-01-01T12:00',
+      timeZone: 'UTC',
+      latitude: '51.4769',
+      longitude: '0.0005',
+      ayanamsa: 'LAHIRI'
+    });
 
     const calcBtn = screen.getByRole('button', { name: /calculate chart/i });
     fireEvent.click(calcBtn);
@@ -349,8 +397,16 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     const editBtn = screen.getByTitle('Edit Birth Details & Ayanamsa');
     fireEvent.click(editBtn);
 
-    const j2000PresetBtn = screen.getByText('J2000 Astronomical Epoch');
-    fireEvent.click(j2000PresetBtn);
+    // Fill in the J2000 birth details previously provided by the preset
+    fillBirthForm({
+      name: 'J2000 Epoch',
+      placeOfBirth: 'Greenwich, London, UK',
+      dateTime: '2000-01-01T12:00',
+      timeZone: 'UTC',
+      latitude: '51.4769',
+      longitude: '0.0005',
+      ayanamsa: 'LAHIRI'
+    });
 
     const calcBtn = screen.getByRole('button', { name: /calculate chart/i });
     fireEvent.click(calcBtn);

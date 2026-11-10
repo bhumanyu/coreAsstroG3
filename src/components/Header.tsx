@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Compass, Sparkles, Calendar, MapPin, RefreshCw, Menu, X } from 'lucide-react';
+import { Compass, Sparkles, Calendar, MapPin, Menu, X } from 'lucide-react';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import {
   PRODUCT_NAVIGATION,
@@ -19,7 +19,6 @@ export interface HeaderProps {
   onNavigate?: (page: AppPage) => void;
   birthContext?: BirthContext;
   onOpenBirthForm?: () => void;
-  onResetPreset?: () => void;
 
   // Legacy props compatibility
   birthDetails?: BirthDetails;
@@ -231,7 +230,6 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate: propOnNavigate,
   birthContext: propBirthContext,
   onOpenBirthForm,
-  onResetPreset,
   birthDetails,
   activeTab,
   setActiveTab
@@ -283,18 +281,6 @@ export const Header: React.FC<HeaderProps> = ({
             birthContext={resolvedBirthContext}
             onOpenBirthForm={onOpenBirthForm}
           />
-
-          {onResetPreset && (
-            <button
-              type="button"
-              onClick={onResetPreset}
-              className="p-2 bg-slate-800/80 hover:bg-slate-750 dark:bg-slate-800/80 dark:hover:bg-slate-700 light:bg-slate-100 light:hover:bg-slate-200 border border-slate-700/80 dark:border-slate-700/80 light:border-slate-300 rounded-xl text-slate-400 dark:text-slate-400 light:text-slate-600 hover:text-white dark:hover:text-white light:hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-              title="Reset to Vedic Epoch Default"
-              aria-label="Reset to default preset"
-            >
-              <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
-            </button>
-          )}
 
           <div className="hidden sm:block">
             <ThemeToggle />

@@ -13,7 +13,6 @@ export interface AppController {
   navigate: (page: AppPage) => void;
   openBirthForm: () => void;
   closeBirthForm: () => void;
-  resetPreset: () => void;
   analyze: (birthDetails: BirthDetails) => Promise<void>;
   selectPeriod: (mahadashaId: string, antardashaId: string) => Promise<void>;
   /** Rebuilds only the optional Dasha projection for the active canonical analysis. */
@@ -50,7 +49,6 @@ export function createAppController(
     navigate: (page: AppPage) => setState(prev => ({ ...prev, activePage: page })),
     openBirthForm: () => setState(prev => ({ ...prev, isBirthFormOpen: true })),
     closeBirthForm: () => setState(prev => ({ ...prev, isBirthFormOpen: false })),
-    resetPreset: () => setState(prev => ({ ...prev, activePage: 'overview' })),
 
     analyze: async (birthDetails: BirthDetails) => {
       const requestId = ++analysisRequestId;

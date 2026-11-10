@@ -33,7 +33,6 @@ function createController(analyze: AppController['analyze']): AppController {
     navigate: vi.fn(),
     openBirthForm: vi.fn(),
     closeBirthForm: vi.fn(),
-    resetPreset: vi.fn(),
     selectPeriod: vi.fn().mockResolvedValue(undefined),
     retryDashaTiming: vi.fn().mockResolvedValue(undefined)
   };

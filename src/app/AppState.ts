@@ -1,9 +1,8 @@
-import type { BirthDetails, Horoscope } from '../types';
+import { AyanamsaType, type BirthDetails, type Horoscope } from '../types';
 import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
 import type { ProductAnalysis } from '../product/analysis';
 import type { AppPage } from './navigation/navigationTypes';
 import type { DashaTimingViewModel } from '../product/dasha-timing';
-import { PRESET_PROFILES } from '../components/BirthFormModal';
 
 export interface ProductAnalysisState {
   readonly status: 'IDLE' | 'LOADING' | 'READY' | 'ERROR';
@@ -58,9 +57,19 @@ export interface AppState {
   readonly selectionState: SelectionState;
 }
 
+export const DEFAULT_BIRTH_DETAILS: BirthDetails = {
+  name: 'CoreAstro Test Chart',
+  placeOfBirth: 'Ujjain, MP, India',
+  dateTimeStr: '2024-05-15T12:00:00Z',
+  timeZone: 'UTC',
+  latitude: 23.1793,
+  longitude: 75.7849,
+  ayanamsa: AyanamsaType.LAHIRI
+};
+
 export const INITIAL_APP_STATE: AppState = {
   activePage: 'overview',
-  birthDetails: PRESET_PROFILES[0].details,
+  birthDetails: DEFAULT_BIRTH_DETAILS,
   isBirthFormOpen: false,
   productAnalysis: INITIAL_PRODUCT_ANALYSIS_STATE,
   lifeAnalysisState: { status: 'LOADING' },

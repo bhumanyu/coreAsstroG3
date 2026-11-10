@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Header } from '../components/Header';
 import { BirthContext, buildBirthContext } from './birthContext';
-import { BirthFormModal, PRESET_PROFILES } from '../components/BirthFormModal';
+import { BirthFormModal } from '../components/BirthFormModal';
 import { ProductPageRouter } from './ProductPageRouter';
 import { AppFooter } from './AppFooter';
 import { AppState, INITIAL_APP_STATE, BirthDetails } from './AppState';
@@ -47,21 +47,6 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
     void runAnalysisSafely(state.birthDetails);
   }, [runAnalysisSafely, state.birthDetails]);
 
-  const handleResetPreset = () => {
-    controller.resetPreset();
-    setState((prev) => ({
-      ...prev,
-      birthDetails: PRESET_PROFILES[0].details,
-      productAnalysis: { status: 'LOADING' },
-      lifeAnalysisState: { status: 'LOADING' },
-      horoscope: undefined,
-      selectionState: { status: 'IDLE' },
-      dashaTimingViewModel: undefined,
-      dashaTimingProjectionError: undefined,
-      dashaTimingProjectionState: { status: 'IDLE' }
-    }));
-  };
-
   const handleSaveBirthDetails = (newDetails: BirthDetails) => {
     setState((prev) => ({
       ...prev,
@@ -89,7 +74,6 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
         onNavigate={controller.navigate}
         birthContext={birthContext}
         onOpenBirthForm={controller.openBirthForm}
-        onResetPreset={import.meta.env.VITE_SHOW_PRESETS === 'true' ? handleResetPreset : undefined}
       />
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">

@@ -2,17 +2,45 @@ import { describe, it, expect } from 'vitest';
 import { calculateHoroscope } from '../../astroEngine';
 import { AyanamsaType, BirthDetails } from '../../../types';
 import { CareerEvidenceFamily } from '../themeInterpretationTypes';
-import { PRESET_PROFILES } from '../../../components/BirthFormModal';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
+import { DEFAULT_BIRTH_DETAILS } from '../../../app/AppState';
 
-describe('D10 Career Theme Integration - Real Preset Charts', () => {
-  it('does NOT universally produce CONFLICTS across preset birth profiles', () => {
+const TEST_BIRTH_PROFILES: { name: string; details: BirthDetails }[] = [
+  { name: 'Standard CoreAstro Test Vector', details: DEFAULT_BIRTH_DETAILS },
+  {
+    name: 'J2000 Astronomical Epoch',
+    details: {
+      name: 'J2000 Epoch',
+      placeOfBirth: 'Greenwich, London, UK',
+      dateTimeStr: '2000-01-01T12:00:00Z',
+      timeZone: 'UTC',
+      latitude: 51.4769,
+      longitude: 0.0005,
+      ayanamsa: AyanamsaType.LAHIRI
+    }
+  },
+  {
+    name: 'New Delhi Birth Chart',
+    details: {
+      name: 'Sample New Delhi',
+      placeOfBirth: 'New Delhi, India',
+      dateTimeStr: '1995-10-24T06:30:00Z',
+      timeZone: 'Asia/Kolkata',
+      latitude: 28.6139,
+      longitude: 77.2090,
+      ayanamsa: AyanamsaType.LAHIRI
+    }
+  }
+];
+
+describe('D10 Career Theme Integration - Real Birth Profiles', () => {
+  it('does NOT universally produce CONFLICTS across test birth profiles', () => {
     const profiles: { name: string; details: BirthDetails }[] = [
-      ...PRESET_PROFILES.map((p) => ({ name: p.name, details: p.details })),
+      ...TEST_BIRTH_PROFILES,
       { name: 'Canonical Fixture Chart', details: CANONICAL_BIRTH_DETAILS }
     ];
 
-    const results = PRESET_PROFILES.map((profile) => {
+    const results = TEST_BIRTH_PROFILES.map((profile) => {
       const horoscope = calculateHoroscope(profile.details);
       const careerTheme = horoscope.themeInterpretationV2?.career;
       const d10Evidence = careerTheme?.evidence.find(
