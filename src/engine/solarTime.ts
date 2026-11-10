@@ -35,10 +35,29 @@ export function parseUtcDate(dateTimeStr: string): Date {
     throw new TypeError('dateTimeStr must be a non-empty string');
   }
 
-  // Accept explicit Z or explicit offset only
-  const explicitOffsetOrZ = /([+-]\d{2}:\d{2}|Z)$/i;
-  if (!explicitOffsetOrZ.test(dateTimeStr)) {
-    throw new Error('Birth datetime must include an explicit timezone offset or Z.');
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(Z|[+-]\d{2}:\d{2})$/i.exec(dateTimeStr);
+  if (!match) {
+    throw new Error('Birth datetime must be a complete ISO datetime with an explicit timezone offset or Z.');
+  }
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , offsetText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = secondText === undefined ? 0 : Number(secondText);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > daysInMonth
+    || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+    throw new TypeError('Birth datetime contains an impossible calendar date or clock time.');
+  }
+
+  if (offsetText.toUpperCase() !== 'Z') {
+    const offsetMatch = /^[+-](\d{2}):(\d{2})$/.exec(offsetText);
+    if (!offsetMatch || Number(offsetMatch[1]) > 23 || Number(offsetMatch[2]) > 59) {
+      throw new TypeError('Birth datetime contains an invalid timezone offset.');
+    }
   }
 
   const d = new Date(dateTimeStr);
@@ -47,7 +66,6 @@ export function parseUtcDate(dateTimeStr: string): Date {
   }
   return d;
 }
-
 /**
  * Gets ayanamsa offset in degrees relative to Lahiri baseline.
  */
