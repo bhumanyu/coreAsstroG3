@@ -6,7 +6,7 @@ import { PlaceAutocomplete } from './PlaceAutocomplete';
 import { DateTimeSelector } from './DateTimeSelector';
 import { PlaceResult } from '../services/geocoding';
 import { validateBirthDetails, type BirthValidationError } from '../core/validation/birthDetailsValidation';
-import { isValidIanaTimeZone, resolveLocalDateTime } from '../core/time/timeZoneResolution';
+import { getTimeZoneResolutionStatus, isValidIanaTimeZone, resolveLocalDateTime, type TimeZoneResolutionStatus } from '../core/time/timeZoneResolution';
 
 interface BirthFormModalProps {
   isOpen: boolean;
@@ -106,6 +106,8 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [ayanamsa, setAyanamsa] = useState<AyanamsaType>(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
   const [validationErrors, setValidationErrors] = useState<readonly BirthValidationError[]>([]);
   const [selectedAmbiguousInstant, setSelectedAmbiguousInstant] = useState('');
+  const [timeZoneSource, setTimeZoneSource] = useState<'PROVIDER' | 'USER'>('PROVIDER');
+  const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
   const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
 
   const handleKeyDown = useCallback(
@@ -123,6 +125,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
       setPlaceOfBirth(currentDetails.placeOfBirth || 'Ujjain, India');
       const tz = currentDetails.timeZone || '';
       setTimeZone(tz);
+      setTimeZoneSource('PROVIDER');
       setDateTimeStr(
         utcISOToZonedWallClock(
           currentDetails.dateTimeStr || '2024-05-15T12:00:00Z',
@@ -166,7 +169,9 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
             ? 'This local time does not exist because of a daylight-saving clock change. Choose another time.'
             : resolution.status === 'AMBIGUOUS'
               ? 'This local time occurs twice. Select which UTC offset matches the recorded birth time.'
-              : resolution.reason
+              : resolution.status === 'INVALID'
+                ? resolution.reason
+                : 'Enter a valid local date and time.'
         };
       setValidationErrors([error]);
       return;
@@ -201,6 +206,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     setLongitude(place.longitude.toString());
     // A new location invalidates the prior timezone unless the provider supplies one.
     setTimeZone(place.timezone ?? '');
+    setTimeZoneSource('PROVIDER');
     setSelectedAmbiguousInstant('');
   };
 
@@ -209,6 +215,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     setPlaceOfBirth(preset.details.placeOfBirth || '');
     const tz = preset.details.timeZone;
     setTimeZone(tz);
+    setTimeZoneSource('USER');
     setDateTimeStr(utcISOToZonedWallClock(preset.details.dateTimeStr, tz));
     setLatitude(preset.details.latitude.toString());
     setLongitude(preset.details.longitude.toString());
@@ -358,7 +365,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       list="birth-time-zone-options"
                       required
                       value={timeZone}
-                      onChange={(e) => { setTimeZone(e.target.value); setSelectedAmbiguousInstant(''); }}
+                      onChange={(e) => { setTimeZone(e.target.value); setTimeZoneSource('USER'); setSelectedAmbiguousInstant(''); }}
                       placeholder="Enter IANA timezone, e.g. Asia/Kolkata"
                       className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
@@ -371,11 +378,12 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       <option value="Australia/Sydney" />
                       <option value="Pacific/Auckland" />
                     </datalist>
-                    {!isValidIanaTimeZone(timeZone) && (
+                    {timeZoneStatus === 'UNRESOLVED' && (
                       <p role="alert" className="mt-1 text-xs text-amber-300">
                         Timezone is unresolved. Enter a valid IANA timezone; the chart cannot be calculated until it is resolved.
                       </p>
                     )}
+                    {timeZoneStatus === 'INVALID' && <p role="alert" className="mt-1 text-xs text-rose-400">The timezone identifier is invalid. Enter a valid IANA timezone.</p>}
                     {validationErrors.some((e) => e.field === 'timeZone') && (
                       <p className="mt-1 text-xs text-rose-400">
                         {validationErrors.find((e) => e.field === 'timeZone')?.message}
