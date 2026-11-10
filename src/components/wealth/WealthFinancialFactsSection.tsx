@@ -51,7 +51,7 @@ export const WealthFinancialFactsSection: React.FC<WealthFinancialFactsSectionPr
       <header className="flex items-start gap-3">
         <div className="rounded-xl border border-sky-500/20 bg-sky-500/10 p-2 text-sky-300"><FileCheck2 className="h-5 w-5" aria-hidden="true" /></div>
         <div className="min-w-0 flex-1">
-          <h2 id="wealth-financial-facts-heading" className="text-base font-semibold text-slate-100">Your Financial Information (C01)</h2>
+          <h2 id="wealth-financial-facts-heading" className="text-base font-semibold text-slate-100">Financial facts attached to this analysis (C01)</h2>
           <p className="mt-1 text-xs text-slate-400">Real-world values are shown only when explicitly supplied and validated with source provenance. They are independent of the horoscope and CW-05 conclusions.</p>
         </div>
         <span className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-300">{financialData.status}</span>
