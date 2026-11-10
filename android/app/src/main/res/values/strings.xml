@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CoreAstro</string>
+    <string name="title_activity_main">CoreAstro</string>
+    <string name="package_name">com.bhumanyu.coreastro</string>
+    <string name="custom_url_scheme">com.bhumanyu.coreastro</string>
+</resources>

@@ -29,6 +29,8 @@
     "acceptance:report": "node scripts/acceptance/generate-acceptance-report.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/core": "^7.6.10",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
     "motion": "^12.4.7",
@@ -37,6 +39,7 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.10",
     "@playwright/test": "1.56.1",
     "@tailwindcss/vite": "^4.0.0",
     "@testing-library/dom": "^10.4.2",
