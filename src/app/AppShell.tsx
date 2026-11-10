@@ -93,14 +93,18 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
       />
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <ChartShareControls
-          onLoadBirthDetails={handleSaveBirthDetails}
-        />
-        <ChartExportControl
-          analysis={state.productAnalysis.analysis}
-          selectedPeriod={state.productAnalysis.analysis?.selectedPeriod}
-          onLoadBirthDetails={handleSaveBirthDetails}
-        />
+        {state.activePage === 'overview' && (
+          <>
+            <ChartShareControls
+              onLoadBirthDetails={handleSaveBirthDetails}
+            />
+            <ChartExportControl
+              analysis={state.productAnalysis.analysis}
+              selectedPeriod={state.productAnalysis.analysis?.selectedPeriod}
+              onLoadBirthDetails={handleSaveBirthDetails}
+            />
+          </>
+        )}
         <ProductPageRouter
           state={state}
           horoscope={state.horoscope}

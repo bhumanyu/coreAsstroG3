@@ -139,6 +139,46 @@ describe('AppShellContent analysis safety wrapper', () => {
     window.history.replaceState(null, '', '/');
   });
 
+  it('renders chart utility controls on the overview page only', async () => {
+    window.localStorage.clear();
+    const sharedBirth = {
+      ...INITIAL_APP_STATE.birthDetails,
+      name: 'Shared chart',
+      dateTimeStr: '2001-02-03T04:05:00Z',
+      latitude: 35,
+      longitude: -110
+    };
+    const encoded = encodeChartShare(sharedBirth);
+    if (!encoded.ok) throw new Error(encoded.error);
+    window.history.replaceState(null, '', `/#chart=${encoded.value}`);
+
+    let setStateRef: Dispatch<SetStateAction<AppState>> | undefined;
+    const analyze = vi.fn<AppController['analyze']>().mockResolvedValue(undefined);
+    const baseController = createController(analyze);
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
+      setStateRef = setState;
+      return {
+        ...baseController,
+        navigate: (page: AppState['activePage']) =>
+          setState((prev) => ({ ...prev, activePage: page }))
+      };
+    };
+
+    render(<AppShellContent controllerFactory={controllerFactory} />);
+
+    // A #chart= fragment on initial load still surfaces the load prompt on overview.
+    expect(await screen.findByRole('button', { name: 'Load shared chart inputs' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export chart and report JSON' })).toBeInTheDocument();
+
+    act(() => {
+      setStateRef?.((prev) => ({ ...prev, activePage: 'career' }));
+    });
+    expect(screen.queryByRole('button', { name: 'Load shared chart inputs' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export chart and report JSON' })).not.toBeInTheDocument();
+
+    window.history.replaceState(null, '', '/');
+  });
+
   it('handles an unexpected initial rejection without an unhandled rejection or duplicate error', async () => {
     const controller = createController(vi.fn().mockRejectedValue(new Error('unexpected failure')));
     const controllerFactory = () => controller;
