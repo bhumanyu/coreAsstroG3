@@ -1,9 +1,10 @@
 import React from 'react';
 import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ProductAnalysis } from '../product/analysis/productAnalysisTypes';
 import { createProductAnalysis } from '../product/analysis/__tests__/testHelpers';
 import { createProductAnalysisReportAcceptanceAdapter } from './productAnalysisReportAcceptanceAdapter';
+import { ProductAnalysisReportBoundary } from '../components/fullNatalReport/ProductAnalysisReportBoundary';
 
 describe('ProductAnalysisReportAcceptanceAdapter', () => {
   it('renders the real report and preserves canonical Career, Wealth, Dasha and provenance outputs', () => {
@@ -163,4 +164,43 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
     render(view);
     expect(screen.getByText(/no canonical ProductAnalysis snapshot is attached/i)).toBeInTheDocument();
   });
+  it('isolates report-render errors and retries the existing snapshot without rerunning analysis', () => {
+    let shouldThrow = true;
+    const UnstableReport = () => {
+      if (shouldThrow) {
+        shouldThrow = false;
+        throw new Error('renderer failed');
+      }
+      return <div>Recovered report for the same analysis</div>;
+    };
+    const analysisRetry = vi.fn();
+    render(
+      <ProductAnalysisReportBoundary resetKey="analysis-1">
+        <UnstableReport />
+      </ProductAnalysisReportBoundary>
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('renderer failed');
+    expect(screen.getByRole('alert')).toHaveTextContent('canonical chart analysis has been preserved');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry report' }));
+
+    expect(screen.getByText('Recovered report for the same analysis')).toBeInTheDocument();
+    expect(analysisRetry).not.toHaveBeenCalled();
+  });
+
+  it('clears an earlier report-render error when the canonical analysis identity changes', () => {
+    const { rerender } = render(
+      <ProductAnalysisReportBoundary resetKey="chart-a">
+        <div>Chart A report</div>
+      </ProductAnalysisReportBoundary>
+    );
+    rerender(
+      <ProductAnalysisReportBoundary resetKey="chart-b">
+        <div>Chart B report</div>
+      </ProductAnalysisReportBoundary>
+    );
+    expect(screen.getByText('Chart B report')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
 });
