@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ProductAnalysis } from '../product/analysis/productAnalysisTypes';
 import { createProductAnalysis } from '../product/analysis/__tests__/testHelpers';
@@ -189,14 +189,24 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
   });
 
   it('clears an earlier report-render error when the canonical analysis identity changes', () => {
+    let shouldThrow = true;
+    const UnstableReport = () => {
+      if (shouldThrow) {
+        shouldThrow = false;
+        throw new Error('chart A renderer failed');
+      }
+      return <div>Chart B report</div>;
+    };
     const { rerender } = render(
       <ProductAnalysisReportBoundary resetKey="chart-a">
-        <div>Chart A report</div>
+        <UnstableReport />
       </ProductAnalysisReportBoundary>
     );
+    expect(screen.getByRole('alert')).toHaveTextContent('chart A renderer failed');
+
     rerender(
       <ProductAnalysisReportBoundary resetKey="chart-b">
-        <div>Chart B report</div>
+        <UnstableReport />
       </ProductAnalysisReportBoundary>
     );
     expect(screen.getByText('Chart B report')).toBeInTheDocument();
