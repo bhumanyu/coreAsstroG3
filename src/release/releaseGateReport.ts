@@ -733,6 +733,17 @@ function normalizePr8AcceptanceStatuses(
       continue;
     }
 
+    if (normalized.has(item.name)) {
+      const previous = normalized.get(item.name)!;
+      normalized.set(item.name, {
+        ...item,
+        status: previous.status === 'FAIL' || item.status === 'FAIL' ? 'FAIL' : 'BLOCKED',
+        coverageStatus: 'BLOCKED',
+        details: `Duplicate PR-8 status entries for ${item.name}; conflicting evidence is not merged.`
+      });
+      continue;
+    }
+
     if (item.status === 'FAIL') {
       normalized.set(item.name, item);
       continue;
