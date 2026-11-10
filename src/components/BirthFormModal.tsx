@@ -128,7 +128,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
       setTimeZoneSource('PROVIDER');
       setDateTimeStr(
         utcISOToZonedWallClock(
-          currentDetails.dateTimeStr || '2024-05-15T12:00:00Z',
+          currentDetails.dateTimeStr,
           tz
         )
       );
@@ -392,6 +392,17 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   </div>
                 </div>
 
+                {localDateTimeResolution.status === 'UNIQUE' && (
+                  <p className="text-xs text-slate-400" aria-live="polite">
+                    Resolved instant: <span className="font-mono text-slate-200">{localDateTimeResolution.candidates[0].instant}</span>
+                    {' '}({localDateTimeResolution.candidates[0].offsetLabel})
+                  </p>
+                )}
+                {localDateTimeResolution.status === 'AMBIGUOUS' && selectedAmbiguousInstant && (
+                  <p className="text-xs text-slate-400" aria-live="polite">
+                    Selected instant: <span className="font-mono text-slate-200">{selectedAmbiguousInstant}</span>
+                  </p>
+                )}
                 {localDateTimeResolution.status === 'AMBIGUOUS' && (
                   <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
                     <label htmlFor="birth-time-ambiguity" className="block text-xs font-semibold text-amber-200 mb-1">
