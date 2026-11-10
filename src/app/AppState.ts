@@ -10,48 +10,49 @@ export interface ProductAnalysisState {
   readonly analysis?: ProductAnalysis;
   readonly error?: string;
   readonly horoscope?: Horoscope;
+  /** Monotonic controller request identity that produced this state. */
+  readonly requestId?: number;
+  readonly analysisId?: string;
 }
 
 export interface SelectionState {
   readonly status: 'IDLE' | 'SUBMITTING' | 'READY' | 'ERROR';
   readonly error?: string;
+  readonly requestId?: number;
+  readonly analysisId?: string;
+  readonly mahadashaId?: string;
+  readonly antardashaId?: string;
 }
 
-export const INITIAL_SELECTION_STATE: SelectionState = {
-  status: 'IDLE'
-};
+export type DashaTimingProjectionStatus = 'IDLE' | 'READY' | 'RETRYING' | 'ERROR';
 
-export const INITIAL_PRODUCT_ANALYSIS_STATE: ProductAnalysisState = {
-  status: 'IDLE'
-};
+export interface DashaTimingProjectionState {
+  readonly status: DashaTimingProjectionStatus;
+  readonly requestId?: number;
+  readonly analysisId?: string;
+  readonly error?: string;
+}
+
+export const INITIAL_SELECTION_STATE: SelectionState = { status: 'IDLE' };
+export const INITIAL_PRODUCT_ANALYSIS_STATE: ProductAnalysisState = { status: 'IDLE' };
+export const INITIAL_DASHA_TIMING_PROJECTION_STATE: DashaTimingProjectionState = { status: 'IDLE' };
 
 export interface AppState {
   readonly activePage: AppPage;
   readonly birthDetails: BirthDetails;
   readonly isBirthFormOpen: boolean;
-  /**
-   * Canonical aggregate state for product views (P-UI-02).
-   */
+  /** Canonical aggregate state for product views (P-UI-02). */
   readonly productAnalysis: ProductAnalysisState;
-  /**
-   * Transitional compatibility state retained for legacy product views
-   * and backward-compatible test assertions.
-   */
+  /** Transitional compatibility state retained for legacy product views. */
   readonly lifeAnalysisState: LifeAnalysisProductState;
-  /**
-   * Sourced directly from single ProductAnalysis pipeline
-   */
+  /** Sourced directly from single ProductAnalysis pipeline. */
   readonly horoscope?: Horoscope;
-  /**
-   * Sourced directly from single ProductAnalysis pipeline
-   */
+  /** Optional Dasha timing projection over the canonical run snapshot. */
   readonly dashaTimingViewModel?: DashaTimingViewModel;
   /** User-visible diagnostic when the optional Dasha timing projection fails. */
   readonly dashaTimingProjectionError?: string;
-  /**
-   * Selection state for period selection - separate from productAnalysis.status
-   * to avoid clobbering the baseline view on selection errors.
-   */
+  readonly dashaTimingProjectionState: DashaTimingProjectionState;
+  /** Selection state is independent from baseline analysis status. */
   readonly selectionState: SelectionState;
 }
 
@@ -61,8 +62,8 @@ export const INITIAL_APP_STATE: AppState = {
   isBirthFormOpen: false,
   productAnalysis: INITIAL_PRODUCT_ANALYSIS_STATE,
   lifeAnalysisState: { status: 'LOADING' },
-  selectionState: INITIAL_SELECTION_STATE
+  selectionState: INITIAL_SELECTION_STATE,
+  dashaTimingProjectionState: INITIAL_DASHA_TIMING_PROJECTION_STATE
 };
 
 export type { BirthDetails, LifeAnalysisProductState, AppPage };
-
