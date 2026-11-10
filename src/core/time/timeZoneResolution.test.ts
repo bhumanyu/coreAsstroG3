@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidIanaTimeZone, resolveLocalDateTime } from './timeZoneResolution';
+import { getTimeZoneResolutionStatus, isValidIanaTimeZone, resolveLocalDateTime } from './timeZoneResolution';
 
 describe('resolveLocalDateTime', () => {
   it('resolves an ordinary local time to exactly one instant', () => {
@@ -38,5 +38,9 @@ describe('resolveLocalDateTime', () => {
     expect(resolveLocalDateTime('2024-01-01T12:00', 'Mars/Olympus').status).toBe('INVALID');
     expect(isValidIanaTimeZone('Asia/Kolkata')).toBe(true);
     expect(isValidIanaTimeZone('')).toBe(false);
+    expect(getTimeZoneResolutionStatus(undefined)).toBe('UNRESOLVED');
+    expect(getTimeZoneResolutionStatus('Not/AZone')).toBe('INVALID');
+    expect(getTimeZoneResolutionStatus('Asia/Kolkata')).toBe('RESOLVED');
+    expect(getTimeZoneResolutionStatus('Asia/Kolkata', 'USER')).toBe('USER_SELECTED');
   });
 });
