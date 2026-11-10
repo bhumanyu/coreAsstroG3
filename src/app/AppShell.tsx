@@ -34,7 +34,7 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
         horoscope: undefined,
         selectionState: { status: 'IDLE' },
         dashaTimingViewModel: undefined,
-        dashaTimingProjectionError: message,
+        dashaTimingProjectionError: undefined,
         dashaTimingProjectionState: { status: 'IDLE' }
       }));
     }
