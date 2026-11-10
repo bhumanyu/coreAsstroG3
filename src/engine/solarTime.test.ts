@@ -31,6 +31,20 @@ describe('solarTime module', () => {
     expect(() => parseUtcDate('1988-05-08 09:30:00')).toThrow();
   });
 
+  it('rejects impossible calendar dates and clock values without JavaScript normalization', () => {
+    expect(() => parseUtcDate('2024-02-30T12:00:00Z')).toThrow(/impossible calendar date/i);
+    expect(() => parseUtcDate('2023-02-29T12:00:00Z')).toThrow(/impossible calendar date/i);
+    expect(() => parseUtcDate('2024-13-01T12:00:00Z')).toThrow(/impossible calendar date/i);
+    expect(() => parseUtcDate('2024-01-01T24:00:00Z')).toThrow(/impossible calendar date/i);
+    expect(() => parseUtcDate('2024-01-01T12:60:00Z')).toThrow(/impossible calendar date/i);
+    expect(() => parseUtcDate('2024-01-01T12:00:00+25:00')).toThrow(/invalid timezone offset/i);
+  });
+
+  it('accepts leap-day instants and explicit offsets without changing the instant', () => {
+    expect(parseUtcDate('2024-02-29T12:00:00Z').toISOString()).toBe('2024-02-29T12:00:00.000Z');
+    expect(parseUtcDate('1988-05-08T09:30:00+05:30').toISOString()).toBe('1988-05-08T04:00:00.000Z');
+  });
+
   it('shouldCalculateSunDeclinationAtSolsticesAndEquinoxes', () => {
     const obliq = 23.44;
     // Spring Equinox (0° tropical) -> ~0° declination
