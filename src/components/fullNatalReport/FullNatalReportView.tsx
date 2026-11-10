@@ -28,12 +28,18 @@ import { ProductAnalysisReportView } from './ProductAnalysisReportView';
 export interface FullNatalReportViewProps {
   readonly report: FullNatalAnalysisReport;
   readonly productAnalysis?: ProductAnalysis;
+  readonly productAnalysisStatus?: 'IDLE' | 'LOADING' | 'READY' | 'ERROR';
+  readonly productAnalysisError?: string;
+  readonly onRetryAnalysis?: () => void;
   readonly onNavigateToDashaTiming?: () => void;
 }
 
 export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({
   report,
   productAnalysis,
+  productAnalysisStatus,
+  productAnalysisError,
+  onRetryAnalysis,
   onNavigateToDashaTiming
 }) => {
   const activeSectionId = useReportSectionObserver(REPORT_SECTION_IDS);
@@ -243,7 +249,7 @@ export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({
           </ReportSection>
         </div>
       </div>
-      <ProductAnalysisReportView analysis={productAnalysis} />
+      <ProductAnalysisReportView analysis={productAnalysis} status={productAnalysisStatus} error={productAnalysisError} onRetry={onRetryAnalysis} />
     </div>
   );
 };
