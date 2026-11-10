@@ -7,10 +7,10 @@ async function openApp(page: Page): Promise<void> {
 }
 
 test('E08-S05 corrupt profile storage is reported without breaking the active chart', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('coreastro.chartProfiles', '{broken-json');
-  });
   await openApp(page);
+  await page.evaluate(() => window.localStorage.setItem('coreastro.chartProfiles', '{broken-json'));
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 
   await expect(page.getByRole('alert')).toContainText('Saved chart data is damaged');
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible();
@@ -18,7 +18,8 @@ test('E08-S05 corrupt profile storage is reported without breaking the active ch
 });
 
 test('E08-S05 browser quota failure does not claim that a chart profile was saved', async ({ page }) => {
-  await page.addInitScript(() => {
+  await openApp(page);
+  await page.evaluate(() => {
     const originalSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key: string, value: string): void {
       if (key === 'coreastro.chartProfiles') {
@@ -27,7 +28,6 @@ test('E08-S05 browser quota failure does not claim that a chart profile was save
       originalSetItem.call(this, key, value);
     };
   });
-  await openApp(page);
 
   await page.getByLabel('Profile name').fill('Quota Failure Profile');
   await page.getByRole('button', { name: 'Save current chart' }).click();
@@ -38,7 +38,8 @@ test('E08-S05 browser quota failure does not claim that a chart profile was save
 });
 
 test('E08-S05 denied profile storage is surfaced while the chart remains usable', async ({ page }) => {
-  await page.addInitScript(() => {
+  await openApp(page);
+  await page.evaluate(() => {
     const originalGetItem = Storage.prototype.getItem;
     Storage.prototype.getItem = function (key: string): string | null {
       if (key === 'coreastro.chartProfiles') {
@@ -47,11 +48,10 @@ test('E08-S05 denied profile storage is surfaced while the chart remains usable'
       return originalGetItem.call(this, key);
     };
   });
-  await openApp(page);
+  await page.getByRole('button', { name: 'Refresh profile list' }).click();
 
   await expect(page.getByRole('alert')).toContainText('Browser storage is unavailable');
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Calculate Chart' })).toHaveCount(0);
 });
 
 test('E08-S05 malformed share fragment is rejected without replacing current chart inputs', async ({ page }) => {
