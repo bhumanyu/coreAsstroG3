@@ -1,13 +1,13 @@
 import React from 'react';
 
 export interface ProductAnalysisReportBoundaryProps {
-  readonly resetKey?: string;
+  readonly resetKey: string;
   readonly children: React.ReactNode;
 }
 
 interface ProductAnalysisReportBoundaryState {
   readonly error?: Error;
-  readonly resetKey: string;
+  readonly resetKey?: string;
 }
 
 /** Isolates report rendering failures from the canonical analysis lifecycle. */
