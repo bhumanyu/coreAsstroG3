@@ -76,7 +76,8 @@
   ],
   "pr8Acceptance": {
     "consumedBy": "RG-13",
-    "retainedBlockedSurfaces": ["report-renderer", "AppController async-state"]
+    "requiredEvidenceSurfaces": ["report-renderer", "AppController async-state"],
+    "evidenceRequirement": "Each surface requires exact tested SHA, successful adapter command, successful Chromium journeys, CI run identity, and artifact references."
   },
   "allowedSkippedTests": [],
   "retainedBlockers": [
@@ -90,16 +91,6 @@
       "status": "BLOCKED",
       "scope": "Owner-gated non-dusthana mechanism families remain blocked and are never inferred PASS."
     },
-    {
-      "id": "report-renderer",
-      "status": "BLOCKED",
-      "scope": "PR-8 report-renderer acceptance surface remains blocked."
-    },
-    {
-      "id": "AppController async-state",
-      "status": "BLOCKED",
-      "scope": "PR-8 AppController async-state acceptance surface remains blocked."
-    }
   ],
   "skippedTests": {
     "policy": "No skipped tests are approved; skipped tests not explicitly authorized by this empty allowlist are unapproved.",
