@@ -137,7 +137,7 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
     <section aria-labelledby="wealth-facts-manager-heading" className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4">
       <header className="space-y-1">
         <h2 id="wealth-facts-manager-heading" className="text-base font-semibold text-slate-100">Manage user-reported financial facts</h2>
-        <p className="text-xs text-slate-400">Add, edit or delete values you explicitly report. Records are stored only in this browser/device and are not synced or transmitted.</p>
+        <p className="text-xs text-slate-400">Add, edit or delete values you explicitly report. Records are stored only in this browser/device; they are not synced, transmitted or encrypted. Anyone with access to this browser profile may be able to read them.</p>
         <p className="text-xs text-amber-200">These records are separate from astrological indications and CW-05. They do not change chart calculations, confidence, financial suitability or predictions.</p>
       </header>
 
