@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createProductAnalysis } from '../product/analysis/__tests__/testHelpers';
-import { INITIAL_APP_STATE } from './AppState';
-import { assertAppControllerState, assertAppControllerTransition } from './AppControllerStateContract';
+import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
+import { INITIAL_APP_STATE } from '../AppState';
+import { assertAppControllerState, assertAppControllerTransition } from '../AppControllerStateContract';
 
 describe('AppControllerStateContract', () => {
   it('accepts only documented analysis transitions', () => {
