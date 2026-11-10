@@ -32,6 +32,7 @@ import {
 export interface DashaPageProps {
   readonly productAnalysisState?: ProductAnalysisState;
   readonly selectionState?: { status: 'IDLE' | 'SUBMITTING' | 'READY' | 'ERROR'; error?: string };
+  readonly dashaTimingProjectionError?: string;
   readonly onRetry?: () => void;
   readonly onNavigate?: (page: AppPage) => void;
   readonly onSelectPeriod?: (mahadashaId: string, antardashaId: string) => Promise<void>;
@@ -57,6 +58,7 @@ function deriveSelectionErrorBanner(
 export const DashaPage: React.FC<DashaPageProps> = ({
   productAnalysisState,
   selectionState,
+  dashaTimingProjectionError,
   onRetry,
   onNavigate,
   onSelectPeriod
@@ -153,6 +155,15 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <DashaHero hero={viewModel.hero} />
+
+      {dashaTimingProjectionError && (
+        <div role="alert" aria-live="polite" className="rounded-xl border border-amber-700/50 bg-amber-950/30 p-4 text-sm text-amber-200">
+          Dasha timing detail could not be prepared: {dashaTimingProjectionError}
+          <span className="block mt-1 text-xs text-amber-100/80">
+            The canonical chart analysis remains available. Retry the analysis to rebuild the timing projection.
+          </span>
+        </div>
+      )}
 
       <CurrentDashaHierarchy
         hierarchy={viewModel.hierarchy}
