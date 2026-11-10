@@ -97,8 +97,8 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [timeZone, setTimeZone] = useState(currentDetails.timeZone || '');
   const [dateTimeStr, setDateTimeStr] = useState(() =>
     utcISOToZonedWallClock(
-      currentDetails.dateTimeStr || '2024-05-15T12:00:00Z',
-      currentDetails.timeZone || 'UTC'
+      currentDetails.dateTimeStr,
+      currentDetails.timeZone || ''
     )
   );
   const [latitude, setLatitude] = useState(currentDetails.latitude.toString());
