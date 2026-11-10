@@ -20,6 +20,7 @@ const manifestPath = resolve(outputDirectory, 'manifest.json');
 const testReportPath = resolve(outputDirectory, 'test-report.json');
 const acceptanceReportPath = resolve(outputDirectory, 'pr8-acceptance.json');
 const fixtureResultsPath = resolve(outputDirectory, 'calculation-fixture-results.json');
+const browserReportPath = resolve(root, 'test-results/e2e-results.json');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const preflightErrors = [];
 const limitations = [
@@ -282,7 +283,7 @@ let toolchainNodeExpected = '';
 let toolchainNpmExpected = '';
 
 mkdirSync(logsDirectory, { recursive: true });
-for (const stalePath of [testReportPath, acceptanceReportPath, fixtureResultsPath]) {
+for (const stalePath of [testReportPath, acceptanceReportPath, fixtureResultsPath, browserReportPath]) {
   if (existsSync(stalePath)) unlinkSync(stalePath);
 }
 const packageJsonPath = resolve(root, 'package.json');
@@ -626,7 +627,15 @@ if (cleanPreflight) {
   const createSurfaceStatus = (name, adapterCommand) => {
     if (adapterCommand) commandLogEvidence(adapterCommand);
     if (browserAcceptanceCommand) commandLogEvidence(browserAcceptanceCommand);
-    const browserReportEvidence = fileSha256Evidence('test-results/e2e-results.json');
+    const browserReportFresh = Boolean(
+      browserAcceptanceCommand
+      && existsSync(browserReportPath)
+      && statSync(browserReportPath).mtimeMs >= browserAcceptanceCommand.startedAt
+      && statSync(browserReportPath).mtimeMs <= browserAcceptanceCommand.finishedAt
+    );
+    const browserReportEvidence = browserReportFresh
+      ? fileSha256Evidence(relative(root, browserReportPath))
+      : [];
     const evidenceReferences = [
       adapterCommand?.logPath,
       browserAcceptanceCommand?.logPath,
