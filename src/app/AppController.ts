@@ -109,7 +109,7 @@ export function createAppController(
             analysis,
             ...(errorMessage ? { error: errorMessage } : {}),
             requestId,
-            ...(isCanonicalSuccess ? { analysisId: analysis.analysisId } : {})
+            ...(isCanonicalSuccess ? { analysisId: analysis.analysisId, sourceAnalysisId: analysis.analysisId } : {})
           },
           lifeAnalysisState: snapshot.pipelineState ?? (errorMessage
             ? { status: 'ERROR', errorMessage }
@@ -166,7 +166,8 @@ export function createAppController(
           productAnalysis: {
             ...prev.productAnalysis,
             analysis,
-            analysisId,
+            analysisId: analysis.analysisId,
+            sourceAnalysisId: analysisId,
             requestId: prev.productAnalysis.requestId
           },
           selectionState: { status: 'READY', requestId, analysisId, mahadashaId, antardashaId }
