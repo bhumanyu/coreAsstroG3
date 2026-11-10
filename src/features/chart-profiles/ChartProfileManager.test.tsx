@@ -127,4 +127,49 @@ describe('ChartProfileManager', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/damaged/i);
     expect(corruptStorage.getItem(CHART_PROFILE_STORAGE_KEY)).toBe('broken');
   });
+
+  it('shows a recoverable quota error and does not claim that a profile was saved', () => {
+    class QuotaStorage extends MemoryStorage {
+      setItem(_key: string, _value: string): void {
+        throw Object.assign(new Error('quota'), { name: 'QuotaExceededError' });
+      }
+    }
+    const service = new ChartProfileService(new QuotaStorage(), () => new Date(), () => 'quota-profile');
+    render(<ChartProfileManager currentBirthDetails={birth} onRestoreBirthDetails={vi.fn()} service={service} />);
+
+    fireEvent.change(screen.getByLabelText('Profile name'), { target: { value: 'Quota chart' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save current chart' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/Browser storage is full/i);
+    expect(screen.queryByRole('status')).not.toHaveTextContent(/Saved/i);
+  });
+
+  it('lets the user explicitly rename duplicate IDs or names during import', async () => {
+    const storage = new MemoryStorage();
+    const service = new ChartProfileService(storage, () => new Date('2026-02-01T00:00:00Z'), () => 'renamed-import-id');
+    service.saveProfile('My chart', birth, 'existing-id');
+    const importedProfile = {
+      id: 'existing-id',
+      label: 'My chart',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      birthDetails: { ...birth, latitude: 10 }
+    };
+    const serialized = JSON.stringify({ schemaVersion: 1, profiles: [importedProfile] });
+    const file = new File([serialized], 'profiles.json', { type: 'application/json' });
+    Object.defineProperty(file, 'text', { value: async () => serialized });
+    render(<ChartProfileManager currentBirthDetails={birth} onRestoreBirthDetails={vi.fn()} service={service} />);
+
+    fireEvent.change(screen.getByLabelText('Import duplicate handling'), { target: { value: 'RENAME_DUPLICATES' } });
+    fireEvent.change(screen.getByLabelText('Import profile JSON'), { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('renamed 1 duplicate(s)'));
+    expect(service.listProfiles()).toMatchObject({
+      ok: true,
+      value: [
+        { id: 'existing-id', label: 'My chart', birthDetails: birth },
+        { id: 'renamed-import-id', label: 'My chart (Imported 2)', birthDetails: { ...birth, latitude: 10 } }
+      ]
+    });
+  });
 });
