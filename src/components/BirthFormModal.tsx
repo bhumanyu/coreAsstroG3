@@ -16,6 +16,8 @@ interface BirthFormModalProps {
   currentDetails: BirthDetails;
   onSave: (details: BirthDetails) => void;
   service?: ChartProfileService;
+  /** Overrides the dev/e2e preset-profile visibility flag (defaults to import.meta.env). */
+  showPresetProfiles?: boolean;
 }
 
 const PROFILE_SAVE_WARNING_CLOSE_DELAY_MS = 1600;
@@ -110,7 +112,8 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   onClose,
   currentDetails,
   onSave,
-  service: suppliedService
+  service: suppliedService,
+  showPresetProfiles: showPresetProfilesOverride
 }) => {
   const profileService = useMemo(
     () => suppliedService ?? new ChartProfileService(),
@@ -137,6 +140,8 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [profileSaveWarning, setProfileSaveWarning] = useState('');
   const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
   const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
+  const showPresetProfiles = showPresetProfilesOverride
+    ?? (import.meta.env.DEV === true || import.meta.env.VITE_SHOW_PRESETS === 'true');
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -356,7 +361,8 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
 
             {/* Content Body */}
             <div className="p-5 sm:p-6 space-y-5 max-h-[calc(85vh-7rem)] overflow-y-auto scrollbar-none">
-              {/* Quick Presets */}
+              {/* Quick Presets (dev/e2e only) */}
+              {showPresetProfiles && (
               <div>
                 <label className="block text-xs font-semibold text-slate-400 dark:text-slate-400 light:text-slate-500 uppercase tracking-wider mb-2 font-mono-code">
                   Select Preset Test Profile
@@ -381,6 +387,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Saved Chart Profiles */}
               <div>

@@ -23,7 +23,7 @@
     "verify:bundle": "npm run build && npm run test:bundle",
     "test:pba10": "vitest run src/product/analysis/selectedPeriodProductService.test.ts src/product/analysis/productAnalysisMapper.test.ts src/product/analysis/productAnalysisService.integration.test.ts src/product/analysis/__tests__/productAnalysisService.test.ts src/ai/product/aiExplanationService.test.ts src/pages/__tests__/DashaPage.test.tsx",
     "verify:pba10": "npm run lint && npm run test:pba10 && npm run build",
-    "test:e2e": "npm run build && node node_modules/@playwright/test/cli.js test && node scripts/acceptance/verify-e2e-results.mjs",
+    "test:e2e": "node scripts/build-e2e.mjs && node node_modules/@playwright/test/cli.js test && node scripts/acceptance/verify-e2e-results.mjs",
     "test:e2e:critical": "npm run test:e2e",
     "test:e2e:report": "playwright show-report",
     "acceptance:report": "node scripts/acceptance/generate-acceptance-report.mjs"
