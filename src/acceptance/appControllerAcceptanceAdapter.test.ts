@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Horoscope } from '../../types';
-import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
-import type { LifeAnalysisProductState } from '../../product/life-analysis/lifeAnalysisTypes';
+import type { Horoscope } from '../types';
+import type { AnalysisContext } from '../core/analysis/AnalysisContext';
+import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
 import {
   createProductAnalysis,
   type ProductAnalysisRun,
   type ProductAnalysisRunSnapshot,
   type ProductAnalysisService
-} from '../../product/analysis';
-import type { DashaTimingViewModel } from '../../product/dasha-timing';
-import { INITIAL_APP_STATE } from '../../app/AppState';
-import { createAppControllerAcceptanceAdapter } from '../appControllerAcceptanceAdapter';
+} from '../product/analysis';
+import type { DashaTimingViewModel } from '../product/dasha-timing';
+import { INITIAL_APP_STATE } from '../app/AppState';
+import { createAppControllerAcceptanceAdapter } from './appControllerAcceptanceAdapter';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
