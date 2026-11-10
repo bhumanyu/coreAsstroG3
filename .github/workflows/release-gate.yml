@@ -74,6 +74,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Chromium for exact-revision product acceptance
+        run: npx playwright install --with-deps chromium
+
       - name: Run release gate
         run: npm run verify:release
 
