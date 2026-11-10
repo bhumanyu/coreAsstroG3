@@ -166,7 +166,7 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="evidence-modal-title"
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
         >
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
             {/* Modal Header */}

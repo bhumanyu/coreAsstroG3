@@ -252,7 +252,7 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
       ) : !errorMessage ? <p className="mt-3 text-sm text-slate-400">{profiles.length === 0 ? 'No saved profiles on this browser/device.' : 'No profiles match this search.'}</p> : null}
 
       {editingProfile && (
-        <div role="dialog" aria-modal="true" aria-labelledby="rename-profile-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="rename-profile-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <form onSubmit={handleConfirmRename} className="w-full max-w-md space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-5 shadow-2xl">
             <h3 id="rename-profile-title" className="text-lg font-semibold">Rename saved profile</h3>
             <label className="flex flex-col gap-1 text-sm">
@@ -268,7 +268,7 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
       )}
 
       {deletingProfile && (
-        <div role="dialog" aria-modal="true" aria-labelledby="delete-profile-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="delete-profile-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-md space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-5 shadow-2xl">
             <h3 id="delete-profile-title" className="text-lg font-semibold">Delete saved profile?</h3>
             <p className="text-sm text-slate-300">Delete "{deletingProfile.label}" from this browser/device? This cannot be undone.</p>

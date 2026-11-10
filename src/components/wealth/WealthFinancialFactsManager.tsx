@@ -225,7 +225,7 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
       </div>
 
       {deletingFact && (
-        <div role="dialog" aria-modal="true" aria-labelledby="delete-financial-fact-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="delete-financial-fact-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-md space-y-4 rounded-xl border border-slate-700 bg-slate-900 p-5">
             <h3 id="delete-financial-fact-title" className="text-lg font-semibold text-slate-100">Delete financial fact?</h3>
             <p className="text-sm text-slate-300">Delete this user-reported record from this browser/device? It cannot be recovered after deletion.</p>

@@ -261,7 +261,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, [propBirthContext, birthDetails]);
 
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 dark:bg-slate-950/85 light:bg-white/90 border-b border-indigo-500/15 dark:border-indigo-500/15 light:border-slate-200/90 shadow-sm transition-colors duration-200">
+    <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top)] backdrop-blur-xl bg-slate-950/85 dark:bg-slate-950/85 light:bg-white/90 border-b border-indigo-500/15 dark:border-indigo-500/15 light:border-slate-200/90 shadow-sm transition-colors duration-200">
       {/* Top Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Brand */}

@@ -180,7 +180,7 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
       role="dialog"
       aria-modal="true"
       aria-labelledby={dialogId}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:pt-[env(safe-area-inset-top)] sm:pb-[env(safe-area-inset-bottom)] overflow-y-auto bg-black/70 backdrop-blur-sm animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div

@@ -68,7 +68,7 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
   }, [state.birthDetails]);
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 dark:text-slate-100 light:text-slate-900 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-transparent text-slate-100 dark:text-slate-100 light:text-slate-900 flex flex-col font-sans transition-colors duration-200 pb-[env(safe-area-inset-bottom)]">
       <Header
         activePage={state.activePage}
         onNavigate={controller.navigate}
