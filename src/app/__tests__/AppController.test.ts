@@ -213,7 +213,8 @@ describe('AppController', () => {
       isBirthFormOpen: true,
       productAnalysis: INITIAL_PRODUCT_ANALYSIS_STATE,
       lifeAnalysisState: { status: 'LOADING' },
-      selectionState: { status: 'IDLE' }
+      selectionState: { status: 'IDLE' },
+      dashaTimingProjectionState: { status: 'IDLE' }
     };
 
     const nextState = updater(previousState);
