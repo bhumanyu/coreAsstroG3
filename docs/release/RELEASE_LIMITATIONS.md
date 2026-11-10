@@ -2,7 +2,7 @@
 
 This release report is a gate-and-evidence projection. It is not a new calculation authority, does not alter calculation behavior, and does not convert unavailable or unverified evidence into a positive conclusion.
 
-Run the expanded release sequence from a clean checkout after installing the locked dependencies:
+Run the expanded release sequence from a clean checkout after installing the locked dependencies and Chromium. After `npm ci`, run `npx playwright install --with-deps chromium`; the release gate executes the 18 required browser journeys itself so their evidence is tied to the same exact revision and CI run:
 
 - PowerShell: `$env:PR9_EXPECTED_SHA='<full-commit-sha>'; npm run verify:release`
 - POSIX shell: `PR9_EXPECTED_SHA=<full-commit-sha> npm run verify:release`
