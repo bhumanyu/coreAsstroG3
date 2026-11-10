@@ -69,7 +69,7 @@ afterEach(() => {
 });
 
 describe('AppShellContent analysis safety wrapper', () => {
-  it('restores a saved profile through the existing birth-details seam and reruns analysis normally', async () => {
+  it('restores a saved profile through the birth form modal and reruns analysis', async () => {
     window.localStorage.clear();
     const restoredBirth = {
       ...INITIAL_APP_STATE.birthDetails,
@@ -81,13 +81,34 @@ describe('AppShellContent analysis safety wrapper', () => {
     new ChartProfileService(window.localStorage, () => new Date(), () => 'restore-profile')
       .saveProfile('Restored', restoredBirth);
     const analyze = vi.fn<AppController['analyze']>().mockResolvedValue(undefined);
-    const controller = createController(analyze);
-    const controllerFactory = () => controller;
+    const baseController = createController(analyze);
+    let setStateRef: Dispatch<SetStateAction<AppState>> | undefined;
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
+      setStateRef = setState;
+      return {
+        ...baseController,
+        openBirthForm: () => setState((prev) => ({ ...prev, isBirthFormOpen: true }))
+      };
+    };
     render(<AppShellContent controllerFactory={controllerFactory} />);
     await waitFor(() => expect(analyze).toHaveBeenCalledTimes(1));
-    fireEvent.click(await screen.findByRole('button', { name: 'Restore' }));
+
+    act(() => {
+      setStateRef?.((prev) => ({ ...prev, isBirthFormOpen: true }));
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Restored' }));
+    fireEvent.click(screen.getByRole('button', { name: /calculate chart/i }));
+
     await waitFor(() => expect(analyze).toHaveBeenCalledTimes(2));
-    expect(analyze.mock.calls[1][0]).toEqual(restoredBirth);
+    const restoredCall = analyze.mock.calls[1][0];
+    expect(restoredCall).toEqual(expect.objectContaining({
+      name: 'Restored chart',
+      placeOfBirth: restoredBirth.placeOfBirth,
+      timeZone: restoredBirth.timeZone,
+      latitude: 35,
+      longitude: -110
+    }));
+    expect(restoredCall.dateTimeStr).toContain('2001-02-03T04:05');
     window.localStorage.clear();
   });
 
@@ -219,33 +240,4 @@ describe('AppShellContent analysis safety wrapper', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
 
-  it('renders Saved chart profiles on the overview page only', async () => {
-    window.localStorage.clear();
-    let setStateRef: Dispatch<SetStateAction<AppState>> | undefined;
-    const analyze = vi.fn<AppController['analyze']>().mockResolvedValue(undefined);
-    const baseController = createController(analyze);
-    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
-      setStateRef = setState;
-      return {
-        ...baseController,
-        navigate: (page: AppState['activePage']) =>
-          setState((prev) => ({ ...prev, activePage: page }))
-      };
-    };
-
-    render(<AppShellContent controllerFactory={controllerFactory} />);
-
-    expect(await screen.findByRole('heading', { name: 'Saved chart profiles' })).toBeInTheDocument();
-
-    act(() => {
-      setStateRef?.((prev) => ({ ...prev, activePage: 'career' }));
-    });
-    expect(screen.queryByRole('heading', { name: 'Saved chart profiles' })).not.toBeInTheDocument();
-
-    act(() => {
-      setStateRef?.((prev) => ({ ...prev, activePage: 'overview' }));
-    });
-    expect(await screen.findByRole('heading', { name: 'Saved chart profiles' })).toBeInTheDocument();
-    window.localStorage.clear();
-  });
 });

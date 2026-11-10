@@ -6,15 +6,21 @@ async function openApp(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 }
 
+async function openBirthModal(page: Page): Promise<void> {
+  await page.getByTitle('Edit Birth Details & Ayanamsa').click();
+  await expect(page.getByRole('dialog', { name: 'Calculate Horoscope & Positions' })).toBeVisible();
+}
+
 test('E08-S05 corrupt profile storage is reported without breaking the active chart', async ({ page }) => {
   await openApp(page);
   await page.evaluate(() => window.localStorage.setItem('coreastro.chartProfiles', '{broken-json'));
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 
+  await openBirthModal(page);
   await expect(page.getByRole('alert')).toContainText('Saved chart data is damaged');
+  await expect(page.getByRole('heading', { name: 'Saved Chart Profiles' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Saved chart profiles' })).toBeVisible();
 });
 
 test('E08-S05 browser quota failure does not claim that a chart profile was saved', async ({ page }) => {
@@ -29,12 +35,14 @@ test('E08-S05 browser quota failure does not claim that a chart profile was save
     };
   });
 
-  await page.getByLabel('Profile name').fill('Quota Failure Profile');
-  await page.getByRole('button', { name: 'Save current chart' }).click();
+  await openBirthModal(page);
+  await page.getByRole('checkbox', { name: /save as chart profile/i }).check();
+  await page.getByRole('button', { name: /calculate chart/i }).click();
 
   await expect(page.getByRole('alert')).toContainText('Browser storage is full');
-  await expect(page.getByText('Saved "Quota Failure Profile" on this browser/device.')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible();
+  await expect(page.getByText(/The chart was still calculated/)).toBeVisible();
+  await expect(page.getByRole('dialog')).toBeHidden({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 });
 
 test('E08-S05 denied profile storage is surfaced while the chart remains usable', async ({ page }) => {
@@ -48,8 +56,8 @@ test('E08-S05 denied profile storage is surfaced while the chart remains usable'
       return originalGetItem.call(this, key);
     };
   });
-  await page.getByRole('button', { name: 'Refresh profile list' }).click();
 
+  await openBirthModal(page);
   await expect(page.getByRole('alert')).toContainText('Browser storage is unavailable');
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible();
 });
@@ -60,5 +68,7 @@ test('E08-S05 malformed share fragment is rejected without replacing current cha
 
   await expect(page.getByRole('alert')).toContainText('This share link is malformed.');
   await expect(page.getByText(/A shared chart is available to load/)).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Saved chart profiles' })).toBeVisible();
+
+  await openBirthModal(page);
+  await expect(page.getByRole('heading', { name: 'Saved Chart Profiles' })).toBeVisible();
 });

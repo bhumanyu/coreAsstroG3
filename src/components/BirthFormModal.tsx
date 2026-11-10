@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, MapPin, Globe, Compass, Sparkles, Clock } from 'lucide-react';
 import { BirthDetails, AyanamsaType } from '../types';
@@ -7,13 +7,32 @@ import { DateTimeSelector } from './DateTimeSelector';
 import { PlaceResult } from '../services/geocoding';
 import { validateBirthDetails, type BirthValidationError } from '../core/validation/birthDetailsValidation';
 import { getTimeZoneResolutionStatus, isValidIanaTimeZone, resolveLocalDateTime, type TimeZoneResolutionStatus } from '../core/time/timeZoneResolution';
+import { ChartProfileService, type ChartProfileOperationError } from '../features/chart-profiles/chartProfileService';
+import type { ChartProfile } from '../features/chart-profiles/chartProfileSchema';
 
 interface BirthFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentDetails: BirthDetails;
   onSave: (details: BirthDetails) => void;
+  service?: ChartProfileService;
 }
+
+const PROFILE_SAVE_WARNING_CLOSE_DELAY_MS = 1600;
+
+const PROFILE_ERROR_MESSAGES: Record<ChartProfileOperationError, string> = {
+  DUPLICATE_ID: 'A profile with this identifier already exists.',
+  LIMIT_REACHED: 'Profile limit reached. Delete a saved profile before saving another.',
+  INVALID_LABEL: 'Enter a name of 1-80 characters.',
+  NOT_FOUND: 'That saved profile is no longer available. Reopen the form and try again.',
+  INVALID_BIRTH_DETAILS: 'The saved chart inputs are invalid and cannot be restored.',
+  CORRUPT: 'Saved chart data is damaged. It has been left unchanged; delete the browser data only if you choose to start over.',
+  UNAVAILABLE: 'Browser storage is unavailable. Your chart is unchanged; try again in a browser that allows local storage.',
+  QUOTA: 'Browser storage is full. Delete an unused profile or free browser storage and try again.',
+  UNSUPPORTED_VERSION: 'These saved profiles were created by a newer app version and were left unchanged.',
+  MIGRATION_REQUIRED: 'Saved profiles need a format update. Try reopening the form to refresh them.',
+  INVALID_IMPORT: 'The selected file is not a valid supported CoreAstroG3 profile export. Existing profiles were not changed.'
+};
 
 export function zonedWallClockToUtcISO(dateTimeStr: string, timeZone: string): string {
   const resolution = resolveLocalDateTime(dateTimeStr, timeZone);
@@ -90,8 +109,13 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   isOpen,
   onClose,
   currentDetails,
-  onSave
+  onSave,
+  service: suppliedService
 }) => {
+  const profileService = useMemo(
+    () => suppliedService ?? new ChartProfileService(),
+    [suppliedService]
+  );
   const [name, setName] = useState(currentDetails.name || 'Custom Horoscope');
   const [placeOfBirth, setPlaceOfBirth] = useState(currentDetails.placeOfBirth || 'Ujjain, India');
   const [timeZone, setTimeZone] = useState(currentDetails.timeZone || '');
@@ -107,6 +131,10 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [validationErrors, setValidationErrors] = useState<readonly BirthValidationError[]>([]);
   const [selectedAmbiguousInstant, setSelectedAmbiguousInstant] = useState('');
   const [timeZoneSource, setTimeZoneSource] = useState<'PROVIDER' | 'USER'>('PROVIDER');
+  const [savedProfiles, setSavedProfiles] = useState<readonly ChartProfile[]>([]);
+  const [profileListError, setProfileListError] = useState('');
+  const [saveAsProfile, setSaveAsProfile] = useState(false);
+  const [profileSaveWarning, setProfileSaveWarning] = useState('');
   const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
   const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
 
@@ -118,6 +146,20 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     },
     [onClose]
   );
+
+  const refreshProfiles = useCallback(() => {
+    let result = profileService.listProfiles();
+    if (!result.ok && result.error === 'MIGRATION_REQUIRED') {
+      result = profileService.migrateProfileStore();
+    }
+    if (result.ok) {
+      setSavedProfiles(result.value);
+      setProfileListError('');
+    } else {
+      setSavedProfiles([]);
+      setProfileListError(PROFILE_ERROR_MESSAGES[result.error]);
+    }
+  }, [profileService]);
 
   useEffect(() => {
     if (isOpen) {
@@ -137,6 +179,9 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
       setAyanamsa(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
       setValidationErrors([]); // Clear errors when modal opens
       setSelectedAmbiguousInstant('');
+      setSaveAsProfile(false);
+      setProfileSaveWarning('');
+      refreshProfiles();
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
     } else {
@@ -147,7 +192,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, handleKeyDown, currentDetails]);
+  }, [isOpen, handleKeyDown, currentDetails, refreshProfiles]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,8 +239,28 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     }
 
     setValidationErrors([]);
+
+    let profileSaveFailed = false;
+    if (saveAsProfile) {
+      const saved = profileService.saveProfile(
+        candidateBirthDetails.name ?? 'Custom Horoscope',
+        candidateBirthDetails
+      );
+      if (saved.ok) {
+        setSavedProfiles((previous) => [...previous, saved.value]);
+        setProfileSaveWarning('');
+      } else {
+        profileSaveFailed = true;
+        setProfileSaveWarning(PROFILE_ERROR_MESSAGES[saved.error]);
+      }
+    }
+
     onSave(candidateBirthDetails);
-    onClose();
+    if (profileSaveFailed) {
+      window.setTimeout(onClose, PROFILE_SAVE_WARNING_CLOSE_DELAY_MS);
+    } else {
+      onClose();
+    }
   };
 
   const handleSelectPlace = (place: PlaceResult) => {
@@ -210,16 +275,31 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     setSelectedAmbiguousInstant('');
   };
 
-  const handleApplyPreset = (preset: typeof PRESET_PROFILES[0]) => {
-    setName(preset.details.name || 'Preset');
-    setPlaceOfBirth(preset.details.placeOfBirth || '');
-    const tz = preset.details.timeZone;
+  const applyBirthDetails = (details: BirthDetails) => {
+    setName(details.name || 'Preset');
+    setPlaceOfBirth(details.placeOfBirth || '');
+    const tz = details.timeZone;
     setTimeZone(tz);
     setTimeZoneSource('USER');
-    setDateTimeStr(utcISOToZonedWallClock(preset.details.dateTimeStr, tz));
-    setLatitude(preset.details.latitude.toString());
-    setLongitude(preset.details.longitude.toString());
-    setAyanamsa(preset.details.ayanamsa);
+    setDateTimeStr(utcISOToZonedWallClock(details.dateTimeStr, tz));
+    setLatitude(details.latitude.toString());
+    setLongitude(details.longitude.toString());
+    setAyanamsa(details.ayanamsa);
+    setSelectedAmbiguousInstant('');
+    setValidationErrors([]);
+  };
+
+  const handleApplyPreset = (preset: typeof PRESET_PROFILES[0]) => {
+    applyBirthDetails(preset.details);
+  };
+
+  const handleDeleteProfile = (profile: ChartProfile) => {
+    const result = profileService.deleteProfile(profile.id);
+    if (result.ok) {
+      refreshProfiles();
+    } else {
+      setProfileListError(PROFILE_ERROR_MESSAGES[result.error]);
+    }
   };
 
   return (
@@ -300,6 +380,46 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     </motion.button>
                   ))}
                 </div>
+              </div>
+
+              {/* Saved Chart Profiles */}
+              <div>
+                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-400 light:text-slate-500 uppercase tracking-wider mb-2 font-mono-code">
+                  Saved Chart Profiles
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-500 light:text-slate-500 mb-2">
+                  Saved on this browser/device only. These profiles are not backed up or synced.
+                </p>
+                {profileListError && (
+                  <p role="alert" className="mb-2 text-xs text-rose-400">{profileListError}</p>
+                )}
+                {savedProfiles.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {savedProfiles.map((profile) => (
+                      <li key={profile.id} className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => applyBirthDetails(profile.birthDetails)}
+                          className="flex-1 min-w-0 rounded-lg border border-slate-700/60 dark:border-slate-700/60 light:border-slate-200 bg-slate-800/60 dark:bg-slate-800/60 light:bg-slate-50 hover:bg-slate-800 dark:hover:bg-slate-750 light:hover:bg-slate-100 hover:border-indigo-500/50 px-3 py-2 text-left text-xs font-medium text-slate-200 dark:text-slate-200 light:text-slate-800 transition-colors cursor-pointer truncate"
+                        >
+                          {profile.label}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProfile(profile)}
+                          aria-label={`Delete profile ${profile.label}`}
+                          className="shrink-0 rounded-lg border border-slate-700/60 dark:border-slate-700/60 light:border-slate-200 px-2.5 py-2 text-[11px] font-medium text-slate-400 hover:text-rose-300 hover:border-rose-500/40 transition-colors cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : !profileListError ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-500 light:text-slate-500">
+                    No saved profiles on this browser/device.
+                  </p>
+                ) : null}
               </div>
 
               <div className="relative flex py-1 items-center">
@@ -497,8 +617,23 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   )}
                 </div>
 
-                {/* Submit */}
-                <div className="pt-3 flex justify-end space-x-3">
+                {/* Save as profile + Submit */}
+                <div className="pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={saveAsProfile}
+                      onChange={(e) => setSaveAsProfile(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-500 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <span>Save as chart profile</span>
+                  </label>
+                  {profileSaveWarning && (
+                    <p role="alert" className="text-xs text-amber-300 sm:order-first sm:w-full">
+                      {profileSaveWarning} The chart was still calculated.
+                    </p>
+                  )}
+                  <div className="flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={onClose}
@@ -515,6 +650,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>Calculate Chart</span>
                   </motion.button>
+                  </div>
                 </div>
               </form>
             </div>
