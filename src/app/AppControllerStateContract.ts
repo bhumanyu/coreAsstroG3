@@ -47,7 +47,7 @@ export function assertAppControllerTransition(
 export function assertAppControllerState(state: AppState): void {
   const analysis = state.productAnalysis;
   if (analysis.status === 'READY') {
-    if (!analysis.analysis || !analysis.analysisId || analysis.analysis.analysisId !== analysis.analysisId) {
+    if (!analysis.analysis || !analysis.analysisId || !analysis.sourceAnalysisId || analysis.analysis.analysisId !== analysis.analysisId) {
       throw new Error('READY analysis state must contain its matching canonical analysis identity.');
     }
   }
@@ -60,7 +60,7 @@ export function assertAppControllerState(state: AppState): void {
     if (!selection.analysisId || !selection.mahadashaId || !selection.antardashaId || selection.requestId === undefined) {
       throw new Error(`${selection.status} period selection must contain request, analysis and MD–AD identities.`);
     }
-    if (analysis.status !== 'READY' || analysis.analysisId !== selection.analysisId) {
+    if (analysis.status !== 'READY' || analysis.sourceAnalysisId !== selection.analysisId) {
       throw new Error('Period selection must belong to the active canonical analysis.');
     }
   }
@@ -70,7 +70,7 @@ export function assertAppControllerState(state: AppState): void {
 
   const projection = state.dashaTimingProjectionState;
   if (projection.status !== 'IDLE') {
-    if (!projection.analysisId || analysis.status !== 'READY' || analysis.analysisId !== projection.analysisId) {
+    if (!projection.analysisId || analysis.status !== 'READY' || analysis.sourceAnalysisId !== projection.analysisId) {
       throw new Error('Dasha timing projection state must belong to the active canonical analysis.');
     }
   }
