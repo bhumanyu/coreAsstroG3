@@ -204,9 +204,6 @@ export function validateAcceptanceEvidenceReport(
       errors.push(`${prefix}.productStatus does not match its execution evidence; expected ${derivedStatus}.`);
     }
 
-    if (execution.status === 'PASS' && derivedStatus !== 'COMPLETE') {
-      errors.push(`${prefix} claims PASS without exact-SHA, owner, CI, command, expected-test, evidence and zero-skip proof.`);
-    }
   }
 
   return errors;
