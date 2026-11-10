@@ -22,6 +22,7 @@ import type {
 } from '../life-analysis/lifeAnalysisTypes';
 import type { AiExplanationResult } from '../../ai/browser';
 import { validateWealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
+import { analyzeCareerPathways, type CareerPathwayAnalysis } from '../../domain/career/careerPathway';
 import type { WealthFinancialDataSet } from '../../domain/wealth/wealthFinancialData';
 import type {
   ProductAnalysis,
@@ -44,6 +45,7 @@ import type {
   ProductQualification,
   ProductCareerAnalyticalAxes,
   ProductCareerOutcomeAnalysis,
+  ProductCareerPathwayAnalysis,
   ProductCareerEventTimeline,
   ProductCareerProfessionRanking,
   ProductConfidence,
@@ -866,6 +868,52 @@ function mapCareerEventTimeline(value: CareerEventTimelineAnalysis): ProductCare
   };
 }
 
+function mapCareerPathwayAnalysis(source: CareerPathwayAnalysis): ProductCareerPathwayAnalysis {
+  const mapMode = (mode: CareerPathwayAnalysis['employment']): ProductCareerPathwayAnalysis['employment'] => ({
+    mode: mode.mode,
+    status: mode.status,
+    candidates: mode.candidates.map(candidate => ({
+      candidateId: candidate.candidateId,
+      qualification: candidate.qualification,
+      sourceEventId: candidate.sourceEventId,
+      opportunityId: candidate.opportunityId,
+      activationId: candidate.activationId,
+      timing: { ...candidate.timing },
+      supportingEvidenceOccurrenceIds: [...candidate.supportingEvidenceOccurrenceIds],
+      ruleIds: [...candidate.ruleIds],
+      counterEvidenceOccurrenceIds: [...candidate.counterEvidenceOccurrenceIds],
+      counterIndicationSeverity: candidate.counterIndicationSeverity
+    })),
+    candidateCount: mode.candidateCount,
+    supportedCandidateCount: mode.supportedCandidateCount,
+    conditionalCandidateCount: mode.conditionalCandidateCount,
+    supportingEvidenceOccurrenceIds: [...mode.supportingEvidenceOccurrenceIds],
+    ruleIds: [...mode.ruleIds],
+    counterEvidenceOccurrenceIds: [...mode.counterEvidenceOccurrenceIds],
+    practicalExecution: mode.practicalExecution,
+    financialReadiness: mode.financialReadiness,
+    personalPreference: mode.personalPreference
+  });
+
+  return {
+    reasoningVersion: source.reasoningVersion,
+    methodVersion: source.methodVersion,
+    sourceReasoningVersion: source.sourceReasoningVersion,
+    sourceMethodVersion: source.sourceMethodVersion,
+    status: source.status,
+    verdict: source.verdict,
+    employment: mapMode(source.employment),
+    independent: mapMode(source.independent),
+    confidence: { ...source.confidence },
+    guaranteedOutcomeAvailable: source.guaranteedOutcomeAvailable,
+    numericProbabilityAvailable: source.numericProbabilityAvailable,
+    suitabilityAvailable: source.suitabilityAvailable,
+    diagnostics: [...source.diagnostics],
+    statement: source.statement,
+    limitations: [...source.limitations]
+  };
+}
+
 function mapCareer(
   viewModel: LifeAnalysisViewModel,
   explicitEvidence?: readonly ProductEvidence[]
@@ -900,6 +948,9 @@ function mapCareer(
       : undefined,
     outcomeQualification: detail?.careerOutcomeAnalysis
       ? mapCareerOutcomeAnalysis(detail.careerOutcomeAnalysis)
+      : undefined,
+    pathwayPotential: detail?.careerOutcomeAnalysis
+      ? mapCareerPathwayAnalysis(analyzeCareerPathways({ outcomeAnalysis: detail.careerOutcomeAnalysis }))
       : undefined,
     eventTimeline: detail?.careerEventTimeline
       ? mapCareerEventTimeline(detail.careerEventTimeline)
