@@ -14,7 +14,8 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
-    ['junit', { outputFile: 'test-results/e2e-junit.xml' }]
+    ['junit', { outputFile: 'test-results/e2e-junit.xml' }],
+    ['json', { outputFile: 'test-results/e2e-results.json' }]
   ],
   globalSetup: './e2e/global-setup.ts',
   use: {
