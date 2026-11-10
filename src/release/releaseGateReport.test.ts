@@ -1096,6 +1096,32 @@ describe('release gate report', () => {
     expect(report.gates.find(gate => gate.id === 'RG-13')?.status).toBe('BLOCKED');
   });
 
+  it('fails closed when the same required PR-8 surface is reported more than once', () => {
+    const sha = 'a'.repeat(40);
+    const passing = {
+      name: 'report-renderer',
+      status: 'PASS' as const,
+      coverageStatus: 'PASSED' as const,
+      testedSha: sha,
+      ciRunId: '42760000000',
+      ciRunUrl: 'https://github.com/example/repo/actions/runs/42760000000',
+      evidenceReferences: [evidencePath, 'package.json']
+    };
+    const report = finalize({
+      gates: allPassingGates(),
+      fixtureCount: 1,
+      metadata: { sourceRevision: sha },
+      pr8AcceptanceStatuses: [
+        passing,
+        { ...passing, status: 'BLOCKED' as const, coverageStatus: 'BLOCKED' as const },
+        { ...passing, name: 'AppController async-state' }
+      ]
+    });
+
+    expect(report.gates.find(gate => gate.id === 'RG-13')?.status).toBe('BLOCKED');
+    expect(report.pr8AcceptanceStatuses.find(status => status.name === 'report-renderer')?.status).toBe('BLOCKED');
+  });
+
   it('fails RG-13 when a consumed PR-8 surface fails', () => {
     const report = finalize({
       gates: allPassingGates(),
