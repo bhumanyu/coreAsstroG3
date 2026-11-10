@@ -97,6 +97,9 @@ export class WealthFinancialFactsService {
     const current = this.listFacts();
     if (!current.ok) return current;
 
+    if (existingId && !current.value.some(item => item.id === existingId)) {
+      return { ok: false, error: 'INVALID_FACT' };
+    }
     const id = existingId ?? this.createId();
     const reportedAt = this.now().toISOString();
     let fact: WealthFinancialDatum<unknown>;
@@ -124,7 +127,8 @@ export class WealthFinancialFactsService {
     const facts = exists
       ? current.value.map(item => item.id === id ? fact : item)
       : [...current.value, fact];
-    return this.persist(facts, fact);
+    const persisted = this.persist(facts);
+    return persisted.ok ? { ok: true, value: fact } : persisted;
   }
 
   deleteFact(id: string): WealthFinancialFactsResult<void> {
@@ -134,14 +138,11 @@ export class WealthFinancialFactsService {
     return this.persist(current.value.filter(item => item.id !== id));
   }
 
-  private persist(
-    facts: readonly WealthFinancialDatum<unknown>[],
-    value?: WealthFinancialDatum<unknown>
-  ): WealthFinancialFactsResult<WealthFinancialDatum<unknown> | void> {
+  private persist(facts: readonly WealthFinancialDatum<unknown>[]): WealthFinancialFactsResult<void> {
     const payload: StoredWealthFinancialFacts = { schemaVersion: STORE_SCHEMA, facts };
     try {
       this.storage.setItem(WEALTH_FINANCIAL_FACTS_STORAGE_KEY, JSON.stringify(payload));
-      return { ok: true, value };
+      return { ok: true, value: undefined };
     } catch (error) {
       return { ok: false, error: isQuotaError(error) ? 'QUOTA' : 'UNAVAILABLE' };
     }
