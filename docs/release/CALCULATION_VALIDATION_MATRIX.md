@@ -18,10 +18,10 @@ The report contains exactly the required gates RG-01 through RG-14. `aggregateRe
 | RG-10 | Independent external reference parity | Remains `BLOCKED` until independent Swiss Ephemeris / JPL Horizons reference data and parity evidence are available. |
 | RG-11 | Owner-gated mechanism coverage | Owner-gated non-dusthana mechanism families remain `BLOCKED`; no `PASS` is inferred. |
 | RG-12 | Determinism and reproducibility | Record reproducible inputs, version context, and repeatability evidence. |
-| RG-13 | PR-8 production acceptance surfaces | Consume PR-8 surface statuses. `report-renderer` and `AppController async-state` remain `BLOCKED` even if an input attempts to mark them `PASS`. |
+| RG-13 | PR-8 production acceptance surfaces | Consume exact-revision PR-8 surface evidence. `report-renderer` and `AppController async-state` pass only with successful adapter tests, all required Chromium journeys, CI identity and artifact references; missing or mismatched evidence is `BLOCKED`. |
 | RG-14 | Limitations and excluded capabilities | Confirm retained blockers and out-of-scope capabilities are disclosed in the release report. |
 
-RG-10 and RG-11 are retained blockers rather than claims of successful validation. RG-13 also remains blocked by its retained PR-8 surfaces. Their status and evidence remain visible in the report; a blocked surface is not silently omitted.
+RG-10 and RG-11 remain independently retained blockers. RG-13 is evidence-derived: PR-8 surfaces are never assumed PASS and remain BLOCKED until their exact-revision adapter/browser evidence is present.
 
 ## Test inventory audit
 
