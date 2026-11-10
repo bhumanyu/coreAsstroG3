@@ -822,15 +822,17 @@ const requiredPr8SurfacesPassed = requiredPr8SurfaceNames.every(name => {
 });
 const allPr8AcceptanceStatusesPassed = pr8AcceptanceStatuses.length > 0
   && pr8AcceptanceStatuses.every(item => item.status === 'PASS' && item.coverageStatus === 'PASSED');
-const pr8GateStatus = !pr8EvaluatedOnCandidate
-  ? 'BLOCKED'
-  : [controllerAcceptanceCommand, reportAcceptanceCommand, browserAcceptanceCommand].some(command => command && !command.passed)
-    || (acceptanceCommand && !acceptanceCommand.passed)
-    || (pr8ReportPresent && !pr8BaselinesPassed)
-      ? 'FAIL'
-      : pr8ReportPresent && pr8BaselinesPassed && requiredPr8SurfacesPassed && allPr8AcceptanceStatusesPassed
-        ? 'PASS'
-        : 'BLOCKED';
+const pr8HasFailure = [controllerAcceptanceCommand, reportAcceptanceCommand, browserAcceptanceCommand, acceptanceCommand]
+  .some(command => command && !command.passed)
+  || (pr8ReportPresent && !pr8BaselinesPassed)
+  || pr8AcceptanceStatuses.some(item => item.status === 'FAIL');
+const pr8GateStatus = pr8HasFailure
+  ? 'FAIL'
+  : !pr8EvaluatedOnCandidate
+    ? 'BLOCKED'
+    : pr8ReportPresent && pr8BaselinesPassed && requiredPr8SurfacesPassed && allPr8AcceptanceStatusesPassed
+      ? 'PASS'
+      : 'BLOCKED';
 const pr8GateEvidence = pr8EvaluatedOnCandidate && pr8ReportSha256
   ? [
     ...fileSha256Evidence(relative(root, acceptanceReportPath)),
