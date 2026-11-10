@@ -46,6 +46,8 @@ export interface AppState {
    * Sourced directly from single ProductAnalysis pipeline
    */
   readonly dashaTimingViewModel?: DashaTimingViewModel;
+  /** User-visible diagnostic when the optional Dasha timing projection fails. */
+  readonly dashaTimingProjectionError?: string;
   /**
    * Selection state for period selection - separate from productAnalysis.status
    * to avoid clobbering the baseline view on selection errors.
