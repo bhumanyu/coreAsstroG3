@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { WealthFinancialFactsManager } from './WealthFinancialFactsManager';
 import { WealthFinancialFactsService, type WealthFinancialFactsStorage } from '../../domain/wealth/wealthFinancialFactsService';
