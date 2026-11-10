@@ -25,7 +25,6 @@ const preflightErrors = [];
 const limitations = [
   'Independent Swiss Ephemeris / JPL Horizons reference parity is BLOCKED.',
   'Owner-gated non-dusthana mechanism families are BLOCKED.',
-  'PR-8 report-renderer and AppController async-state surfaces are BLOCKED.'
 ];
 const commands = [];
 const skippedTests = [];
@@ -548,6 +547,9 @@ let typecheckCommand;
 let testCommand;
 let temporalCommand;
 let acceptanceCommand;
+let controllerAcceptanceCommand;
+let reportAcceptanceCommand;
+let browserAcceptanceCommand;
 let calculationCommand;
 let buildCommand;
 let bundleCommand;
@@ -607,6 +609,75 @@ if (cleanPreflight) {
   } else {
     preflightErrors.push('PR-8 acceptance probe did not produce an output report.');
   }
+
+  controllerAcceptanceCommand = recordCommand('app-controller-acceptance', [
+    'exec', '--', 'vitest', 'run', 'src/acceptance/appControllerAcceptanceAdapter.test.ts'
+  ]);
+  reportAcceptanceCommand = recordCommand('report-renderer-acceptance', [
+    'exec', '--', 'vitest', 'run', 'src/acceptance/productAnalysisReportAcceptanceAdapter.test.tsx'
+  ]);
+  browserAcceptanceCommand = recordCommand('browser-acceptance', ['run', 'test:e2e:critical']);
+
+  const workflowRunId = process.env.GITHUB_RUN_ID ?? null;
+  const workflowRunUrl = workflowRunId && process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY
+    ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${workflowRunId}`
+    : null;
+
+  const createSurfaceStatus = (name, adapterCommand) => {
+    if (adapterCommand) commandLogEvidence(adapterCommand);
+    if (browserAcceptanceCommand) commandLogEvidence(browserAcceptanceCommand);
+    const browserReportEvidence = fileSha256Evidence('test-results/e2e-results.json');
+    const evidenceReferences = [
+      adapterCommand?.logPath,
+      browserAcceptanceCommand?.logPath,
+      ...(browserReportEvidence.length > 0 ? ['test-results/e2e-results.json'] : [])
+    ].filter(Boolean);
+    const commandFailed = Boolean(
+      (adapterCommand && !adapterCommand.passed)
+      || (browserAcceptanceCommand && !browserAcceptanceCommand.passed)
+    );
+    const evidenceComplete = Boolean(
+      adapterCommand?.passed
+      && browserAcceptanceCommand?.passed
+      && browserReportEvidence.length > 0
+      && candidateSha
+      && testedSha === candidateSha
+      && workflowRunId
+      && workflowRunUrl
+    );
+    const status = commandFailed ? 'FAIL' : evidenceComplete ? 'PASS' : 'BLOCKED';
+    return {
+      name,
+      status,
+      coverageStatus: status === 'PASS' ? 'PASSED' : status === 'FAIL' ? 'BLOCKED' : 'NOT_TESTED',
+      details: evidenceComplete
+        ? 'Adapter and all required Chromium journeys passed on the exact candidate revision.'
+        : 'BLOCKED until adapter, Chromium journey, exact revision, CI identity and report evidence are all present.',
+      ...(candidateSha ? { testedSha: candidateSha } : {}),
+      ...(workflowRunId ? { ciRunId: workflowRunId } : {}),
+      ...(workflowRunUrl ? { ciRunUrl: workflowRunUrl } : {}),
+      evidenceReferences
+    };
+  };
+
+  pr8AcceptanceStatuses = [
+    ...pr8AcceptanceStatuses,
+    createSurfaceStatus('AppController async-state', controllerAcceptanceCommand),
+    createSurfaceStatus('report-renderer', reportAcceptanceCommand)
+  ];
+
+  pr8EvaluatedOnCandidate = releaseReportModule?.pr8WasEvaluatedOnCandidate(
+    pr8ImplementationSha,
+    candidateSha,
+    testedSha,
+    acceptanceFilesChangedSince,
+    acceptanceCommand?.passed === true
+      && controllerAcceptanceCommand?.passed === true
+      && reportAcceptanceCommand?.passed === true
+      && browserAcceptanceCommand?.passed === true
+      && isPr8AcceptanceReport(pr8AcceptanceReport),
+    pr8ReportSha256
+  ) === true;
 
   fixtureInvocationId = randomUUID();
   calculationCommand = recordCommand(
