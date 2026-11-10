@@ -9,6 +9,8 @@ import { createAppController, type AppController } from './AppController';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ChartExportControl } from '../features/chart-export/ChartExportControl';
 import { ChartShareControls } from '../features/chart-sharing/ChartShareControls';
+import { Suspense } from 'react';
+import '../i18n/i18n';
 
 interface AppShellContentProps {
   readonly controllerFactory?: (setState: React.Dispatch<React.SetStateAction<AppState>>) => AppController;
@@ -116,7 +118,9 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
 export const AppShell: React.FC = () => {
   return (
     <ThemeProvider>
-      <AppShellContent />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-400">Loading language resources...</div>}>
+        <AppShellContent />
+      </Suspense>
     </ThemeProvider>
   );
 };
