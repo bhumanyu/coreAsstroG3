@@ -81,6 +81,27 @@ describe('searchPlacesDetailed', () => {
     await expect(searchPlacesDetailed('London')).resolves.toEqual({ status: 'INVALID_RESPONSE' });
   });
 
+  it('preserves an absent timezone as unresolved instead of substituting UTC', async () => {
+    const { timezone: _timezone, ...placeWithoutTimezone } = validPlace;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(200, async () => ({ results: [placeWithoutTimezone] }))));
+
+    await expect(searchPlacesDetailed('London')).resolves.toEqual({
+      status: 'SUCCESS',
+      places: [placeWithoutTimezone]
+    });
+  });
+
+  it('preserves an empty provider timezone as unresolved', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(200, async () => ({
+      results: [{ ...validPlace, timezone: ' ' }]
+    }))));
+
+    await expect(searchPlacesDetailed('London')).resolves.toMatchObject({
+      status: 'SUCCESS',
+      places: [{ name: 'London', latitude: 51.5072, longitude: -0.1276 }]
+    });
+  });
+
   it('returns INVALID_RESPONSE for malformed payloads and non-finite coordinates', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(200, async () => ({
       results: [{ ...validPlace, latitude: Number.NaN }]
