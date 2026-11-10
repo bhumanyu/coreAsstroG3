@@ -50,7 +50,7 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
     return (
       <section aria-label="Career and Wealth product report" role="alert" className="rounded-xl border border-rose-700/50 bg-rose-950/20 p-5 print:border-slate-300 print:bg-white">
         <h2 className="text-lg font-semibold text-slate-100 print:text-black">Career & Wealth Product Analysis</h2>
-        <p className="mt-2 text-sm text-rose-200 print:text-slate-700">ERROR — {error ?? 'The canonical analysis report could not be prepared.'}</p>
+        <p className="mt-2 text-sm text-rose-200 print:text-slate-700">Chart analysis could not be completed: {analysisError ?? 'The canonical analysis is unavailable.'}</p>
         {onRetryAnalysis && <button type="button" onClick={onRetryAnalysis} className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white print:hidden">Retry chart analysis</button>}
       </section>
     );
