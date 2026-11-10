@@ -1546,7 +1546,7 @@ describe('A06 — AI execution independence and grounding', () => {
 
     const failed = await runAiExplanation({ ...options, router: timeoutRouter as unknown as AiRouter });
     expect(failed.kind).toBe('ERROR');
-    if (failed.kind === 'ERROR') expect(failed.message).toContain('timeout');
+    if (failed.kind === 'ERROR') expect(failed.message).toBe('AI explanation could not be generated.');
 
     // Retry through the production local-only router; no astrology or domain
     // interpretation is rerun or mutated by the AI explanation retry.
