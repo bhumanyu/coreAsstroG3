@@ -815,23 +815,38 @@ addGate(gates, 'RG-11', 'BLOCKED', 'Owner-gated non-dusthana mechanism coverage 
 addGate(gates, 'RG-12', determinismCommand
   ? (determinismCommand.passed ? 'PASS' : 'FAIL')
   : 'NOT_RUN', 'Dasha determinism validation.', commandLogEvidence(determinismCommand));
+const requiredPr8SurfaceNames = ['report-renderer', 'AppController async-state'];
+const requiredPr8SurfacesPassed = requiredPr8SurfaceNames.every(name => {
+  const surface = pr8AcceptanceStatuses.find(item => item.name === name);
+  return surface?.status === 'PASS' && surface.coverageStatus === 'PASSED';
+});
+const allPr8AcceptanceStatusesPassed = pr8AcceptanceStatuses.length > 0
+  && pr8AcceptanceStatuses.every(item => item.status === 'PASS' && item.coverageStatus === 'PASSED');
 const pr8GateStatus = !pr8EvaluatedOnCandidate
   ? 'BLOCKED'
-  : acceptanceCommand && !acceptanceCommand.passed
-    ? 'FAIL'
-    : pr8ReportPresent
-      ? pr8BaselinesPassed ? 'BLOCKED' : 'FAIL'
-      : 'BLOCKED';
+  : [controllerAcceptanceCommand, reportAcceptanceCommand, browserAcceptanceCommand].some(command => command && !command.passed)
+    || (acceptanceCommand && !acceptanceCommand.passed)
+    || (pr8ReportPresent && !pr8BaselinesPassed)
+      ? 'FAIL'
+      : pr8ReportPresent && pr8BaselinesPassed && requiredPr8SurfacesPassed && allPr8AcceptanceStatusesPassed
+        ? 'PASS'
+        : 'BLOCKED';
+const pr8GateEvidence = pr8EvaluatedOnCandidate && pr8ReportSha256
+  ? [
+    ...fileSha256Evidence(relative(root, acceptanceReportPath)),
+    ...fileSha256Evidence('test-results/e2e-results.json')
+  ]
+  : [];
 addGate(
   gates,
   'RG-13',
   pr8GateStatus,
-  pr8EvaluatedOnCandidate
-    ? 'Consumes candidate-linked PR-8 output; retained adapter blockers remain.'
-    : 'BLOCKED: PR-8 implementation/report linkage is missing or acceptance files changed since the approved implementation.',
-  pr8EvaluatedOnCandidate && pr8ReportSha256
-    ? fileSha256Evidence(relative(root, acceptanceReportPath))
-    : []
+  pr8GateStatus === 'PASS'
+    ? 'All PR-8 domain and product surfaces passed candidate-linked adapter and Chromium acceptance.'
+    : !pr8EvaluatedOnCandidate
+      ? 'BLOCKED: accepted PR-8 implementation baseline has not been explicitly reconciled with this candidate.'
+      : 'BLOCKED: required PR-8 surfaces lack complete exact-revision adapter, browser, CI or artifact evidence.',
+  pr8GateEvidence
 );
 const limitationDocumentEvidence = [
   ...fileSha256Evidence('docs/release/RELEASE_LIMITATIONS.md', 'POLICY_DOCUMENT'),
@@ -920,6 +935,7 @@ const manifest = {
       : null,
     reportSha256: pr8ReportSha256,
     evaluatedOnCandidate: pr8EvaluatedOnCandidate,
+    acceptanceSurfaceStatuses: pr8AcceptanceStatuses,
     ...(acceptanceFilesChangedSince.length > 0 ? { acceptanceFilesChangedSince } : {})
   },
   commands,
