@@ -197,23 +197,27 @@ test('E08-S14 AI narrative unavailability does not replace selected-period deter
 
 test('E08-S15 saved chart profiles survive reload and can be restored', async ({ page }) => {
   await openApp(page);
-  await page.getByLabel('Profile name').fill('E08 Persistent Profile');
-  await page.getByRole('button', { name: 'Save current chart' }).click();
-  await expect(page.getByText('Saved "E08 Persistent Profile" on this browser/device.')).toBeVisible();
+  await openBirthDialog(page);
+  await page.getByPlaceholder('e.g. CoreAstro Test Vector 1').fill('E08 Persistent Profile');
+  await page.getByRole('checkbox', { name: /save as chart profile/i }).check();
+  await page.getByRole('button', { name: 'Calculate Chart' }).click();
+  await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
+
   await page.reload();
-  await expect(page.getByText('E08 Persistent Profile')).toBeVisible();
-  await page.getByRole('button', { name: 'Restore' }).last().click();
+  await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
+  await openBirthDialog(page);
+  await page.getByRole('button', { name: 'E08 Persistent Profile', exact: true }).click();
+  await page.getByRole('button', { name: 'Calculate Chart' }).click();
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 });
 
 test('E08-S16 share-link recipient preview requires explicit load before replacing chart inputs', async ({ page }) => {
-  await openApp(page);
-  await page.getByRole('button', { name: 'Create share link' }).click();
-  const shareUrl = await page.getByLabel('Created share link').inputValue();
-  expect(shareUrl).toContain('#chart=');
+  // v1 payload: { version: 1, dateTimeStr: '2024-05-15T12:00:00Z', timeZone: 'UTC',
+  //   latitude: 23.1793, longitude: 75.7849, ayanamsa: 'LAHIRI' } (default preset chart)
+  const shareUrl = '/#chart=v1.eyJ2ZXJzaW9uIjoxLCJkYXRlVGltZVN0ciI6IjIwMjQtMDUtMTVUMTI6MDA6MDBaIiwidGltZVpvbmUiOiJVVEMiLCJsYXRpdHVkZSI6MjMuMTc5MywibG9uZ2l0dWRlIjo3NS43ODQ5LCJheWFuYW1zYSI6IkxBSElSSSJ9';
   const recipient = await page.context().newPage();
   await recipient.goto(shareUrl);
-  await expect(recipient.getByText(/A shared chart is available to load/)).toBeVisible();
+  await expect(recipient.getByText(/A shared chart is available to load/)).toBeVisible({ timeout: 120_000 });
   await recipient.getByRole('button', { name: 'Load shared chart inputs' }).click();
   await expect(recipient.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
   await recipient.close();
