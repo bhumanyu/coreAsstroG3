@@ -90,7 +90,7 @@
       "id": "owner-gated-non-dusthana-mechanisms",
       "status": "BLOCKED",
       "scope": "Owner-gated non-dusthana mechanism families remain blocked and are never inferred PASS."
-    },
+    }
   ],
   "skippedTests": {
     "policy": "No skipped tests are approved; skipped tests not explicitly authorized by this empty allowlist are unapproved.",
