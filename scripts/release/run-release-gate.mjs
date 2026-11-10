@@ -871,7 +871,7 @@ try {
   const validatedRunnerResult = releaseReportModule.createValidatedRunnerResult({
     gates,
     ...(fixtureCountToReport === undefined ? {} : { fixtureCount: fixtureCountToReport }),
-    pr8AcceptanceStatuses: pr8EvaluatedOnCandidate ? pr8AcceptanceStatuses : [],
+    pr8AcceptanceStatuses,
     metadata: {
       generatedAt: new Date().toISOString(),
       sourceRevision: testedSha ?? 'unavailable'
