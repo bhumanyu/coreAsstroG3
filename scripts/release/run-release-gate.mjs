@@ -20,12 +20,12 @@ const manifestPath = resolve(outputDirectory, 'manifest.json');
 const testReportPath = resolve(outputDirectory, 'test-report.json');
 const acceptanceReportPath = resolve(outputDirectory, 'pr8-acceptance.json');
 const fixtureResultsPath = resolve(outputDirectory, 'calculation-fixture-results.json');
+const browserReportPath = resolve(root, 'test-results/e2e-results.json');
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const preflightErrors = [];
 const limitations = [
   'Independent Swiss Ephemeris / JPL Horizons reference parity is BLOCKED.',
   'Owner-gated non-dusthana mechanism families are BLOCKED.',
-  'PR-8 report-renderer and AppController async-state surfaces are BLOCKED.'
 ];
 const commands = [];
 const skippedTests = [];
@@ -278,12 +278,13 @@ let harnessDependencyIssues = [];
 let acceptedHarnessGraph = null;
 let candidateHarnessGraph = null;
 let harnessGraphRevisionDifferences = [];
+let baselineReconciliationErrors = [];
 let fixtureInvocationId = null;
 let toolchainNodeExpected = '';
 let toolchainNpmExpected = '';
 
 mkdirSync(logsDirectory, { recursive: true });
-for (const stalePath of [testReportPath, acceptanceReportPath, fixtureResultsPath]) {
+for (const stalePath of [testReportPath, acceptanceReportPath, fixtureResultsPath, browserReportPath]) {
   if (existsSync(stalePath)) unlinkSync(stalePath);
 }
 const packageJsonPath = resolve(root, 'package.json');
@@ -506,7 +507,7 @@ if (releaseReportModule && acceptedHarnessGraph && candidateHarnessGraph) {
     candidateHarnessGraph
   );
   if (harnessGraphRevisionDifferences.length > 0) {
-    preflightErrors.push(
+    baselineReconciliationErrors.push(
       `PR-8 harness dependency graph differs between accepted and candidate revisions: ${harnessGraphRevisionDifferences.join('; ')}`
     );
   }
@@ -524,7 +525,7 @@ if (releaseReportModule && acceptedHarnessGraph && candidateHarnessGraph) {
   );
   harnessDependencyIssues = [...harnessDependencyIssues, ...acceptedInventoryIssues];
   if (harnessDependencyIssues.length > 0) {
-    preflightErrors.push(
+    baselineReconciliationErrors.push(
       `PR-8 revision-comparison inventory does not cover harness dependencies: ${harnessDependencyIssues.join(', ')}`
     );
   }
@@ -536,7 +537,7 @@ if (releaseReportModule && acceptedHarnessGraph && candidateHarnessGraph) {
   for (const limitation of runtimeLoadLimitations) {
     const filePath = limitation.split(':')[0];
     if (!dependencyWaivers.some(waiver => waiver?.path === filePath)) {
-      preflightErrors.push(
+      baselineReconciliationErrors.push(
         `Runtime-loaded dependency ${limitation} requires an approved structured path waiver.`
       );
     }
@@ -548,6 +549,9 @@ let typecheckCommand;
 let testCommand;
 let temporalCommand;
 let acceptanceCommand;
+let controllerAcceptanceCommand;
+let reportAcceptanceCommand;
+let browserAcceptanceCommand;
 let calculationCommand;
 let buildCommand;
 let bundleCommand;
@@ -607,6 +611,84 @@ if (cleanPreflight) {
   } else {
     preflightErrors.push('PR-8 acceptance probe did not produce an output report.');
   }
+
+  controllerAcceptanceCommand = recordCommand('app-controller-acceptance', [
+    'exec', '--', 'vitest', 'run', 'src/acceptance/appControllerAcceptanceAdapter.test.ts'
+  ]);
+  reportAcceptanceCommand = recordCommand('report-renderer-acceptance', [
+    'exec', '--', 'vitest', 'run', 'src/acceptance/productAnalysisReportAcceptanceAdapter.test.tsx'
+  ]);
+  browserAcceptanceCommand = recordCommand('browser-acceptance', ['run', 'test:e2e:critical']);
+
+  const workflowRunId = process.env.GITHUB_RUN_ID ?? null;
+  const workflowRunUrl = workflowRunId && process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY
+    ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${workflowRunId}`
+    : null;
+
+  const createSurfaceStatus = (name, adapterCommand) => {
+    if (adapterCommand) commandLogEvidence(adapterCommand);
+    if (browserAcceptanceCommand) commandLogEvidence(browserAcceptanceCommand);
+    const browserReportFresh = Boolean(
+      browserAcceptanceCommand
+      && existsSync(browserReportPath)
+      && statSync(browserReportPath).mtimeMs >= browserAcceptanceCommand.startedAt
+      && statSync(browserReportPath).mtimeMs <= browserAcceptanceCommand.finishedAt
+    );
+    const browserReportEvidence = browserReportFresh
+      ? fileSha256Evidence(relative(root, browserReportPath))
+      : [];
+    const evidenceReferences = [
+      adapterCommand?.logPath,
+      browserAcceptanceCommand?.logPath,
+      ...(browserReportEvidence.length > 0 ? ['test-results/e2e-results.json'] : [])
+    ].filter(Boolean);
+    const commandFailed = Boolean(
+      (adapterCommand && !adapterCommand.passed)
+      || (browserAcceptanceCommand && !browserAcceptanceCommand.passed)
+    );
+    const evidenceComplete = Boolean(
+      adapterCommand?.passed
+      && browserAcceptanceCommand?.passed
+      && browserReportEvidence.length > 0
+      && candidateSha
+      && testedSha === candidateSha
+      && workflowRunId
+      && workflowRunUrl
+    );
+    const status = commandFailed ? 'FAIL' : evidenceComplete ? 'PASS' : 'BLOCKED';
+    return {
+      name,
+      status,
+      coverageStatus: status === 'PASS' ? 'PASSED' : status === 'FAIL' ? 'BLOCKED' : 'NOT_TESTED',
+      details: evidenceComplete
+        ? 'Adapter and all required Chromium journeys passed on the exact candidate revision.'
+        : 'BLOCKED until adapter, Chromium journey, exact revision, CI identity and report evidence are all present.',
+      ...(candidateSha ? { testedSha: candidateSha } : {}),
+      ...(workflowRunId ? { ciRunId: workflowRunId } : {}),
+      ...(workflowRunUrl ? { ciRunUrl: workflowRunUrl } : {}),
+      evidenceReferences
+    };
+  };
+
+  pr8AcceptanceStatuses = [
+    ...pr8AcceptanceStatuses,
+    createSurfaceStatus('AppController async-state', controllerAcceptanceCommand),
+    createSurfaceStatus('report-renderer', reportAcceptanceCommand)
+  ];
+
+  pr8EvaluatedOnCandidate = releaseReportModule?.pr8WasEvaluatedOnCandidate(
+    pr8ImplementationSha,
+    candidateSha,
+    testedSha,
+    acceptanceFilesChangedSince,
+    baselineReconciliationErrors.length === 0
+      && acceptanceCommand?.passed === true
+      && controllerAcceptanceCommand?.passed === true
+      && reportAcceptanceCommand?.passed === true
+      && browserAcceptanceCommand?.passed === true
+      && isPr8AcceptanceReport(pr8AcceptanceReport),
+    pr8ReportSha256
+  ) === true;
 
   fixtureInvocationId = randomUUID();
   calculationCommand = recordCommand(
@@ -744,23 +826,40 @@ addGate(gates, 'RG-11', 'BLOCKED', 'Owner-gated non-dusthana mechanism coverage 
 addGate(gates, 'RG-12', determinismCommand
   ? (determinismCommand.passed ? 'PASS' : 'FAIL')
   : 'NOT_RUN', 'Dasha determinism validation.', commandLogEvidence(determinismCommand));
-const pr8GateStatus = !pr8EvaluatedOnCandidate
-  ? 'BLOCKED'
-  : acceptanceCommand && !acceptanceCommand.passed
-    ? 'FAIL'
-    : pr8ReportPresent
-      ? pr8BaselinesPassed ? 'BLOCKED' : 'FAIL'
+const requiredPr8SurfaceNames = ['report-renderer', 'AppController async-state'];
+const requiredPr8SurfacesPassed = requiredPr8SurfaceNames.every(name => {
+  const surface = pr8AcceptanceStatuses.find(item => item.name === name);
+  return surface?.status === 'PASS' && surface.coverageStatus === 'PASSED';
+});
+const allPr8AcceptanceStatusesPassed = pr8AcceptanceStatuses.length > 0
+  && pr8AcceptanceStatuses.every(item => item.status === 'PASS' && item.coverageStatus === 'PASSED');
+const pr8HasFailure = [controllerAcceptanceCommand, reportAcceptanceCommand, browserAcceptanceCommand, acceptanceCommand]
+  .some(command => command && !command.passed)
+  || (pr8ReportPresent && !pr8BaselinesPassed)
+  || pr8AcceptanceStatuses.some(item => item.status === 'FAIL');
+const pr8GateStatus = pr8HasFailure
+  ? 'FAIL'
+  : baselineReconciliationErrors.length > 0 || !pr8EvaluatedOnCandidate
+    ? 'BLOCKED'
+    : pr8ReportPresent && pr8BaselinesPassed && requiredPr8SurfacesPassed && allPr8AcceptanceStatusesPassed
+      ? 'PASS'
       : 'BLOCKED';
+const pr8GateEvidence = pr8EvaluatedOnCandidate && pr8ReportSha256
+  ? [
+    ...fileSha256Evidence(relative(root, acceptanceReportPath)),
+    ...fileSha256Evidence('test-results/e2e-results.json')
+  ]
+  : [];
 addGate(
   gates,
   'RG-13',
   pr8GateStatus,
-  pr8EvaluatedOnCandidate
-    ? 'Consumes candidate-linked PR-8 output; retained adapter blockers remain.'
-    : 'BLOCKED: PR-8 implementation/report linkage is missing or acceptance files changed since the approved implementation.',
-  pr8EvaluatedOnCandidate && pr8ReportSha256
-    ? fileSha256Evidence(relative(root, acceptanceReportPath))
-    : []
+  pr8GateStatus === 'PASS'
+    ? 'All PR-8 domain and product surfaces passed candidate-linked adapter and Chromium acceptance.'
+    : !pr8EvaluatedOnCandidate
+      ? `BLOCKED: accepted PR-8 implementation baseline has not been explicitly reconciled with this candidate. ${baselineReconciliationErrors.join('; ')}`
+      : 'BLOCKED: required PR-8 surfaces lack complete exact-revision adapter, browser, CI or artifact evidence.',
+  pr8GateEvidence
 );
 const limitationDocumentEvidence = [
   ...fileSha256Evidence('docs/release/RELEASE_LIMITATIONS.md', 'POLICY_DOCUMENT'),
@@ -783,7 +882,7 @@ try {
   const validatedRunnerResult = releaseReportModule.createValidatedRunnerResult({
     gates,
     ...(fixtureCountToReport === undefined ? {} : { fixtureCount: fixtureCountToReport }),
-    pr8AcceptanceStatuses: pr8EvaluatedOnCandidate ? pr8AcceptanceStatuses : [],
+    pr8AcceptanceStatuses,
     metadata: {
       generatedAt: new Date().toISOString(),
       sourceRevision: testedSha ?? 'unavailable'
@@ -833,6 +932,7 @@ const manifest = {
     harnessDependencyPaths,
     harnessDependencyIssues,
     harnessGraphRevisionDifferences,
+    baselineReconciliationErrors,
     acceptedHarnessGraph: acceptedHarnessGraph
       ? {
         dependencyCount: acceptedHarnessGraph.dependencies.length,
@@ -849,6 +949,7 @@ const manifest = {
       : null,
     reportSha256: pr8ReportSha256,
     evaluatedOnCandidate: pr8EvaluatedOnCandidate,
+    acceptanceSurfaceStatuses: pr8AcceptanceStatuses,
     ...(acceptanceFilesChangedSince.length > 0 ? { acceptanceFilesChangedSince } : {})
   },
   commands,
