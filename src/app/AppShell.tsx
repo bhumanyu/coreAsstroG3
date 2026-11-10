@@ -30,7 +30,12 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
       setState((prev) => ({
         ...prev,
         productAnalysis: { status: 'ERROR', error: message },
-        lifeAnalysisState: { status: 'ERROR', errorMessage: message }
+        lifeAnalysisState: { status: 'ERROR', errorMessage: message },
+        horoscope: undefined,
+        selectionState: { status: 'IDLE' },
+        dashaTimingViewModel: undefined,
+        dashaTimingProjectionError: message,
+        dashaTimingProjectionState: { status: 'IDLE' }
       }));
     }
   }, [controller]);
@@ -47,7 +52,14 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
     controller.resetPreset();
     setState((prev) => ({
       ...prev,
-      birthDetails: PRESET_PROFILES[0].details
+      birthDetails: PRESET_PROFILES[0].details,
+      productAnalysis: { status: 'LOADING' },
+      lifeAnalysisState: { status: 'LOADING' },
+      horoscope: undefined,
+      selectionState: { status: 'IDLE' },
+      dashaTimingViewModel: undefined,
+      dashaTimingProjectionError: undefined,
+      dashaTimingProjectionState: { status: 'IDLE' }
     }));
   };
 
@@ -55,7 +67,14 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
     setState((prev) => ({
       ...prev,
       birthDetails: newDetails,
-      isBirthFormOpen: false
+      isBirthFormOpen: false,
+      productAnalysis: { status: 'LOADING' },
+      lifeAnalysisState: { status: 'LOADING' },
+      horoscope: undefined,
+      selectionState: { status: 'IDLE' },
+      dashaTimingViewModel: undefined,
+      dashaTimingProjectionError: undefined,
+      dashaTimingProjectionState: { status: 'IDLE' }
     }));
   };
 
