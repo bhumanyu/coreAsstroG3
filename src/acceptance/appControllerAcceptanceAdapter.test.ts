@@ -178,4 +178,57 @@ describe('AppController production acceptance adapter', () => {
     expect(adapter.getState().productAnalysis.analysisId).toBe('chart-after');
     expect(adapter.getState().selectionState.status).toBe('IDLE');
   });
+
+  it('recovers from a transient chart calculation failure when the user retries analysis', async () => {
+    const run = makeRun('analysis-recovered');
+    const service = {
+      analyzeRun: vi.fn()
+        .mockRejectedValueOnce(new Error('transient calculation failure'))
+        .mockResolvedValueOnce(run)
+    } as unknown as ProductAnalysisService;
+    const adapter = createAppControllerAcceptanceAdapter(service);
+
+    await adapter.controller.analyze(INITIAL_APP_STATE.birthDetails);
+    expect(adapter.getState().productAnalysis).toMatchObject({
+      status: 'ERROR',
+      error: 'transient calculation failure'
+    });
+
+    await adapter.controller.analyze(INITIAL_APP_STATE.birthDetails);
+    expect(adapter.getState().productAnalysis).toMatchObject({
+      status: 'READY',
+      analysisId: 'analysis-recovered'
+    });
+    expect(service.analyzeRun).toHaveBeenCalledTimes(2);
+  });
+
+  it('recovers from a transient selected-period service failure without discarding canonical analysis', async () => {
+    const run = makeRun('period-retry-analysis');
+    const selected = createProductAnalysis({ analysisId: 'period-retry-analysis' });
+    const service = {
+      analyzeRun: vi.fn().mockResolvedValue(run),
+      selectPeriodForRun: vi.fn()
+        .mockRejectedValueOnce(new Error('selected-period timeout'))
+        .mockResolvedValueOnce(selected)
+    } as unknown as ProductAnalysisService;
+    const adapter = createAppControllerAcceptanceAdapter(service);
+
+    await adapter.controller.analyze(INITIAL_APP_STATE.birthDetails);
+    await adapter.controller.selectPeriod('md_jupiter', 'ad_saturn');
+    expect(adapter.getState().selectionState).toMatchObject({
+      status: 'ERROR',
+      error: 'selected-period timeout',
+      analysisId: 'period-retry-analysis'
+    });
+    expect(adapter.getState().productAnalysis.status).toBe('READY');
+
+    await adapter.controller.selectPeriod('md_jupiter', 'ad_saturn');
+    expect(adapter.getState().selectionState).toMatchObject({
+      status: 'READY',
+      analysisId: 'period-retry-analysis',
+      mahadashaId: 'md_jupiter',
+      antardashaId: 'ad_saturn'
+    });
+    expect(adapter.getState().productAnalysis.status).toBe('READY');
+  });
 });
