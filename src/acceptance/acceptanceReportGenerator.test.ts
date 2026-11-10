@@ -83,7 +83,7 @@ describe('generate-acceptance-report', () => {
     expect(existsSync(result.outputPath)).toBe(false);
   });
 
-  it('rejects a report that tries to mark incomplete evidence COMPLETE', () => {
+  it('recomputes rather than trusts a caller-supplied COMPLETE status', () => {
     const input = {
       repository: 'bhumanyu/coreAsstroG3',
       sourceSha: sha,
@@ -92,7 +92,7 @@ describe('generate-acceptance-report', () => {
     };
     const result = runGenerator(input);
 
-    expect(result.error).toBeInstanceOf(Error);
-    expect((result.error as Error).message).toContain('productStatus does not match its execution evidence');
+    expect(result.error).toBeUndefined();
+    expect(result.report.records[0].productStatus).toBe('PARTIAL');
   });
 });
