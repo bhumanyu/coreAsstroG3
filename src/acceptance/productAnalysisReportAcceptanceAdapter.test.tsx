@@ -167,10 +167,7 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
   it('isolates report-render errors and retries the existing snapshot without rerunning analysis', () => {
     let shouldThrow = true;
     const UnstableReport = () => {
-      if (shouldThrow) {
-        shouldThrow = false;
-        throw new Error('renderer failed');
-      }
+      if (shouldThrow) throw new Error('renderer failed');
       return <div>Recovered report for the same analysis</div>;
     };
     const analysisRetry = vi.fn();
@@ -182,6 +179,7 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('renderer failed');
     expect(screen.getByRole('alert')).toHaveTextContent('canonical chart analysis has been preserved');
+    shouldThrow = false;
     fireEvent.click(screen.getByRole('button', { name: 'Retry report' }));
 
     expect(screen.getByText('Recovered report for the same analysis')).toBeInTheDocument();
@@ -191,10 +189,7 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
   it('clears an earlier report-render error when the canonical analysis identity changes', () => {
     let shouldThrow = true;
     const UnstableReport = () => {
-      if (shouldThrow) {
-        shouldThrow = false;
-        throw new Error('chart A renderer failed');
-      }
+      if (shouldThrow) throw new Error('chart A renderer failed');
       return <div>Chart B report</div>;
     };
     const { rerender } = render(
@@ -203,6 +198,7 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
       </ProductAnalysisReportBoundary>
     );
     expect(screen.getByRole('alert')).toHaveTextContent('chart A renderer failed');
+    shouldThrow = false;
 
     rerender(
       <ProductAnalysisReportBoundary resetKey="chart-b">
