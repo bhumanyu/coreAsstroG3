@@ -95,4 +95,98 @@ describe('ChartProfileService', () => {
     expect(storage.getItem(CHART_PROFILE_STORAGE_KEY)).toBe(future);
     expect(service.migrateProfileStore()).toEqual({ ok: false, error: 'UNSUPPORTED_VERSION' });
   });
+
+  it('reports browser storage quota exhaustion without claiming a profile was saved', () => {
+    class QuotaStorage extends MemoryStorage {
+      setItem(_key: string, _value: string): void {
+        throw Object.assign(new Error('Storage quota exceeded'), { name: 'QuotaExceededError' });
+      }
+    }
+    const service = new ChartProfileService(new QuotaStorage(), () => new Date(), () => 'quota-profile');
+    expect(service.saveProfile('Quota profile', birth)).toEqual({ ok: false, error: 'QUOTA' });
+  });
+
+  it('skips duplicate imported IDs and labels without overwriting the existing profile', () => {
+    const storage = new MemoryStorage();
+    const service = new ChartProfileService(storage, () => new Date(), () => 'new-import-id');
+    service.saveProfile('Existing chart', birth, 'existing-id');
+    const imported = {
+      schemaVersion: 1,
+      profiles: [{
+        id: 'existing-id',
+        label: 'Existing chart',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        birthDetails: { ...birth, latitude: 10 }
+      }]
+    };
+
+    expect(service.importProfiles(JSON.stringify(imported), 'SKIP_DUPLICATES')).toEqual({
+      ok: true,
+      value: { importedCount: 0, skippedCount: 1, renamedCount: 0 }
+    });
+    expect(service.listProfiles()).toMatchObject({
+      ok: true,
+      value: [{ id: 'existing-id', label: 'Existing chart', birthDetails: birth }]
+    });
+  });
+
+  it('renames duplicate imported IDs and labels deterministically without overwriting existing data', () => {
+    const storage = new MemoryStorage();
+    const service = new ChartProfileService(storage, () => new Date('2026-02-01T00:00:00Z'), () => 'renamed-import-id');
+    service.saveProfile('Existing chart', birth, 'existing-id');
+    const imported = {
+      schemaVersion: 1,
+      profiles: [{
+        id: 'existing-id',
+        label: 'Existing chart',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        birthDetails: { ...birth, latitude: 10 }
+      }]
+    };
+
+    expect(service.importProfiles(JSON.stringify(imported), 'RENAME_DUPLICATES')).toEqual({
+      ok: true,
+      value: { importedCount: 1, skippedCount: 0, renamedCount: 1 }
+    });
+    expect(service.listProfiles()).toMatchObject({
+      ok: true,
+      value: [
+        { id: 'existing-id', label: 'Existing chart', birthDetails: birth },
+        { id: 'renamed-import-id', label: 'Existing chart (Imported 2)', birthDetails: { ...birth, latitude: 10 } }
+      ]
+    });
+  });
+
+  it('rejects a mixed-validity import atomically and preserves all existing profiles', () => {
+    const storage = new MemoryStorage();
+    const service = new ChartProfileService(storage, () => new Date(), () => 'new-id');
+    service.saveProfile('Existing chart', birth, 'existing-id');
+    const imported = {
+      schemaVersion: 1,
+      profiles: [
+        {
+          id: 'valid-import',
+          label: 'Valid import',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          birthDetails: birth
+        },
+        {
+          id: 'invalid-import',
+          label: 'Invalid import',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          birthDetails: { ...birth, timeZone: 'Not/A_Real_Zone' }
+        }
+      ]
+    };
+
+    expect(service.importProfiles(JSON.stringify(imported))).toEqual({ ok: false, error: 'INVALID_IMPORT' });
+    expect(service.listProfiles()).toMatchObject({
+      ok: true,
+      value: [{ id: 'existing-id', label: 'Existing chart', birthDetails: birth }]
+    });
+  });
 });
