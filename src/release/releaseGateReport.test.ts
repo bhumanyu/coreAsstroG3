@@ -48,14 +48,19 @@ const evidencePath = 'src/release/releaseGateReport.test.ts';
 const evidenceSha = createHash('sha256')
   .update(readFileSync(resolve(process.cwd(), evidencePath)))
   .digest('hex');
+const packageSha = createHash('sha256')
+  .update(readFileSync(resolve(process.cwd(), 'package.json')))
+  .digest('hex');
 const testEvidenceManifest: RunnerEvidenceManifest = {
-  commands: [...new Set(Object.values(RELEASE_GATE_EVIDENCE_KIND)
-    .flatMap(requirement => requirement.commandNames ?? []))].map(name => ({
+  commands: [...new Set([
+    ...Object.values(RELEASE_GATE_EVIDENCE_KIND).flatMap(requirement => requirement.commandNames ?? []),
+    'report-adapter', 'controller-adapter'
+  ])].map(name => ({
     name,
     logPath: evidencePath,
     exitCode: 0
   })),
-  files: [{ path: evidencePath, sha256: evidenceSha }],
+  files: [{ path: evidencePath, sha256: evidenceSha }, { path: 'package.json', sha256: packageSha }],
   fixtureComparisons: [{
     path: evidencePath,
     sha256: evidenceSha,
@@ -1047,7 +1052,7 @@ describe('release gate report', () => {
         testedSha: sha,
         ciRunId: '42760000000',
         ciRunUrl: 'https://github.com/example/repo/actions/runs/42760000000',
-        evidenceReferences: ['report-adapter.log', 'browser-report.json']
+        evidenceReferences: [evidencePath, 'package.json']
       },
       {
         name: 'AppController async-state',
@@ -1056,7 +1061,7 @@ describe('release gate report', () => {
         testedSha: sha,
         ciRunId: '42760000000',
         ciRunUrl: 'https://github.com/example/repo/actions/runs/42760000000',
-        evidenceReferences: ['controller-adapter.log', 'browser-report.json']
+        evidenceReferences: [evidencePath, 'package.json']
       }
     ];
     const report = finalize({
