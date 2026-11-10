@@ -26,7 +26,8 @@ export function createAppControllerAcceptanceAdapter(
     const previous = state;
     const next = typeof update === 'function' ? (update as (value: AppState) => AppState)(previous) : update;
 
-    if (previous.productAnalysis.status !== next.productAnalysis.status) {
+    if (previous.productAnalysis.status !== next.productAnalysis.status
+      || previous.productAnalysis.requestId !== next.productAnalysis.requestId) {
       assertAppControllerTransition('ANALYSIS', previous.productAnalysis.status, next.productAnalysis.status);
       transitions.push(Object.freeze({
         operation: 'ANALYSIS',

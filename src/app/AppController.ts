@@ -17,7 +17,7 @@ export interface AppController {
   analyze: (birthDetails: BirthDetails) => Promise<void>;
   selectPeriod: (mahadashaId: string, antardashaId: string) => Promise<void>;
   /** Rebuilds only the optional Dasha projection for the active canonical analysis. */
-  retryDashaTiming?: () => Promise<void>;
+  retryDashaTiming: () => Promise<void>;
 }
 
 export type DashaTimingProjectionBuilder = (input: BuildDashaTimingViewModelInput) => DashaTimingViewModel;
