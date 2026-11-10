@@ -31,9 +31,31 @@ function Value({ label, value }: { label: string; value?: string | number | null
 
 export interface ProductAnalysisReportViewProps {
   readonly analysis?: ProductAnalysis;
+  readonly status?: 'IDLE' | 'LOADING' | 'READY' | 'ERROR';
+  readonly error?: string;
+  readonly onRetry?: () => void;
 }
 
-export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps> = ({ analysis }) => {
+export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps> = ({ analysis, status, error, onRetry }) => {
+  if (status === 'LOADING') {
+    return (
+      <section aria-label="Career and Wealth product report" role="status" className="rounded-xl border border-slate-700 bg-slate-900/60 p-5 print:border-slate-300 print:bg-white">
+        <h2 className="text-lg font-semibold text-slate-100 print:text-black">Career & Wealth Product Analysis</h2>
+        <p className="mt-2 text-sm text-slate-300 print:text-slate-700">LOADING — preparing the canonical analysis report. No previous or unrelated analysis is substituted.</p>
+      </section>
+    );
+  }
+
+  if (status === 'ERROR') {
+    return (
+      <section aria-label="Career and Wealth product report" role="alert" className="rounded-xl border border-rose-700/50 bg-rose-950/20 p-5 print:border-slate-300 print:bg-white">
+        <h2 className="text-lg font-semibold text-slate-100 print:text-black">Career & Wealth Product Analysis</h2>
+        <p className="mt-2 text-sm text-rose-200 print:text-slate-700">ERROR — {error ?? 'The canonical analysis report could not be prepared.'}</p>
+        {onRetry && <button type="button" onClick={onRetry} className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white print:hidden">Retry analysis</button>}
+      </section>
+    );
+  }
+
   if (!analysis) {
     return (
       <section aria-label="Career and Wealth product report" className="rounded-xl border border-amber-700/50 bg-amber-950/20 p-5 print:border-slate-300 print:bg-white">
