@@ -218,4 +218,34 @@ describe('AppShellContent analysis safety wrapper', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('handled failure');
     expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
+
+  it('renders Saved chart profiles on the overview page only', async () => {
+    window.localStorage.clear();
+    let setStateRef: Dispatch<SetStateAction<AppState>> | undefined;
+    const analyze = vi.fn<AppController['analyze']>().mockResolvedValue(undefined);
+    const baseController = createController(analyze);
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
+      setStateRef = setState;
+      return {
+        ...baseController,
+        navigate: (page: AppState['activePage']) =>
+          setState((prev) => ({ ...prev, activePage: page }))
+      };
+    };
+
+    render(<AppShellContent controllerFactory={controllerFactory} />);
+
+    expect(await screen.findByRole('heading', { name: 'Saved chart profiles' })).toBeInTheDocument();
+
+    act(() => {
+      setStateRef?.((prev) => ({ ...prev, activePage: 'career' }));
+    });
+    expect(screen.queryByRole('heading', { name: 'Saved chart profiles' })).not.toBeInTheDocument();
+
+    act(() => {
+      setStateRef?.((prev) => ({ ...prev, activePage: 'overview' }));
+    });
+    expect(await screen.findByRole('heading', { name: 'Saved chart profiles' })).toBeInTheDocument();
+    window.localStorage.clear();
+  });
 });
