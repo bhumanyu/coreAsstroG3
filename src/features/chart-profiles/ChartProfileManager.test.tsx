@@ -141,7 +141,7 @@ describe('ChartProfileManager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save current chart' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent(/Browser storage is full/i);
-    expect(screen.queryByRole('status')).not.toHaveTextContent(/Saved/i);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('lets the user explicitly rename duplicate IDs or names during import', async () => {
