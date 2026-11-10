@@ -278,6 +278,7 @@ let harnessDependencyIssues = [];
 let acceptedHarnessGraph = null;
 let candidateHarnessGraph = null;
 let harnessGraphRevisionDifferences = [];
+let baselineReconciliationErrors = [];
 let fixtureInvocationId = null;
 let toolchainNodeExpected = '';
 let toolchainNpmExpected = '';
@@ -506,7 +507,7 @@ if (releaseReportModule && acceptedHarnessGraph && candidateHarnessGraph) {
     candidateHarnessGraph
   );
   if (harnessGraphRevisionDifferences.length > 0) {
-    preflightErrors.push(
+    baselineReconciliationErrors.push(
       `PR-8 harness dependency graph differs between accepted and candidate revisions: ${harnessGraphRevisionDifferences.join('; ')}`
     );
   }
@@ -524,7 +525,7 @@ if (releaseReportModule && acceptedHarnessGraph && candidateHarnessGraph) {
   );
   harnessDependencyIssues = [...harnessDependencyIssues, ...acceptedInventoryIssues];
   if (harnessDependencyIssues.length > 0) {
-    preflightErrors.push(
+    baselineReconciliationErrors.push(
       `PR-8 revision-comparison inventory does not cover harness dependencies: ${harnessDependencyIssues.join(', ')}`
     );
   }
@@ -536,7 +537,7 @@ if (releaseReportModule && acceptedHarnessGraph && candidateHarnessGraph) {
   for (const limitation of runtimeLoadLimitations) {
     const filePath = limitation.split(':')[0];
     if (!dependencyWaivers.some(waiver => waiver?.path === filePath)) {
-      preflightErrors.push(
+      baselineReconciliationErrors.push(
         `Runtime-loaded dependency ${limitation} requires an approved structured path waiver.`
       );
     }
@@ -837,7 +838,7 @@ const pr8HasFailure = [controllerAcceptanceCommand, reportAcceptanceCommand, bro
   || pr8AcceptanceStatuses.some(item => item.status === 'FAIL');
 const pr8GateStatus = pr8HasFailure
   ? 'FAIL'
-  : !pr8EvaluatedOnCandidate
+  : baselineReconciliationErrors.length > 0 || !pr8EvaluatedOnCandidate
     ? 'BLOCKED'
     : pr8ReportPresent && pr8BaselinesPassed && requiredPr8SurfacesPassed && allPr8AcceptanceStatusesPassed
       ? 'PASS'
@@ -855,7 +856,7 @@ addGate(
   pr8GateStatus === 'PASS'
     ? 'All PR-8 domain and product surfaces passed candidate-linked adapter and Chromium acceptance.'
     : !pr8EvaluatedOnCandidate
-      ? 'BLOCKED: accepted PR-8 implementation baseline has not been explicitly reconciled with this candidate.'
+      ? `BLOCKED: accepted PR-8 implementation baseline has not been explicitly reconciled with this candidate. ${baselineReconciliationErrors.join('; ')}`
       : 'BLOCKED: required PR-8 surfaces lack complete exact-revision adapter, browser, CI or artifact evidence.',
   pr8GateEvidence
 );
@@ -930,6 +931,7 @@ const manifest = {
     harnessDependencyPaths,
     harnessDependencyIssues,
     harnessGraphRevisionDifferences,
+    baselineReconciliationErrors,
     acceptedHarnessGraph: acceptedHarnessGraph
       ? {
         dependencyCount: acceptedHarnessGraph.dependencies.length,
