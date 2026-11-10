@@ -1535,4 +1535,24 @@ describe('A06 — AI execution independence and grounding', () => {
     const result = await runAiExplanation({ ...options, router });
     expect(result.kind).toBe('ERROR');
   });
+
+  it('recovers from an AI router timeout on a subsequent retry without changing deterministic synthesis', async () => {
+    const options = createTestOptions({ task: 'CHART_SYNTHESIS' });
+    const originalLifeAnalysis = JSON.parse(JSON.stringify(options.lifeAnalysis));
+    const originalDomainInterpretations = JSON.parse(JSON.stringify(options.domainInterpretations));
+    const timeoutRouter = {
+      route: async () => { throw new Error('AI provider timeout'); }
+    };
+
+    const failed = await runAiExplanation({ ...options, router: timeoutRouter as unknown as AiRouter });
+    expect(failed.kind).toBe('ERROR');
+    if (failed.kind === 'ERROR') expect(failed.message).toContain('timeout');
+
+    // Retry through the production local-only router; no astrology or domain
+    // interpretation is rerun or mutated by the AI explanation retry.
+    const retried = await runAiExplanation(options);
+    expect(retried.kind).toBe('SUCCESS');
+    expect(JSON.parse(JSON.stringify(options.lifeAnalysis))).toEqual(originalLifeAnalysis);
+    expect(JSON.parse(JSON.stringify(options.domainInterpretations))).toEqual(originalDomainInterpretations);
+  });
 });
