@@ -151,7 +151,7 @@ test('E08-S11 Career-only partial evidence remains visible without requiring Wea
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
   await navigate(page, 'Career');
   await expect(page.getByRole('heading', { name: 'Career & Professional Trajectory' })).toBeVisible();
-  await expect(page.locator('main')).toContainText(/PARTIAL|UNAVAILABLE|INSUFFICIENT/i);
+  await expect(page.locator('#career-pathways')).toContainText(/PARTIAL|UNAVAILABLE|NOT_IDENTIFIED|CONDITIONAL|INSUFFICIENT_DATA|UNRESOLVED/i);
 });
 
 test('E08-S12 Wealth-only partial evidence remains visible without requiring Career conclusions', async ({ page }) => {
@@ -162,7 +162,8 @@ test('E08-S12 Wealth-only partial evidence remains visible without requiring Car
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
   await navigate(page, 'Wealth');
   await expect(page.getByRole('heading', { name: 'Wealth & Financial Prosperity' })).toBeVisible();
-  await expect(page.locator('main')).toContainText(/PARTIAL|UNAVAILABLE|INSUFFICIENT/i);
+  await expect(page.getByRole('heading', { name: 'Hora (D2) Divisional Alignment' })).toBeVisible();
+  await expect(page.getByText(/D2 calculation and interpretation have not passed independent validation/)).toBeVisible();
 });
 
 test('E08-S13 AI narrative unavailability does not replace selected-period deterministic analysis', async ({ page }) => {
@@ -218,7 +219,7 @@ test('E08-S18 failed out-of-range calculation can be corrected and recalculated'
   await openApp(page);
   await openBirthDialog(page);
   await page.getByPlaceholder('e.g. CoreAstro Test Vector 1').fill('Out of Range Engine Test');
-  await page.getByLabel('Birth date and time').fill('9999-12-31T23:59');
+  await page.getByLabel('Birth date and time').fill('0001-01-01T00:00');
   await page.locator('#birth-time-zone').fill('UTC');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
   await expect(page.getByRole('heading', { name: 'Overview Computation Error' })).toBeVisible({ timeout: 120_000 });
