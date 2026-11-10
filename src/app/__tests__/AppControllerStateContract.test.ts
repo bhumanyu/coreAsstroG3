@@ -21,7 +21,7 @@ describe('AppControllerStateContract', () => {
     const active = createProductAnalysis({ analysisId: 'active-chart' });
     expect(() => assertAppControllerState({
       ...INITIAL_APP_STATE,
-      productAnalysis: { status: 'READY', analysis: active, analysisId: 'active-chart', requestId: 2 },
+      productAnalysis: { status: 'READY', analysis: active, analysisId: 'active-chart', sourceAnalysisId: 'active-chart', requestId: 2 },
       selectionState: {
         status: 'READY',
         requestId: 8,
@@ -36,7 +36,7 @@ describe('AppControllerStateContract', () => {
     const active = createProductAnalysis({ analysisId: 'active-chart' });
     expect(() => assertAppControllerState({
       ...INITIAL_APP_STATE,
-      productAnalysis: { status: 'READY', analysis: active, analysisId: 'active-chart', requestId: 2 },
+      productAnalysis: { status: 'READY', analysis: active, analysisId: 'active-chart', sourceAnalysisId: 'active-chart', requestId: 2 },
       selectionState: { status: 'READY', analysisId: 'active-chart', mahadashaId: 'md_jupiter' }
     })).toThrow(/MD–AD identities/);
   });
