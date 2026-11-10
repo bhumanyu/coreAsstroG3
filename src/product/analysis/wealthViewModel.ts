@@ -398,9 +398,11 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     items: [accumulation, gains, fortune, speculation]
   };
 
+  // D2 availability is owned by the canonical product analysis mapper (A08/C02B).
+  // This view model only projects that declaration; it must not independently gate or upgrade it.
   const d2: WealthD2ViewModel = {
-    relationship: 'UNAVAILABLE',
-    statement: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+    relationship: wealth.d2.relationship,
+    statement: wealth.d2.statement
   };
 
   const rawPeriods = wealth.activation.dasha.periods ?? [];

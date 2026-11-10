@@ -149,23 +149,26 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
     });
   });
 
-  describe('WealthD2Section — A08 containment', () => {
-    it.each(['CONFIRMS', 'PARTIALLY_CONFIRMS', 'MODIFIES', 'CONFLICTS', 'UNAVAILABLE'])(
-      'never renders an incoming %s declaration as available',
-      (relValue) => {
-        const d2: WealthD2ViewModel = {
-          relationship: relValue,
-          statement: 'D2 calculation and interpretation have not passed independent validation.'
-        };
+  describe('WealthD2Section — canonical availability projection', () => {
+    it.each([
+      ['CONFIRMS', 'Confirms'],
+      ['PARTIALLY_CONFIRMS', 'Partially Confirms'],
+      ['MODIFIES', 'Modifies'],
+      ['CONFLICTS', 'Conflicts'],
+      ['UNAVAILABLE', 'Unavailable']
+    ])('renders canonical %s as %s without a component-level override', (relationship, label) => {
+      const d2: WealthD2ViewModel = {
+        relationship,
+        statement: relationship === 'UNAVAILABLE'
+          ? 'D2 calculation and interpretation have not passed independent validation.'
+          : 'Canonical product-analysis D2 relationship.'
+      };
 
-        render(<WealthD2Section d2={d2} />);
-        expect(screen.getByText('Hora (D2) Divisional Alignment')).toBeInTheDocument();
-        expect(screen.getByText('Unavailable')).toBeInTheDocument();
-        expect(screen.getByText(/independent validation/)).toBeInTheDocument();
-        expect(screen.queryByText('Confirms')).not.toBeInTheDocument();
-        expect(screen.queryByText('Conflicts')).not.toBeInTheDocument();
-      }
-    );
+      render(<WealthD2Section d2={d2} />);
+      expect(screen.getByText('Hora (D2) Divisional Alignment')).toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByText(d2.statement!)).toBeInTheDocument();
+    });
   });
 
   describe('WealthDashaSection', () => {

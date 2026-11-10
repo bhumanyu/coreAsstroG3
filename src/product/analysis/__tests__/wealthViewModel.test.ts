@@ -119,12 +119,23 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     const vm = selectWealthViewModel(analysis);
 
     expect(vm.d2.relationship).toBe('UNAVAILABLE');
-    expect(vm.d2.statement).toBe(
-      'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
-    );
+    expect(vm.d2.statement).toBe('D2 chart unavailable');
     expect(vm.dasha.status).toBe('UNAVAILABLE');
     expect(vm.transit.status).toBe('UNAVAILABLE');
     expect(vm.transit.effect).toBe('UNAVAILABLE');
+  });
+
+  it('projects the canonical D2 relationship without deriving or overriding availability', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      wealth: {
+        ...base.wealth,
+        d2: { relationship: 'CONFLICTS', statement: 'Canonical D2 relationship from the product analysis.' }
+      }
+    });
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.d2.relationship).toBe('CONFLICTS');
+    expect(vm.d2.statement).toBe('Canonical D2 relationship from the product analysis.');
   });
 
   it('5. speculative risk independent from promise: level and description are separate from overall', () => {
