@@ -127,8 +127,6 @@ test('E08-S07 Wealth page keeps D2 explicitly unavailable and shows canonical di
 
 test('E08-S08 past Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
   await openApp(page);
-  // The default 2024 test profile does not expose a past Mahadasha in the current
-  // temporal horizon. Use the fixed J2000 profile to exercise a real past period.
   await openBirthDialog(page);
   await page.getByRole('button', { name: 'J2000 Astronomical Epoch' }).click();
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
@@ -221,24 +219,15 @@ test('E08-S17 Detailed Analysis includes the canonical Career and Wealth product
   await expect(page.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toBeVisible();
 });
 
-test('E08-S18 invalid birth datetime is blocked and can be corrected without replacing the chart', async ({ page }) => {
+test('E08-S18 out-of-range birth coordinates are blocked and can be corrected', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
-  await page.getByPlaceholder('e.g. CoreAstro Test Vector 1').fill('Out of Range Engine Test');
-  const birthDateTime = page.getByLabel('Birth date and time');
-  await birthDateTime.fill('0001-01-01T00:00');
-  await page.locator('#birth-time-zone').fill('UTC');
+  const latitude = page.getByPlaceholder('e.g. 23.1793');
+  await latitude.fill('100');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
-  // Browsers sanitize unsupported years in datetime-local inputs to an empty
-  // value. Native required validation keeps the dialog open and blocks analysis.
   await expect(page.getByRole('dialog', { name: 'Calculate Horoscope & Positions' })).toBeVisible();
-  const validity = await birthDateTime.evaluate(element => ({
-    valid: (element as HTMLInputElement).validity.valid,
-    valueMissing: (element as HTMLInputElement).validity.valueMissing
-  }));
-  expect(validity.valid).toBe(false);
-  expect(validity.valueMissing).toBe(true);
-  await birthDateTime.fill('2000-01-01T12:00');
+  await expect(page.getByText(/Latitude must be between -90 and 90/)).toBeVisible();
+  await latitude.fill('23.1793');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 });

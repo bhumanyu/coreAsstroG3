@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { validateE2eResultsReport, REQUIRED_E08_JOURNEY_IDS } from '../../src/acceptance/e2eResultsValidation.ts';
 
 const reportPath = 'test-results/e2e-results.json';
 let report;
@@ -8,15 +9,11 @@ try {
   throw new Error(`Browser acceptance JSON report is missing or invalid at ${reportPath}: ${error instanceof Error ? error.message : String(error)}`);
 }
 
-const stats = report?.stats;
-if (!stats || !Number.isInteger(stats.expected) || !Number.isInteger(stats.skipped)
-  || !Number.isInteger(stats.unexpected) || !Number.isInteger(stats.flaky)) {
-  throw new Error('Browser acceptance report does not contain the required Playwright execution statistics.');
+const errors = validateE2eResultsReport(report);
+if (errors.length > 0) {
+  throw new Error(`Browser acceptance evidence is incomplete:\n- ${errors.join('\n- ')}`);
 }
 
+const stats = report.stats;
 const executed = stats.expected + stats.unexpected + stats.flaky;
-if (executed < 1) throw new Error('No browser acceptance tests executed.');
-if (stats.skipped !== 0) throw new Error(`Required browser acceptance suite contains ${stats.skipped} skipped test(s).`);
-if (stats.unexpected !== 0) throw new Error(`Browser acceptance suite contains ${stats.unexpected} unexpected test result(s).`);
-
-process.stdout.write(`Browser acceptance evidence: ${executed} executed, 0 skipped, 0 unexpected.\n`);
+process.stdout.write(`Browser acceptance evidence: ${executed} executed, 0 skipped, 0 unexpected, 0 flaky; all ${REQUIRED_E08_JOURNEY_IDS.length} E08 journeys present.\n`);

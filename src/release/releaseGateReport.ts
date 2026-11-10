@@ -26,7 +26,7 @@ export const ALLOWED_SKIPPED_TESTS: readonly string[] = Object.freeze([]);
 export const EVIDENCE_MANIFEST_SCHEMA_VERSION = 1 as const;
 export const EVIDENCE_MANIFEST_HASH_ALGORITHM = 'SHA-256' as const;
 
-const RETAINED_PR8_BLOCKERS = Object.freeze([
+const REQUIRED_PR8_ACCEPTANCE_SURFACES = Object.freeze([
   'report-renderer',
   'AppController async-state'
 ] as const);
@@ -83,6 +83,27 @@ export function createValidatedRunnerResult(
   input: ReleaseReportInput,
   evidenceManifest: RunnerEvidenceManifest
 ): ValidatedRunnerResult {
+  const expectedRevision = input.metadata?.sourceRevision;
+  for (const surface of input.pr8AcceptanceStatuses ?? []) {
+    if (surface.status !== 'PASS') continue;
+    const references = surface.evidenceReferences ?? [];
+    const hasExactRevision = typeof expectedRevision === 'string'
+      && /^[0-9a-f]{40}$/i.test(expectedRevision)
+      && surface.testedSha?.toLowerCase() === expectedRevision.toLowerCase();
+    const hasCiIdentity = Boolean(surface.ciRunId && surface.ciRunUrl);
+    const hasDistinctEvidence = new Set(references).size >= 2;
+    const hasCommandLog = references.some(reference => evidenceManifest.commands.some(command =>
+      command.logPath === reference && command.exitCode === 0
+      && existsSync(resolve(process.cwd(), command.logPath))
+    ));
+    const hasFileEvidence = references.some(reference => evidenceManifest.files.some(file =>
+      file.path === reference && fileMatchesReference(file.path, file.sha256)
+    ));
+    if (!hasExactRevision || !hasCiIdentity || !hasDistinctEvidence || !hasCommandLog || !hasFileEvidence) {
+      throw new Error(`PR-8 surface ${surface.name} cannot claim PASS without exact-revision CI, command-log and file evidence.`);
+    }
+  }
+
   const allowedStatuses = new Set<ReleaseGateStatus>(['PASS', 'FAIL', 'BLOCKED', 'NOT_RUN']);
   for (const gate of input.gates) {
     if (!allowedStatuses.has(gate.status)) {
@@ -702,30 +723,59 @@ function aggregateCoverageStatus(gates: readonly ReleaseGate[]): ReleaseCoverage
 }
 
 function normalizePr8AcceptanceStatuses(
-  statuses: readonly Pr8AcceptanceStatus[] = []
+  statuses: readonly Pr8AcceptanceStatus[] = [],
+  expectedSha?: string
 ): readonly Pr8AcceptanceStatus[] {
   const normalized = new Map<string, Pr8AcceptanceStatus>();
   for (const item of statuses) {
-    const isRetainedBlocker = RETAINED_PR8_BLOCKERS.includes(
-      item.name as typeof RETAINED_PR8_BLOCKERS[number]
-    );
-    normalized.set(item.name, isRetainedBlocker
-      ? {
+    if (!REQUIRED_PR8_ACCEPTANCE_SURFACES.includes(item.name as typeof REQUIRED_PR8_ACCEPTANCE_SURFACES[number])) {
+      normalized.set(item.name, item);
+      continue;
+    }
+
+    if (normalized.has(item.name)) {
+      const previous = normalized.get(item.name)!;
+      normalized.set(item.name, {
+        ...item,
+        status: previous.status === 'FAIL' || item.status === 'FAIL' ? 'FAIL' : 'BLOCKED',
+        coverageStatus: 'BLOCKED',
+        details: `Duplicate PR-8 status entries for ${item.name}; conflicting evidence is not merged.`
+      });
+      continue;
+    }
+
+    if (item.status === 'FAIL') {
+      normalized.set(item.name, item);
+      continue;
+    }
+
+    const hasExactRevision = typeof expectedSha === 'string'
+      && /^[0-9a-f]{40}$/i.test(expectedSha)
+      && item.testedSha?.toLowerCase() === expectedSha.toLowerCase();
+    const hasCiRun = Boolean(item.ciRunId && item.ciRunUrl);
+    const hasAdapterAndBrowserEvidence = Array.isArray(item.evidenceReferences)
+      && item.evidenceReferences.length >= 2
+      && item.evidenceReferences.every(reference => typeof reference === 'string' && reference.trim().length > 0);
+    const independentlyExecuted = item.status === 'PASS' && item.coverageStatus === 'PASSED'
+      && hasExactRevision && hasCiRun && hasAdapterAndBrowserEvidence;
+
+    normalized.set(item.name, independentlyExecuted
+      ? { ...item, status: 'PASS', coverageStatus: 'PASSED' }
+      : {
         ...item,
         status: 'BLOCKED',
-        coverageStatus: item.coverageStatus ?? 'NOT_TESTED',
-        details: item.details ?? 'Retained as BLOCKED pending its PR-8 implementation.'
-      }
-      : item);
+        coverageStatus: item.coverageStatus === 'BLOCKED' ? 'BLOCKED' : 'NOT_TESTED',
+        details: item.details ?? 'BLOCKED: exact-revision adapter, browser, CI and evidence references are incomplete.'
+      });
   }
 
-  for (const name of RETAINED_PR8_BLOCKERS) {
+  for (const name of REQUIRED_PR8_ACCEPTANCE_SURFACES) {
     if (!normalized.has(name)) {
       normalized.set(name, {
         name,
         status: 'BLOCKED',
         coverageStatus: 'NOT_TESTED',
-        details: 'Retained as BLOCKED pending its PR-8 implementation.'
+        details: 'BLOCKED: required PR-8 acceptance surface has no execution evidence.'
       });
     }
   }
@@ -762,15 +812,29 @@ function pr8Gate(
       : coverageStatuses.some(status => status === 'SCOPE_EXCLUDED')
         ? 'SCOPE_EXCLUDED'
         : 'PASSED';
+  const requiredSurfacesPass = REQUIRED_PR8_ACCEPTANCE_SURFACES.every(name => {
+    const surface = statuses.find(status => status.name === name);
+    return surface?.status === 'PASS' && surface.coverageStatus === 'PASSED';
+  });
+  const everySurfacePass = statuses.length > 0 && statuses.every(status =>
+    status.status === 'PASS' && (status.coverageStatus ?? 'NOT_TESTED') === 'PASSED'
+  );
+  const status: ReleaseGateStatus = hasFailure || suppliedGate?.status === 'FAIL' || duplicateGate
+    ? 'FAIL'
+    : requiredSurfacesPass && everySurfacePass && suppliedGate?.status === 'PASS' && coverageStatus === 'PASSED'
+      ? 'PASS'
+      : 'BLOCKED';
+  const missing = REQUIRED_PR8_ACCEPTANCE_SURFACES.filter(name => {
+    const surface = statuses.find(status => status.name === name);
+    return surface?.status !== 'PASS' || surface.coverageStatus !== 'PASSED';
+  });
 
   return releaseGate('RG-13', suppliedGate, {
-    status: hasFailure || suppliedGate?.status === 'FAIL' || duplicateGate
-      ? 'FAIL'
-      : suppliedGate?.status === 'NOT_RUN'
-        ? 'NOT_RUN'
-        : 'BLOCKED',
+    status,
     coverageStatus,
-    summary: 'Consumes PR-8 surface statuses; report-renderer and AppController async-state remain BLOCKED.'
+    summary: status === 'PASS'
+      ? 'All required PR-8 surfaces passed exact-revision adapter and browser acceptance with typed evidence.'
+      : `PR-8 acceptance remains blocked. Unproven surfaces: ${missing.join(', ') || 'domain parity or supplied gate evidence'}.`
   });
 }
 
@@ -779,7 +843,7 @@ function normalizeRequiredGates(input: ReleaseReportInput): readonly ReleaseGate
     const matches = input.gates.filter(gate => gate.id === id);
     const supplied = matches[0];
     if (id === 'RG-13') {
-      const pr8Statuses = normalizePr8AcceptanceStatuses(input.pr8AcceptanceStatuses);
+      const pr8Statuses = normalizePr8AcceptanceStatuses(input.pr8AcceptanceStatuses, input.metadata?.sourceRevision);
       return pr8Gate(pr8Statuses, supplied, matches.length > 1);
     }
     if (matches.length > 1) {
@@ -822,7 +886,7 @@ export function finalizeReleaseReport(input: ValidatedRunnerResult): ReleaseRepo
   const gates = normalizeRequiredGates(input);
   const status = aggregateReleaseStatus(gates);
   const canRelease = status === 'PASS';
-  const pr8AcceptanceStatuses = normalizePr8AcceptanceStatuses(input.pr8AcceptanceStatuses);
+  const pr8AcceptanceStatuses = normalizePr8AcceptanceStatuses(input.pr8AcceptanceStatuses, input.metadata?.sourceRevision);
 
   return Object.freeze({
     requiredGateIds: Object.freeze(REQUIRED_RELEASE_GATES.map(gate => gate.id)),
