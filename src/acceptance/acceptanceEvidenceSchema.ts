@@ -84,15 +84,20 @@ export function deriveAcceptanceProductStatus(
   if (record.execution.status !== 'PASS') return 'PARTIAL';
 
   const exactRevision = record.execution.testedSha === reportSha && SHA_PATTERN.test(reportSha);
-  const owned = hasAssignedOwner(record.productOwner) && hasAssignedOwner(record.qaOwner);
+  const owned = typeof record.productOwner === 'string' && typeof record.qaOwner === 'string'
+    && hasAssignedOwner(record.productOwner) && hasAssignedOwner(record.qaOwner);
   const ciEvidence = Boolean(record.execution.ciRunId && record.execution.ciRunUrl);
-  const commandEvidence = record.requiredTestCommands.length > 0
+  const commandEvidence = Array.isArray(record.requiredTestCommands)
+    && record.requiredTestCommands.length > 0
+    && Array.isArray(record.execution.commands)
     && record.requiredTestCommands.every(required => record.execution.commands.some(command =>
-      command.command === required && command.status === 'PASS' && command.exitCode === 0
+      Boolean(command && typeof command === 'object')
+      && command.command === required && command.status === 'PASS' && command.exitCode === 0
     ));
-  const artifactEvidence = record.execution.evidenceReferences.length > 0;
+  const artifactEvidence = Array.isArray(record.execution.evidenceReferences)
+    && record.execution.evidenceReferences.length > 0;
   const noSkippedTests = record.execution.skippedCount === 0;
-  const expectedTestsPresent = record.expectedTestIds.length > 0;
+  const expectedTestsPresent = Array.isArray(record.expectedTestIds) && record.expectedTestIds.length > 0;
 
   return exactRevision && owned && ciEvidence && commandEvidence && artifactEvidence
     && noSkippedTests && expectedTestsPresent
