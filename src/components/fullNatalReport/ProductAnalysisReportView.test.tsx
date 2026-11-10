@@ -33,16 +33,16 @@ describe('ProductAnalysisReportView', () => {
   });
 
   it('shows LOADING while the canonical report is being prepared', () => {
-    render(<ProductAnalysisReportView status="LOADING" />);
+    render(<ProductAnalysisReportView analysisStatus="LOADING" />);
     expect(screen.getByRole('status')).toHaveTextContent('LOADING');
     expect(screen.getByRole('status')).toHaveTextContent('No previous or unrelated analysis is substituted');
   });
 
   it('shows a retryable error when canonical analysis failed', () => {
     const onRetry = vi.fn();
-    render(<ProductAnalysisReportView status="ERROR" error="calculation failed" onRetry={onRetry} />);
-    expect(screen.getByRole('alert')).toHaveTextContent('calculation failed');
-    screen.getByRole('button', { name: 'Retry analysis' }).click();
+    render(<ProductAnalysisReportView analysisStatus="ERROR" analysisError="calculation failed" onRetryAnalysis={onRetry} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Chart analysis could not be completed: calculation failed');
+    screen.getByRole('button', { name: 'Retry chart analysis' }).click();
     expect(onRetry).toHaveBeenCalledOnce();
   });
 

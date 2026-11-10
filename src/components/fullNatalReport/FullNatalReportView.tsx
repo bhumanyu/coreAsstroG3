@@ -251,7 +251,7 @@ export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({
         </div>
       </div>
       <ProductAnalysisReportBoundary resetKey={productAnalysis?.analysisId ?? productAnalysisStatus ?? 'UNAVAILABLE'}>
-        <ProductAnalysisReportView analysis={productAnalysis} status={productAnalysisStatus} error={productAnalysisError} onRetry={onRetryAnalysis} />
+        <ProductAnalysisReportView analysis={productAnalysis} analysisStatus={productAnalysisStatus} analysisError={productAnalysisError} onRetryAnalysis={onRetryAnalysis} />
       </ProductAnalysisReportBoundary>
     </div>
   );
