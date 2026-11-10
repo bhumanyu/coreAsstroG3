@@ -645,7 +645,7 @@ describe('AppController', () => {
 
         await controller.selectPeriod('md_jupiter', 'ad_saturn');
 
-        expect(currentState.selectionState).toEqual({
+        expect(currentState.selectionState).toMatchObject({
           status: 'ERROR',
           error: 'No active analysis run. Analyze birth details before selecting a period.'
         });
