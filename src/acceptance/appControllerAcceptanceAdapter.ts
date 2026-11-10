@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type { ProductAnalysisService, DashaTimingViewModel } from '../product/analysis';
+import type { ProductAnalysisService } from '../product/analysis';
 import { createAppController, type AppController, type DashaTimingProjectionBuilder } from '../app/AppController';
 import { INITIAL_APP_STATE, type AppState } from '../app/AppState';
 import {
