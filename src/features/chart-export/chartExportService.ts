@@ -1,9 +1,43 @@
 import { buildChartExport, type ChartExportSelection } from './chartExportMapper';
 import { validateChartExport, type ChartExportV1 } from './chartExportSchema';
+import type { BirthDetails } from '../../types';
 
 export type ChartExportDownloadResult =
   | { readonly ok: true; readonly filename: string; readonly json: string }
   | { readonly ok: false; readonly error: string };
+
+export type ChartExportImportResult =
+  | { readonly ok: true; readonly birthDetails: BirthDetails; readonly schemaVersion: 1 | 2 }
+  | { readonly ok: false; readonly error: 'INVALID_JSON' | 'INVALID_SHAPE' | 'UNSUPPORTED_VERSION' };
+
+export function parseChartExport(serialized: string): ChartExportImportResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(serialized);
+  } catch {
+    return { ok: false, error: 'INVALID_JSON' };
+  }
+
+  if (typeof parsed === 'object' && parsed !== null && 'schemaVersion' in parsed) {
+    const version = (parsed as { schemaVersion?: unknown }).schemaVersion;
+    if (version !== 1 && version !== 2) return { ok: false, error: 'UNSUPPORTED_VERSION' };
+  }
+
+  const validation = validateChartExport(parsed);
+  if (!validation.ok) return { ok: false, error: validation.error };
+
+  // Import only the original birth inputs. Never trust or restore exported
+  // interpretations, selected-period results, confidence or event projections.
+  const birth = validation.value.birth;
+  const birthDetails: BirthDetails = {
+    dateTimeStr: birth.dateTime,
+    timeZone: birth.timezone,
+    latitude: birth.latitude,
+    longitude: birth.longitude,
+    ayanamsa: birth.ayanamsa as BirthDetails['ayanamsa']
+  };
+  return { ok: true, birthDetails, schemaVersion: validation.value.schemaVersion };
+}
 
 export interface ChartExportBrowser {
   readonly createObjectURL: (blob: Blob) => string;

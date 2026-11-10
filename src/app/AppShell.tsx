@@ -102,12 +102,11 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
           currentBirthDetails={state.birthDetails}
           onLoadBirthDetails={handleSaveBirthDetails}
         />
-        {state.productAnalysis.analysis && (
-          <ChartExportControl
-            analysis={state.productAnalysis.analysis}
-            selectedPeriod={state.productAnalysis.analysis.selectedPeriod}
-          />
-        )}
+        <ChartExportControl
+          analysis={state.productAnalysis.analysis}
+          selectedPeriod={state.productAnalysis.analysis?.selectedPeriod}
+          onLoadBirthDetails={handleSaveBirthDetails}
+        />
         <ProductPageRouter
           state={state}
           horoscope={state.horoscope}

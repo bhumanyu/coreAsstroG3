@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
-import { downloadChartExport, type ChartExportBrowser } from './chartExportService';
+import { downloadChartExport, parseChartExport, type ChartExportBrowser } from './chartExportService';
+import { buildChartExport } from './chartExportMapper';
 
 describe('chart export download service', () => {
   it('validates and initiates the offline download before deferred URL revocation', () => {
@@ -30,6 +31,29 @@ describe('chart export download service', () => {
     expect(revokeObjectURL).not.toHaveBeenCalled();
     scheduled[0]();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:chart-json');
+  });
+
+  it('round-trips only validated birth inputs from a canonical chart export', () => {
+    const analysis = createProductAnalysis();
+    const exported = buildChartExport({ analysis }, '2026-10-26T00:00:00Z');
+    const parsed = parseChartExport(JSON.stringify(exported));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.birthDetails).toEqual({
+      dateTimeStr: exported.birth.dateTime,
+      timeZone: exported.birth.timezone,
+      latitude: exported.birth.latitude,
+      longitude: exported.birth.longitude,
+      ayanamsa: exported.birth.ayanamsa
+    });
+    expect('selectedPeriod' in parsed.birthDetails).toBe(false);
+  });
+
+  it('rejects malformed JSON, invalid shapes and unsupported schema versions', () => {
+    expect(parseChartExport('{broken')).toEqual({ ok: false, error: 'INVALID_JSON' });
+    expect(parseChartExport(JSON.stringify({ schemaVersion: 99 }))).toEqual({ ok: false, error: 'UNSUPPORTED_VERSION' });
+    expect(parseChartExport(JSON.stringify({ schemaVersion: 1, birth: {} }))).toEqual({ ok: false, error: 'INVALID_SHAPE' });
   });
 
   it('surfaces initiation failures and still schedules URL revocation', () => {
