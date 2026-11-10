@@ -96,6 +96,7 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
           lifeAnalysisState={state.lifeAnalysisState}
           onNavigate={controller.navigate}
           onRetry={handleLifeAnalysisRetry}
+          onRetryDashaTiming={controller.retryDashaTiming}
           onSelectPeriod={controller.selectPeriod}
         />
       </main>
