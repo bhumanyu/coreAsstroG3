@@ -358,6 +358,61 @@ export interface ProductCareerOutcomeAnalysis {
   readonly statement: string;
 }
 
+export type ProductCareerPathwayVerdict =
+  | 'DUAL_POTENTIAL'
+  | 'CONDITIONAL_DUAL_POTENTIAL'
+  | 'EMPLOYMENT_POTENTIAL_IDENTIFIED'
+  | 'INDEPENDENT_POTENTIAL_IDENTIFIED'
+  | 'NO_MODE_CANDIDATE'
+  | 'UNRESOLVED'
+  | 'INSUFFICIENT_DATA';
+
+export interface ProductCareerPathwayCandidate {
+  readonly candidateId: string;
+  readonly qualification: 'SUPPORTED_CANDIDATE' | 'CONDITIONALLY_SUPPORTED_CANDIDATE';
+  readonly sourceEventId: string;
+  readonly opportunityId: string;
+  readonly activationId: string;
+  readonly timing: { readonly type: 'DASHA_PERIOD_WINDOW' | 'UNTIMED'; readonly start?: string; readonly end?: string };
+  readonly supportingEvidenceOccurrenceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly counterEvidenceOccurrenceIds: readonly string[];
+  readonly counterIndicationSeverity: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH';
+}
+
+export interface ProductCareerPathwayModeAssessment {
+  readonly mode: 'EMPLOYMENT_SERVICE' | 'INDEPENDENT_BUSINESS';
+  readonly status: 'SUPPORTED_CANDIDATE' | 'CONDITIONAL_CANDIDATE' | 'NOT_IDENTIFIED';
+  readonly candidates: readonly ProductCareerPathwayCandidate[];
+  readonly candidateCount: number;
+  readonly supportedCandidateCount: number;
+  readonly conditionalCandidateCount: number;
+  readonly supportingEvidenceOccurrenceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly counterEvidenceOccurrenceIds: readonly string[];
+  readonly practicalExecution: 'NOT_ASSESSED';
+  readonly financialReadiness: 'NOT_ASSESSED';
+  readonly personalPreference: 'NOT_ASSESSED';
+}
+
+export interface ProductCareerPathwayAnalysis {
+  readonly reasoningVersion: 'B05';
+  readonly methodVersion: 'B05-DUAL-POTENTIAL-v1';
+  readonly sourceReasoningVersion: 'B02';
+  readonly sourceMethodVersion: string;
+  readonly status: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE' | 'UNRESOLVED' | 'INSUFFICIENT_DATA';
+  readonly verdict: ProductCareerPathwayVerdict;
+  readonly employment: ProductCareerPathwayModeAssessment;
+  readonly independent: ProductCareerPathwayModeAssessment;
+  readonly confidence: { readonly status: 'NOT_ASSESSED'; readonly reason: string };
+  readonly guaranteedOutcomeAvailable: false;
+  readonly numericProbabilityAvailable: false;
+  readonly suitabilityAvailable: false;
+  readonly diagnostics: readonly string[];
+  readonly statement: string;
+  readonly limitations: readonly string[];
+}
+
 export interface ProductCareerEventTimelineWindow {
   readonly windowId: string;
   readonly sourceEventId: string;
@@ -486,6 +541,8 @@ export interface CareerProductAnalysis {
   readonly analyticalAxes?: ProductCareerAnalyticalAxes;
   /** B02: Outcome candidates qualified by Promise + Activation; observed facts stay separate. */
   readonly outcomeQualification?: ProductCareerOutcomeAnalysis;
+  /** B05: compares explicit B02 employment/service and independent/business candidates; not suitability. */
+  readonly pathwayPotential?: ProductCareerPathwayAnalysis;
   /** B06: specific event taxonomy is gated; only qualified generic windows are projected. */
   readonly eventTimeline?: ProductCareerEventTimeline;
   readonly promise: CareerPromiseProduct;
