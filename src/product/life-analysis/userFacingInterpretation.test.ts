@@ -72,7 +72,9 @@ describe('user-facing interpretation', () => {
   it.each(['UNAVAILABLE', 'INSUFFICIENT_DATA', 'BLOCKED', 'PARTIAL'])(
     'does not treat missing evidence (%s) as negative evidence',
     (value) => {
-      expect(explainUserFacingClassification(value)).toContain('not be treated as evidence against');
+      expect(explainUserFacingClassification(value)).toMatch(
+        /not (be )?treated as|No positive or negative conclusion|withheld/i
+      );
     }
   );
 

@@ -72,7 +72,6 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
   const wealth = selectWealthViewModel(analysis);
   const dasha = selectDashaViewModel(analysis);
   const careerTimeline = analysis.career.eventTimeline;
-  const wealthLifecycle = analysis.wealth.lifecycle;
   const selectedPeriod = analysis.selectedPeriod;
   const financialData = analysis.wealth.financialData;
   const sourceCounts = financialData?.data.reduce<Record<string, number>>((counts, datum) => {
@@ -138,7 +137,7 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
           <Value label="Promise" value={analysis.wealth.overall.promise} />
           <Value label="CW-05 confidence" value={wealth.conclusion.confidence} />
           <Value label="D2 relationship" value={analysis.wealth.d2.relationship} />
-          <Value label="C04 lifecycle" value={wealthLifecycle?.status ?? 'UNAVAILABLE'} />
+          <Value label="C04 lifecycle" value={wealth.lifecycle.status} />
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {(['accumulation', 'gains', 'fortune', 'speculation'] as const).map(dimension => (

@@ -96,9 +96,9 @@ describe('OverviewPage (P-UI-03)', () => {
     expect(screen.getByText('Mercury')).toBeInTheDocument();
 
     // Check role labels rendered as text
-    expect(screen.getAllByText('Primary Driver').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Modifier').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Refinement').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Primary factor').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Transits may modify the underlying indications').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Refining factor').length).toBeGreaterThan(0);
   });
 
   it('invokes onNavigate callback when clicking domain action links', () => {

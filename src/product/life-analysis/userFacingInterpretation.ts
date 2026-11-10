@@ -92,7 +92,7 @@ export function formatUserFacingClassification(value?: string | null): string {
   const key = normalize(value);
   if (!key) return 'Not available';
   if (LABELS[key]) return LABELS[key];
-  return key.toLowerCase().split(/[_\\s]+/).filter(Boolean)
+  return key.toLowerCase().split(/[_\s]+/).filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 }
 
