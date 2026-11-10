@@ -7,7 +7,7 @@ export interface ProductAnalysisReportBoundaryProps {
 
 interface ProductAnalysisReportBoundaryState {
   readonly error?: Error;
-  readonly resetKey: string;
+  readonly resetKey?: string;
 }
 
 /** Isolates report rendering failures from the canonical analysis lifecycle. */
