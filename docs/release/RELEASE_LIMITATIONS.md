@@ -2,7 +2,7 @@
 
 This release report is a gate-and-evidence projection. It is not a new calculation authority, does not alter calculation behavior, and does not convert unavailable or unverified evidence into a positive conclusion.
 
-Run the expanded release sequence from a clean checkout after installing the locked dependencies:
+Run the expanded release sequence from a clean checkout after installing the locked dependencies and Chromium. After `npm ci`, run `npx playwright install --with-deps chromium`; the release gate executes the 18 required browser journeys itself so their evidence is tied to the same exact revision and CI run:
 
 - PowerShell: `$env:PR9_EXPECTED_SHA='<full-commit-sha>'; npm run verify:release`
 - POSIX shell: `PR9_EXPECTED_SHA=<full-commit-sha> npm run verify:release`
@@ -21,11 +21,10 @@ RG-09 does not trust the fixture module's `READY` or `coverageComplete` flags. T
 
 - **Independent reference parity — BLOCKED:** External Swiss Ephemeris / JPL Horizons comparison remains blocked pending independently captured reference data.
 - **Owner-gated mechanism families — BLOCKED:** Non-dusthana mechanism families requiring owner approval remain blocked; they are never inferred to pass.
-- **Report renderer — BLOCKED:** The PR-8 `report-renderer` surface remains blocked pending its adapter/acceptance evidence.
-- **AppController async-state — BLOCKED:** The PR-8 `AppController async-state` surface remains blocked pending its adapter/acceptance evidence.
+- **PR-8 production surfaces — evidence-gated:** The report renderer and AppController async-state are required acceptance surfaces. RG-13 derives their status from exact-revision adapter tests, Chromium journeys, CI run identity and artifact references. They remain BLOCKED when any evidence is absent or belongs to another SHA.
 - **Skipped validation — not approved:** `D08-A1` Moon-anchor validation is recorded as skipped in the project acceptance documentation. `allowedSkippedTests` is `[]`; no skipped test is approved by this policy. The release report must not claim zero skips without executed test evidence.
 
-RG-13 consumes the PR-8 acceptance statuses and retains `report-renderer` and `AppController async-state` as `BLOCKED`. A caller-provided `PASS` for either does not override the retained status.
+RG-13 consumes PR-8 acceptance statuses and can pass only when every required surface has successful adapter and browser evidence tied to the exact tested SHA. A caller-provided `PASS` without the matching CI and artifact evidence is downgraded to `BLOCKED`.
 
 ## Excluded capabilities
 
