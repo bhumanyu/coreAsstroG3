@@ -26,7 +26,9 @@
     "test:e2e": "npm run build && node node_modules/@playwright/test/cli.js test && node scripts/acceptance/verify-e2e-results.mjs",
     "test:e2e:critical": "npm run test:e2e",
     "test:e2e:report": "playwright show-report",
-    "acceptance:report": "node scripts/acceptance/generate-acceptance-report.mjs"
+    "acceptance:report": "node scripts/acceptance/generate-acceptance-report.mjs",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.10",

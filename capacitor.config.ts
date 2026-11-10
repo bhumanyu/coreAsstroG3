@@ -4,6 +4,7 @@ const config: CapacitorConfig = {
   appId: 'com.bhumanyu.coreastro',
   appName: 'CoreAstro',
   webDir: 'dist',
+  bundledWebRuntime: false,
 };
 
 export default config;
