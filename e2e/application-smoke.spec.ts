@@ -15,13 +15,14 @@ test('product navigation remains interactive in the production browser build', a
   await expect(careerNavigation).toBeVisible();
   await careerNavigation.click();
 
-  await expect(page.locator('main')).toContainText(/Career/i);
+  await expect(page.locator('main').last()).toContainText(/Career/i);
 });
 
-test('fresh browser context does not retain prior browser storage', async ({ page }) => {
+test('fresh browser context starts clean and reload preserves same-session storage', async ({ page }) => {
   await page.goto('/');
-  await page.evaluate(() => window.localStorage.setItem('e2e-contamination', 'stale'));
-  await page.reload();
-
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem('e2e-contamination'))).toBeNull();
+
+  await page.evaluate(() => window.localStorage.setItem('e2e-contamination', 'same-session'));
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('e2e-contamination'))).toBe('same-session');
 });
