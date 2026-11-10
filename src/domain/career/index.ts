@@ -105,3 +105,5 @@ export {
     buildCareerDispositorStartsFromStructural,
     buildCareerDispositorAnalysis
 } from './careerDispositor';
+
+export * from './careerPathway';
