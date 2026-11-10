@@ -16,6 +16,7 @@ import type {
   ProductWarning,
   ProductCareerAnalyticalAxes,
   ProductCareerOutcomeAnalysis,
+  ProductCareerPathwayAnalysis,
   ProductCareerEventTimeline,
   ProductCareerProfessionRanking,
   PromiseStrength,
@@ -183,6 +184,8 @@ export interface CareerViewModel {
   readonly analyticalAxes?: ProductCareerAnalyticalAxes;
   /** B02: Candidate-only outcome qualification plus explicitly user-reported observed facts. */
   readonly outcomeQualification?: ProductCareerOutcomeAnalysis;
+  /** B05: Evidence-bounded comparison of explicit employment/service and independent/business candidates. */
+  readonly pathwayPotential?: ProductCareerPathwayAnalysis;
   /** B06: source-backed generic windows and explicit unvalidated event taxonomy. */
   readonly eventTimeline?: ProductCareerEventTimeline;
   readonly hero: CareerHeroViewModel;
@@ -379,6 +382,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
     confidenceCompleteness: selectUnifiedConfidenceProjection(analysis),
     analyticalAxes: career.analyticalAxes,
     outcomeQualification: career.outcomeQualification,
+    pathwayPotential: career.pathwayPotential,
     eventTimeline: career.eventTimeline,
     hero,
     promise,

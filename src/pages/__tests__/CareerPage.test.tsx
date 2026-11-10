@@ -3,6 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { CareerPage } from '../CareerPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
+import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
+import { analyzeCareerPathways } from '../../domain/career/careerPathway';
 
 describe('CareerPage (P-UI-04)', () => {
   it('1. Loading state: renders CareerLoadingState when status is LOADING', () => {
@@ -236,61 +238,62 @@ describe('CareerPage (P-UI-04)', () => {
     expect(screen.getByText(/Vimshottari dasha timing calculations are currently unavailable/)).toBeInTheDocument();
   });
 
-  it('D05: dual pathway candidates are only shown from canonical B04/B02 candidates', () => {
+  it('B05: dual pathway verdict is based on explicit canonical B02 candidates', () => {
     const base = createProductAnalysis();
+    const outcomeQualification = {
+      reasoningVersion: 'B02' as const,
+      methodVersion: 'B02-OUTCOME-QUALIFICATION-v1',
+      status: 'CANDIDATES_AVAILABLE' as const,
+      candidateOutcomes: [
+        {
+          candidateId: 'employment-candidate',
+          outcomeType: 'EMPLOYMENT_OR_SERVICE_OPPORTUNITY' as const,
+          status: 'CANDIDATE' as const,
+          qualification: 'SUPPORTED_CANDIDATE' as const,
+          qualificationBasis: 'NATAL_PROMISE_AND_LINKED_DASHA_ACTIVATION' as const,
+          sourceEventId: 'event-employment',
+          opportunityId: 'opp-employment',
+          activationId: 'activation-employment',
+          timing: { type: 'UNTIMED' as const },
+          supportingEvidence: { natalPromiseOccurrenceIds: ['natal-employment'], activationOccurrenceIds: ['activation-employment'], candidateEventEvidenceIds: [], ruleIds: ['rule-employment'] },
+          executionConditions: { professionAnalysisStatus: 'PARTIAL' as const, d10Qualification: 'UNAVAILABLE' as const, practicalExecution: 'NOT_ASSESSED' as const, requiredChecks: ['SKILLS_AND_EXPERIENCE_FIT', 'REAL_WORLD_OPPORTUNITY', 'USER_ACTION_AND_EXECUTION', 'EMPLOYER_MARKET_AND_RESOURCE_CONSTRAINTS'] as const },
+          counterIndications: { severity: 'NONE' as const, evidenceOccurrenceIds: [], conflicts: [] },
+          guarantee: 'NONE' as const
+        },
+        {
+          candidateId: 'business-candidate',
+          outcomeType: 'INDEPENDENT_OR_BUSINESS_ACTIVITY' as const,
+          status: 'CANDIDATE' as const,
+          qualification: 'CONDITIONALLY_SUPPORTED_CANDIDATE' as const,
+          qualificationBasis: 'NATAL_PROMISE_AND_LINKED_DASHA_ACTIVATION' as const,
+          sourceEventId: 'event-business',
+          opportunityId: 'opp-business',
+          activationId: 'activation-business',
+          timing: { type: 'UNTIMED' as const },
+          supportingEvidence: { natalPromiseOccurrenceIds: ['natal-business'], activationOccurrenceIds: ['activation-business'], candidateEventEvidenceIds: [], ruleIds: ['rule-business'] },
+          executionConditions: { professionAnalysisStatus: 'PARTIAL' as const, d10Qualification: 'PARTIAL' as const, practicalExecution: 'NOT_ASSESSED' as const, requiredChecks: ['SKILLS_AND_EXPERIENCE_FIT', 'REAL_WORLD_OPPORTUNITY', 'USER_ACTION_AND_EXECUTION', 'EMPLOYER_MARKET_AND_RESOURCE_CONSTRAINTS'] as const },
+          counterIndications: { severity: 'NONE' as const, evidenceOccurrenceIds: [], conflicts: [] },
+          guarantee: 'NONE' as const
+        }
+      ],
+      observedOutcomes: [],
+      diagnostics: [],
+      guaranteedOutcomeAvailable: false as const,
+      numericProbabilityAvailable: false as const,
+      statement: 'Both pathway types are candidates only.'
+    } as CareerOutcomeAnalysis;
+    const pathwayPotential = analyzeCareerPathways({ outcomeAnalysis: outcomeQualification });
     const analysis = {
       ...base,
-      career: {
-        ...base.career,
-        outcomeQualification: {
-          reasoningVersion: 'B02' as const,
-          methodVersion: 'B02-test',
-          status: 'CANDIDATES_AVAILABLE' as const,
-          candidateOutcomes: [
-            {
-              candidateId: 'employment-candidate',
-              outcomeType: 'EMPLOYMENT_OR_SERVICE_OPPORTUNITY' as const,
-              status: 'CANDIDATE' as const,
-              qualification: 'SUPPORTED_CANDIDATE' as const,
-              qualificationBasis: 'NATAL_PROMISE_AND_LINKED_DASHA_ACTIVATION' as const,
-              sourceEventId: 'event-employment',
-              opportunityId: 'opp-employment',
-              activationId: 'activation-employment',
-              timing: { type: 'UNTIMED' as const },
-              supportingEvidence: { natalPromiseOccurrenceIds: [], activationOccurrenceIds: [], candidateEventEvidenceIds: [], ruleIds: [] },
-              executionConditions: { professionAnalysisStatus: 'PARTIAL' as const, d10Qualification: 'UNAVAILABLE' as const, practicalExecution: 'NOT_ASSESSED' as const, requiredChecks: [] },
-              counterIndications: { severity: 'NONE' as const, evidenceOccurrenceIds: [], conflicts: [] },
-              guarantee: 'NONE' as const
-            },
-            {
-              candidateId: 'business-candidate',
-              outcomeType: 'INDEPENDENT_OR_BUSINESS_ACTIVITY' as const,
-              status: 'CANDIDATE' as const,
-              qualification: 'CONDITIONALLY_SUPPORTED_CANDIDATE' as const,
-              qualificationBasis: 'NATAL_PROMISE_AND_LINKED_DASHA_ACTIVATION' as const,
-              sourceEventId: 'event-business',
-              opportunityId: 'opp-business',
-              activationId: 'activation-business',
-              timing: { type: 'UNTIMED' as const },
-              supportingEvidence: { natalPromiseOccurrenceIds: [], activationOccurrenceIds: [], candidateEventEvidenceIds: [], ruleIds: [] },
-              executionConditions: { professionAnalysisStatus: 'PARTIAL' as const, d10Qualification: 'PARTIAL' as const, practicalExecution: 'NOT_ASSESSED' as const, requiredChecks: [] },
-              counterIndications: { severity: 'NONE' as const, evidenceOccurrenceIds: [], conflicts: [] },
-              guarantee: 'NONE' as const
-            }
-          ],
-          observedOutcomes: [],
-          diagnostics: [],
-          guaranteedOutcomeAvailable: false as const,
-          numericProbabilityAvailable: false as const,
-          statement: 'Both pathway types are candidates only.'
-        }
-      }
+      career: { ...base.career, outcomeQualification, pathwayPotential }
     };
+
     render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
     const comparison = screen.getByRole('region', { name: 'Corporate & Independent Pathways' });
-    expect(within(comparison).getByText(/Employment or service opportunity/)).toBeInTheDocument();
-    expect(within(comparison).getByText(/Independent or business activity/)).toBeInTheDocument();
-    expect(within(comparison).getByText(/not a recommendation or decision/i)).toBeInTheDocument();
+    expect(within(comparison).getByText('CONDITIONAL_DUAL_POTENTIAL')).toBeInTheDocument();
+    expect(within(comparison).getByText('employment-candidate · SUPPORTED CANDIDATE')).toBeInTheDocument();
+    expect(within(comparison).getByText('business-candidate · CONDITIONALLY SUPPORTED CANDIDATE')).toBeInTheDocument();
+    expect(within(comparison).getByText(/not a suitability verdict or recommendation/i)).toBeInTheDocument();
   });
 
   it('D05: no timeline candidates remain unavailable rather than inferred from Dasha alone', () => {

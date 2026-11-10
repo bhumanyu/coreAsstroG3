@@ -74,6 +74,11 @@ export const CareerPage: React.FC<CareerPageProps> = ({
       || viewModel.profession.status === 'PARTIAL'
       ? 'PARTIAL' as const
       : 'UNAVAILABLE' as const;
+  const pathwayState = viewModel.pathwayPotential?.status === 'AVAILABLE'
+    ? 'AVAILABLE' as const
+    : viewModel.pathwayPotential?.status === 'PARTIAL' || viewModel.pathwayPotential?.status === 'UNRESOLVED'
+      ? 'PARTIAL' as const
+      : 'UNAVAILABLE' as const;
   const eventState = viewModel.eventTimeline?.status === 'GENERIC_WINDOWS_ONLY'
     && viewModel.eventTimeline.genericWindows.length > 0
     ? 'AVAILABLE' as const
@@ -91,7 +96,7 @@ export const CareerPage: React.FC<CareerPageProps> = ({
     { id: 'career-promise', title: 'Natal promise', description: 'C11 promise and dominant manifestations.', state: 'AVAILABLE' as const },
     { id: 'career-expressions', title: 'Career expressions', description: 'Canonical working style and expressions.', state: viewModel.expression.available ? 'AVAILABLE' as const : 'UNAVAILABLE' as const },
     { id: 'career-professions', title: 'Profession families', description: 'B04 ranked families and unresolved candidates.', state: professionState },
-    { id: 'career-pathways', title: 'Pathway comparison', description: 'Corporate and independent candidates where supplied.', state: professionState },
+    { id: 'career-pathways', title: 'Pathway comparison', description: 'B05 comparison of explicit B02 employment/service and independent/business candidates.', state: pathwayState },
     { id: 'career-d10', title: 'D10 qualification', description: 'D10 qualifies an existing expression; it does not create promise.', state: viewModel.d10.relationship === 'UNAVAILABLE' ? 'UNAVAILABLE' as const : viewModel.d10.relationship === 'PARTIALLY_CONFIRMS' ? 'PARTIAL' as const : 'AVAILABLE' as const },
     { id: 'career-activation', title: 'Activation & timing', description: 'Canonical Dasha and transit activation.', state: viewModel.dasha.status === 'AVAILABLE' ? 'AVAILABLE' as const : viewModel.dasha.status === 'PARTIAL' ? 'PARTIAL' as const : 'UNAVAILABLE' as const },
     { id: 'career-events', title: 'Candidate timeline', description: 'Indicative B02/B06 candidates, never guarantees.', state: eventState },
@@ -118,7 +123,7 @@ export const CareerPage: React.FC<CareerPageProps> = ({
         <CareerProfessionStatusSection profession={viewModel.profession} />
       </section>
 
-      <CareerPathwayComparisonSection profession={viewModel.profession} outcomeQualification={viewModel.outcomeQualification} />
+      <CareerPathwayComparisonSection pathwayPotential={viewModel.pathwayPotential} />
 
       <section id="career-d10" aria-label="D10 qualification" className="scroll-mt-6 space-y-4">
         <CareerD10Section d10={viewModel.d10} />
