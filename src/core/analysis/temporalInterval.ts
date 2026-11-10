@@ -15,10 +15,39 @@
  * Returns null if invalid.
  */
 export function parseInstant(value: string): number | null {
-  const milliseconds = Date.parse(value);
-  return Number.isFinite(milliseconds) ? milliseconds : null;
-}
+  if (typeof value !== 'string' || value.length === 0) return null;
 
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const timestamp = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(Z|[+-]\d{2}:\d{2})$/i.exec(value);
+  const match = dateOnly ?? timestamp;
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = timestamp ? Number(match[4]) : 0;
+  const minute = timestamp ? Number(match[5]) : 0;
+  const second = timestamp && match[6] !== undefined ? Number(match[6]) : 0;
+  if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1
+    || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+    return null;
+  }
+
+  const calendar = new Date(0);
+  calendar.setUTCHours(0, 0, 0, 0);
+  calendar.setUTCFullYear(year, month - 1, day);
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) {
+    return null;
+  }
+
+  if (timestamp && match[8].toUpperCase() !== 'Z') {
+    const offset = /^([+-])(\d{2}):(\d{2})$/.exec(match[8]);
+    if (!offset || Number(offset[2]) > 23 || Number(offset[3]) > 59) return null;
+  }
+
+  const parsed = Date.parse(dateOnly ? value + 'T00:00:00.000Z' : value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 /**
  * Temporal relation of an interval relative to an asOf timestamp.
  * UNKNOWN indicates invalid/unparseable date strings.
