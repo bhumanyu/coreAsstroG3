@@ -7,6 +7,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import type { DashaTimingProjectionState, ProductAnalysisState } from '../app/AppState';
+import type { ProductAnalysis } from '../product/analysis';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectDashaViewModel } from '../product/analysis/dashaViewModel';
 import {
@@ -38,6 +39,16 @@ export interface DashaPageProps {
   readonly onRetryDashaTiming?: () => Promise<void>;
   readonly onNavigate?: (page: AppPage) => void;
   readonly onSelectPeriod?: (mahadashaId: string, antardashaId: string) => Promise<void>;
+}
+
+/** Stable identity for a selected-period report: selected-period projections may have
+ * their own ProductAnalysis ID, while sourceAnalysisId identifies the natal run.
+ */
+export function getDashaSelectionContextIdentity(
+  productAnalysisState: ProductAnalysisState | undefined,
+  analysis: ProductAnalysis | undefined
+): string | undefined {
+  return productAnalysisState?.sourceAnalysisId ?? analysis?.analysisId;
 }
 
 // Helper to determine if selection error banner should be shown
@@ -93,6 +104,10 @@ export const DashaPage: React.FC<DashaPageProps> = ({
     [analysis]
   );
 
+  // A selected-period ProductAnalysis may have its own projection ID. The stable
+  // sourceAnalysisId remains the identity of the natal chart/run that owns it.
+  const sourceAnalysisId = getDashaSelectionContextIdentity(productAnalysisState, analysis);
+
   // State for period selection
   const [domainToggle, setDomainToggle] = useState<'CAREER' | 'WEALTH' | 'BOTH'>('BOTH');
   
@@ -108,7 +123,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   useEffect(() => {
     // New analysis identity identifies a new selection context; invalidate its report too.
     setSubmittedPeriod(null);
-  }, [analysis?.analysisId]);
+  }, [sourceAnalysisId]);
 
   // isSubmitting is derived from selectionState
   const isSubmitting = selectionStatus === 'SUBMITTING';
@@ -127,11 +142,11 @@ export const DashaPage: React.FC<DashaPageProps> = ({
     setSubmittedPeriod({
       mahadashaId,
       antardashaId,
-      analysisId: analysis.analysisId
+      analysisId: sourceAnalysisId ?? analysis.analysisId
     });
 
     await onSelectPeriod(mahadashaId, antardashaId);
-  }, [onSelectPeriod, analysis?.analysisId]);
+  }, [onSelectPeriod, analysis?.analysisId, sourceAnalysisId]);
 
   // Clear submittedPeriod when selection fails
   useEffect(() => {
@@ -232,7 +247,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
           selectedPeriod.synthesis &&
           selectionStatus === 'READY' &&
           submittedPeriod &&
-          submittedPeriod.analysisId === analysis.analysisId &&
+          submittedPeriod.analysisId === sourceAnalysisId &&
           selectedPeriod.synthesis.period.mahadashaId === submittedPeriod.mahadashaId &&
           selectedPeriod.synthesis.period.antardashaId === submittedPeriod.antardashaId;
         return canShowSelectedPeriodReport ? (

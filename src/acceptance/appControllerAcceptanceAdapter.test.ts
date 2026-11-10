@@ -96,6 +96,43 @@ describe('AppController production acceptance adapter', () => {
       .toEqual([['IDLE', 'IDLE'], ['IDLE', 'ERROR'], ['ERROR', 'RETRYING'], ['RETRYING', 'READY']]);
   });
 
+  it('keeps canonical analysis available when the Dasha projection retry fails again', async () => {
+    const temporalState = {} as LifeAnalysisProductState['temporalState'];
+    const pipelineState = { status: 'READY', temporalState } as LifeAnalysisProductState;
+    const run = makeRun('retry-still-fails', pipelineState);
+    const projectionBuilder = vi.fn()
+      .mockImplementation(() => { throw new Error('projection remains unavailable'); });
+    const service = { analyzeRun: vi.fn().mockResolvedValue(run) } as unknown as ProductAnalysisService;
+    const adapter = createAppControllerAcceptanceAdapter(service, INITIAL_APP_STATE, projectionBuilder);
+
+    await adapter.controller.analyze(INITIAL_APP_STATE.birthDetails);
+    await adapter.controller.retryDashaTiming?.();
+
+    expect(adapter.getState().productAnalysis).toMatchObject({
+      status: 'READY',
+      analysisId: 'retry-still-fails',
+      sourceAnalysisId: 'retry-still-fails'
+    });
+    expect(adapter.getState().dashaTimingProjectionState).toMatchObject({
+      status: 'ERROR',
+      analysisId: 'retry-still-fails',
+      error: 'projection remains unavailable'
+    });
+    expect(adapter.getState().dashaTimingProjectionError).toBe('projection remains unavailable');
+    expect(service.analyzeRun).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not allow a projection retry without an active canonical analysis to create an invalid READY or RETRYING state', async () => {
+    const service = { analyzeRun: vi.fn() } as unknown as ProductAnalysisService;
+    const adapter = createAppControllerAcceptanceAdapter(service);
+
+    await adapter.controller.retryDashaTiming?.();
+
+    expect(adapter.getState().productAnalysis.status).toBe('IDLE');
+    expect(adapter.getState().dashaTimingProjectionState.status).toBe('IDLE');
+    expect(adapter.getState().dashaTimingProjectionError).toContain('No active canonical analysis');
+  });
+
   it('keeps the newest MD–AD selection when earlier selection resolves last', async () => {
     const selectionA = deferred<ReturnType<typeof createProductAnalysis>>();
     const selectionB = deferred<ReturnType<typeof createProductAnalysis>>();

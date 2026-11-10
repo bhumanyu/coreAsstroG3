@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { DashaPage } from './DashaPage';
+import { DashaPage, getDashaSelectionContextIdentity } from './DashaPage';
 import { createProductAnalysis } from '../product/analysis/__tests__/testHelpers';
 
 describe('DashaPage projection diagnostics', () => {
@@ -42,5 +42,23 @@ describe('DashaPage projection diagnostics', () => {
       />
     );
     expect(screen.getByRole('button', { name: 'Retrying Dasha timing…' })).toBeDisabled();
+  });
+});
+
+
+describe('Dasha selected-period analysis identity', () => {
+  it('uses the stable source chart identity when selected-period output has a distinct ProductAnalysis ID', () => {
+    const selectedPeriodAnalysis = createProductAnalysis({ analysisId: 'selected-period-projection-id' });
+    expect(getDashaSelectionContextIdentity({
+      status: 'READY',
+      analysis: selectedPeriodAnalysis,
+      analysisId: 'selected-period-projection-id',
+      sourceAnalysisId: 'base-chart-run-id'
+    }, selectedPeriodAnalysis)).toBe('base-chart-run-id');
+  });
+
+  it('falls back to the current canonical analysis identity when no source identity is attached', () => {
+    const analysis = createProductAnalysis({ analysisId: 'base-chart-run-id' });
+    expect(getDashaSelectionContextIdentity({ status: 'READY', analysis }, analysis)).toBe('base-chart-run-id');
   });
 });
