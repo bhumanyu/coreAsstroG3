@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { vi } from 'vitest';
 import { ProductAnalysisReportView } from './ProductAnalysisReportView';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 
@@ -29,6 +30,20 @@ describe('ProductAnalysisReportView', () => {
     expect(screen.getByText('CW-05 confidence')).toBeInTheDocument();
     expect(screen.getByText(/Event-specific forecasts remain unavailable/)).toBeInTheDocument();
     expect(screen.getByText(/D2 and unvalidated lifecycle event rules remain unavailable/)).toBeInTheDocument();
+  });
+
+  it('shows LOADING while the canonical report is being prepared', () => {
+    render(<ProductAnalysisReportView status="LOADING" />);
+    expect(screen.getByRole('status')).toHaveTextContent('LOADING');
+    expect(screen.getByRole('status')).toHaveTextContent('No previous or unrelated analysis is substituted');
+  });
+
+  it('shows a retryable error when canonical analysis failed', () => {
+    const onRetry = vi.fn();
+    render(<ProductAnalysisReportView status="ERROR" error="calculation failed" onRetry={onRetry} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('calculation failed');
+    screen.getByRole('button', { name: 'Retry analysis' }).click();
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('shows unavailable when no canonical ProductAnalysis is attached', () => {
