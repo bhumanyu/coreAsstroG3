@@ -24,6 +24,7 @@ import { MajorLifePeriodsSection } from './MajorLifePeriodsSection';
 import { OverallSynthesisSection } from './OverallSynthesisSection';
 import type { ProductAnalysis } from '../../product/analysis/productAnalysisTypes';
 import { ProductAnalysisReportView } from './ProductAnalysisReportView';
+import { ProductAnalysisReportBoundary } from './ProductAnalysisReportBoundary';
 
 export interface FullNatalReportViewProps {
   readonly report: FullNatalAnalysisReport;
@@ -249,7 +250,9 @@ export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({
           </ReportSection>
         </div>
       </div>
-      <ProductAnalysisReportView analysis={productAnalysis} status={productAnalysisStatus} error={productAnalysisError} onRetry={onRetryAnalysis} />
+      <ProductAnalysisReportBoundary resetKey={productAnalysis?.analysisId ?? productAnalysisStatus ?? 'UNAVAILABLE'}>
+        <ProductAnalysisReportView analysis={productAnalysis} status={productAnalysisStatus} error={productAnalysisError} onRetry={onRetryAnalysis} />
+      </ProductAnalysisReportBoundary>
     </div>
   );
 };

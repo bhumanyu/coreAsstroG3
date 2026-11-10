@@ -25,7 +25,8 @@
     "verify:pba10": "npm run lint && npm run test:pba10 && npm run build",
     "test:e2e": "npm run build && node node_modules/@playwright/test/cli.js test && node scripts/acceptance/verify-e2e-results.mjs",
     "test:e2e:critical": "npm run test:e2e",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "acceptance:report": "node scripts/acceptance/generate-acceptance-report.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
