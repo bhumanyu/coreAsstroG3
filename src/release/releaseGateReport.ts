@@ -83,6 +83,27 @@ export function createValidatedRunnerResult(
   input: ReleaseReportInput,
   evidenceManifest: RunnerEvidenceManifest
 ): ValidatedRunnerResult {
+  const expectedRevision = input.metadata?.sourceRevision;
+  for (const surface of input.pr8AcceptanceStatuses ?? []) {
+    if (surface.status !== 'PASS') continue;
+    const references = surface.evidenceReferences ?? [];
+    const hasExactRevision = typeof expectedRevision === 'string'
+      && /^[0-9a-f]{40}$/i.test(expectedRevision)
+      && surface.testedSha?.toLowerCase() === expectedRevision.toLowerCase();
+    const hasCiIdentity = Boolean(surface.ciRunId && surface.ciRunUrl);
+    const hasDistinctEvidence = new Set(references).size >= 2;
+    const hasCommandLog = references.some(reference => evidenceManifest.commands.some(command =>
+      command.logPath === reference && command.exitCode === 0
+      && existsSync(resolve(process.cwd(), command.logPath))
+    ));
+    const hasFileEvidence = references.some(reference => evidenceManifest.files.some(file =>
+      file.path === reference && fileMatchesReference(file.path, file.sha256)
+    ));
+    if (!hasExactRevision || !hasCiIdentity || !hasDistinctEvidence || !hasCommandLog || !hasFileEvidence) {
+      throw new Error(`PR-8 surface ${surface.name} cannot claim PASS without exact-revision CI, command-log and file evidence.`);
+    }
+  }
+
   const allowedStatuses = new Set<ReleaseGateStatus>(['PASS', 'FAIL', 'BLOCKED', 'NOT_RUN']);
   for (const gate of input.gates) {
     if (!allowedStatuses.has(gate.status)) {
