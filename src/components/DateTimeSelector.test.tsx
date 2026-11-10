@@ -17,6 +17,6 @@ describe('DateTimeSelector', () => {
     fireEvent.change(screen.getByLabelText('Birth date and time'), {
       target: { value: '2024-05-15T12:03:45' }
     });
-    expect(onChange).toHaveBeenCalledWith('2024-05-15T12:03:45');
+    expect(onChange).toHaveBeenCalledWith('2024-05-15T12:03:45.000');
   });
 });
