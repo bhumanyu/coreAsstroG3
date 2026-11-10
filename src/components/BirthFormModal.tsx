@@ -106,6 +106,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [ayanamsa, setAyanamsa] = useState<AyanamsaType>(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
   const [validationErrors, setValidationErrors] = useState<readonly BirthValidationError[]>([]);
   const [selectedAmbiguousInstant, setSelectedAmbiguousInstant] = useState('');
+  const [pendingBirthConfirmation, setPendingBirthConfirmation] = useState<BirthDetails | null>(null);
   const [timeZoneSource, setTimeZoneSource] = useState<'PROVIDER' | 'USER'>('PROVIDER');
   const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
   const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
@@ -137,6 +138,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
       setAyanamsa(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
       setValidationErrors([]); // Clear errors when modal opens
       setSelectedAmbiguousInstant('');
+      setPendingBirthConfirmation(null);
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
     } else {
@@ -194,9 +196,16 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     }
 
     setValidationErrors([]);
-    onSave(candidateBirthDetails);
+    setPendingBirthConfirmation(candidateBirthDetails);
+  };
+
+  const handleConfirmBirthDetails = () => {
+    if (!pendingBirthConfirmation) return;
+    onSave(pendingBirthConfirmation);
+    setPendingBirthConfirmation(null);
     onClose();
   };
+
 
   const handleSelectPlace = (place: PlaceResult) => {
     const parts = [place.name, place.admin1, place.country].filter(Boolean);
@@ -516,7 +525,31 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     <span>Calculate Chart</span>
                   </motion.button>
                 </div>
-              </form>
+                {pendingBirthConfirmation && (
+                <div role="dialog" aria-modal="true" aria-labelledby="birth-confirmation-title" className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
+                  <div className="w-full max-w-lg space-y-4 rounded-2xl border border-slate-600 bg-slate-900 p-5 shadow-2xl">
+                    <div>
+                      <h2 id="birth-confirmation-title" className="text-lg font-semibold text-slate-100">Confirm birth details</h2>
+                      <p className="mt-1 text-xs text-slate-400">Review the exact inputs and resolved UTC instant before creating the chart.</p>
+                    </div>
+                    <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                      <div><dt className="text-xs text-slate-400">Chart name</dt><dd className="text-slate-100">{pendingBirthConfirmation.name}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Birthplace</dt><dd className="text-slate-100">{pendingBirthConfirmation.placeOfBirth}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Local birth time</dt><dd className="font-mono text-slate-100">{dateTimeStr}</dd></div>
+                      <div><dt className="text-xs text-slate-400">IANA timezone</dt><dd className="text-slate-100">{pendingBirthConfirmation.timeZone}</dd></div>
+                      <div className="sm:col-span-2"><dt className="text-xs text-slate-400">Resolved UTC instant</dt><dd className="font-mono text-slate-100">{pendingBirthConfirmation.dateTimeStr}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Coordinates</dt><dd className="text-slate-100">{pendingBirthConfirmation.latitude}, {pendingBirthConfirmation.longitude}</dd></div>
+                      <div><dt className="text-xs text-slate-400">Ayanamsa</dt><dd className="text-slate-100">{pendingBirthConfirmation.ayanamsa}</dd></div>
+                    </dl>
+                    <p className="text-xs text-amber-200">The chart will be calculated from this confirmed snapshot. If any detail is wrong, return to editing before continuing.</p>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => setPendingBirthConfirmation(null)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200">Edit details</button>
+                      <button type="button" onClick={handleConfirmBirthDetails} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Confirm and calculate</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </form>
             </div>
           </motion.div>
         </div>
