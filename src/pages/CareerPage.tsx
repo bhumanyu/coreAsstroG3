@@ -118,7 +118,7 @@ export const CareerPage: React.FC<CareerPageProps> = ({
         <CareerProfessionStatusSection profession={viewModel.profession} />
       </section>
 
-      <CareerPathwayComparisonSection profession={viewModel.profession} outcomeQualification={viewModel.outcomeQualification} />
+      <CareerPathwayComparisonSection pathwayPotential={viewModel.pathwayPotential} />
 
       <section id="career-d10" aria-label="D10 qualification" className="scroll-mt-6 space-y-4">
         <CareerD10Section d10={viewModel.d10} />
