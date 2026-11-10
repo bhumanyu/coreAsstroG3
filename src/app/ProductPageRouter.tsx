@@ -51,6 +51,7 @@ export interface ProductPageRouterProps {
   readonly lifeAnalysisState?: LifeAnalysisProductState;
   readonly onNavigate: (page: AppPage) => void;
   readonly onRetry: () => void;
+  readonly onRetryDashaTiming?: () => Promise<void>;
   readonly onSelectPeriod?: (mahadashaId: string, antardashaId: string) => Promise<void>;
 }
 
@@ -117,6 +118,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
   lifeAnalysisState,
   onNavigate,
   onRetry,
+  onRetryDashaTiming,
   onSelectPeriod
 }) => {
   const effectiveLifeAnalysisState: LifeAnalysisProductState =
@@ -158,7 +160,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
           productAnalysisState={state.productAnalysis}
           selectionState={state.selectionState}
           dashaTimingProjectionError={state.dashaTimingProjectionError}
+          dashaTimingProjectionState={state.dashaTimingProjectionState}
           onRetry={onRetry}
+          onRetryDashaTiming={onRetryDashaTiming}
           onNavigate={onNavigate}
           onSelectPeriod={onSelectPeriod}
         />
