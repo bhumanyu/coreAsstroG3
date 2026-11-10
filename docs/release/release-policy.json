@@ -12,6 +12,10 @@
     ],
     "revisionComparisonPaths": [
       "src/acceptance/",
+      "e2e/",
+      "scripts/acceptance/",
+      ".github/workflows/browser-acceptance.yml",
+      ".github/workflows/release-gate.yml",
       "src/ai/",
       "src/core/analysis/",
       "src/core/validation/",
@@ -76,7 +80,8 @@
   ],
   "pr8Acceptance": {
     "consumedBy": "RG-13",
-    "retainedBlockedSurfaces": ["report-renderer", "AppController async-state"]
+    "requiredEvidenceSurfaces": ["report-renderer", "AppController async-state"],
+    "evidenceRequirement": "Each surface requires exact tested SHA, successful adapter command, successful Chromium journeys, CI run identity, and artifact references."
   },
   "allowedSkippedTests": [],
   "retainedBlockers": [
@@ -89,16 +94,6 @@
       "id": "owner-gated-non-dusthana-mechanisms",
       "status": "BLOCKED",
       "scope": "Owner-gated non-dusthana mechanism families remain blocked and are never inferred PASS."
-    },
-    {
-      "id": "report-renderer",
-      "status": "BLOCKED",
-      "scope": "PR-8 report-renderer acceptance surface remains blocked."
-    },
-    {
-      "id": "AppController async-state",
-      "status": "BLOCKED",
-      "scope": "PR-8 AppController async-state acceptance surface remains blocked."
     }
   ],
   "skippedTests": {
