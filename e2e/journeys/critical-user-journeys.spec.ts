@@ -1,11 +1,12 @@
 import { test, expect } from '../fixtures/test';
+import type { Page } from '@playwright/test';
 
-async function openApp(page: Parameters<typeof test>[0] extends never ? never : any): Promise<void> {
+async function openApp(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 }
 
-async function openBirthDialog(page: any): Promise<void> {
+async function openBirthDialog(page: Page): Promise<void> {
   await page.locator('button[title="Edit Birth Details & Ayanamsa"]').click();
   await expect(page.getByRole('dialog', { name: 'Calculate Horoscope & Positions' })).toBeVisible();
 }
@@ -61,7 +62,7 @@ test('E08-S01 first-time user enters exact birth details and reaches the canonic
     dateTime: '1990-05-15T10:30',
     timeZone: 'Asia/Kolkata'
   });
-  await expect(page.getByLabel('Natal Chart Sign Positions')).toBeVisible();
+  await expect(page.locator('[aria-label="Natal Chart Sign Positions"]')).toBeVisible();
 });
 
 test('E08-S02 manual IANA timezone resolution is explicit before chart calculation', async ({ page }) => {
