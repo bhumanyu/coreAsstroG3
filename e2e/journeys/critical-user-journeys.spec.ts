@@ -82,7 +82,7 @@ test('E08-S03 invalid or missing birth date is blocked without replacing the cur
   const dateTime = page.getByLabel('Birth date and time');
   await dateTime.fill('');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
-  await expect(dateTime).toHaveJSProperty('validity', expect.objectContaining({ valueMissing: true }));
+  expect(await dateTime.evaluate(element => (element as HTMLInputElement).validity.valueMissing)).toBe(true);
   await expect(page.getByRole('dialog')).toBeVisible();
 });
 
@@ -177,7 +177,7 @@ test('E08-S14 saved chart profiles survive reload and can be restored', async ({
   await openApp(page);
   await page.getByLabel('Profile name').fill('E08 Persistent Profile');
   await page.getByRole('button', { name: 'Save current chart' }).click();
-  await expect(page.getByText(/Saved profile/)).toBeVisible();
+  await expect(page.getByText('Saved "E08 Persistent Profile" on this browser/device.')).toBeVisible();
   await page.reload();
   await expect(page.getByText('E08 Persistent Profile')).toBeVisible();
   await page.getByRole('button', { name: 'Restore' }).last().click();
@@ -216,11 +216,11 @@ test('E08-S17 Detailed Analysis includes the canonical Career and Wealth product
 
 test('E08-S18 failed out-of-range calculation can be corrected and recalculated', async ({ page }) => {
   await openApp(page);
-  await submitBirthDetails(page, {
-    name: 'Out of Range Engine Test',
-    dateTime: '9999-12-31T23:59',
-    timeZone: 'UTC'
-  });
+  await openBirthDialog(page);
+  await page.getByPlaceholder('e.g. CoreAstro Test Vector 1').fill('Out of Range Engine Test');
+  await page.getByLabel('Birth date and time').fill('9999-12-31T23:59');
+  await page.locator('#birth-time-zone').fill('UTC');
+  await page.getByRole('button', { name: 'Calculate Chart' }).click();
   await expect(page.getByRole('heading', { name: 'Overview Computation Error' })).toBeVisible({ timeout: 120_000 });
   await openBirthDialog(page);
   await page.getByLabel('Birth date and time').fill('2000-01-01T12:00');
