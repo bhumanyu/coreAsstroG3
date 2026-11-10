@@ -398,6 +398,78 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(selectCareer(analysis).outcomeQualification).toEqual(outcomeQualification);
   });
 
+  it('1.3 maps B05 dual-potential analysis from explicit B02 outcome candidates', () => {
+    const makeCandidate = (
+      candidateId: string,
+      outcomeType: 'EMPLOYMENT_OR_SERVICE_OPPORTUNITY' | 'INDEPENDENT_OR_BUSINESS_ACTIVITY',
+      qualification: 'SUPPORTED_CANDIDATE' | 'CONDITIONALLY_SUPPORTED_CANDIDATE'
+    ) => ({
+      candidateId,
+      outcomeType,
+      status: 'CANDIDATE' as const,
+      qualification,
+      qualificationBasis: 'NATAL_PROMISE_AND_LINKED_DASHA_ACTIVATION' as const,
+      sourceEventId: 'event-' + candidateId,
+      opportunityId: 'opportunity-' + candidateId,
+      activationId: 'activation-' + candidateId,
+      timing: { type: 'UNTIMED' as const },
+      supportingEvidence: {
+        natalPromiseOccurrenceIds: ['natal-' + candidateId],
+        activationOccurrenceIds: ['activation-' + candidateId],
+        candidateEventEvidenceIds: [],
+        ruleIds: ['rule-' + candidateId]
+      },
+      executionConditions: {
+        professionAnalysisStatus: 'COMPLETE' as const,
+        d10Qualification: 'QUALIFIED' as const,
+        practicalExecution: 'NOT_ASSESSED' as const,
+        requiredChecks: [
+          'SKILLS_AND_EXPERIENCE_FIT',
+          'REAL_WORLD_OPPORTUNITY',
+          'USER_ACTION_AND_EXECUTION',
+          'EMPLOYER_MARKET_AND_RESOURCE_CONSTRAINTS'
+        ] as const
+      },
+      counterIndications: { severity: 'NONE' as const, evidenceOccurrenceIds: [], conflicts: [] },
+      guarantee: 'NONE' as const
+    });
+    const outcomeQualification: CareerOutcomeAnalysis = {
+      reasoningVersion: 'B02',
+      methodVersion: 'B02-OUTCOME-QUALIFICATION-v1',
+      status: 'CANDIDATES_AVAILABLE',
+      candidateOutcomes: [
+        makeCandidate('employment-1', 'EMPLOYMENT_OR_SERVICE_OPPORTUNITY', 'SUPPORTED_CANDIDATE'),
+        makeCandidate('business-1', 'INDEPENDENT_OR_BUSINESS_ACTIVITY', 'CONDITIONALLY_SUPPORTED_CANDIDATE')
+      ],
+      observedOutcomes: [],
+      diagnostics: [],
+      guaranteedOutcomeAvailable: false,
+      numericProbabilityAvailable: false,
+      statement: 'Two pathway candidate modes are present.'
+    };
+    const viewModelWithOutcome: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        careerOutcomeAnalysis: outcomeQualification
+      }
+    };
+
+    const analysis = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: viewModelWithOutcome,
+      context: sampleContext
+    });
+
+    expect(analysis.career.pathwayPotential?.reasoningVersion).toBe('B05');
+    expect(analysis.career.pathwayPotential?.verdict).toBe('CONDITIONAL_DUAL_POTENTIAL');
+    expect(analysis.career.pathwayPotential?.employment.candidates[0]?.candidateId).toBe('employment-1');
+    expect(analysis.career.pathwayPotential?.independent.candidates[0]?.candidateId).toBe('business-1');
+    expect(analysis.career.pathwayPotential?.suitabilityAvailable).toBe(false);
+    expect(selectCareer(analysis).pathwayPotential).toEqual(analysis.career.pathwayPotential);
+  });
+
   it('2. D10 relationship mapping preserves semantics and never returns percentage', () => {
     expect(mapD10Relationship('CONFIRMS')).toBe('CONFIRMS');
     expect(mapD10Relationship('PARTIALLY_CONFIRMS')).toBe('PARTIALLY_CONFIRMS');
