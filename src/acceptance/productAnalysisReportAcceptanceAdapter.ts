@@ -52,7 +52,7 @@ export function createProductAnalysisReportAcceptanceAdapter(
   analysis?: ProductAnalysis
 ): ProductAnalysisReportAcceptanceResult {
   if (!analysis) {
-    return { view: React.createElement(ProductAnalysisReportView, { status: 'READY' }) };
+    return { view: React.createElement(ProductAnalysisReportView, { analysisStatus: 'READY' }) };
   }
 
   const career = selectCareerViewModel(analysis);
@@ -60,7 +60,7 @@ export function createProductAnalysisReportAcceptanceAdapter(
   const dasha = selectDashaViewModel(analysis);
 
   return {
-    view: React.createElement(ProductAnalysisReportView, { analysis, status: 'READY' }),
+    view: React.createElement(ProductAnalysisReportView, { analysis, analysisStatus: 'READY' }),
     expected: {
       analysisId: analysis.analysisId,
       analysisStatus: analysis.status,
