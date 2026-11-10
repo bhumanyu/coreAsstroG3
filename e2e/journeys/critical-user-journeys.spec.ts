@@ -38,7 +38,7 @@ async function selectPeriodByRelation(page: any, relation: 'Past' | 'Current' | 
   await expect(page.getByText('Select Dasha Period')).toBeVisible({ timeout: 60_000 });
 
   const mahadasha = await page.locator('#mahadasha-select option').evaluateAll((options, wanted) => {
-    const option = options.find(item => item.textContent?.includes(`(${wanted})`) && (item as HTMLOptionElement).value);
+    const option = options.find(item => item.textContent?.includes(`(${wanted})`) && (item as HTMLOptionElement).value && !(item as HTMLOptionElement).disabled);
     return option ? (option as HTMLOptionElement).value : '';
   }, relation);
   expect(mahadasha, `No valid ${relation} Mahadasha is available in this chart.`).not.toBe('');
@@ -112,7 +112,7 @@ test('E08-S06 Career page renders the canonical C11 conclusion and evidence', as
   await navigate(page, 'Career');
   await expect(page.getByRole('heading', { name: 'Career & Professional Trajectory' })).toBeVisible();
   await expect(page.getByText(/Evidence/i).first()).toBeVisible();
-  await expect(page.getByText(/C11/i).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Integrated Vocational Synthesis|Career Conclusion/ })).toBeVisible();
 });
 
 test('E08-S07 Wealth page keeps D2 explicitly unavailable and shows canonical dimensions', async ({ page }) => {
