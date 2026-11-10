@@ -62,7 +62,7 @@ export function createProductAnalysisReportAcceptanceAdapter(
   return {
     view: (
       <ProductAnalysisReportBoundary resetKey={analysis.analysisId}>
-        <ProductAnalysisReportView analysis={analysis} status="READY" />
+        <ProductAnalysisReportView analysis={analysis} analysisStatus="READY" />
       </ProductAnalysisReportBoundary>
     ),
     expected: {
