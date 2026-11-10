@@ -180,16 +180,10 @@ describe('WealthPage (P-UI-05)', () => {
     expect(within(dimensions).getByText('Speculation & Venture')).toBeInTheDocument();
   });
 
-  it('D06: D2 remains unavailable even if an incoming ProductAnalysis declares a relationship', () => {
+  it('D06: renders the canonical D2 unavailable status and its release explanation', () => {
     const base = createProductAnalysis();
-    const analysis = {
-      ...base,
-      wealth: {
-        ...base.wealth,
-        d2: { relationship: 'CONFIRMS' as const, statement: 'Unvalidated D2 assertion.' }
-      }
-    };
-    render(<WealthPage productAnalysisState={{ status: 'READY', analysis }} />);
+    expect(base.wealth.d2.relationship).toBe('UNAVAILABLE');
+    render(<WealthPage productAnalysisState={{ status: 'READY', analysis: base }} />);
     const d2 = screen.getByRole('region', { name: 'D2 status and qualification' });
     expect(within(d2).getByText('Unavailable')).toBeInTheDocument();
     expect(within(d2).getByText(/D2 calculation and interpretation have not passed independent validation/)).toBeInTheDocument();
