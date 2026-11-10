@@ -7,7 +7,7 @@ export interface ProductAnalysisReportBoundaryProps {
 
 interface ProductAnalysisReportBoundaryState {
   readonly error?: Error;
-  readonly resetKey: string;
+  readonly resetKey?: string;
 }
 
 /** Isolates report rendering failures from the canonical analysis lifecycle. */
@@ -15,7 +15,7 @@ export class ProductAnalysisReportBoundary extends React.Component<
   ProductAnalysisReportBoundaryProps,
   ProductAnalysisReportBoundaryState
 > {
-  state: ProductAnalysisReportBoundaryState = { resetKey: this.props.resetKey };
+  state: ProductAnalysisReportBoundaryState = {};
 
   static getDerivedStateFromError(error: Error): ProductAnalysisReportBoundaryState {
     return { error };
