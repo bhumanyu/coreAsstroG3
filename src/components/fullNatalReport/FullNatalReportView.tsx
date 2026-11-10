@@ -22,14 +22,18 @@ import { CurrentTransitSection } from './CurrentTransitSection';
 import { LifeThemesSection } from './LifeThemesSection';
 import { MajorLifePeriodsSection } from './MajorLifePeriodsSection';
 import { OverallSynthesisSection } from './OverallSynthesisSection';
+import type { ProductAnalysis } from '../../product/analysis/productAnalysisTypes';
+import { ProductAnalysisReportView } from './ProductAnalysisReportView';
 
 export interface FullNatalReportViewProps {
   readonly report: FullNatalAnalysisReport;
+  readonly productAnalysis?: ProductAnalysis;
   readonly onNavigateToDashaTiming?: () => void;
 }
 
 export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({
   report,
+  productAnalysis,
   onNavigateToDashaTiming
 }) => {
   const activeSectionId = useReportSectionObserver(REPORT_SECTION_IDS);
@@ -239,6 +243,7 @@ export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({
           </ReportSection>
         </div>
       </div>
+      <ProductAnalysisReportView analysis={productAnalysis} />
     </div>
   );
 };
