@@ -16,7 +16,8 @@ import { calculateNakshatra } from '../nakshatraUtils';
 import { calculateSign, calculateWholeSignHouse, getDivisionalLongitude } from '../chartMath';
 import { generatePlanetaryPositions } from '../astroEngine';
 import { calculateVimshottari, VIMSHOTTARI_YEAR_DAYS } from '../dasha/vimshottari';
-import { Planet } from '../../types';
+import { Nakshatra, Planet, Sign } from '../../types';
+import { NAKSHATRAS_ORDER, ZODIAC_SIGNS_ORDER } from './calculationReferenceFixtures';
 
 const fixtureResults: Array<{
   fixtureId: string;
@@ -59,6 +60,12 @@ afterAll(() => {
 });
 
 describe('RG-09 calculation reference validation', () => {
+  it('keeps the strip-only fixture inventory contracts aligned with runtime enums', () => {
+    const enumValues = (value: object) => [...new Set(Object.values(value).filter((item): item is string => typeof item === 'string'))].sort();
+    expect([...ZODIAC_SIGNS_ORDER].sort()).toEqual(enumValues(Sign));
+    expect([...NAKSHATRAS_ORDER].sort()).toEqual(enumValues(Nakshatra));
+  });
+
   it('requires approved independent fixtures before RG-09 can pass', () => {
     expect(CALCULATION_REFERENCE_FIXTURES.length).toBeGreaterThan(0);
   });
