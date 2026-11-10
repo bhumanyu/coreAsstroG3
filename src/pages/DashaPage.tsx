@@ -7,6 +7,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import type { DashaTimingProjectionState, ProductAnalysisState } from '../app/AppState';
+import type { ProductAnalysis } from '../product/analysis';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectDashaViewModel } from '../product/analysis/dashaViewModel';
 import {
@@ -38,6 +39,16 @@ export interface DashaPageProps {
   readonly onRetryDashaTiming?: () => Promise<void>;
   readonly onNavigate?: (page: AppPage) => void;
   readonly onSelectPeriod?: (mahadashaId: string, antardashaId: string) => Promise<void>;
+}
+
+/** Stable identity for a selected-period report: selected-period projections may have
+ * their own ProductAnalysis ID, while sourceAnalysisId identifies the natal run.
+ */
+export function getDashaSelectionContextIdentity(
+  productAnalysisState: ProductAnalysisState | undefined,
+  analysis: ProductAnalysis | undefined
+): string | undefined {
+  return productAnalysisState?.sourceAnalysisId ?? analysis?.analysisId;
 }
 
 // Helper to determine if selection error banner should be shown
@@ -95,7 +106,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
 
   // A selected-period ProductAnalysis may have its own projection ID. The stable
   // sourceAnalysisId remains the identity of the natal chart/run that owns it.
-  const sourceAnalysisId = productAnalysisState?.sourceAnalysisId ?? analysis?.analysisId;
+  const sourceAnalysisId = getDashaSelectionContextIdentity(productAnalysisState, analysis);
 
   // State for period selection
   const [domainToggle, setDomainToggle] = useState<'CAREER' | 'WEALTH' | 'BOTH'>('BOTH');
