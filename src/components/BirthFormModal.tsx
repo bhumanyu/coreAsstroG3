@@ -6,6 +6,7 @@ import { PlaceAutocomplete } from './PlaceAutocomplete';
 import { DateTimeSelector } from './DateTimeSelector';
 import { PlaceResult } from '../services/geocoding';
 import { validateBirthDetails, type BirthValidationError } from '../core/validation/birthDetailsValidation';
+import { getTimeZoneResolutionStatus, isValidIanaTimeZone, resolveLocalDateTime, type TimeZoneResolutionStatus } from '../core/time/timeZoneResolution';
 
 interface BirthFormModalProps {
   isOpen: boolean;
@@ -14,91 +15,33 @@ interface BirthFormModalProps {
   onSave: (details: BirthDetails) => void;
 }
 
-function getZonedParts(date: Date, timeZone: string) {
-  try {
-    const dtf = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-      hourCycle: 'h23'
-    });
-    const parts = dtf.formatToParts(date);
-    const getPart = (type: string) => {
-      const p = parts.find((pt) => pt.type === type)?.value || '0';
-      return parseInt(p, 10);
-    };
-    let hour = getPart('hour');
-    if (hour === 24) hour = 0;
-    return {
-      year: getPart('year'),
-      month: getPart('month'),
-      day: getPart('day'),
-      hour,
-      minute: getPart('minute'),
-      second: getPart('second')
-    };
-  } catch {
-    return {
-      year: date.getUTCFullYear(),
-      month: date.getUTCMonth() + 1,
-      day: date.getUTCDate(),
-      hour: date.getUTCHours(),
-      minute: date.getUTCMinutes(),
-      second: date.getUTCSeconds()
-    };
-  }
-}
-
-function getOffsetMs(ms: number, timeZone: string): number {
-  const parts = getZonedParts(new Date(ms), timeZone);
-  const zonedMs = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
-  return zonedMs - ms;
-}
-
 export function zonedWallClockToUtcISO(dateTimeStr: string, timeZone: string): string {
-  if (!dateTimeStr) {
-    throw new Error('Birth datetime is required');
+  const resolution = resolveLocalDateTime(dateTimeStr, timeZone);
+  if (resolution.status === 'UNIQUE') return resolution.candidates[0].instant;
+  if (resolution.status === 'AMBIGUOUS') {
+    throw new Error('This local time occurs twice because of a daylight-saving transition. Select the intended UTC offset.');
   }
-
-  const match = dateTimeStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
-  if (!match) {
-    throw new Error('Invalid datetime format');
+  if (resolution.status === 'NONEXISTENT') {
+    throw new Error('This local time does not exist because the clock moves forward. Enter a different time.');
   }
-  const [, yr, mo, da, hr, mi, se] = match;
-  const year = parseInt(yr, 10);
-  const month = parseInt(mo, 10);
-  const day = parseInt(da, 10);
-  const hour = parseInt(hr, 10);
-  const minute = parseInt(mi, 10);
-  const second = se ? parseInt(se, 10) : 0;
-
-  const guessUtcMs = Date.UTC(year, month - 1, day, hour, minute, second);
-
-  const offsetMs1 = getOffsetMs(guessUtcMs, timeZone);
-  const targetUtcMs = guessUtcMs - offsetMs1;
-  const offsetMs2 = getOffsetMs(targetUtcMs, timeZone);
-  const finalUtcMs = guessUtcMs - offsetMs2;
-
-  return new Date(finalUtcMs).toISOString();
+  throw new Error(resolution.reason);
 }
 
 export function utcISOToZonedWallClock(iso: string, timeZone: string): string {
-  if (!iso) return '2024-05-15T12:00';
-  const isoClean = (iso.includes('Z') || iso.includes('+') || (iso.length > 10 && iso.slice(10).includes('-')))
-    ? iso
-    : iso + 'Z';
-  const date = new Date(isoClean);
-  if (isNaN(date.getTime())) {
-    return iso.slice(0, 16) || '2024-05-15T12:00';
-  }
-  const parts = getZonedParts(date, timeZone);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}`;
+  if (!iso || !isValidIanaTimeZone(timeZone)) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+  return [value('year'), '-', value('month'), '-', value('day'), 'T', value('hour'), ':', value('minute')].join('');
 }
 
 export const PRESET_PROFILES: { name: string; details: BirthDetails; desc: string }[] = [
@@ -151,17 +94,21 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
 }) => {
   const [name, setName] = useState(currentDetails.name || 'Custom Horoscope');
   const [placeOfBirth, setPlaceOfBirth] = useState(currentDetails.placeOfBirth || 'Ujjain, India');
-  const [timeZone, setTimeZone] = useState(currentDetails.timeZone || 'UTC');
+  const [timeZone, setTimeZone] = useState(currentDetails.timeZone || '');
   const [dateTimeStr, setDateTimeStr] = useState(() =>
     utcISOToZonedWallClock(
-      currentDetails.dateTimeStr || '2024-05-15T12:00:00Z',
-      currentDetails.timeZone || 'UTC'
+      currentDetails.dateTimeStr,
+      currentDetails.timeZone || ''
     )
   );
   const [latitude, setLatitude] = useState(currentDetails.latitude.toString());
   const [longitude, setLongitude] = useState(currentDetails.longitude.toString());
   const [ayanamsa, setAyanamsa] = useState<AyanamsaType>(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
   const [validationErrors, setValidationErrors] = useState<readonly BirthValidationError[]>([]);
+  const [selectedAmbiguousInstant, setSelectedAmbiguousInstant] = useState('');
+  const [timeZoneSource, setTimeZoneSource] = useState<'PROVIDER' | 'USER'>('PROVIDER');
+  const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
+  const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -176,11 +123,12 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     if (isOpen) {
       setName(currentDetails.name || 'Custom Horoscope');
       setPlaceOfBirth(currentDetails.placeOfBirth || 'Ujjain, India');
-      const tz = currentDetails.timeZone || 'UTC';
+      const tz = currentDetails.timeZone || '';
       setTimeZone(tz);
+      setTimeZoneSource('PROVIDER');
       setDateTimeStr(
         utcISOToZonedWallClock(
-          currentDetails.dateTimeStr || '2024-05-15T12:00:00Z',
+          currentDetails.dateTimeStr,
           tz
         )
       );
@@ -188,6 +136,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
       setLongitude(currentDetails.longitude.toString());
       setAyanamsa(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
       setValidationErrors([]); // Clear errors when modal opens
+      setSelectedAmbiguousInstant('');
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
     } else {
@@ -203,20 +152,41 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const parsedLatitude = Number(latitude);
-    const parsedLongitude = Number(longitude);
+    const resolution = resolveLocalDateTime(dateTimeStr, timeZone);
+    let resolvedInstant: string | undefined;
+    if (resolution.status === 'UNIQUE') {
+      resolvedInstant = resolution.candidates[0].instant;
+    } else if (resolution.status === 'AMBIGUOUS' && resolution.candidates.some(candidate => candidate.instant === selectedAmbiguousInstant)) {
+      resolvedInstant = selectedAmbiguousInstant;
+    } else {
+      const error: BirthValidationError = resolution.status === 'INVALID' && !isValidIanaTimeZone(timeZone)
+        ? { field: 'timeZone', code: 'TIMEZONE_UNRESOLVED', message: 'Select or enter a valid IANA timezone before calculating the chart.' }
+        : {
+          field: 'dateTimeStr',
+          code: resolution.status === 'NONEXISTENT' ? 'NONEXISTENT_LOCAL_TIME'
+            : resolution.status === 'AMBIGUOUS' ? 'AMBIGUOUS_LOCAL_TIME' : 'INVALID_LOCAL_DATETIME',
+          message: resolution.status === 'NONEXISTENT'
+            ? 'This local time does not exist because of a daylight-saving clock change. Choose another time.'
+            : resolution.status === 'AMBIGUOUS'
+              ? 'This local time occurs twice. Select which UTC offset matches the recorded birth time.'
+              : resolution.status === 'INVALID'
+                ? resolution.reason
+                : 'Enter a valid local date and time.'
+        };
+      setValidationErrors([error]);
+      return;
+    }
 
     const candidateBirthDetails: BirthDetails = {
       name: name.trim() || 'Custom Horoscope',
       placeOfBirth: placeOfBirth.trim() || 'Custom Location',
-      dateTimeStr: zonedWallClockToUtcISO(dateTimeStr, timeZone),
+      dateTimeStr: resolvedInstant,
       timeZone,
-      latitude: parsedLatitude,
-      longitude: parsedLongitude,
+      latitude: Number(latitude),
+      longitude: Number(longitude),
       ayanamsa
     };
 
-    // Validate birth details before saving
     const errors = validateBirthDetails(candidateBirthDetails);
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -234,9 +204,10 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     setPlaceOfBirth(label);
     setLatitude(place.latitude.toString());
     setLongitude(place.longitude.toString());
-    if (place.timezone) {
-      setTimeZone(place.timezone);
-    }
+    // A new location invalidates the prior timezone unless the provider supplies one.
+    setTimeZone(place.timezone ?? '');
+    setTimeZoneSource('PROVIDER');
+    setSelectedAmbiguousInstant('');
   };
 
   const handleApplyPreset = (preset: typeof PRESET_PROFILES[0]) => {
@@ -244,6 +215,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     setPlaceOfBirth(preset.details.placeOfBirth || '');
     const tz = preset.details.timeZone;
     setTimeZone(tz);
+    setTimeZoneSource('USER');
     setDateTimeStr(utcISOToZonedWallClock(preset.details.dateTimeStr, tz));
     setLatitude(preset.details.latitude.toString());
     setLongitude(preset.details.longitude.toString());
@@ -375,7 +347,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       <Clock className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600" aria-hidden="true" />
                       <span>Date & Time (local)</span>
                     </label>
-                    <DateTimeSelector dateTimeStr={dateTimeStr} onChange={setDateTimeStr} />
+                    <DateTimeSelector dateTimeStr={dateTimeStr} onChange={(value) => { setDateTimeStr(value); setSelectedAmbiguousInstant(''); }} />
                     {validationErrors.some((e) => e.field === 'dateTimeStr') && (
                       <p className="mt-1 text-xs text-rose-400">
                         {validationErrors.find((e) => e.field === 'dateTimeStr')?.message}
@@ -388,20 +360,30 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       <Globe className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600" aria-hidden="true" />
                       <span>Time Zone</span>
                     </label>
-                    <select
+                    <input
+                      id="birth-time-zone"
+                      list="birth-time-zone-options"
+                      required
                       value={timeZone}
-                      onChange={(e) => setTimeZone(e.target.value)}
+                      onChange={(e) => { setTimeZone(e.target.value); setTimeZoneSource('USER'); setSelectedAmbiguousInstant(''); }}
+                      placeholder="Enter IANA timezone, e.g. Asia/Kolkata"
                       className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    >
-                      <option value="UTC">UTC (+00:00)</option>
-                      <option value="Asia/Kolkata">Asia/Kolkata IST (+05:30)</option>
-                      <option value="America/New_York">America/New_York EST (-05:00)</option>
-                      <option value="Europe/London">Europe/London GMT (+00:00)</option>
-                      <option value="Asia/Tokyo">Asia/Tokyo JST (+09:00)</option>
-                      {!['UTC', 'Asia/Kolkata', 'America/New_York', 'Europe/London', 'Asia/Tokyo'].includes(timeZone) && (
-                        <option value={timeZone}>{timeZone}</option>
-                      )}
-                    </select>
+                    />
+                    <datalist id="birth-time-zone-options">
+                      <option value="UTC" />
+                      <option value="Asia/Kolkata" />
+                      <option value="America/New_York" />
+                      <option value="Europe/London" />
+                      <option value="Asia/Tokyo" />
+                      <option value="Australia/Sydney" />
+                      <option value="Pacific/Auckland" />
+                    </datalist>
+                    {timeZoneStatus === 'UNRESOLVED' && (
+                      <p role="alert" className="mt-1 text-xs text-amber-300">
+                        Timezone is unresolved. Enter a valid IANA timezone; the chart cannot be calculated until it is resolved.
+                      </p>
+                    )}
+                    {timeZoneStatus === 'INVALID' && <p role="alert" className="mt-1 text-xs text-rose-400">The timezone identifier is invalid. Enter a valid IANA timezone.</p>}
                     {validationErrors.some((e) => e.field === 'timeZone') && (
                       <p className="mt-1 text-xs text-rose-400">
                         {validationErrors.find((e) => e.field === 'timeZone')?.message}
@@ -409,6 +391,43 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     )}
                   </div>
                 </div>
+
+                {localDateTimeResolution.status === 'UNIQUE' && (
+                  <p className="text-xs text-slate-400" aria-live="polite">
+                    Resolved instant: <span className="font-mono text-slate-200">{localDateTimeResolution.candidates[0].instant}</span>
+                    {' '}({localDateTimeResolution.candidates[0].offsetLabel})
+                  </p>
+                )}
+                {localDateTimeResolution.status === 'AMBIGUOUS' && selectedAmbiguousInstant && (
+                  <p className="text-xs text-slate-400" aria-live="polite">
+                    Selected instant: <span className="font-mono text-slate-200">{selectedAmbiguousInstant}</span>
+                  </p>
+                )}
+                {localDateTimeResolution.status === 'AMBIGUOUS' && (
+                  <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                    <label htmlFor="birth-time-ambiguity" className="block text-xs font-semibold text-amber-200 mb-1">
+                      This local time occurs twice. Select the recorded offset.
+                    </label>
+                    <select
+                      id="birth-time-ambiguity"
+                      value={selectedAmbiguousInstant}
+                      onChange={(event) => setSelectedAmbiguousInstant(event.target.value)}
+                      className="w-full rounded-lg border border-amber-500/40 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                    >
+                      <option value="">Choose the correct occurrence</option>
+                      {localDateTimeResolution.candidates.map((candidate) => (
+                        <option key={candidate.instant} value={candidate.instant}>
+                          {candidate.offsetLabel} — {candidate.instant}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {localDateTimeResolution.status === 'NONEXISTENT' && (
+                  <p role="alert" className="text-xs text-rose-400">
+                    This local time does not exist in the selected timezone because the clock moves forward. Choose a valid time.
+                  </p>
+                )}
 
                 {/* Coordinates */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
