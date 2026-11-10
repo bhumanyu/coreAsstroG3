@@ -1,3 +1,14 @@
+export type TimeZoneResolutionStatus = 'RESOLVED' | 'USER_SELECTED' | 'UNRESOLVED' | 'INVALID';
+
+export function getTimeZoneResolutionStatus(
+  timeZone: string | undefined,
+  source: 'PROVIDER' | 'USER' = 'PROVIDER'
+): TimeZoneResolutionStatus {
+  if (!timeZone || timeZone.trim().length === 0) return 'UNRESOLVED';
+  if (!isValidIanaTimeZone(timeZone)) return 'INVALID';
+  return source === 'USER' ? 'USER_SELECTED' : 'RESOLVED';
+}
+
 export type LocalDateTimeResolutionStatus = 'UNIQUE' | 'AMBIGUOUS' | 'NONEXISTENT' | 'INVALID';
 
 export interface LocalDateTimeCandidate {
