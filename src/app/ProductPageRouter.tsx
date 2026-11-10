@@ -195,6 +195,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
           />
           <FullNatalReportView
             report={horoscope.fullNatalAnalysis}
+            productAnalysis={state.productAnalysis.analysis}
             onNavigateToDashaTiming={() => onNavigate('dasha')}
           />
         </div>
