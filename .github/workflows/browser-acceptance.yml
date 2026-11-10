@@ -35,6 +35,8 @@ jobs:
           echo "package-lock.json SHA256: $(sha256sum package-lock.json)"
       - name: Install dependencies from lockfile
         run: npm ci
+      - name: Verify Playwright test runner installation
+        run: npm ls @playwright/test playwright playwright-core --depth=0
       - name: Install Chromium and system dependencies
         run: npx playwright install --with-deps chromium
       - name: Run production browser acceptance
