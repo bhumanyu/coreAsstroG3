@@ -12,6 +12,10 @@
     ],
     "revisionComparisonPaths": [
       "src/acceptance/",
+      "e2e/",
+      "scripts/acceptance/",
+      ".github/workflows/browser-acceptance.yml",
+      ".github/workflows/release-gate.yml",
       "src/ai/",
       "src/core/analysis/",
       "src/core/validation/",
