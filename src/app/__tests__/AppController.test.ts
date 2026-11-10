@@ -318,6 +318,7 @@ describe('AppController', () => {
       expect(currentState.productAnalysis.analysis?.career).toEqual(mockProductAnalysis.career);
       expect(currentState.productAnalysis.analysis?.wealth).toEqual(mockProductAnalysis.wealth);
       expect(currentState.dashaTimingViewModel).toBeUndefined();
+      expect(currentState.dashaTimingProjectionError).toBe('Dasha projection failed');
     });
 
     it('updates productAnalysis to ERROR on failure with error message extracted from warnings', async () => {
