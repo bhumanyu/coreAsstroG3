@@ -127,6 +127,12 @@ test('E08-S07 Wealth page keeps D2 explicitly unavailable and shows canonical di
 
 test('E08-S08 past Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
   await openApp(page);
+  // The default 2024 test profile does not expose a past Mahadasha in the current
+  // temporal horizon. Use the fixed J2000 profile to exercise a real past period.
+  await openBirthDialog(page);
+  await page.getByRole('button', { name: 'J2000 Astronomical Epoch' }).click();
+  await page.getByRole('button', { name: 'Calculate Chart' }).click();
+  await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
   await selectPeriodByRelation(page, 'Past');
   await expect(page.getByText('PAST', { exact: true }).first()).toBeVisible();
 });
@@ -222,8 +228,10 @@ test('E08-S18 failed out-of-range calculation can be corrected and recalculated'
   await page.getByLabel('Birth date and time').fill('0001-01-01T00:00');
   await page.locator('#birth-time-zone').fill('UTC');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
-  await expect(page.getByRole('heading', { name: 'Overview Computation Error' })).toBeVisible({ timeout: 120_000 });
-  await openBirthDialog(page);
+  // This is rejected at birth-input validation; it must not reach the astronomy
+  // engine or replace the currently displayed chart.
+  await expect(page.getByRole('dialog', { name: 'Calculate Horoscope & Positions' })).toBeVisible();
+  await expect(page.getByText(/Invalid birth datetime:/)).toBeVisible();
   await page.getByLabel('Birth date and time').fill('2000-01-01T12:00');
   await page.getByRole('button', { name: 'Calculate Chart' }).click();
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
