@@ -71,7 +71,7 @@ export function createProductAnalysisReportAcceptanceAdapter(
         status: analysis.career.status ?? analysis.status,
         confidence: career.conclusion.confidence,
         promiseStrength: career.promise.strength,
-        conclusion: career.conclusion.statement ?? career.promise.statement,
+        conclusion: career.conclusion.statement ?? career.promise.statement ?? 'Not available',
         professionStatus: career.profession.status,
         d10Relationship: career.d10.relationship,
         evidenceIds: career.evidence.map(item => item.id)
