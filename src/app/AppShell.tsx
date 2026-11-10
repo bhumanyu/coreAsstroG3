@@ -89,7 +89,7 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
         onNavigate={controller.navigate}
         birthContext={birthContext}
         onOpenBirthForm={controller.openBirthForm}
-        onResetPreset={handleResetPreset}
+        onResetPreset={import.meta.env.VITE_SHOW_PRESETS === 'true' ? handleResetPreset : undefined}
       />
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">

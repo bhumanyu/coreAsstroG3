@@ -16,7 +16,7 @@ interface BirthFormModalProps {
   currentDetails: BirthDetails;
   onSave: (details: BirthDetails) => void;
   service?: ChartProfileService;
-  /** Overrides the dev/e2e preset-profile visibility flag (defaults to import.meta.env). */
+  /** Overrides the preset-profile visibility flag (defaults to VITE_SHOW_PRESETS env). */
   showPresetProfiles?: boolean;
 }
 
@@ -141,7 +141,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
   const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
   const showPresetProfiles = showPresetProfilesOverride
-    ?? (import.meta.env.DEV === true || import.meta.env.VITE_SHOW_PRESETS === 'true');
+    ?? import.meta.env.VITE_SHOW_PRESETS === 'true';
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

@@ -12,6 +12,9 @@ export default defineConfig({
   cacheDir: 'node_modules/.vite',
   test: {
     globals: true,
+    env: {
+      VITE_SHOW_PRESETS: 'true'
+    },
     setupFiles: './src/test/setupTests.ts',
     testTimeout: 120000,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
