@@ -218,7 +218,7 @@ describe('WealthPage (P-UI-05)', () => {
     const analysis = { ...base, wealth: { ...base.wealth, financialData } };
     render(<WealthPage productAnalysisState={{ status: 'READY', analysis }} />);
     expect(screen.getByText('Financial facts attached to this analysis (C01)')).toBeInTheDocument();
-    expect(screen.getByText('Income')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Income' })).toBeInTheDocument();
     expect(screen.getByText('125000 INR')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Source and provenance'));
     expect(screen.getByText(/report-income-d06/)).toBeInTheDocument();

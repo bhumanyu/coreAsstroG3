@@ -116,7 +116,7 @@ export const ChartExportControl: React.FC<ChartExportControlProps> = ({
               <div><dt className="text-xs text-slate-400">Longitude</dt><dd className="mt-1 text-slate-100">{pendingImport.birthDetails.longitude}</dd></div>
               <div><dt className="text-xs text-slate-400">Ayanamsa</dt><dd className="mt-1 text-slate-100">{pendingImport.birthDetails.ayanamsa}</dd></div>
             </dl>
-            <p className="text-xs text-amber-200">The exported interpretation, confidence, selected-period synthesis and timing outputs are not imported. Loading these inputs starts a new chart calculation using the current engine and rules.</p>
+            <p className="text-xs text-amber-200">On load, imported conclusions are not reused. The exported interpretation, confidence, selected-period synthesis and timing outputs are not imported. Loading these inputs starts a new chart calculation using the current engine and rules.</p>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setPendingImport(undefined)}>Cancel</Button>
               <Button type="button" onClick={handleConfirmImport}>Load imported chart</Button>
