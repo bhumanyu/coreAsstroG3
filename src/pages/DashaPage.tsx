@@ -93,6 +93,10 @@ export const DashaPage: React.FC<DashaPageProps> = ({
     [analysis]
   );
 
+  // A selected-period ProductAnalysis may have its own projection ID. The stable
+  // sourceAnalysisId remains the identity of the natal chart/run that owns it.
+  const sourceAnalysisId = productAnalysisState?.sourceAnalysisId ?? analysis?.analysisId;
+
   // State for period selection
   const [domainToggle, setDomainToggle] = useState<'CAREER' | 'WEALTH' | 'BOTH'>('BOTH');
   
@@ -108,7 +112,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   useEffect(() => {
     // New analysis identity identifies a new selection context; invalidate its report too.
     setSubmittedPeriod(null);
-  }, [analysis?.analysisId]);
+  }, [sourceAnalysisId]);
 
   // isSubmitting is derived from selectionState
   const isSubmitting = selectionStatus === 'SUBMITTING';
@@ -127,11 +131,11 @@ export const DashaPage: React.FC<DashaPageProps> = ({
     setSubmittedPeriod({
       mahadashaId,
       antardashaId,
-      analysisId: analysis.analysisId
+      analysisId: sourceAnalysisId ?? analysis.analysisId
     });
 
     await onSelectPeriod(mahadashaId, antardashaId);
-  }, [onSelectPeriod, analysis?.analysisId]);
+  }, [onSelectPeriod, analysis?.analysisId, sourceAnalysisId]);
 
   // Clear submittedPeriod when selection fails
   useEffect(() => {
@@ -232,7 +236,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
           selectedPeriod.synthesis &&
           selectionStatus === 'READY' &&
           submittedPeriod &&
-          submittedPeriod.analysisId === analysis.analysisId &&
+          submittedPeriod.analysisId === sourceAnalysisId &&
           selectedPeriod.synthesis.period.mahadashaId === submittedPeriod.mahadashaId &&
           selectedPeriod.synthesis.period.antardashaId === submittedPeriod.antardashaId;
         return canShowSelectedPeriodReport ? (
