@@ -157,6 +157,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
         <DashaPage
           productAnalysisState={state.productAnalysis}
           selectionState={state.selectionState}
+          dashaTimingProjectionError={state.dashaTimingProjectionError}
           onRetry={onRetry}
           onNavigate={onNavigate}
           onSelectPeriod={onSelectPeriod}

@@ -42,7 +42,9 @@ export function createAppController(
         ...prev,
         productAnalysis: { status: 'LOADING' },
         lifeAnalysisState: { status: 'LOADING' },
-        selectionState: { status: 'IDLE' }
+        selectionState: { status: 'IDLE' },
+        dashaTimingViewModel: undefined,
+        dashaTimingProjectionError: undefined
       }));
 
       try {
@@ -57,6 +59,7 @@ export function createAppController(
         currentRunSnapshot = run.snapshot;
         const { pipelineState, horoscope } = run.snapshot;
         let dashaTimingViewModel: DashaTimingViewModel | undefined;
+        let dashaTimingProjectionError: string | undefined;
         const temporalState = pipelineState?.temporalState;
         if (temporalState && horoscope && pipelineState) {
           try {
@@ -66,8 +69,11 @@ export function createAppController(
               careerTiming: pipelineState.analysis?.careerDetail?.timing,
               wealthTiming: pipelineState.analysis?.wealthDetail?.timing
             });
-          } catch {
+          } catch (error) {
             dashaTimingViewModel = undefined;
+            dashaTimingProjectionError = error instanceof Error
+              ? error.message
+              : 'Dasha timing projection failed for an unknown reason.';
           }
         }
 
@@ -88,7 +94,8 @@ export function createAppController(
               errorMessage: errorMsg
             },
             horoscope,
-            dashaTimingViewModel
+            dashaTimingViewModel,
+            dashaTimingProjectionError
           }));
         } else {
           setState((prev) => ({
@@ -102,7 +109,8 @@ export function createAppController(
               status: 'READY'
             },
             horoscope,
-            dashaTimingViewModel
+            dashaTimingViewModel,
+            dashaTimingProjectionError
           }));
         }
       } catch (error) {
@@ -121,7 +129,9 @@ export function createAppController(
           lifeAnalysisState: {
             status: 'ERROR',
             errorMessage: errorMsg
-          }
+          },
+          dashaTimingViewModel: undefined,
+          dashaTimingProjectionError: undefined
         }));
       }
     },
