@@ -189,8 +189,7 @@ export function createAppController(
         setState(prev => ({
           ...prev,
           dashaTimingProjectionState: {
-            status: 'ERROR',
-            error: 'No active canonical analysis is available for Dasha timing retry.'
+            status: 'IDLE'
           },
           dashaTimingProjectionError: 'No active canonical analysis is available for Dasha timing retry.'
         }));
