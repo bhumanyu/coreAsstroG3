@@ -13,6 +13,8 @@ export interface ProductAnalysisState {
   /** Monotonic controller request identity that produced this state. */
   readonly requestId?: number;
   readonly analysisId?: string;
+  /** Stable identity of the base run; selected-period projections may create a new ProductAnalysis ID. */
+  readonly sourceAnalysisId?: string;
 }
 
 export interface SelectionState {
