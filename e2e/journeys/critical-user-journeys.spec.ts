@@ -65,7 +65,18 @@ test('E08-S01 first-time user enters exact birth details and reaches the canonic
   await expect(page.locator('[aria-label="Natal Chart Sign Positions"]')).toBeVisible();
 });
 
-test('E08-S02 manual IANA timezone resolution is explicit before chart calculation', async ({ page }) => {
+test('E08-S02 editing birth details recalculates rather than retaining the previous chart', async ({ page }) => {
+  await openApp(page);
+  await submitBirthDetails(page, { name: 'Chart A', dateTime: '1990-05-15T10:30', timeZone: 'Asia/Kolkata' });
+  await openBirthDialog(page);
+  await page.getByPlaceholder('e.g. CoreAstro Test Vector 1').fill('Chart B');
+  await page.getByLabel('Birth date and time').fill('1991-06-16T11:31');
+  await page.getByRole('button', { name: 'Calculate Chart' }).click();
+  await expect(page.getByText('Chart B', { exact: true }).first()).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByText('Chart A', { exact: true })).toHaveCount(0);
+});
+
+test('E08-S03 manual IANA timezone resolution is explicit before chart calculation', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
   await page.locator('#birth-time-zone').fill('');
@@ -76,7 +87,7 @@ test('E08-S02 manual IANA timezone resolution is explicit before chart calculati
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 });
 
-test('E08-S03 invalid or missing birth date is blocked without replacing the current chart', async ({ page }) => {
+test('E08-S04 invalid birth date is blocked before analysis', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
   const dateTime = page.getByLabel('Birth date and time');
@@ -86,7 +97,7 @@ test('E08-S03 invalid or missing birth date is blocked without replacing the cur
   await expect(page.getByRole('dialog')).toBeVisible();
 });
 
-test('E08-S04 ambiguous daylight-saving birth time requires the user to select the recorded offset', async ({ page }) => {
+test('E08-S05 ambiguous daylight-saving birth time requires the user to select the recorded offset', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
   await page.getByLabel('Birth date and time').fill('2025-11-02T01:30');
@@ -100,7 +111,7 @@ test('E08-S04 ambiguous daylight-saving birth time requires the user to select t
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 });
 
-test('E08-S05 completed chart is shown in Overview with its natal sign positions', async ({ page }) => {
+test('E08-EXTRA-01 completed chart is shown in Overview with its natal sign positions', async ({ page }) => {
   await openApp(page);
   await expect(page.getByLabel('Natal Chart Sign Positions')).toBeVisible();
   await expect(page.getByText('Ascendant', { exact: true })).toBeVisible();
@@ -125,7 +136,13 @@ test('E08-S07 Wealth page keeps D2 explicitly unavailable and shows canonical di
   await expect(page.getByText(/Speculation/i).first()).toBeVisible();
 });
 
-test('E08-S08 past Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
+test('E08-S08 Dasha page exposes the active temporal state', async ({ page }) => {
+  await openApp(page);
+  await navigate(page, 'Dasha & Timing');
+  await expect(page.getByText('Select Dasha Period')).toBeVisible({ timeout: 60_000 });
+});
+
+test('E08-S09 past Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
   await page.getByRole('button', { name: 'J2000 Astronomical Epoch' }).click();
@@ -135,19 +152,19 @@ test('E08-S08 past Mahadasha–Antardasha selection produces a qualified period 
   await expect(page.getByText('PAST', { exact: true }).first()).toBeVisible();
 });
 
-test('E08-S09 current Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
+test('E08-S10 current Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
   await openApp(page);
   await selectPeriodByRelation(page, 'Current');
   await expect(page.getByText('CURRENT', { exact: true }).first()).toBeVisible();
 });
 
-test('E08-S10 future Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
+test('E08-S11 future Mahadasha–Antardasha selection produces a qualified period report', async ({ page }) => {
   await openApp(page);
   await selectPeriodByRelation(page, 'Future');
   await expect(page.getByText('FUTURE', { exact: true }).first()).toBeVisible();
 });
 
-test('E08-S11 Career-only partial evidence remains visible without requiring Wealth conclusions', async ({ page }) => {
+test('E08-S12 Career-only partial evidence remains visible without requiring Wealth conclusions', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
   await page.getByRole('button', { name: 'New Delhi Birth Chart' }).click();
@@ -158,7 +175,7 @@ test('E08-S11 Career-only partial evidence remains visible without requiring Wea
   await expect(page.locator('#career-pathways')).toContainText(/PARTIAL|UNAVAILABLE|NOT_IDENTIFIED|CONDITIONAL|INSUFFICIENT_DATA|UNRESOLVED/i);
 });
 
-test('E08-S12 Wealth-only partial evidence remains visible without requiring Career conclusions', async ({ page }) => {
+test('E08-S13 Wealth-only partial evidence remains visible without requiring Career conclusions', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
   await page.getByRole('button', { name: 'J2000 Astronomical Epoch' }).click();
@@ -170,7 +187,7 @@ test('E08-S12 Wealth-only partial evidence remains visible without requiring Car
   await expect(page.getByText(/D2 calculation and interpretation have not passed independent validation/)).toBeVisible();
 });
 
-test('E08-S13 AI narrative unavailability does not replace selected-period deterministic analysis', async ({ page }) => {
+test('E08-S14 AI narrative unavailability does not replace selected-period deterministic analysis', async ({ page }) => {
   await openApp(page);
   await selectPeriodByRelation(page, 'Current');
   await expect(page.getByText('Selected Period Analysis')).toBeVisible();
@@ -178,7 +195,7 @@ test('E08-S13 AI narrative unavailability does not replace selected-period deter
   await expect(page.getByText('Selected Period Analysis')).toBeVisible();
 });
 
-test('E08-S14 saved chart profiles survive reload and can be restored', async ({ page }) => {
+test('E08-S15 saved chart profiles survive reload and can be restored', async ({ page }) => {
   await openApp(page);
   await page.getByLabel('Profile name').fill('E08 Persistent Profile');
   await page.getByRole('button', { name: 'Save current chart' }).click();
@@ -189,7 +206,7 @@ test('E08-S14 saved chart profiles survive reload and can be restored', async ({
   await expect(page.getByRole('heading', { name: 'Unified Life Domain Analysis' })).toBeVisible({ timeout: 120_000 });
 });
 
-test('E08-S15 share-link recipient preview requires explicit load before replacing chart inputs', async ({ page }) => {
+test('E08-S16 share-link recipient preview requires explicit load before replacing chart inputs', async ({ page }) => {
   await openApp(page);
   await page.getByRole('button', { name: 'Create share link' }).click();
   const shareUrl = await page.getByLabel('Created share link').inputValue();
@@ -202,7 +219,7 @@ test('E08-S15 share-link recipient preview requires explicit load before replaci
   await recipient.close();
 });
 
-test('E08-S16 canonical chart and report JSON export produces a validated download', async ({ page }) => {
+test('E08-S17 canonical chart and report JSON export produces a validated download', async ({ page }) => {
   await openApp(page);
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export chart and report JSON' }).click();
@@ -211,7 +228,7 @@ test('E08-S16 canonical chart and report JSON export produces a validated downlo
   await expect(page.getByText('Validated chart JSON download initiated.')).toBeVisible();
 });
 
-test('E08-S17 Detailed Analysis includes the canonical Career and Wealth product report', async ({ page }) => {
+test('E08-S18 Detailed Analysis includes the canonical Career and Wealth product report', async ({ page }) => {
   await openApp(page);
   await navigate(page, 'Detailed Analysis');
   await expect(page.getByRole('heading', { name: 'Career & Wealth Analysis' })).toBeVisible({ timeout: 60_000 });
@@ -219,7 +236,7 @@ test('E08-S17 Detailed Analysis includes the canonical Career and Wealth product
   await expect(page.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toBeVisible();
 });
 
-test('E08-S18 out-of-range birth coordinates are blocked and can be corrected', async ({ page }) => {
+test('E08-EXTRA-02 out-of-range birth coordinates are blocked and can be corrected', async ({ page }) => {
   await openApp(page);
   await openBirthDialog(page);
   const latitude = page.getByPlaceholder('e.g. 23.1793');
