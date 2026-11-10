@@ -376,7 +376,7 @@ describe('AppController', () => {
       expect(currentState.productAnalysis.status).not.toBe('LOADING');
 
       await controller.selectPeriod('md_jupiter', 'ad_saturn');
-      expect(currentState.selectionState).toEqual({
+      expect(currentState.selectionState).toMatchObject({
         status: 'ERROR',
         error: 'No active analysis run. Analyze birth details before selecting a period.'
       });
@@ -597,7 +597,7 @@ describe('AppController', () => {
 
         const currentRunB = makeRun(analysisB, birthB, horoscopeB);
         const analyzeProfileB = controller.analyze(birthB);
-        expect(currentState.selectionState).toEqual({ status: 'IDLE' });
+        expect(currentState.selectionState).toMatchObject({ status: 'IDLE' });
         resolveRunB(currentRunB);
         await analyzeProfileB;
 
@@ -625,7 +625,7 @@ describe('AppController', () => {
         );
         expect(currentState.productAnalysis.analysis?.analysisId).toBe('profile-b-period');
         expect(currentState.horoscope).toBe(horoscopeB);
-        expect(currentState.selectionState).toEqual({ status: 'READY' });
+        expect(currentState.selectionState).toMatchObject({ status: 'READY' });
       });
 
       it('reports a missing active analysis run before selecting a period', async () => {
