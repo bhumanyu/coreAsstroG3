@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Horoscope } from '../types';
 import type { AnalysisContext } from '../core/analysis/AnalysisContext';
 import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
-import {
-  createProductAnalysis,
-  type ProductAnalysisRun,
-  type ProductAnalysisRunSnapshot,
-  type ProductAnalysisService
+import { createProductAnalysis } from '../product/analysis/__tests__/testHelpers';
+import type {
+  ProductAnalysisRun,
+  ProductAnalysisRunSnapshot,
+  ProductAnalysisService
 } from '../product/analysis';
 import type { DashaTimingViewModel } from '../product/dasha-timing';
 import { INITIAL_APP_STATE } from '../app/AppState';
