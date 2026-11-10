@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {
   deriveAcceptanceProductStatus,
   validateAcceptanceEvidenceReport
-} from '../../src/acceptance/acceptanceEvidenceSchema.ts';
+} from './acceptanceEvidenceSchema.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
