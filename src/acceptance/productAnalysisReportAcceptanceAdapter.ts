@@ -81,7 +81,7 @@ export function createProductAnalysisReportAcceptanceAdapter(
         confidence: wealth.conclusion.confidence,
         promise: analysis.wealth.overall.promise,
         d2Relationship: analysis.wealth.d2.relationship,
-        lifecycleStatus: wealth.lifecycle?.status ?? 'UNAVAILABLE',
+        lifecycleStatus: analysis.wealth.lifecycle?.status ?? 'UNAVAILABLE',
         dimensions: (['accumulation', 'gains', 'fortune', 'speculation'] as const).map(id => ({
           id,
           status: analysis.wealth.dimensions[id].status,
