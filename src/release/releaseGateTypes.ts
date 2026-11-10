@@ -39,9 +39,7 @@ export const RELEASE_POLICY_VERSION_WITH_DEPENDENCY_WAIVERS = 4;
 
 export const RETAINED_RELEASE_BLOCKERS = Object.freeze([
   { id: 'external-reference-parity', status: 'BLOCKED' },
-  { id: 'owner-gated-non-dusthana-mechanisms', status: 'BLOCKED' },
-  { id: 'report-renderer', status: 'BLOCKED' },
-  { id: 'AppController async-state', status: 'BLOCKED' }
+  { id: 'owner-gated-non-dusthana-mechanisms', status: 'BLOCKED' }
 ] as const);
 
 export const EXCLUDED_RELEASE_CAPABILITIES = Object.freeze([
@@ -167,6 +165,13 @@ export interface Pr8AcceptanceStatus {
   readonly status: ReleaseGateStatus;
   readonly coverageStatus?: ReleaseCoverageStatus;
   readonly details?: string;
+  /** Exact commit whose adapter and browser journeys were executed. */
+  readonly testedSha?: string;
+  /** CI workflow run that executed the acceptance commands. */
+  readonly ciRunId?: string;
+  readonly ciRunUrl?: string;
+  /** Exact command-log and browser-report evidence references. */
+  readonly evidenceReferences?: readonly string[];
 }
 
 export interface ReleaseGate extends ReleaseGateResult {
