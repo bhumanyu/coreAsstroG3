@@ -142,8 +142,8 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
         speculation: { status: 'SUPPORTED', statement: '5th house stable.' }
       },
       d2: {
-        relationship: 'CONFIRMS',
-        statement: 'Hora D2 confirms liquid capital accumulation.'
+        relationship: 'UNAVAILABLE',
+        statement: 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
       },
       activation: {
         dasha: {
