@@ -4,7 +4,7 @@ export interface PlaceResult {
   country?: string;
   latitude: number;
   longitude: number;
-  timezone: string;
+  timezone?: string;
 }
 
 export type GeocodingOutcome =
@@ -146,9 +146,9 @@ function parsePlaces(payload: unknown): PlaceResult[] | undefined {
       ...(typeof place.country === 'string' ? { country: place.country } : {}),
       latitude: place.latitude,
       longitude: place.longitude,
-      timezone: typeof place.timezone === 'string' && place.timezone.length > 0
-        ? place.timezone
-        : 'UTC'
+      ...(typeof place.timezone === 'string' && place.timezone.trim().length > 0
+        ? { timezone: place.timezone }
+        : {})
     });
   }
   return places;
