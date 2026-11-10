@@ -6,6 +6,7 @@ import * as vimshottariModule from '../../engine/dasha/vimshottari';
 import * as dashaInterpModule from '../../engine/dashaInterpretation/dashaInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { FullNatalReportView } from './FullNatalReportView';
+import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 import { DashaSection } from './DashaSection';
 import { App } from '../../App';
 import { REPORT_SECTION_IDS, REPORT_NAVIGATION, formatPlanetName } from './reportUtils';
@@ -31,6 +32,13 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
   it('1. FullNatalReportView renders without crashing', () => {
     const { container } = render(<FullNatalReportView report={canonicalReport} />);
     expect(container).toBeInTheDocument();
+  });
+
+  it('renders the canonical Career and Wealth product report in the Detailed Analysis journey', () => {
+    render(<FullNatalReportView report={canonicalReport} productAnalysis={createProductAnalysis()} />);
+    expect(screen.getByRole('heading', { name: 'Career & Wealth Analysis' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toBeInTheDocument();
   });
 
   // Case 2: All major sections render
