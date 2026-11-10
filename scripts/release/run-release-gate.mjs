@@ -681,7 +681,8 @@ if (cleanPreflight) {
     candidateSha,
     testedSha,
     acceptanceFilesChangedSince,
-    acceptanceCommand?.passed === true
+    baselineReconciliationErrors.length === 0
+      && acceptanceCommand?.passed === true
       && controllerAcceptanceCommand?.passed === true
       && reportAcceptanceCommand?.passed === true
       && browserAcceptanceCommand?.passed === true
