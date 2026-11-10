@@ -7,6 +7,7 @@ export interface ProductAnalysisReportBoundaryProps {
 
 interface ProductAnalysisReportBoundaryState {
   readonly error?: Error;
+  readonly resetKey: string;
 }
 
 /** Isolates report rendering failures from the canonical analysis lifecycle. */
@@ -14,16 +15,20 @@ export class ProductAnalysisReportBoundary extends React.Component<
   ProductAnalysisReportBoundaryProps,
   ProductAnalysisReportBoundaryState
 > {
-  state: ProductAnalysisReportBoundaryState = {};
+  state: ProductAnalysisReportBoundaryState = { resetKey: this.props.resetKey };
 
   static getDerivedStateFromError(error: Error): ProductAnalysisReportBoundaryState {
     return { error };
   }
 
-  componentDidUpdate(previousProps: ProductAnalysisReportBoundaryProps): void {
-    if (previousProps.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: undefined });
+  static getDerivedStateFromProps(
+    props: ProductAnalysisReportBoundaryProps,
+    state: ProductAnalysisReportBoundaryState
+  ): Partial<ProductAnalysisReportBoundaryState> | null {
+    if (props.resetKey !== state.resetKey) {
+      return { resetKey: props.resetKey, error: undefined };
     }
+    return null;
   }
 
   private retryReport = (): void => {
