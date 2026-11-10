@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type { AppState } from './AppState';
+import type { AppState, DashaTimingProjectionState } from './AppState';
 import type { BirthDetails } from '../types';
 import type { AppPage } from './navigation/navigationTypes';
 import { ProductAnalysisService, type ProductAnalysisRunSnapshot } from '../product/analysis';
@@ -82,7 +82,7 @@ export function createAppController(
 
         let dashaTimingViewModel: DashaTimingViewModel | undefined;
         let dashaTimingProjectionError: string | undefined;
-        let projectionState = { status: 'IDLE' as const, requestId, ...(isCanonicalSuccess ? { analysisId: analysis.analysisId } : {}) };
+        let projectionState: DashaTimingProjectionState = { status: 'IDLE', requestId, ...(isCanonicalSuccess ? { analysisId: analysis.analysisId } : {}) };
 
         if (isCanonicalSuccess) {
           try {
