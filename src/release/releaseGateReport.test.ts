@@ -1032,8 +1032,8 @@ describe('release gate report', () => {
       fixtureCount: 1,
       metadata: { sourceRevision: 'a'.repeat(40) },
       pr8AcceptanceStatuses: [
-        { name: 'report-renderer', status: 'PASS', coverageStatus: 'PASSED' },
-        { name: 'AppController async-state', status: 'PASS', coverageStatus: 'PASSED' }
+        { name: 'report-renderer', status: 'BLOCKED', coverageStatus: 'NOT_TESTED', details: 'No exact-revision evidence supplied.' },
+        { name: 'AppController async-state', status: 'BLOCKED', coverageStatus: 'NOT_TESTED', details: 'No exact-revision evidence supplied.' }
       ]
     });
 
@@ -1086,14 +1086,12 @@ describe('release gate report', () => {
       ciRunUrl: 'https://github.com/example/repo/actions/runs/42760000000',
       evidenceReferences: ['adapter.log', 'browser-report.json']
     }));
-    const report = finalize({
+    expect(() => finalize({
       gates: allPassingGates(),
       fixtureCount: 1,
       metadata: { sourceRevision: sha },
       pr8AcceptanceStatuses: evidence
-    });
-
-    expect(report.gates.find(gate => gate.id === 'RG-13')?.status).toBe('BLOCKED');
+    })).toThrow(/cannot claim PASS without exact-revision CI, command-log and file evidence/);
   });
 
   it('fails closed when the same required PR-8 surface is reported more than once', () => {
