@@ -1,7 +1,7 @@
 import React from 'react';
 
 export interface ProductAnalysisReportBoundaryProps {
-  readonly resetKey: string;
+  readonly resetKey?: string;
   readonly children: React.ReactNode;
 }
 
@@ -15,7 +15,7 @@ export class ProductAnalysisReportBoundary extends React.Component<
   ProductAnalysisReportBoundaryProps,
   ProductAnalysisReportBoundaryState
 > {
-  state: ProductAnalysisReportBoundaryState = { resetKey: this.props.resetKey };
+  state: ProductAnalysisReportBoundaryState = {};
 
   static getDerivedStateFromError(error: Error): ProductAnalysisReportBoundaryState {
     return { error };
