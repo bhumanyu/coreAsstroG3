@@ -5,6 +5,8 @@ import {
   MAX_SAVED_PROFILES,
   copyBirthDetails,
   isValidProfileLabel,
+  isChartProfileStoreV0,
+  isChartProfileStoreV1,
   type ChartProfile,
   type ChartProfileStoreV0,
   type ChartProfileStoreV1
@@ -26,7 +28,8 @@ export type ChartProfileOperationError =
   | 'UNAVAILABLE'
   | 'QUOTA'
   | 'UNSUPPORTED_VERSION'
-  | 'MIGRATION_REQUIRED';
+  | 'MIGRATION_REQUIRED'
+  | 'INVALID_IMPORT';
 
 export type ChartProfileResult<T> =
   | { readonly ok: true; readonly value: T }
@@ -144,6 +147,85 @@ export class ChartProfileService {
     return write.status === 'SAVED'
       ? { ok: true, value: migrated.profiles.map(cloneProfile) }
       : { ok: false, error: write.status };
+  }
+
+  exportProfiles(): ChartProfileResult<string> {
+    const listed = this.listProfiles();
+    if (!listed.ok) return listed;
+    const store: ChartProfileStoreV1 = {
+      schemaVersion: CHART_PROFILE_SCHEMA_VERSION,
+      profiles: listed.value
+    };
+    return { ok: true, value: JSON.stringify(store, null, 2) };
+  }
+
+  importProfiles(
+    serialized: string,
+    strategy: 'SKIP_DUPLICATES' | 'RENAME_DUPLICATES' = 'SKIP_DUPLICATES'
+  ): ChartProfileResult<{ readonly importedCount: number; readonly skippedCount: number; readonly renamedCount: number }> {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(serialized);
+    } catch {
+      return { ok: false, error: 'INVALID_IMPORT' };
+    }
+
+    if (!isChartProfileStoreV1(parsed) && !isChartProfileStoreV0(parsed)) {
+      return { ok: false, error: 'INVALID_IMPORT' };
+    }
+    const imported = isChartProfileStoreV0(parsed)
+      ? toV1(parsed).profiles
+      : parsed.profiles.map(cloneProfile);
+    const existing = this.readForMutation();
+    if (!existing.ok) return existing;
+
+    const profiles = [...existing.value];
+    let importedCount = 0;
+    let skippedCount = 0;
+    let renamedCount = 0;
+    const normalizedLabel = (label: string) => label.trim().toLocaleLowerCase();
+
+    for (const source of imported) {
+      if (validateBirthDetails(source.birthDetails).length > 0) {
+        return { ok: false, error: 'INVALID_IMPORT' };
+      }
+      const idCollision = profiles.some(profile => profile.id === source.id);
+      const labelCollision = profiles.some(profile => normalizedLabel(profile.label) === normalizedLabel(source.label));
+      if (idCollision || labelCollision) {
+        if (strategy === 'SKIP_DUPLICATES') {
+          skippedCount += 1;
+          continue;
+        }
+        let nextId = source.id;
+        if (idCollision) {
+          do { nextId = this.createId(); } while (profiles.some(profile => profile.id === nextId));
+        }
+        let nextLabel = source.label;
+        if (labelCollision) {
+          let suffix = 2;
+          do {
+            nextLabel = source.label + ' (Imported ' + suffix + ')';
+            suffix += 1;
+          } while (profiles.some(profile => normalizedLabel(profile.label) === normalizedLabel(nextLabel)));
+        }
+        profiles.push({
+          ...cloneProfile(source),
+          id: nextId,
+          label: nextLabel,
+          updatedAt: this.now().toISOString()
+        });
+        importedCount += 1;
+        renamedCount += 1;
+      } else {
+        profiles.push(cloneProfile(source));
+        importedCount += 1;
+      }
+    }
+
+    if (profiles.length > MAX_SAVED_PROFILES) return { ok: false, error: 'LIMIT_REACHED' };
+    const write = writeChartProfileStore({ schemaVersion: CHART_PROFILE_SCHEMA_VERSION, profiles }, this.storage);
+    if (write.status !== 'SAVED') return { ok: false, error: write.status };
+    return { ok: true, value: { importedCount, skippedCount, renamedCount } };
   }
 
   deleteAllProfiles(): ChartProfileResult<void> {
