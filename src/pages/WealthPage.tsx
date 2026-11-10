@@ -29,6 +29,7 @@ import {
   WealthJourney,
   WealthFinancialFactsSection
 } from '../components/wealth';
+import { WealthFinancialFactsManager } from '../components/wealth/WealthFinancialFactsManager';
 
 export interface WealthPageProps {
   readonly productAnalysisState?: ProductAnalysisState;
@@ -120,6 +121,7 @@ export const WealthPage: React.FC<WealthPageProps> = ({
       </section>
 
       <WealthFinancialFactsSection financialData={viewModel.financialData} />
+      <WealthFinancialFactsManager />
 
       <section id="wealth-d2" aria-label="D2 status and qualification" className="scroll-mt-6 space-y-4">
         <WealthD2Section d2={viewModel.d2} />

@@ -131,6 +131,9 @@ describe('WealthPage (P-UI-05)', () => {
     expect(screen.getByText('Qualifications & Modifiers')).toBeInTheDocument();
     expect(screen.getByText('EXPENDITURE_PRESSURE')).toBeInTheDocument();
 
+    expect(screen.getByRole('heading', { name: 'Manage user-reported financial facts' })).toBeInTheDocument();
+    expect(screen.getByText(/These records are separate from astrological indications and CW-05/)).toBeInTheDocument();
+
     // Evidential Reasoning Provenance
     expect(screen.getByText('Evidential Reasoning Provenance')).toBeInTheDocument();
     expect(screen.getAllByText('2nd Lord Exalted')).toHaveLength(2);
@@ -214,7 +217,7 @@ describe('WealthPage (P-UI-05)', () => {
     };
     const analysis = { ...base, wealth: { ...base.wealth, financialData } };
     render(<WealthPage productAnalysisState={{ status: 'READY', analysis }} />);
-    expect(screen.getByText('Your Financial Information (C01)')).toBeInTheDocument();
+    expect(screen.getByText('Financial facts attached to this analysis (C01)')).toBeInTheDocument();
     expect(screen.getByText('Income')).toBeInTheDocument();
     expect(screen.getByText('125000 INR')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Source and provenance'));
