@@ -34,13 +34,13 @@
     "@capacitor/android": "^7.6.10",
     "@capacitor/core": "^7.6.10",
     "clsx": "^2.1.1",
+    "i18next": "^25.6.0",
     "lucide-react": "^0.475.0",
     "motion": "^12.4.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwind-merge": "^3.0.1",
-    "i18next": "^25.6.0",
-    "react-i18next": "^16.3.5"
+    "react-i18next": "^16.3.5",
+    "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.6.10",
