@@ -125,6 +125,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
   onSelectPeriod
 }) => {
   const { t } = useTranslation('navigation');
+  const { t: tAstrology } = useTranslation('astrology');
   const effectiveLifeAnalysisState: LifeAnalysisProductState =
     lifeAnalysisState ?? state.lifeAnalysisState ?? { status: 'LOADING' };
 
@@ -241,7 +242,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
                 <Compass className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] uppercase font-mono-code text-slate-400">Lagna (Ascendant)</span>
+                <span className="text-[10px] uppercase font-mono-code text-slate-400">{tAstrology('lagnaAscendant')}</span>
                 <p className="text-sm font-bold font-serif-astro text-slate-100">
                   {horoscope.rasiChart.ascendantSign}
                 </p>
@@ -256,12 +257,12 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
                 <Sun className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] uppercase font-mono-code text-slate-400">Sun Sign</span>
+                <span className="text-[10px] uppercase font-mono-code text-slate-400">{tAstrology('sunSign')}</span>
                 <p className="text-sm font-bold font-serif-astro text-slate-100">
                   {horoscope.planetFacts[Planet.SUN].sign}
                 </p>
                 <span className="text-[11px] text-slate-400 font-mono-code">
-                  {horoscope.planetFacts[Planet.SUN]?.nakshatraMetadata?.englishName || 'N/A'}
+                  {horoscope.planetFacts[Planet.SUN]?.nakshatraMetadata?.englishName || tAstrology('notAvailable')}
                 </span>
               </div>
             </div>
@@ -271,14 +272,14 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
                 <Moon className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] uppercase font-mono-code text-slate-400">Moon Sign (Rasi)</span>
+                <span className="text-[10px] uppercase font-mono-code text-slate-400">{tAstrology('moonSignRasi')}</span>
                 <p className="text-sm font-bold font-serif-astro text-slate-100">
                   {horoscope.planetFacts[Planet.MOON].sign}
                 </p>
                 <span className="text-[11px] text-slate-400 font-mono-code">
                   {horoscope.planetFacts[Planet.MOON]?.nakshatraResult
                     ? `${horoscope.planetFacts[Planet.MOON].nakshatraResult.nakshatra} (P${horoscope.planetFacts[Planet.MOON].nakshatraResult.padaNumber})`
-                    : 'N/A'}
+                    : tAstrology('notAvailable')}
                 </span>
               </div>
             </div>
@@ -288,18 +289,18 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] uppercase font-mono-code text-slate-400">Key Dignities</span>
+                <span className="text-[10px] uppercase font-mono-code text-slate-400">{tAstrology('keyDignities')}</span>
                 <p className="text-xs font-semibold text-slate-200">
                   {exaltedPlanets.length > 0 ? (
                     <span className="text-amber-300">
-                      Exalted: {exaltedPlanets.map((p) => p.planet).join(', ')}
+                      {tAstrology('exaltedPrefix')} {exaltedPlanets.map((p) => p.planet).join(', ')}
                     </span>
                   ) : (
-                    <span className="text-slate-400">No Exalted Planets</span>
+                    <span className="text-slate-400">{tAstrology('noExaltedPlanets')}</span>
                   )}
                 </p>
                 <span className="text-[11px] text-slate-400 font-mono-code block">
-                  {combustPlanets.length} Combust Planets
+                  {tAstrology('combustPlanets', { number: combustPlanets.length })}
                 </span>
               </div>
             </div>
@@ -310,15 +311,15 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
             <div className="lg:col-span-6">
               <KundaliChart
                 chart={horoscope.rasiChart}
-                title="Rasi Birth Chart (D1)"
-                subtitle={`Computed under ${state.birthDetails.ayanamsa} Ayanamsa`}
+                title={tAstrology('rasiBirthChart')}
+                subtitle={tAstrology('computedAyanamsa', { ayanamsa: state.birthDetails.ayanamsa })}
               />
             </div>
             <div className="lg:col-span-6">
               <KundaliChart
                 chart={horoscope.charts[ChartType.NAVAMSA]}
-                title="Navamsa Chart (D9)"
-                subtitle="Spouse, Soul Purpose & Strength"
+                title={tAstrology('navamsaChart')}
+                subtitle={tAstrology('navamsaSubtitle')}
               />
             </div>
           </div>

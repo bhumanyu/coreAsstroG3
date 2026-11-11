@@ -4,8 +4,10 @@ import { calculateNakshatra, calculateSign, calculateDignity, normalizeDegree } 
 import { calculateTransit } from '../engine/transitEngine';
 import { CheckCircle2, XCircle, Play, ShieldCheck, Cpu, Orbit } from 'lucide-react';
 import { Planet, Sign, DignityStatus } from '../types';
+import { useTranslation } from 'react-i18next';
 
 export const EngineValidator: React.FC = () => {
+  const { t } = useTranslation('research');
   const [isRunning, setIsRunning] = useState(false);
   const [testResults, setTestResults] = useState<{
     total: number;
@@ -172,11 +174,11 @@ export const EngineValidator: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Cpu className="w-5 h-5 text-emerald-400" />
             <h3 className="text-lg font-bold font-serif-astro text-slate-100">
-              Golden Vector Engine Validation
+              {t('goldenValidationTitle')}
             </h3>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Validates coreAstro Engine algorithms against original Java test vectors (nakshatra-test-vectors.csv & dignity tables)
+            {t('goldenValidationDescription')}
           </p>
         </div>
 
@@ -186,7 +188,7 @@ export const EngineValidator: React.FC = () => {
           className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
         >
           <Play className="w-4 h-4 fill-current" />
-          <span>{isRunning ? 'Running Validation...' : 'Run Golden Vector Suite'}</span>
+          <span>{isRunning ? t('runValidation') : t('runGoldenSuite')}</span>
         </button>
       </div>
 
@@ -195,7 +197,7 @@ export const EngineValidator: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <span className="text-xs text-slate-400 block font-mono-code uppercase">Total Tests</span>
+              <span className="text-xs text-slate-400 block font-mono-code uppercase">{t('totalTests')}</span>
               <span className="text-2xl font-bold font-mono-code text-slate-100">{testResults.total}</span>
             </div>
             <ShieldCheck className="w-8 h-8 text-indigo-400 opacity-60" />
@@ -203,7 +205,7 @@ export const EngineValidator: React.FC = () => {
 
           <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <span className="text-xs text-emerald-400 block font-mono-code uppercase">Tests Passed</span>
+              <span className="text-xs text-emerald-400 block font-mono-code uppercase">{t('testsPassed')}</span>
               <span className="text-2xl font-bold font-mono-code text-emerald-300">{testResults.passed}</span>
             </div>
             <CheckCircle2 className="w-8 h-8 text-emerald-400 opacity-80" />
@@ -211,7 +213,7 @@ export const EngineValidator: React.FC = () => {
 
           <div className="bg-rose-950/40 border border-rose-500/30 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <span className="text-xs text-rose-400 block font-mono-code uppercase">Tests Failed</span>
+              <span className="text-xs text-rose-400 block font-mono-code uppercase">{t('testsFailed')}</span>
               <span className="text-2xl font-bold font-mono-code text-rose-300">{testResults.failed}</span>
             </div>
             <XCircle className="w-8 h-8 text-rose-400 opacity-80" />
@@ -227,21 +229,28 @@ export const EngineValidator: React.FC = () => {
             <div className="flex items-center space-x-2 mb-3">
               <Orbit className="w-4 h-4 text-indigo-400" />
               <h4 className="text-sm font-bold font-serif-astro text-slate-200">
-                PR-037 Gochara Transit Engine Validation Vectors
+                {t('transitVectorTitle')}
               </h4>
             </div>
             <div className="space-y-3">
-              {testResults.transitTests.map((t, idx) => (
+              {testResults.transitTests.map((transitTest, idx) => (
                 <div key={idx} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <span className="font-bold text-indigo-300 block text-sm">
-                      {t.name}
+                      {transitTest.name}
                     </span>
                     <span className="text-slate-400 font-mono-code text-[11px]">
-                      Sign: {t.actualSign} (Expected: {t.expectedSign}) • From Moon: H{t.actualFromMoon} (Exp: H{t.expectedFromMoon}) • From Lagna: H{t.actualFromAsc} (Exp: H{t.expectedFromAsc})
+                      {t('signExpectedActual', {
+                        actualSign: transitTest.actualSign,
+                        expectedSign: transitTest.expectedSign,
+                        actualFromMoon: transitTest.actualFromMoon,
+                        expectedFromMoon: transitTest.expectedFromMoon,
+                        actualFromAsc: transitTest.actualFromAsc,
+                        expectedFromAsc: transitTest.expectedFromAsc
+                      })}
                     </span>
                   </div>
-                  {t.pass ? (
+                  {transitTest.pass ? (
                     <span className="inline-flex items-center space-x-1 text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/30">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>100% VERIFIED</span>
@@ -260,7 +269,7 @@ export const EngineValidator: React.FC = () => {
           {/* Dignity Tests */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
             <h4 className="text-sm font-bold font-serif-astro text-slate-200 mb-3">
-              Planetary Dignity Golden Test Cases
+              {t('dignityTestCases')}
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {testResults.dignityTests.map((d, idx) => (
@@ -270,7 +279,7 @@ export const EngineValidator: React.FC = () => {
                       {PLANETS_METADATA[d.planet].englishName} in {d.sign} ({d.degree}°)
                     </span>
                     <span className="text-[11px] text-slate-400 block font-mono-code">
-                      Expected: {d.expectedDignity}
+                      {t('expected')} {d.expectedDignity}
                     </span>
                   </div>
                   {d.pass ? (
@@ -287,7 +296,7 @@ export const EngineValidator: React.FC = () => {
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
             <div className="p-4 border-b border-slate-800">
               <h4 className="text-sm font-bold font-serif-astro text-slate-200">
-                Nakshatra & Pada Golden Vectors (nakshatra-test-vectors.csv)
+                {t('nakshatraVectors')}
               </h4>
             </div>
 
@@ -295,12 +304,12 @@ export const EngineValidator: React.FC = () => {
               <table className="w-full text-left text-xs font-mono-code">
                 <thead className="bg-slate-950 text-slate-400 uppercase sticky top-0 border-b border-slate-800">
                   <tr>
-                    <th className="p-3">Longitude (°</th>
-                    <th className="p-3">Expected Nakshatra</th>
-                    <th className="p-3">Actual Nakshatra</th>
-                    <th className="p-3">Expected Pada</th>
-                    <th className="p-3">Actual Pada</th>
-                    <th className="p-3 text-right">Status</th>
+                    <th className="p-3">{t('longitude')}</th>
+                    <th className="p-3">{t('expectedNakshatra')}</th>
+                    <th className="p-3">{t('actualNakshatra')}</th>
+                    <th className="p-3">{t('expectedPada')}</th>
+                    <th className="p-3">{t('actualPada')}</th>
+                    <th className="p-3 text-right">{t('status')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">

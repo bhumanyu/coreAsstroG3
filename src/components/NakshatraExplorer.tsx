@@ -3,8 +3,10 @@ import { NAKSHATRAS_METADATA, PLANETS_METADATA } from '../data/astroData';
 import { calculateNakshatra, normalizeDegree, calculateSign } from '../engine/astroEngine';
 import { Search, Compass, Sparkles, Filter } from 'lucide-react';
 import { Planet } from '../types';
+import { useTranslation } from 'react-i18next';
 
 export const NakshatraExplorer: React.FC = () => {
+  const { t } = useTranslation('astrology');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLord, setSelectedLord] = useState<string>('ALL');
   const [calcDegree, setCalcDegree] = useState<string>('213.3333333333');
@@ -30,13 +32,13 @@ export const NakshatraExplorer: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-2.5 py-1 border border-purple-500/20 rounded-md inline-block">
-              Nakshatra Calculator Engine
+              {t('nakshatraEngine')}
             </span>
             <h3 className="text-lg font-bold font-serif-astro text-slate-100">
-              Calculate Nakshatra & Pada by Longitude
+              {t('calculateNakshatraPada')}
             </h3>
             <p className="text-xs text-slate-400">
-              Enter any ecliptic longitude degree [0°, 360°) to test Nakshatra & Pada boundary logic
+              {t('longitudePrompt')}
             </p>
           </div>
 
@@ -47,7 +49,8 @@ export const NakshatraExplorer: React.FC = () => {
                 step="0.0000000001"
                 value={calcDegree}
                 onChange={(e) => setCalcDegree(e.target.value)}
-                placeholder="Degree (e.g. 173.33)"
+                placeholder={t('degreePlaceholder')}
+                aria-label={t('degreePlaceholder')}
                 className="bg-slate-950 border border-indigo-500/50 focus:border-indigo-400 rounded-xl px-4 py-2.5 text-sm font-mono-code text-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-full sm:w-48 shadow-inner"
               />
               <span className="absolute right-3 top-2.5 text-xs text-slate-500 font-mono-code">°</span>
@@ -55,21 +58,21 @@ export const NakshatraExplorer: React.FC = () => {
 
             <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center space-x-3 text-xs">
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Nakshatra</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-mono-code">{t('nakshatra')}</span>
                 <span className="font-bold text-amber-300 text-sm font-serif-astro">
                   {nakResult.nakshatra}
                 </span>
               </div>
               <div className="h-6 w-px bg-slate-800" />
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Pada</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-mono-code">{t('pada')}</span>
                 <span className="font-bold text-purple-300 font-mono-code">
-                  Pada {nakResult.padaNumber}
+                  {t('pada')} {nakResult.padaNumber}
                 </span>
               </div>
               <div className="h-6 w-px bg-slate-800" />
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Sign</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-mono-code">{t('sign')}</span>
                 <span className="font-bold text-slate-200">
                   {signResult}
                 </span>
@@ -87,20 +90,21 @@ export const NakshatraExplorer: React.FC = () => {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search Nakshatra or Deity..."
+            placeholder={t('searchNakshatraPlaceholder')}
+            aria-label={t('searchNakshatraPlaceholder')}
             className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none"
           />
         </div>
 
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Filter className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="text-xs text-slate-400">Vimshottari Lord:</span>
+          <span className="text-xs text-slate-400">{t('vimshottariLord')}</span>
           <select
             value={selectedLord}
             onChange={(e) => setSelectedLord(e.target.value)}
             className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-indigo-300 font-semibold focus:outline-none"
           >
-            <option value="ALL">All 9 Lords</option>
+            <option value="ALL">{t('allNineLords')}</option>
             {Object.values(Planet).map((p) => (
               <option key={p} value={p}>
                 {PLANETS_METADATA[p].englishName} ({PLANETS_METADATA[p].sanskritName})
@@ -133,33 +137,33 @@ export const NakshatraExplorer: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-1">
-                    Deity: <span className="text-slate-200 font-medium">{nak.deity || 'N/A'}</span>
+                    {t('deity')}: <span className="text-slate-200 font-medium">{nak.deity || t('notAvailable')}</span>
                   </p>
                 </div>
 
                 {lordInfo && (
                   <span className="px-2 py-0.5 text-[10px] font-mono-code font-bold uppercase bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded">
-                    Lord: {lordInfo.englishName}
+                    {t('lord')}: {lordInfo.englishName}
                   </span>
                 )}
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-xs font-mono-code">
                 <div>
-                  <span className="text-[10px] text-slate-500 block uppercase">Start Degree</span>
+                  <span className="text-[10px] text-slate-500 block uppercase">{t('startDegree')}</span>
                   <span className="text-slate-300">
-                    {nak.startDegree !== undefined ? `${nak.startDegree.toFixed(2)}°` : 'N/A'}
+                    {nak.startDegree !== undefined ? `${nak.startDegree.toFixed(2)}°` : t('notAvailable')}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block uppercase">End Degree</span>
+                  <span className="text-[10px] text-slate-500 block uppercase">{t('endDegree')}</span>
                   <span className="text-slate-300">
-                    {nak.endDegree !== undefined ? `${nak.endDegree.toFixed(2)}°` : 'N/A'}
+                    {nak.endDegree !== undefined ? `${nak.endDegree.toFixed(2)}°` : t('notAvailable')}
                   </span>
                 </div>
                 <div className="col-span-2 text-[11px] text-slate-400 mt-1 flex items-center space-x-1">
                   <Sparkles className="w-3 h-3 text-indigo-400" />
-                  <span>Symbol: {nak.symbol || 'N/A'}</span>
+                  <span>{t('symbol')}: {nak.symbol || t('notAvailable')}</span>
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Chart, Planet, Sign, DignityStatus } from '../types';
 import { SIGNS_METADATA, SIGNS_ORDER, PLANETS_METADATA } from '../data/astroData';
 import { calculateSign, calculateDignity } from '../engine/astroEngine';
+import { useTranslation } from 'react-i18next';
 
 interface KundaliChartProps {
   chart: Chart;
@@ -11,13 +12,14 @@ interface KundaliChartProps {
 
 export const KundaliChart: React.FC<KundaliChartProps> = ({ chart, title, subtitle }) => {
   const [style, setStyle] = useState<'NORTH' | 'SOUTH'>('NORTH');
+  const { t } = useTranslation('astrology');
 
   const ascSign = (chart as any).ascendantSign || (chart as any).ascendant?.sign || Sign.ARIES;
   if (!chart || !chart.positions) {
     return (
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 text-center text-slate-400 shadow-xl">
-        <h3 className="text-sm font-semibold text-slate-300">{title || 'Chart'}</h3>
-        <p className="text-xs text-slate-500 mt-1">{subtitle || 'Chart data is unavailable.'}</p>
+        <h3 className="text-sm font-semibold text-slate-300">{title || t('chart')}</h3>
+        <p className="text-xs text-slate-500 mt-1">{subtitle || t('chartUnavailable')}</p>
       </div>
     );
   }
@@ -91,7 +93,7 @@ export const KundaliChart: React.FC<KundaliChartProps> = ({ chart, title, subtit
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-800 pb-3">
         <div>
           <h3 className="text-base font-bold font-serif-astro text-slate-100 flex items-center space-x-2">
-            <span>{title || ((chart as any).type ? `${(chart as any).type} Divisional Chart` : 'Divisional Chart')}</span>
+            <span>{title || ((chart as any).type ? t('divisionalChart', { type: (chart as any).type }) : t('chart'))}</span>
             <span className="px-2 py-0.5 text-[10px] font-mono-code bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded">
               ASC: {ascSignMeta.englishName} ({ascSignMeta.sanskritName})
             </span>
@@ -108,7 +110,7 @@ export const KundaliChart: React.FC<KundaliChartProps> = ({ chart, title, subtit
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            North Indian
+            {t('northIndian')}
           </button>
           <button
             onClick={() => setStyle('SOUTH')}
@@ -118,7 +120,7 @@ export const KundaliChart: React.FC<KundaliChartProps> = ({ chart, title, subtit
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            South Indian
+            {t('southIndian')}
           </button>
         </div>
       </div>
@@ -141,7 +143,7 @@ export const KundaliChart: React.FC<KundaliChartProps> = ({ chart, title, subtit
                         {(chart as any).type || 'D1'}
                       </span>
                       <span className="text-[11px] text-slate-400 font-mono-code mt-1">
-                        Lagna: {ascSignMeta.sanskritName}
+                        {t('lagna')}: {ascSignMeta.sanskritName}
                       </span>
                       <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-amber-400"></span> Exalted
@@ -181,7 +183,7 @@ export const KundaliChart: React.FC<KundaliChartProps> = ({ chart, title, subtit
                   {/* Planets List */}
                   <div className="my-1 flex flex-wrap gap-1 text-[11px] font-mono-code">
                     {planets.length === 0 ? (
-                      <span className="text-[10px] text-slate-700 font-sans italic">empty</span>
+                      <span className="text-[10px] text-slate-700 font-sans italic">{t('empty')}</span>
                     ) : (
                       planets.map((p, pIdx) => (
                         <span

@@ -4,12 +4,14 @@ import { calculateTransit } from '../engine/transitEngine';
 import { calculateCurrentTransitLongitudes } from '../engine/transitEphemeris';
 import { PLANETS_METADATA, SIGNS_METADATA } from '../data/astroData';
 import { Calendar, Compass, Eye, ShieldAlert, Sparkles, Clock, Layers, Orbit } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface GocharaTransitViewProps {
   horoscope: Horoscope;
 }
 
 export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscope }) => {
+  const { t } = useTranslation('astrology');
   const [transitDateStr, setTransitDateStr] = useState<string>(
     new Date().toISOString().slice(0, 16)
   );
@@ -58,13 +60,13 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
           <div>
             <div className="flex items-center space-x-2 text-indigo-400 text-xs font-mono-code mb-1">
               <Orbit className="w-4 h-4 animate-spin-slow text-indigo-400" />
-              <span>PR-037 • GOCHARA TRANSIT CALCULATOR</span>
+              <span>{t('gocharaContractTag')}</span>
             </div>
             <h2 className="text-2xl font-bold font-serif-astro text-slate-100">
-              Vedic Planetary Gochara (Transit Analysis)
+              {t('gocharaTitle')}
             </h2>
             <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-              Deterministic whole-sign transit positions, house offsets relative to natal Moon (Rasi) and Ascendant (Lagna), and active Graha Drishti aspect beams.
+              {t('gocharaDescription')}
             </p>
           </div>
 
@@ -73,7 +75,7 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                Transit Timestamp
+                {t('transitTimestamp')}
               </span>
               <span className="text-[10px] font-mono-code bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded">
                 {horoscope.birthDetails.ayanamsa}
@@ -82,6 +84,7 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
 
             <input
               type="datetime-local"
+              aria-label={t('transitTimestamp')}
               value={transitDateStr}
               onChange={(e) => setTransitDateStr(e.target.value)}
               className="bg-slate-950 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono-code w-full"
@@ -92,19 +95,19 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
                 onClick={() => setTransitDateStr(new Date().toISOString().slice(0, 16))}
                 className="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded transition-colors cursor-pointer"
               >
-                Now
+                {t('now')}
               </button>
               <button
                 onClick={() => setPresetDate(6)}
                 className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded transition-colors cursor-pointer"
               >
-                +6 Mths
+                {t('sixMonths')}
               </button>
               <button
                 onClick={() => setPresetDate(12)}
                 className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded transition-colors cursor-pointer"
               >
-                +1 Year
+                {t('oneYear')}
               </button>
             </div>
           </div>
@@ -117,7 +120,7 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
               🌙
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 uppercase font-mono-code block">Natal Moon (Janma Rasi)</span>
+              <span className="text-[10px] text-slate-400 uppercase font-mono-code block">{t('natalMoon')}</span>
               <span className="text-sm font-bold text-slate-200 font-serif-astro">
                 {transitAnalysis.natalMoonSign}
               </span>
@@ -132,7 +135,7 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
               🌅
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 uppercase font-mono-code block">Natal Ascendant (Lagna)</span>
+              <span className="text-[10px] text-slate-400 uppercase font-mono-code block">{t('natalAscendant')}</span>
               <span className="text-sm font-bold text-slate-200 font-serif-astro">
                 {transitAnalysis.natalAscendantSign}
               </span>
@@ -148,12 +151,12 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
                 🪐
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 uppercase font-mono-code block">Saturn Gochara</span>
+                <span className="text-[10px] text-slate-400 uppercase font-mono-code block">{t('saturnGochara')}</span>
                 <span className="text-sm font-bold text-purple-300 font-serif-astro">
-                  House {transitAnalysis.results[Planet.SATURN]?.housePosition.fromMoon} from Moon
+                  {t('houseFromMoon', { number: transitAnalysis.results[Planet.SATURN]?.housePosition.fromMoon })}
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono-code block">
-                  in {transitAnalysis.results[Planet.SATURN]?.position.sign}
+                  {t('inSign', { sign: transitAnalysis.results[Planet.SATURN]?.position.sign })}
                 </span>
               </div>
             </div>
@@ -165,12 +168,12 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
                 ✨
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 uppercase font-mono-code block">Jupiter Gochara</span>
+                <span className="text-[10px] text-slate-400 uppercase font-mono-code block">{t('jupiterGochara')}</span>
                 <span className="text-sm font-bold text-emerald-300 font-serif-astro">
-                  House {transitAnalysis.results[Planet.JUPITER]?.housePosition.fromMoon} from Moon
+                  {t('houseFromMoon', { number: transitAnalysis.results[Planet.JUPITER]?.housePosition.fromMoon })}
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono-code block">
-                  in {transitAnalysis.results[Planet.JUPITER]?.position.sign}
+                  {t('inSign', { sign: transitAnalysis.results[Planet.JUPITER]?.position.sign })}
                 </span>
               </div>
             </div>
@@ -201,25 +204,25 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
 
               <div className="text-xs space-y-1.5 mt-3 pt-2 border-t border-slate-800/80">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Transit Sign:</span>
+                  <span className="text-slate-400">{t('transitSign')}</span>
                   <span className="font-semibold text-slate-200">{res.position.sign}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Nakshatra:</span>
+                  <span className="text-slate-400">{t('nakshatra')}:</span>
                   <span className="font-mono-code text-indigo-300 text-[11px]">
                     {res.position.nakshatraResult.nakshatra} P{res.position.nakshatraResult.padaNumber}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">From Moon:</span>
+                  <span className="text-slate-400">{t('fromMoon')}</span>
                   <span className="font-bold text-indigo-400">
-                    House {res.housePosition.fromMoon}
+                    {t('houseFromMoon', { number: res.housePosition.fromMoon })}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">From Lagna:</span>
+                  <span className="text-slate-400">{t('fromLagna')}</span>
                   <span className="font-bold text-purple-400">
-                    House {res.housePosition.fromAscendant}
+                    {t('houseFromLagna', { number: res.housePosition.fromAscendant })}
                   </span>
                 </div>
               </div>
@@ -234,11 +237,11 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
           <div className="flex items-center space-x-2">
             <Compass className="w-4 h-4 text-indigo-400" />
             <h3 className="text-sm font-bold text-slate-200 font-serif-astro">
-              All Vedic Transit Positions & Graha Drishti Beams
+              {t('allTransitPositions')}
             </h3>
           </div>
           <span className="text-xs text-slate-400 font-mono-code">
-            Whole Sign Gochara Calculations
+            {t('wholeSignCalculations')}
           </span>
         </div>
 
@@ -246,13 +249,13 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
           <table className="w-full text-left text-xs text-slate-300 font-sans">
             <thead className="bg-slate-950/80 text-slate-400 text-[11px] uppercase font-mono-code border-b border-slate-800">
               <tr>
-                <th className="py-3 px-4">Planet</th>
-                <th className="py-3 px-4">Transit Longitude</th>
-                <th className="py-3 px-4">Transit Sign</th>
-                <th className="py-3 px-4">Nakshatra & Pada</th>
-                <th className="py-3 px-4 text-center">House (from Moon)</th>
-                <th className="py-3 px-4 text-center">House (from Lagna)</th>
-                <th className="py-3 px-4">Active Graha Drishti Targets</th>
+                <th className="py-3 px-4">{t('planet')}</th>
+                <th className="py-3 px-4">{t('transitLongitude')}</th>
+                <th className="py-3 px-4">{t('transitSign')}</th>
+                <th className="py-3 px-4">{t('nakshatraPada')}</th>
+                <th className="py-3 px-4 text-center">{t('houseFromMoonHeader')}</th>
+                <th className="py-3 px-4 text-center">{t('houseFromLagnaHeader')}</th>
+                <th className="py-3 px-4">{t('activeDrishtiTargets')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono-code text-[12px]">
@@ -285,7 +288,7 @@ export const GocharaTransitView: React.FC<GocharaTransitViewProps> = ({ horoscop
                         {res.position.nakshatraResult.nakshatra}
                       </span>{' '}
                       <span className="text-slate-400">
-                        (Pada {res.position.nakshatraResult.padaNumber})
+                        ({t('pada')} {res.position.nakshatraResult.padaNumber})
                       </span>
                     </td>
 

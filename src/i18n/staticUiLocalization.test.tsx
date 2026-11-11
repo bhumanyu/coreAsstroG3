@@ -9,7 +9,11 @@ import { ProductAnalysisReportView } from '../components/fullNatalReport/Product
 import { BirthFormModal } from '../components/BirthFormModal';
 import { ChartProfileManager } from '../features/chart-profiles/ChartProfileManager';
 import { ChartExportControl } from '../features/chart-export/ChartExportControl';
-import { AyanamsaType } from '../types';
+import { AyanamsaType, type Chart } from '../types';
+import { RelationshipMatrix } from '../components/RelationshipMatrix';
+import { NakshatraExplorer } from '../components/NakshatraExplorer';
+import { EngineValidator } from '../components/EngineValidator';
+import { KundaliChart } from '../components/KundaliChart';
 
 describe('shared UI localization', () => {
   it('renders shell and report status copy in Hindi', async () => {
@@ -57,5 +61,24 @@ describe('shared UI localization', () => {
     expect(screen.getAllByText('सहेजी गई कुंडली प्रोफ़ाइलें')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'कुंडली और रिपोर्ट JSON निर्यात करें' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('My saved chart')).toBeInTheDocument();
+  });
+
+  it('localizes research labels while retaining canonical planetary data labels', async () => {
+    await i18n.changeLanguage('hi');
+    render(
+      <>
+        <RelationshipMatrix />
+        <NakshatraExplorer />
+        <EngineValidator />
+        <KundaliChart chart={{ positions: {} } as Chart} />
+      </>
+    );
+
+    expect(screen.getByText('प्राकृतिक ग्रह संबंध (नैसर्गिक संबंध)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'गोल्डन वेक्टर परीक्षण चलाएँ' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('नक्षत्र या देवता खोजें...')).toBeInTheDocument();
+    expect(screen.getByText('उत्तर भारतीय')).toBeInTheDocument();
+    expect(screen.getByText('दक्षिण भारतीय')).toBeInTheDocument();
+    expect(screen.getAllByText('Sun').length).toBeGreaterThan(0);
   });
 });

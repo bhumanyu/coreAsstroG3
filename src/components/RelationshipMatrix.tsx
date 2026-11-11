@@ -3,8 +3,10 @@ import { Planet, Relationship } from '../types';
 import { PLANETS_METADATA } from '../data/astroData';
 import { calculateNaturalRelationship } from '../engine/astroEngine';
 import { Heart, ShieldAlert, Minus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const RelationshipMatrix: React.FC = () => {
+  const { t } = useTranslation('astrology');
   const classicalPlanets = [
     Planet.SUN,
     Planet.MOON,
@@ -43,10 +45,10 @@ export const RelationshipMatrix: React.FC = () => {
     <div className="space-y-6">
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
         <h3 className="text-lg font-bold font-serif-astro text-slate-100">
-          Natural Relationships (Naisargika Sambandha)
+          {t('relationshipTitle')}
         </h3>
         <p className="text-xs text-slate-400 mt-0.5">
-          Classical Vedic friendship and enmity rules tabulated between the 7 primary planets
+          {t('relationshipDescription')}
         </p>
       </div>
 
@@ -55,7 +57,7 @@ export const RelationshipMatrix: React.FC = () => {
           <table className="w-full text-center text-xs">
             <thead>
               <tr className="border-b border-slate-800 text-slate-400 font-mono-code uppercase">
-                <th className="p-3 text-left">Planet ↓ \ Towards →</th>
+                <th className="p-3 text-left">{t('planetToward')}</th>
                 {classicalPlanets.map((p) => (
                   <th key={p} className="p-3">
                     <span className="block font-bold text-slate-200">{PLANETS_METADATA[p].code}</span>
@@ -85,7 +87,7 @@ export const RelationshipMatrix: React.FC = () => {
                     if (p1 === p2) {
                       return (
                         <td key={p2} className="p-2 bg-slate-950/60">
-                          <span className="text-slate-600 font-mono-code font-bold">Self</span>
+                          <span className="text-slate-600 font-mono-code font-bold">{t('self')}</span>
                         </td>
                       );
                     }

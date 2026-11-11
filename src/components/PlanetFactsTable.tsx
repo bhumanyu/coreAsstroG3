@@ -2,12 +2,14 @@ import React from 'react';
 import { PlanetFacts, DignityStatus, PlanetCondition, Planet } from '../types';
 import { PLANETS_METADATA } from '../data/astroData';
 import { Flame, ShieldAlert, Sparkles, Navigation } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface PlanetFactsTableProps {
   planetFacts: Record<Planet, any>;
 }
 
 export const PlanetFactsTable: React.FC<PlanetFactsTableProps> = ({ planetFacts }) => {
+  const { t } = useTranslation('astrology');
   const planets = Object.values(Planet);
 
   const getDignityBadge = (status: DignityStatus) => {
@@ -65,10 +67,10 @@ export const PlanetFactsTable: React.FC<PlanetFactsTableProps> = ({ planetFacts 
       <div className="p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h3 className="text-lg font-bold font-serif-astro text-slate-100">
-            Planetary Facts & Dignity Analysis
+            {t('planetaryFactsTitle')}
           </h3>
           <p className="text-xs text-slate-400">
-            Computed ecliptic coordinates, signs, nakshatra padas, dignities, and motion states
+            {t('planetaryFactsDescription')}
           </p>
         </div>
       </div>
@@ -77,14 +79,14 @@ export const PlanetFactsTable: React.FC<PlanetFactsTableProps> = ({ planetFacts 
         <table className="w-full text-left text-sm text-slate-300">
           <thead className="bg-slate-950 text-xs text-slate-400 uppercase tracking-wider font-mono-code border-b border-slate-800">
             <tr>
-              <th className="px-4 py-3">Planet</th>
-              <th className="px-4 py-3">Longitude (°</th>
-              <th className="px-4 py-3">House</th>
-              <th className="px-4 py-3">Sign (Rasi)</th>
-              <th className="px-4 py-3">Nakshatra & Pada</th>
-              <th className="px-4 py-3">Dignity</th>
-              <th className="px-4 py-3">Combustion (Asta)</th>
-              <th className="px-4 py-3">Motion</th>
+              <th className="px-4 py-3">{t('planet')}</th>
+              <th className="px-4 py-3">{t('longitude')}</th>
+              <th className="px-4 py-3">{t('houseHeader')}</th>
+              <th className="px-4 py-3">{t('signRasi')}</th>
+              <th className="px-4 py-3">{t('nakshatraPada')}</th>
+              <th className="px-4 py-3">{t('dignity')}</th>
+              <th className="px-4 py-3">{t('combustionAsta')}</th>
+              <th className="px-4 py-3">{t('motion')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
@@ -118,13 +120,13 @@ export const PlanetFactsTable: React.FC<PlanetFactsTableProps> = ({ planetFacts 
 
                   {/* House */}
                   <td className="px-4 py-3 font-semibold text-purple-300 font-mono-code">
-                    House {fact.house}
+                    {t('house')} {fact.house}
                   </td>
 
                   {/* Sign */}
                   <td className="px-4 py-3">
                     <span className="font-semibold text-slate-200">
-                      {fact.signMetadata?.englishName || 'N/A'}
+                      {fact.signMetadata?.englishName || t('notAvailable')}
                     </span>
                     <span className="text-xs text-slate-400 block font-mono-code">
                       {fact.signMetadata?.sanskritName || ''} ({degInSign}°)
@@ -134,13 +136,13 @@ export const PlanetFactsTable: React.FC<PlanetFactsTableProps> = ({ planetFacts 
                   {/* Nakshatra & Pada */}
                   <td className="px-4 py-3">
                     <span className="font-medium text-slate-200">
-                      {fact.nakshatraMetadata?.englishName || 'N/A'}
+                      {fact.nakshatraMetadata?.englishName || t('notAvailable')}
                     </span>
                     <span className="text-xs text-slate-400 block font-mono-code">
-                      Pada {fact.nakshatraResult?.padaNumber ?? 1} • Lord:{' '}
+                      {t('pada')} {fact.nakshatraResult?.padaNumber ?? 1} • {t('lord')}:{' '}
                       {fact.nakshatraMetadata?.lord && PLANETS_METADATA[fact.nakshatraMetadata.lord as Planet]
                         ? PLANETS_METADATA[fact.nakshatraMetadata.lord as Planet].englishName
-                        : 'N/A'}
+                        : t('notAvailable')}
                     </span>
                   </td>
 
