@@ -10,6 +10,7 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { ChartExportControl } from '../features/chart-export/ChartExportControl';
 import { ChartShareControls } from '../features/chart-sharing/ChartShareControls';
 import { Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import '../i18n/i18n';
 
 interface AppShellContentProps {
@@ -116,9 +117,10 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
 };
 
 export const AppShell: React.FC = () => {
+  const { t } = useTranslation('common');
   return (
     <ThemeProvider>
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-400">Loading language resources...</div>}>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-400" role="status" aria-live="polite">{t('loadingLanguageResources')}</div>}>
         <AppShellContent />
       </Suspense>
     </ThemeProvider>

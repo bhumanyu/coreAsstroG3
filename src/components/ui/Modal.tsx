@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import { cn } from './cn';
+import { useTranslation } from 'react-i18next';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export const Modal: React.FC<ModalProps> = ({
   className,
   showCloseButton = true
 }) => {
+  const { t } = useTranslation('common');
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -121,7 +123,7 @@ export const Modal: React.FC<ModalProps> = ({
                     type="button"
                     onClick={onClose}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 dark:hover:text-white light:hover:text-slate-900 hover:bg-slate-800/60 dark:hover:bg-slate-800/60 light:hover:bg-slate-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                    aria-label="Close modal"
+                    aria-label={t('close')}
                   >
                     <X className="w-5 h-5" aria-hidden="true" />
                   </button>

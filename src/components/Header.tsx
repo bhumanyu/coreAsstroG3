@@ -26,8 +26,9 @@ export interface HeaderProps {
   setActiveTab?: (tab: AppTab) => void;
 }
 
-export const Brand: React.FC = () => (
-  <div className="flex items-center space-x-3">
+export const Brand: React.FC = () => {
+  const { t } = useTranslation('common');
+  return <div className="flex items-center space-x-3">
     <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 p-0.5 shadow-lg shadow-indigo-500/25">
       <div className="w-full h-full bg-slate-950 dark:bg-slate-950 light:bg-slate-900 rounded-[10px] flex items-center justify-center">
         <Compass className="w-5 h-5 text-indigo-400" aria-hidden="true" />
@@ -35,10 +36,10 @@ export const Brand: React.FC = () => (
     </div>
     <div>
       <h1 className="text-xl font-bold tracking-wide font-serif-astro text-slate-100 dark:text-slate-100 light:text-slate-900">CoreAstro</h1>
-      <p className="text-xs text-slate-400 dark:text-slate-400 light:text-slate-500">Vedic Astrology</p>
+      <p className="text-xs text-slate-400 dark:text-slate-400 light:text-slate-500">{t('brandDescriptor')}</p>
     </div>
-  </div>
-);
+  </div>;
+};
 
 export interface BirthContextButtonProps {
   birthContext?: BirthContext;
@@ -47,12 +48,13 @@ export interface BirthContextButtonProps {
 
 export const BirthContextButton: React.FC<BirthContextButtonProps> = ({ birthContext, onOpenBirthForm }) => {
   const { t } = useTranslation('settings');
+  const { t: tCommon } = useTranslation('common');
   return (
     <button type="button" onClick={onOpenBirthForm}
       className="flex items-center space-x-2 bg-slate-800/80 hover:bg-slate-750 dark:bg-slate-800/80 dark:hover:bg-slate-700 light:bg-slate-100 light:hover:bg-slate-200 border border-slate-700/80 dark:border-slate-700/80 light:border-slate-300 hover:border-indigo-500/50 rounded-xl px-3 py-1.5 text-xs text-slate-300 dark:text-slate-300 light:text-slate-700 transition-all cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
       title={t('editBirthDetails')}>
       <Calendar className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600 shrink-0" aria-hidden="true" />
-      <span className="font-medium text-slate-200 dark:text-slate-200 light:text-slate-900">{birthContext?.name || 'Birth Chart'}</span>
+      <span className="font-medium text-slate-200 dark:text-slate-200 light:text-slate-900">{birthContext?.name || tCommon('birthChart')}</span>
       {birthContext?.placeOfBirth && <><span className="text-slate-500" aria-hidden="true">•</span><span className="text-emerald-400 flex items-center gap-1 font-medium"><MapPin className="w-3 h-3 shrink-0" aria-hidden="true" />{birthContext.placeOfBirth}</span></>}
       {birthContext?.formattedDate && <><span className="text-slate-500" aria-hidden="true">•</span><span className="font-mono-code text-slate-400">{birthContext.formattedDate} {birthContext.zoneLabel}</span></>}
       {birthContext?.ayanamsa && <><span className="text-slate-500" aria-hidden="true">•</span><span className="text-purple-400 font-semibold">{birthContext.ayanamsa}</span></>}
