@@ -12,12 +12,20 @@ function flattenKeys(value: Record<string, unknown>, prefix = ''): string[] {
 }
 
 describe('English/Hindi localization resource parity', () => {
-  it.each(['common', 'navigation', 'settings'])('has matching non-empty %s keys', (namespace) => {
-    const en = resources.en[namespace as keyof typeof resources.en] as Record<string, unknown>;
-    const hi = resources.hi[namespace as keyof typeof resources.hi] as Record<string, unknown>;
+  it.each(Object.keys(resources.en) as Array<keyof typeof resources.en>)('has matching non-empty %s keys', (namespace) => {
+    const en = resources.en[namespace] as Record<string, unknown>;
+    const hi = resources.hi[namespace] as Record<string, unknown>;
     expect(flattenKeys(hi)).toEqual(flattenKeys(en));
-    for (const value of Object.values(hi)) {
-      expect(value).not.toBe('');
-    }
+
+    const assertNonEmptyStrings = (value: Record<string, unknown>) => {
+      for (const child of Object.values(value)) {
+        if (child !== null && typeof child === 'object' && !Array.isArray(child)) {
+          assertNonEmptyStrings(child as Record<string, unknown>);
+        } else if (typeof child === 'string') {
+          expect(child).not.toBe('');
+        }
+      }
+    };
+    assertNonEmptyStrings(hi);
   });
 });

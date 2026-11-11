@@ -17,7 +17,8 @@ This branch implements the first localization foundation for CoreAstroG3 based o
 - Existing theme state remains isolated in `ThemeContext`.
 - Localization is initialized before React renders.
 - Header switcher is available in desktop and mobile layouts.
-- Initial namespaces: `common`, `navigation`, `settings`.
+- Translation convention: each component uses `useTranslation('namespace')` for its UI-copy namespace.
+- Namespaces: `common`, `navigation`, `settings`, `birthForm`, `dateTime`, `validation`, `profiles`, `dashboard`, `astrology`, `dasha`, `career`, `wealth`, `reports`, `research`, `errors`, `chartExport`, and `chartSharing`.
 
 ## Added
 - `src/i18n/config.ts`, `resources.ts`, `i18n.ts`, `languageManager.ts`, `localeUtils.ts`.
