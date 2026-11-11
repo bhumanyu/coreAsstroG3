@@ -3,19 +3,11 @@ import type { BirthDetails } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { chartShareResultToBirthDetails, decodeChartShareUrlFragment } from './chartShareService';
 import type { ChartShareCodecError } from './chartShareCodec';
+import { useTranslation } from 'react-i18next';
 
 export interface ChartShareControlsProps {
   readonly onLoadBirthDetails: (birthDetails: BirthDetails) => void;
 }
-
-const SAFE_ERROR: Record<ChartShareCodecError, string> = {
-  MISSING: 'No share data was found in this link.',
-  TOO_LARGE: 'This share link is too large to process.',
-  BAD_ENCODING: 'This share link is malformed.',
-  BAD_JSON: 'This share link contains unreadable data.',
-  UNSUPPORTED_VERSION: 'This share link uses a version this app does not support.',
-  INVALID_INPUT: 'This share link contains invalid chart inputs.'
-};
 
 const stripChartFragmentParam = () => {
   if (!globalThis.location?.hash.includes('chart=')) return;
@@ -30,8 +22,9 @@ const stripChartFragmentParam = () => {
 export const ChartShareControls: React.FC<ChartShareControlsProps> = ({
   onLoadBirthDetails
 }) => {
+  const { t } = useTranslation('chartSharing');
   const [pendingBirth, setPendingBirth] = useState<BirthDetails>();
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ChartShareCodecError | ''>('');
 
   useEffect(() => {
     const fragment = globalThis.location?.hash ?? '';
@@ -42,7 +35,7 @@ export const ChartShareControls: React.FC<ChartShareControlsProps> = ({
       setPendingBirth(birth);
       setError('');
     } else if (!decoded.ok) {
-      setError(SAFE_ERROR[decoded.error]);
+      setError(decoded.error);
     }
   }, []);
 
@@ -64,17 +57,17 @@ export const ChartShareControls: React.FC<ChartShareControlsProps> = ({
 
   return (
     <section aria-labelledby="shared-chart-heading" className="mb-6 rounded-xl border border-slate-700/70 bg-slate-900/50 p-4">
-      <h2 id="shared-chart-heading" className="text-lg font-semibold">Shared chart</h2>
+      <h2 id="shared-chart-heading" className="text-lg font-semibold">{t('heading')}</h2>
       {pendingBirth && (
         <div className="mt-3 rounded-lg border border-slate-700 p-3">
-          <p role="status">A shared chart is available to load. Current chart inputs will be replaced only if you choose to load them.</p>
-          <Button type="button" className="mt-2" onClick={loadShared}>Load shared chart inputs</Button>
+          <p role="status">{t('available')}</p>
+          <Button type="button" className="mt-2" onClick={loadShared}>{t('load')}</Button>
         </div>
       )}
       {error && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <p role="alert" className="text-sm text-rose-300">{error}</p>
-          <Button type="button" variant="outline" size="sm" onClick={dismiss}>Dismiss</Button>
+          <p role="alert" className="text-sm text-rose-300">{t(`errors.${error}`)}</p>
+          <Button type="button" variant="outline" size="sm" onClick={dismiss}>{t('dismiss')}</Button>
         </div>
       )}
     </section>

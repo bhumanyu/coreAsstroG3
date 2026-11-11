@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2, Search } from 'lucide-react';
 import { searchPlacesDetailed } from '../services/geocoding';
 import type { PlaceResult } from '../services/geocoding';
+import { useTranslation } from 'react-i18next';
 
 interface PlaceAutocompleteProps {
   onSelect: (place: PlaceResult) => void;
@@ -12,8 +13,9 @@ interface PlaceAutocompleteProps {
 export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
   onSelect,
   initialValue = '',
-  placeholder = 'Search city (e.g., Muzaffarpur, London, New York)...'
+  placeholder
 }) => {
+  const { t } = useTranslation('dateTime');
   const [query, setQuery] = useState(initialValue);
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -70,7 +72,7 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
           default:
             setResults([]);
             setOpen(true);
-            setSearchError('Place search is temporarily unavailable. Please try again.');
+            setSearchError('placeSearchUnavailable');
             break;
         }
       }).catch(() => {
@@ -78,7 +80,7 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
         setLoading(false);
         setResults([]);
         setOpen(true);
-        setSearchError('Place search is temporarily unavailable. Please try again.');
+        setSearchError('placeSearchUnavailable');
       });
     }, 300);
 
@@ -127,7 +129,7 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
               setOpen(true);
             }
           }}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('searchCityPlaceholder')}
           className="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-lg pl-9 pr-9 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-500"
         />
         {loading ? (
@@ -141,6 +143,7 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
               setOpen(false);
             }}
             className="text-xs text-slate-500 hover:text-slate-300 absolute right-3 px-1"
+            aria-label={t('clearSearch')}
           >
             ✕
           </button>
@@ -151,23 +154,24 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
 
       {loading && (
         <div role="status" aria-live="polite" className="mt-1 text-xs text-slate-400">
-          Searching places…
+          {t('searchingPlaces')}
         </div>
       )}
       {!loading && noResults && (
         <div role="status" aria-live="polite" className="mt-1 text-xs text-slate-400">
-          No places found. You can still enter coordinates and time zone manually.
+          {t('noPlaces')}
         </div>
       )}
       {!loading && searchError && (
         <div role="alert" aria-live="polite" className="mt-1 flex items-center gap-2 text-xs text-rose-400">
-          <span>{searchError}</span>
+          <span>{t(searchError)}</span>
           <button
             type="button"
             onClick={() => setRetryCount((count) => count + 1)}
             className="underline underline-offset-2 hover:text-rose-300"
+            aria-label={t('retry')}
           >
-            Retry
+            {t('retry')}
           </button>
         </div>
       )}

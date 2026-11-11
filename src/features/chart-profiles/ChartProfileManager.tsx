@@ -3,6 +3,7 @@ import type { BirthDetails } from '../../types';
 import { Button } from '../../components/ui/Button';
 import { ChartProfileService, type ChartProfileOperationError } from './chartProfileService';
 import type { ChartProfile } from './chartProfileSchema';
+import { useTranslation } from 'react-i18next';
 
 export interface ChartProfileManagerProps {
   readonly currentBirthDetails: BirthDetails;
@@ -11,17 +12,17 @@ export interface ChartProfileManagerProps {
 }
 
 const ERROR_MESSAGES: Record<ChartProfileOperationError, string> = {
-  DUPLICATE_ID: 'A profile with this identifier already exists.',
-  LIMIT_REACHED: 'The browser profile limit has been reached. Delete a profile before saving or importing more.',
-  INVALID_LABEL: 'Enter a name of 1-80 characters.',
-  NOT_FOUND: 'That saved profile is no longer available. Refresh the list and try again.',
-  INVALID_BIRTH_DETAILS: 'The saved chart inputs are invalid and cannot be restored.',
-  CORRUPT: 'Saved chart data is damaged. It has been left unchanged; delete the browser data only if you choose to start over.',
-  UNAVAILABLE: 'Browser storage is unavailable. Your chart is unchanged; try again in a browser that allows local storage.',
-  QUOTA: 'Browser storage is full. Delete an unused profile or free browser storage and try again.',
-  UNSUPPORTED_VERSION: 'These saved profiles were created by a newer app version and were left unchanged.',
-  MIGRATION_REQUIRED: 'Saved profiles need a format update. Use the profile refresh action before changing them.',
-  INVALID_IMPORT: 'The selected file is not a valid supported CoreAstroG3 profile export. Existing profiles were not changed.'
+  DUPLICATE_ID: 'errors.DUPLICATE_ID',
+  LIMIT_REACHED: 'errors.LIMIT_REACHED',
+  INVALID_LABEL: 'errors.INVALID_LABEL',
+  NOT_FOUND: 'errors.NOT_FOUND',
+  INVALID_BIRTH_DETAILS: 'errors.INVALID_BIRTH_DETAILS',
+  CORRUPT: 'errors.CORRUPT',
+  UNAVAILABLE: 'errors.UNAVAILABLE',
+  QUOTA: 'errors.QUOTA',
+  UNSUPPORTED_VERSION: 'errors.UNSUPPORTED_VERSION',
+  MIGRATION_REQUIRED: 'errors.MIGRATION_REQUIRED',
+  INVALID_IMPORT: 'errors.INVALID_IMPORT'
 };
 
 export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
@@ -29,6 +30,7 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
   onRestoreBirthDetails,
   service: suppliedService
 }) => {
+  const { t } = useTranslation('profiles');
   const service = useMemo(() => suppliedService ?? new ChartProfileService(), [suppliedService]);
   const [profiles, setProfiles] = useState<readonly ChartProfile[]>([]);
   const [label, setLabel] = useState('');
@@ -37,7 +39,7 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
   const [editingProfile, setEditingProfile] = useState<ChartProfile | null>(null);
   const [editLabel, setEditLabel] = useState('');
   const [deletingProfile, setDeletingProfile] = useState<ChartProfile | null>(null);
-  const [statusMessage, setStatusMessage] = useState('');
+  const [statusMessage, setStatusMessage] = useState<{ key: string; values?: Record<string, string | number> } | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -62,11 +64,11 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
     const result = service.saveProfile(label, currentBirthDetails);
     if (!result.ok) {
       setErrorMessage(ERROR_MESSAGES[result.error]);
-      setStatusMessage('');
+      setStatusMessage(null);
       return;
     }
     setLabel('');
-    setStatusMessage(`Saved "${result.value.label}" on this browser/device.`);
+    setStatusMessage({ key: 'messages.saved', values: { name: result.value.label } });
     setErrorMessage('');
     refresh();
   };
@@ -83,10 +85,10 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
     const result = service.renameProfile(editingProfile.id, editLabel);
     if (!result.ok) {
       setErrorMessage(ERROR_MESSAGES[result.error]);
-      setStatusMessage('');
+      setStatusMessage(null);
       return;
     }
-    setStatusMessage(`Renamed profile to "${result.value.label}".`);
+    setStatusMessage({ key: 'messages.renamed', values: { name: result.value.label } });
     setErrorMessage('');
     setEditingProfile(null);
     refresh();
@@ -96,11 +98,11 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
     const result = service.restoreProfile(profile.id);
     if (!result.ok) {
       setErrorMessage(ERROR_MESSAGES[result.error]);
-      setStatusMessage('');
+      setStatusMessage(null);
       return;
     }
     onRestoreBirthDetails(result.value);
-    setStatusMessage(`Restored "${profile.label}". Analysis will run from these inputs.`);
+    setStatusMessage({ key: 'messages.restored', values: { name: profile.label } });
     setErrorMessage('');
   };
 
@@ -109,10 +111,10 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
     const result = service.deleteProfile(deletingProfile.id);
     if (!result.ok) {
       setErrorMessage(ERROR_MESSAGES[result.error]);
-      setStatusMessage('');
+      setStatusMessage(null);
       return;
     }
-    setStatusMessage(`Deleted "${deletingProfile.label}" from this browser/device.`);
+    setStatusMessage({ key: 'messages.deleted', values: { name: deletingProfile.label } });
     setErrorMessage('');
     setDeletingProfile(null);
     refresh();
@@ -122,7 +124,7 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
     const result = service.exportProfiles();
     if (!result.ok) {
       setErrorMessage(ERROR_MESSAGES[result.error]);
-      setStatusMessage('');
+      setStatusMessage(null);
       return;
     }
     try {
@@ -133,11 +135,11 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
       link.download = 'coreastro-chart-profiles.json';
       link.click();
       URL.revokeObjectURL(url);
-      setStatusMessage('Exported saved profiles to a JSON file. The file contains the birth details in those profiles; store it securely.');
+      setStatusMessage({ key: 'messages.exported' });
       setErrorMessage('');
     } catch {
-      setErrorMessage('The browser could not create the profile export file. Your saved profiles are unchanged.');
-      setStatusMessage('');
+      setErrorMessage('errors.exportFileFailed');
+      setStatusMessage(null);
     }
   };
 
@@ -150,15 +152,22 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
       const result = service.importProfiles(contents, importStrategy);
       if (!result.ok) {
         setErrorMessage(ERROR_MESSAGES[result.error]);
-        setStatusMessage('');
+        setStatusMessage(null);
       } else {
-        setStatusMessage(`Imported ${result.value.importedCount} profile(s); skipped ${result.value.skippedCount}; renamed ${result.value.renamedCount} duplicate(s).`);
+        setStatusMessage({
+          key: 'messages.imported',
+          values: {
+            importedCount: result.value.importedCount,
+            skippedCount: result.value.skippedCount,
+            renamedCount: result.value.renamedCount
+          }
+        });
         setErrorMessage('');
         refresh();
       }
     } catch {
       setErrorMessage(ERROR_MESSAGES.INVALID_IMPORT);
-      setStatusMessage('');
+      setStatusMessage(null);
     } finally {
       input.value = '';
     }
@@ -166,53 +175,53 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
 
   return (
     <section aria-labelledby="chart-profile-heading" className="mb-6 rounded-xl border border-slate-700/70 bg-slate-900/50 p-4">
-      <h2 id="chart-profile-heading" className="text-lg font-semibold">Saved chart profiles</h2>
-      <p className="mt-1 text-sm text-slate-300">Saved on this browser/device only. These profiles are not backed up or synced.</p>
-      <p className="mt-1 text-xs text-amber-200">Import/export files contain saved birth details (date, time, timezone and coordinates). Keep exported files private.</p>
+      <h2 id="chart-profile-heading" className="text-lg font-semibold">{t('savedTitle')}</h2>
+      <p className="mt-1 text-sm text-slate-300">{t('privacy')}</p>
+      <p className="mt-1 text-xs text-amber-200">{t('privacyExport')}</p>
 
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <label className="flex min-w-56 flex-col gap-1 text-sm">
-          Profile name
+          {t('name')}
           <input
-            aria-label="Profile name"
+            aria-label={t('name')}
             maxLength={80}
             value={label}
             onChange={event => setLabel(event.currentTarget.value)}
             className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2"
           />
         </label>
-        <Button type="button" onClick={handleSave} disabled={!label.trim()}>Save current chart</Button>
+        <Button type="button" onClick={handleSave} disabled={!label.trim()}>{t('saveCurrent')}</Button>
         <Button type="button" variant="outline" onClick={() => {
           const result = service.migrateProfileStore();
           if (result.ok) {
             setProfiles(result.value);
             setErrorMessage('');
-            setStatusMessage('Saved profile list refreshed.');
+            setStatusMessage({ key: 'messages.refreshed' });
           } else {
             setErrorMessage(ERROR_MESSAGES[result.error]);
-            setStatusMessage('');
+            setStatusMessage(null);
           }
-        }}>Refresh profile list</Button>
-        <Button type="button" variant="outline" onClick={handleExport}>Export JSON</Button>
+        }}>{t('refresh')}</Button>
+        <Button type="button" variant="outline" onClick={handleExport}>{t('export')}</Button>
       </div>
 
       <div className="mt-3 flex flex-wrap items-end gap-2">
         <label className="flex min-w-56 flex-col gap-1 text-sm">
-          Import duplicate handling
+          {t('duplicateHandling')}
           <select
-            aria-label="Import duplicate handling"
+            aria-label={t('duplicateHandling')}
             value={importStrategy}
             onChange={event => setImportStrategy(event.target.value as typeof importStrategy)}
             className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2"
           >
-            <option value="SKIP_DUPLICATES">Skip duplicate IDs or names</option>
-            <option value="RENAME_DUPLICATES">Rename duplicate IDs or names</option>
+            <option value="SKIP_DUPLICATES">{t('skipDuplicates')}</option>
+            <option value="RENAME_DUPLICATES">{t('renameDuplicates')}</option>
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          Import profile JSON
+          {t('importJson')}
           <input
-            aria-label="Import profile JSON"
+            aria-label={t('importJson')}
             type="file"
             accept=".json,application/json"
             onChange={handleImportFile}
@@ -223,45 +232,45 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
 
       <div className="mt-4">
         <label className="flex max-w-sm flex-col gap-1 text-sm">
-          Search saved profiles
+          {t('search')}
           <input
-            aria-label="Search saved profiles"
+            aria-label={t('search')}
             value={searchTerm}
             onChange={event => setSearchTerm(event.currentTarget.value)}
-            placeholder="Filter by profile name"
+            placeholder={t('filterPlaceholder')}
             className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2"
           />
         </label>
       </div>
 
-      {errorMessage && <p role="alert" className="mt-3 text-sm text-rose-300">{errorMessage}</p>}
-      {statusMessage && <p role="status" className="mt-3 text-sm text-emerald-300">{statusMessage}</p>}
+      {errorMessage && <p role="alert" className="mt-3 text-sm text-rose-300">{t(errorMessage)}</p>}
+      {statusMessage && <p role="status" className="mt-3 text-sm text-emerald-300">{t(statusMessage.key, statusMessage.values)}</p>}
       {visibleProfiles.length > 0 ? (
         <ul className="mt-4 divide-y divide-slate-700/70">
           {visibleProfiles.map(profile => (
             <li key={profile.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
               <span>{profile.label}</span>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => handleRestore(profile)}>Restore</Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => openRenameDialog(profile)}>Rename</Button>
-                <Button type="button" size="sm" variant="danger" onClick={() => setDeletingProfile(profile)}>Delete</Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => handleRestore(profile)}>{t('restore')}</Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => openRenameDialog(profile)}>{t('rename')}</Button>
+                <Button type="button" size="sm" variant="danger" onClick={() => setDeletingProfile(profile)}>{t('delete')}</Button>
               </div>
             </li>
           ))}
         </ul>
-      ) : !errorMessage ? <p className="mt-3 text-sm text-slate-400">{profiles.length === 0 ? 'No saved profiles on this browser/device.' : 'No profiles match this search.'}</p> : null}
+      ) : !errorMessage ? <p className="mt-3 text-sm text-slate-400">{t(profiles.length === 0 ? 'noProfiles' : 'noMatches')}</p> : null}
 
       {editingProfile && (
         <div role="dialog" aria-modal="true" aria-labelledby="rename-profile-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <form onSubmit={handleConfirmRename} className="w-full max-w-md space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-5 shadow-2xl">
-            <h3 id="rename-profile-title" className="text-lg font-semibold">Rename saved profile</h3>
+            <h3 id="rename-profile-title" className="text-lg font-semibold">{t('renameTitle')}</h3>
             <label className="flex flex-col gap-1 text-sm">
-              New profile name
+              {t('newName')}
               <input autoFocus maxLength={80} value={editLabel} onChange={event => setEditLabel(event.currentTarget.value)} className="rounded-lg border border-slate-600 bg-slate-950 px-3 py-2" />
             </label>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setEditingProfile(null)}>Cancel</Button>
-              <Button type="submit" disabled={!editLabel.trim()}>Save name</Button>
+              <Button type="button" variant="outline" onClick={() => setEditingProfile(null)}>{t('cancel', { ns: 'common' })}</Button>
+              <Button type="submit" disabled={!editLabel.trim()}>{t('saveName')}</Button>
             </div>
           </form>
         </div>
@@ -270,11 +279,11 @@ export const ChartProfileManager: React.FC<ChartProfileManagerProps> = ({
       {deletingProfile && (
         <div role="dialog" aria-modal="true" aria-labelledby="delete-profile-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-md space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-5 shadow-2xl">
-            <h3 id="delete-profile-title" className="text-lg font-semibold">Delete saved profile?</h3>
-            <p className="text-sm text-slate-300">Delete "{deletingProfile.label}" from this browser/device? This cannot be undone.</p>
+            <h3 id="delete-profile-title" className="text-lg font-semibold">{t('deleteTitle')}</h3>
+            <p className="text-sm text-slate-300">{t('deleteConfirmation', { name: deletingProfile.label })}</p>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setDeletingProfile(null)}>Cancel</Button>
-              <Button type="button" variant="danger" onClick={handleConfirmDelete}>Delete profile</Button>
+              <Button type="button" variant="outline" onClick={() => setDeletingProfile(null)}>{t('cancel', { ns: 'common' })}</Button>
+              <Button type="button" variant="danger" onClick={handleConfirmDelete}>{t('deleteProfile')}</Button>
             </div>
           </div>
         </div>

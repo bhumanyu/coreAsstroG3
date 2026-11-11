@@ -9,6 +9,7 @@ import { validateBirthDetails, type BirthValidationError } from '../core/validat
 import { getTimeZoneResolutionStatus, isValidIanaTimeZone, resolveLocalDateTime, type TimeZoneResolutionStatus } from '../core/time/timeZoneResolution';
 import { ChartProfileService, type ChartProfileOperationError } from '../features/chart-profiles/chartProfileService';
 import type { ChartProfile } from '../features/chart-profiles/chartProfileSchema';
+import { useTranslation } from 'react-i18next';
 
 interface BirthFormModalProps {
   isOpen: boolean;
@@ -19,20 +20,6 @@ interface BirthFormModalProps {
 }
 
 const PROFILE_SAVE_WARNING_CLOSE_DELAY_MS = 1600;
-
-const PROFILE_ERROR_MESSAGES: Record<ChartProfileOperationError, string> = {
-  DUPLICATE_ID: 'A profile with this identifier already exists.',
-  LIMIT_REACHED: 'Profile limit reached. Delete a saved profile before saving another.',
-  INVALID_LABEL: 'Enter a name of 1-80 characters.',
-  NOT_FOUND: 'That saved profile is no longer available. Reopen the form and try again.',
-  INVALID_BIRTH_DETAILS: 'The saved chart inputs are invalid and cannot be restored.',
-  CORRUPT: 'Saved chart data is damaged. It has been left unchanged; delete the browser data only if you choose to start over.',
-  UNAVAILABLE: 'Browser storage is unavailable. Your chart is unchanged; try again in a browser that allows local storage.',
-  QUOTA: 'Browser storage is full. Delete an unused profile or free browser storage and try again.',
-  UNSUPPORTED_VERSION: 'These saved profiles were created by a newer app version and were left unchanged.',
-  MIGRATION_REQUIRED: 'Saved profiles need a format update. Try reopening the form to refresh them.',
-  INVALID_IMPORT: 'The selected file is not a valid supported CoreAstroG3 profile export. Existing profiles were not changed.'
-};
 
 export function zonedWallClockToUtcISO(dateTimeStr: string, timeZone: string): string {
   const resolution = resolveLocalDateTime(dateTimeStr, timeZone);
@@ -70,6 +57,11 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   onSave,
   service: suppliedService
 }) => {
+  const { t: tBirth } = useTranslation('birthForm');
+  const { t: tDateTime } = useTranslation('dateTime');
+  const { t: tProfiles } = useTranslation('profiles');
+  const { t: tValidation } = useTranslation('validation');
+  const { t: tCommon } = useTranslation('common');
   const profileService = useMemo(
     () => suppliedService ?? new ChartProfileService(),
     [suppliedService]
@@ -90,11 +82,19 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [selectedAmbiguousInstant, setSelectedAmbiguousInstant] = useState('');
   const [timeZoneSource, setTimeZoneSource] = useState<'PROVIDER' | 'USER'>('PROVIDER');
   const [savedProfiles, setSavedProfiles] = useState<readonly ChartProfile[]>([]);
-  const [profileListError, setProfileListError] = useState('');
+  const [profileListError, setProfileListError] = useState<ChartProfileOperationError | ''>('');
   const [saveAsProfile, setSaveAsProfile] = useState(false);
-  const [profileSaveWarning, setProfileSaveWarning] = useState('');
+  const [profileSaveWarning, setProfileSaveWarning] = useState<ChartProfileOperationError | ''>('');
   const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
   const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
+  const validationMessage = (error?: BirthValidationError) => {
+    if (!error) return '';
+    const value = error.field === 'latitude' ? latitude
+      : error.field === 'longitude' ? longitude
+        : error.field === 'timeZone' ? timeZone
+          : error.field === 'ayanamsa' ? ayanamsa : '';
+    return tValidation(error.code, { value });
+  };
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -115,7 +115,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
       setProfileListError('');
     } else {
       setSavedProfiles([]);
-      setProfileListError(PROFILE_ERROR_MESSAGES[result.error]);
+      setProfileListError(result.error);
     }
   }, [profileService]);
 
@@ -209,7 +209,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
         setProfileSaveWarning('');
       } else {
         profileSaveFailed = true;
-        setProfileSaveWarning(PROFILE_ERROR_MESSAGES[saved.error]);
+        setProfileSaveWarning(saved.error);
       }
     }
 
@@ -252,7 +252,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     if (result.ok) {
       refreshProfiles();
     } else {
-      setProfileListError(PROFILE_ERROR_MESSAGES[result.error]);
+      setProfileListError(result.error);
     }
   };
 
@@ -295,14 +295,14 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   id="birth-modal-title"
                   className="text-lg font-bold font-serif-astro text-slate-100 dark:text-slate-100 light:text-slate-900"
                 >
-                  Calculate Horoscope & Positions
+                  {tBirth('title')}
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 className="p-1.5 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-800 light:hover:bg-slate-100 text-slate-400 hover:text-white dark:hover:text-white light:hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                aria-label="Close modal"
+                aria-label={tBirth('close')}
               >
                 <X className="w-5 h-5" aria-hidden="true" />
               </button>
@@ -313,13 +313,13 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
               {/* Saved Chart Profiles */}
               <div>
                 <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-400 light:text-slate-500 uppercase tracking-wider mb-2 font-mono-code">
-                  Saved Chart Profiles
+                  {tBirth('profilesTitle')}
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-500 light:text-slate-500 mb-2">
-                  Saved on this browser/device only. These profiles are not backed up or synced.
+                  {tBirth('profilePrivacy')}
                 </p>
                 {profileListError && (
-                  <p role="alert" className="mb-2 text-xs text-rose-400">{profileListError}</p>
+                  <p role="alert" className="mb-2 text-xs text-rose-400">{tProfiles(`errors.${profileListError}`)}</p>
                 )}
                 {savedProfiles.length > 0 ? (
                   <ul className="space-y-1.5">
@@ -335,17 +335,17 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleDeleteProfile(profile)}
-                          aria-label={`Delete profile ${profile.label}`}
+                          aria-label={tBirth('deleteProfile', { name: profile.label })}
                           className="shrink-0 rounded-lg border border-slate-700/60 dark:border-slate-700/60 light:border-slate-200 px-2.5 py-2 text-[11px] font-medium text-slate-400 hover:text-rose-300 hover:border-rose-500/40 transition-colors cursor-pointer"
                         >
-                          Delete
+                          {tBirth('delete')}
                         </button>
                       </li>
                     ))}
                   </ul>
                 ) : !profileListError ? (
                   <p className="text-xs text-slate-500 dark:text-slate-500 light:text-slate-500">
-                    No saved profiles on this browser/device.
+                    {tBirth('noProfiles')}
                   </p>
                 ) : null}
               </div>
@@ -356,13 +356,13 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1">
-                      Chart Name / Subject
+                      {tBirth('chartName')}
                     </label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. CoreAstro Test Vector 1"
+                      placeholder={tBirth('namePlaceholder')}
                       className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
@@ -370,12 +370,12 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   <div>
                     <label className="block text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1 flex items-center space-x-1">
                       <MapPin className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600" aria-hidden="true" />
-                      <span>Place of Birth (Search city)</span>
+                      <span>{tBirth('place')}</span>
                     </label>
                     <PlaceAutocomplete
                       initialValue={placeOfBirth}
                       onSelect={handleSelectPlace}
-                      placeholder="e.g. Ujjain, Muzaffarpur, London..."
+                      placeholder={tBirth('placePlaceholder')}
                     />
                   </div>
                 </div>
@@ -385,12 +385,12 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   <div>
                     <label className="block text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1 flex items-center space-x-1">
                       <Clock className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600" aria-hidden="true" />
-                      <span>Date & Time (local)</span>
+                      <span>{tBirth('dateTime')}</span>
                     </label>
                     <DateTimeSelector dateTimeStr={dateTimeStr} onChange={(value) => { setDateTimeStr(value); setSelectedAmbiguousInstant(''); }} />
                     {validationErrors.some((e) => e.field === 'dateTimeStr') && (
                       <p className="mt-1 text-xs text-rose-400">
-                        {validationErrors.find((e) => e.field === 'dateTimeStr')?.message}
+                        {validationMessage(validationErrors.find((e) => e.field === 'dateTimeStr'))}
                       </p>
                     )}
                   </div>
@@ -398,7 +398,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   <div>
                     <label className="block text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1 flex items-center space-x-1">
                       <Globe className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600" aria-hidden="true" />
-                      <span>Time Zone</span>
+                      <span>{tBirth('timeZone')}</span>
                     </label>
                     <input
                       id="birth-time-zone"
@@ -406,7 +406,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       required
                       value={timeZone}
                       onChange={(e) => { setTimeZone(e.target.value); setTimeZoneSource('USER'); setSelectedAmbiguousInstant(''); }}
-                      placeholder="Enter IANA timezone, e.g. Asia/Kolkata"
+                      placeholder={tBirth('timeZonePlaceholder')}
                       className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                     <datalist id="birth-time-zone-options">
@@ -420,13 +420,13 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     </datalist>
                     {timeZoneStatus === 'UNRESOLVED' && (
                       <p role="alert" className="mt-1 text-xs text-amber-300">
-                        Timezone is unresolved. Enter a valid IANA timezone; the chart cannot be calculated until it is resolved.
+                        {tDateTime('timeZoneUnresolved')}
                       </p>
                     )}
-                    {timeZoneStatus === 'INVALID' && <p role="alert" className="mt-1 text-xs text-rose-400">The timezone identifier is invalid. Enter a valid IANA timezone.</p>}
+                    {timeZoneStatus === 'INVALID' && <p role="alert" className="mt-1 text-xs text-rose-400">{tDateTime('timeZoneInvalid')}</p>}
                     {validationErrors.some((e) => e.field === 'timeZone') && (
                       <p className="mt-1 text-xs text-rose-400">
-                        {validationErrors.find((e) => e.field === 'timeZone')?.message}
+                        {validationMessage(validationErrors.find((e) => e.field === 'timeZone'))}
                       </p>
                     )}
                   </div>
@@ -434,19 +434,19 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
 
                 {localDateTimeResolution.status === 'UNIQUE' && (
                   <p className="text-xs text-slate-400" aria-live="polite">
-                    Resolved instant: <span className="font-mono text-slate-200">{localDateTimeResolution.candidates[0].instant}</span>
+                    {tDateTime('resolvedInstant')} <span className="font-mono text-slate-200">{localDateTimeResolution.candidates[0].instant}</span>
                     {' '}({localDateTimeResolution.candidates[0].offsetLabel})
                   </p>
                 )}
                 {localDateTimeResolution.status === 'AMBIGUOUS' && selectedAmbiguousInstant && (
                   <p className="text-xs text-slate-400" aria-live="polite">
-                    Selected instant: <span className="font-mono text-slate-200">{selectedAmbiguousInstant}</span>
+                    {tDateTime('selectedInstant')} <span className="font-mono text-slate-200">{selectedAmbiguousInstant}</span>
                   </p>
                 )}
                 {localDateTimeResolution.status === 'AMBIGUOUS' && (
                   <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
                     <label htmlFor="birth-time-ambiguity" className="block text-xs font-semibold text-amber-200 mb-1">
-                      This local time occurs twice. Select the recorded offset.
+                      {tDateTime('ambiguous')}
                     </label>
                     <select
                       id="birth-time-ambiguity"
@@ -454,7 +454,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       onChange={(event) => setSelectedAmbiguousInstant(event.target.value)}
                       className="w-full rounded-lg border border-amber-500/40 bg-slate-950 px-3 py-2 text-sm text-slate-100"
                     >
-                      <option value="">Choose the correct occurrence</option>
+                      <option value="">{tDateTime('chooseOccurrence')}</option>
                       {localDateTimeResolution.candidates.map((candidate) => (
                         <option key={candidate.instant} value={candidate.instant}>
                           {candidate.offsetLabel} — {candidate.instant}
@@ -465,7 +465,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                 )}
                 {localDateTimeResolution.status === 'NONEXISTENT' && (
                   <p role="alert" className="text-xs text-rose-400">
-                    This local time does not exist in the selected timezone because the clock moves forward. Choose a valid time.
+                    {tDateTime('nonexistent')}
                   </p>
                 )}
 
@@ -474,7 +474,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   <div>
                     <label className="block text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1 flex items-center space-x-1">
                       <MapPin className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600" aria-hidden="true" />
-                      <span>Latitude (°N)</span>
+                      <span>{tBirth('latitude')}</span>
                     </label>
                     <input
                       type="number"
@@ -482,12 +482,12 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       value={latitude}
                       onChange={(e) => setLatitude(e.target.value)}
                       required
-                      placeholder="e.g. 23.1793"
+                      placeholder={tBirth('latitudePlaceholder')}
                       className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono-code"
                     />
                     {validationErrors.some((e) => e.field === 'latitude') && (
                       <p className="mt-1 text-xs text-rose-400">
-                        {validationErrors.find((e) => e.field === 'latitude')?.message}
+                        {validationMessage(validationErrors.find((e) => e.field === 'latitude'))}
                       </p>
                     )}
                   </div>
@@ -495,7 +495,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   <div>
                     <label className="block text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1 flex items-center space-x-1">
                       <MapPin className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600" aria-hidden="true" />
-                      <span>Longitude (°E)</span>
+                      <span>{tBirth('longitude')}</span>
                     </label>
                     <input
                       type="number"
@@ -503,12 +503,12 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       value={longitude}
                       onChange={(e) => setLongitude(e.target.value)}
                       required
-                      placeholder="e.g. 75.7849"
+                      placeholder={tBirth('longitudePlaceholder')}
                       className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono-code"
                     />
                     {validationErrors.some((e) => e.field === 'longitude') && (
                       <p className="mt-1 text-xs text-rose-400">
-                        {validationErrors.find((e) => e.field === 'longitude')?.message}
+                        {validationMessage(validationErrors.find((e) => e.field === 'longitude'))}
                       </p>
                     )}
                   </div>
@@ -517,7 +517,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                 {/* Ayanamsa Selection */}
                 <div>
                   <label className="block text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1">
-                    Ayanamsa System
+                    {tBirth('ayanamsa')}
                   </label>
                   <select
                     value={ayanamsa}
@@ -532,7 +532,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   </select>
                   {validationErrors.some((e) => e.field === 'ayanamsa') && (
                     <p className="mt-1 text-xs text-rose-400">
-                      {validationErrors.find((e) => e.field === 'ayanamsa')?.message}
+                      {validationMessage(validationErrors.find((e) => e.field === 'ayanamsa'))}
                     </p>
                   )}
                 </div>
@@ -546,11 +546,11 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       onChange={(e) => setSaveAsProfile(e.target.checked)}
                       className="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-500 focus:ring-indigo-500 cursor-pointer"
                     />
-                    <span>Save as chart profile</span>
+                    <span>{tBirth('saveAsProfile')}</span>
                   </label>
                   {profileSaveWarning && (
                     <p role="alert" className="text-xs text-amber-300 sm:order-first sm:w-full">
-                      {profileSaveWarning} The chart was still calculated.
+                      {tBirth('profileSaveWarning', { message: tProfiles(`errors.${profileSaveWarning}`) })}
                     </p>
                   )}
                   <div className="flex justify-end space-x-3">
@@ -559,7 +559,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     onClick={onClose}
                     className="px-4 py-2 bg-slate-800/80 hover:bg-slate-700 dark:bg-slate-800/80 dark:hover:bg-slate-700 light:bg-slate-100 light:hover:bg-slate-200 border border-slate-700/80 dark:border-slate-700/80 light:border-slate-300 rounded-xl text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 transition-colors cursor-pointer"
                   >
-                    Cancel
+                    {tCommon('cancel')}
                   </button>
                   <motion.button
                     type="submit"
@@ -568,7 +568,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     className="px-5 py-2 bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl text-xs font-bold text-white transition-all shadow-lg shadow-indigo-600/30 cursor-pointer flex items-center space-x-1.5 border border-indigo-400/30"
                   >
                     <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>Calculate Chart</span>
+                    <span>{tBirth('calculate')}</span>
                   </motion.button>
                   </div>
                 </div>
