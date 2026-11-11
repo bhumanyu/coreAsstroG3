@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Clock, AlertTriangle } from 'lucide-react';
 import type { LifeAnalysisTimingViewModel } from '../../product/life-analysis/lifeAnalysisTypes';
 import { formatDomainDisplayName } from '../../product/life-analysis/domainPresentationUtils';
@@ -13,6 +14,7 @@ export const SharedTimingSection: React.FC<SharedTimingSectionProps> = ({
   sharedTiming,
   onNavigateToDashaTiming
 }) => {
+  const { t } = useTranslation('reports');
   if (!sharedTiming || sharedTiming.length === 0) {
     return null;
   }
@@ -23,7 +25,7 @@ export const SharedTimingSection: React.FC<SharedTimingSectionProps> = ({
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-indigo-400" aria-hidden="true" />
           <h2 id="shared-timing-heading" className="text-base sm:text-lg font-semibold text-slate-100">
-            Shared Cross-Domain Timing Activations
+            {t('lifeAnalysis.sharedTimingTitle')}
           </h2>
           <span className="text-xs font-mono-code text-slate-400">
             ({sharedTiming.length})
@@ -36,7 +38,7 @@ export const SharedTimingSection: React.FC<SharedTimingSectionProps> = ({
             onClick={onNavigateToDashaTiming}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors cursor-pointer"
           >
-            <span>View Full Dasha & Timing View</span>
+            <span>{t('lifeAnalysis.viewDasha')}</span>
           </button>
         )}
       </div>
@@ -68,7 +70,7 @@ export const SharedTimingSection: React.FC<SharedTimingSectionProps> = ({
                 {timing.isConflict && (
                   <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-medium">
                     <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>Current Tension / Divergent Effects</span>
+                    <span>{t('lifeAnalysis.divergentEffects')}</span>
                   </div>
                 )}
               </div>
@@ -80,7 +82,7 @@ export const SharedTimingSection: React.FC<SharedTimingSectionProps> = ({
               <div className="mt-4 pt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[11px] font-mono-code text-slate-400">
-                    Impact by Domain:
+                    {t('lifeAnalysis.impactByDomain')}:
                   </span>
                   {timing.domains.map((d) => (
                     <span
@@ -96,7 +98,7 @@ export const SharedTimingSection: React.FC<SharedTimingSectionProps> = ({
                 </div>
 
                 <span className="text-[10px] font-mono-code text-slate-500">
-                  {timing.evidenceCount} linked evidence points
+                  {t('lifeAnalysis.linkedEvidence', { count: timing.evidenceCount })}
                 </span>
               </div>
             </article>

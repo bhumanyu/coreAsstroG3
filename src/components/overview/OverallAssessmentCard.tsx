@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { OverviewOverall } from '../../product/analysis/overviewViewModel';
 import { formatConfidence } from './overviewFormat';
 import { Sparkles, ShieldCheck, AlertCircle, Clock } from 'lucide-react';
@@ -8,33 +9,34 @@ export interface OverallAssessmentCardProps {
 }
 
 export const OverallAssessmentCard: React.FC<OverallAssessmentCardProps> = ({ overall }) => {
+  const { t } = useTranslation('dashboard');
   const statusBadge = () => {
     switch (overall.status) {
       case 'READY':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium font-mono-code bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
-            <span>Complete Assessment</span>
+            <span>{t('assessment.complete')}</span>
           </span>
         );
       case 'PARTIAL':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium font-mono-code bg-amber-500/10 border border-amber-500/20 text-amber-300">
             <Clock className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
-            <span>Partial Assessment</span>
+            <span>{t('assessment.partial')}</span>
           </span>
         );
       case 'ERROR':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium font-mono-code bg-rose-500/10 border border-rose-500/20 text-rose-300">
             <AlertCircle className="w-3.5 h-3.5 text-rose-400" aria-hidden="true" />
-            <span>Assessment Issue</span>
+            <span>{t('assessment.issue')}</span>
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium font-mono-code bg-slate-800 text-slate-300 border border-slate-700">
-            <span>Assessment In Progress</span>
+            <span>{t('assessment.inProgress')}</span>
           </span>
         );
     }
@@ -60,7 +62,7 @@ export const OverallAssessmentCard: React.FC<OverallAssessmentCardProps> = ({ ov
 
   return (
     <section
-      aria-label="Overall Astrological Assessment"
+      aria-label={t('assessment.ariaLabel')}
       className="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-5 sm:p-6 shadow-sm"
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-800/80">
@@ -70,10 +72,10 @@ export const OverallAssessmentCard: React.FC<OverallAssessmentCardProps> = ({ ov
           </div>
           <div>
             <h2 className="text-base font-semibold text-slate-100">
-              Overall Synthesis & Assessment
+              {t('assessment.title')}
             </h2>
             <span className="text-xs text-slate-400">
-              Aggregated life domain synthesis
+              {t('assessment.subtitle')}
             </span>
           </div>
         </div>

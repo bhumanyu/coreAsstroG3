@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, BrainCircuit } from 'lucide-react';
 
 export const ReasoningLoadingState: React.FC = () => {
+  const { t } = useTranslation('reports');
   return (
     <div
       role="status"
@@ -9,7 +11,7 @@ export const ReasoningLoadingState: React.FC = () => {
       aria-live="polite"
       className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-10 text-center flex flex-col items-center justify-center gap-4 my-6"
     >
-      <span className="sr-only">Compiling Astrological Reasoning Graph…</span>
+      <span className="sr-only">{t('reasoning.status.loadingScreenReader')}</span>
 
       <div className="relative">
         <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
@@ -20,10 +22,10 @@ export const ReasoningLoadingState: React.FC = () => {
 
       <div className="space-y-1.5">
         <h3 className="text-base font-semibold text-slate-100">
-          Compiling Astrological Reasoning Graph
+          {t('reasoning.status.loadingTitle')}
         </h3>
         <p className="text-xs text-slate-400 max-w-md">
-          Resolving multi-tier reasoning hierarchy, harmonic divisional confirmations, chronological dasha activations, and evidentiary provenance...
+          {t('reasoning.status.loadingDescription')}
         </p>
       </div>
 

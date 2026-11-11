@@ -1,9 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { WealthSpeculativePropensityViewModel, WealthRiskAndSuitabilityViewModel } from '../../product/analysis/wealthViewModel';
 import { getSpeculativeRiskBadgeClass } from './wealthFormat';
 import { Flame, AlertCircle, ShieldAlert } from 'lucide-react';
-
-const SPECULATIVE_DISCLAIMER = 'Astrological indication only. It is not a measure of actual trading exposure, trading history, risk capacity, expected return, or probability of profit/loss. It does not provide buy, sell, hold, options, leverage, instrument, or position-size recommendations.';
 
 export interface WealthSpeculativeRiskSectionProps {
   readonly speculativePropensity: WealthSpeculativePropensityViewModel;
@@ -14,6 +13,7 @@ export const WealthSpeculativeRiskSection: React.FC<WealthSpeculativeRiskSection
   speculativePropensity,
   riskAndSuitability
 }) => {
+  const { t } = useTranslation('wealth');
   const isAvailable = speculativePropensity.status !== 'INSUFFICIENT_DATA';
   const badgeClass = getSpeculativeRiskBadgeClass(speculativePropensity.status);
 
@@ -25,8 +25,8 @@ export const WealthSpeculativeRiskSection: React.FC<WealthSpeculativeRiskSection
             <Flame className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Astrological Speculative Propensity</h2>
-            <p className="text-xs text-slate-400">Chart-derived indication only; not a measurement of behaviour, exposure, or risk capacity.</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('speculation.title')}</h2>
+            <p className="text-xs text-slate-400">{t('speculation.description')}</p>
           </div>
         </div>
 
@@ -50,7 +50,7 @@ export const WealthSpeculativeRiskSection: React.FC<WealthSpeculativeRiskSection
           {/* Explicit regulatory & methodological disclaimer - visually separated from accumulation */}
           <div className="flex items-start gap-2.5 text-xs text-slate-400 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
             <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
-            <span className="leading-relaxed">{SPECULATIVE_DISCLAIMER}</span>
+            <span className="leading-relaxed">{t('disclaimers.speculative')}</span>
           </div>
         </div>
       ) : (
@@ -58,20 +58,20 @@ export const WealthSpeculativeRiskSection: React.FC<WealthSpeculativeRiskSection
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
             {speculativePropensity.description ||
-              'Astrological speculative propensity is unavailable for this chart calculation.'}
+              t('speculation.unavailable')}
           </span>
         </div>
       )}
       {!isAvailable && (
         <div className="flex items-start gap-2.5 text-xs text-slate-400 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
           <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
-          <span className="leading-relaxed">{SPECULATIVE_DISCLAIMER}</span>
+          <span className="leading-relaxed">{t('disclaimers.speculative')}</span>
         </div>
       )}
       <div className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4 text-xs text-slate-400">
-        <p><strong className="text-slate-200">Actual exposure:</strong> {riskAndSuitability.actualExposure === 'AVAILABLE' ? 'Explicit financial source data is available.' : 'Unavailable — no user-reported or connected financial source was supplied.'}</p>
-        <p><strong className="text-slate-200">Trading history:</strong> {riskAndSuitability.tradingHistory === 'AVAILABLE' ? 'Explicit source data is available.' : 'Unavailable — not inferred from a horoscope.'}</p>
-        <p><strong className="text-slate-200">Suitability:</strong> Unavailable. {riskAndSuitability.suitabilityReason}</p>
+        <p><strong className="text-slate-200">{t('risk.actualExposure')}:</strong> {riskAndSuitability.actualExposure === 'AVAILABLE' ? t('speculation.sourceAvailable') : t('speculation.sourceUnavailable')}</p>
+        <p><strong className="text-slate-200">{t('risk.tradingHistory')}:</strong> {riskAndSuitability.tradingHistory === 'AVAILABLE' ? t('speculation.sourceAvailable') : t('speculation.historyUnavailable')}</p>
+        <p><strong className="text-slate-200">{t('risk.suitability')}:</strong> {t('speculation.suitabilityUnavailable')} {riskAndSuitability.suitabilityReason}</p>
       </div>
     </div>
   );

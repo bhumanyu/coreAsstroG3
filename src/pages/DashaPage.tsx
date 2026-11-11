@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DashaTimingProjectionState, ProductAnalysisState } from '../app/AppState';
 import type { ProductAnalysis } from '../product/analysis';
 import type { AppPage } from '../app/navigation/navigationTypes';
@@ -78,6 +79,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   onNavigate,
   onSelectPeriod
 }) => {
+  const { t } = useTranslation('dasha');
   const status = productAnalysisState?.status;
   const analysis = productAnalysisState?.analysis;
   const errorMessage = productAnalysisState?.error;
@@ -178,11 +180,11 @@ export const DashaPage: React.FC<DashaPageProps> = ({
       {(dashaTimingProjectionError || dashaTimingProjectionState?.status === 'RETRYING') && (
         <div role="alert" aria-live="polite" className="rounded-xl border border-amber-700/50 bg-amber-950/30 p-4 text-sm text-amber-200">
           <p>
-            Dasha timing detail {dashaTimingProjectionState?.status === 'RETRYING' ? 'is being retried' : 'could not be prepared'}:
+            {t(dashaTimingProjectionState?.status === 'RETRYING' ? 'projection.retryingMessage' : 'projection.failedMessage')}:
             {' '}{dashaTimingProjectionState?.error ?? dashaTimingProjectionError}
           </p>
           <p className="mt-1 text-xs text-amber-100/80">
-            The canonical chart analysis remains available. This retry rebuilds only the optional timing projection for the current analysis.
+            {t('projection.description')}
           </p>
           {onRetryDashaTiming && (
             <button
@@ -191,7 +193,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
               disabled={dashaTimingProjectionState?.status === 'RETRYING'}
               className="mt-3 rounded-lg border border-amber-500/60 px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {dashaTimingProjectionState?.status === 'RETRYING' ? 'Retrying Dasha timing…' : 'Retry Dasha timing'}
+              {t(dashaTimingProjectionState?.status === 'RETRYING' ? 'projection.retrying' : 'projection.retry')}
             </button>
           )}
         </div>
@@ -217,7 +219,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
         <div role="alert" aria-live="assertive" className="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-rose-300">
-              Selection Error
+              {t('selection.error')}
             </span>
           </div>
           <div className="text-xs text-slate-300">{selectionError}</div>
@@ -229,11 +231,11 @@ export const DashaPage: React.FC<DashaPageProps> = ({
         <div role="alert" aria-live="assertive" key={`selected-period-error-${selectedPeriod.status}`} className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-amber-300">
-              Period Selection Failed
+              {t('selection.failed')}
             </span>
           </div>
           <div className="text-xs text-slate-300">
-            Status: {selectedPeriod.status}
+            {t('selection.status')}: {selectedPeriod.status}
             {selectedPeriod.error && <span> — {selectedPeriod.error}</span>}
           </div>
         </div>

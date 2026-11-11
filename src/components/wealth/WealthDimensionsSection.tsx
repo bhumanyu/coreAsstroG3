@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { WealthDimensionsViewModel } from '../../product/analysis/wealthViewModel';
 import { WealthDimensionCard } from './WealthDimensionCard';
 import { PieChart } from 'lucide-react';
@@ -10,6 +11,7 @@ export interface WealthDimensionsSectionProps {
 export const WealthDimensionsSection: React.FC<WealthDimensionsSectionProps> = ({
   dimensions
 }) => {
+  const { t } = useTranslation('wealth');
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -18,15 +20,15 @@ export const WealthDimensionsSection: React.FC<WealthDimensionsSectionProps> = (
             <PieChart className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Astrological Wealth Indicators</h2>
+            <h2 className="text-base font-semibold text-slate-100">{t('indicators.title')}</h2>
             <p className="text-xs text-slate-400">
-              Chart-derived indications only; not verified income, savings, assets, or investment facts.
+              {t('disclaimers.chartIndications')}
             </p>
           </div>
         </div>
 
         <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-          4 Dimensions Evaluated
+          {t('indicators.count')}
         </span>
       </div>
 

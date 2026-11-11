@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { CareerThemeInterpretation } from '../../../engine/themeInterpretation/themeInterpretationTypes';
 import { ThemeOverviewCard } from './ThemeOverviewCard';
 import { ThemePromiseCard } from './ThemePromiseCard';
@@ -17,6 +18,7 @@ export const CareerThemePanel: React.FC<CareerThemePanelProps> = ({
   career,
   id = 'career-theme-panel'
 }) => {
+  const { t } = useTranslation('reports');
   const safeEvidence = [...(career.evidence || [])];
   const timingEvidence = safeEvidence.filter(
     (e) => e.dimension === 'TIMING' || e.timingEvidence !== undefined
@@ -39,10 +41,10 @@ export const CareerThemePanel: React.FC<CareerThemePanelProps> = ({
           </div>
           <div>
             <h3 className="text-base font-bold font-serif-astro text-slate-100">
-              Career & Professional Life
+              {t('theme.career.header')}
             </h3>
             <p className="text-xs text-slate-400">
-              Deterministic career analysis based on structural houses, lordship, modifiers, divisional confirmation, and timing.
+              {t('theme.career.description')}
             </p>
           </div>
         </div>
@@ -51,7 +53,7 @@ export const CareerThemePanel: React.FC<CareerThemePanelProps> = ({
       {/* 1. Theme Overview Card */}
       <ThemeOverviewCard
         id={`${id}-overview`}
-        title="Career Synthesis & Trajectory"
+        title={t('theme.career.synthesis')}
         status={career.conclusion.status}
         confidence={career.conclusion.confidence}
         summary={career.conclusion.summary}
@@ -63,7 +65,7 @@ export const CareerThemePanel: React.FC<CareerThemePanelProps> = ({
       {/* 2. Natal Career Promise Card */}
       <ThemePromiseCard
         id={`${id}-promise`}
-        title="Natal Career Promise (Root Structural Potential)"
+        title={t('theme.career.promise')}
         status={career.careerNatalPromise.status}
         confidence={career.careerNatalPromise.evidenceConfidence}
         primarySupport={career.careerNatalPromise.primarySupport}
@@ -75,7 +77,7 @@ export const CareerThemePanel: React.FC<CareerThemePanelProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ThemeConfirmationCard
           id={`${id}-d10-confirmation`}
-          title="D10 (Dasamsa) Divisional Confirmation"
+          title={t('theme.career.d10')}
           relationship={career.metadata.vargaConfirmationStatus}
           type="VARGA"
           statement={d10Statement}
@@ -84,7 +86,7 @@ export const CareerThemePanel: React.FC<CareerThemePanelProps> = ({
 
         <ThemeTimingCard
           id={`${id}-timing`}
-          title="Timing / Activation (Vimshottari Windows)"
+          title={t('theme.career.timing')}
           timingEvidence={timingEvidence}
         />
       </div>

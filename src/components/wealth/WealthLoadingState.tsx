@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Coins } from 'lucide-react';
 
 export const WealthLoadingState: React.FC = () => {
+  const { t } = useTranslation('wealth');
   return (
     <div
       role="status"
@@ -16,10 +18,10 @@ export const WealthLoadingState: React.FC = () => {
         <div className="space-y-1 max-w-md mx-auto">
           <h2 className="text-base font-semibold text-slate-100 flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin text-amber-400" aria-hidden="true" />
-            Analyzing Wealth & Financial Assets
+            {t('status.loadingTitle')}
           </h2>
           <p className="text-xs text-slate-400">
-            Synthesizing natal 2nd/11th house promise, Hora (D2) confirmation, active planetary timing, and transit triggers...
+            {t('status.loadingDescription')}
           </p>
         </div>
       </div>

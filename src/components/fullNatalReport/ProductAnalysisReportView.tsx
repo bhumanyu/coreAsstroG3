@@ -38,32 +38,33 @@ export interface ProductAnalysisReportViewProps {
 }
 
 export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps> = ({ analysis, analysisStatus, analysisError, onRetryAnalysis }) => {
-  const { t } = useTranslation('errors');
+  const { t: errorT } = useTranslation('errors');
+  const { t } = useTranslation('reports');
   if (analysisStatus === 'LOADING') {
     return (
-      <section aria-label={t('productReport')} role="status" className="rounded-xl border border-slate-700 bg-slate-900/60 p-5 print:border-slate-300 print:bg-white">
-        <h2 className="text-lg font-semibold text-slate-100 print:text-black">{t('productAnalysis')}</h2>
-        <p className="mt-2 text-sm text-slate-300 print:text-slate-700">{t('reportLoading')}</p>
+      <section aria-label={errorT('productReport')} role="status" className="rounded-xl border border-slate-700 bg-slate-900/60 p-5 print:border-slate-300 print:bg-white">
+        <h2 className="text-lg font-semibold text-slate-100 print:text-black">{errorT('productAnalysis')}</h2>
+        <p className="mt-2 text-sm text-slate-300 print:text-slate-700">{errorT('reportLoading')}</p>
       </section>
     );
   }
 
   if (analysisStatus === 'ERROR') {
     return (
-      <section aria-label={t('productReport')} role="alert" className="rounded-xl border border-rose-700/50 bg-rose-950/20 p-5 print:border-slate-300 print:bg-white">
-        <h2 className="text-lg font-semibold text-slate-100 print:text-black">{t('productAnalysis')}</h2>
-        <p className="mt-2 text-sm text-rose-200 print:text-slate-700">{t('chartAnalysisFailed', { message: analysisError ?? t('canonicalAnalysisUnavailable') })}</p>
-        {onRetryAnalysis && <button type="button" onClick={onRetryAnalysis} className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white print:hidden">{t('retryChartAnalysis')}</button>}
+      <section aria-label={errorT('productReport')} role="alert" className="rounded-xl border border-rose-700/50 bg-rose-950/20 p-5 print:border-slate-300 print:bg-white">
+        <h2 className="text-lg font-semibold text-slate-100 print:text-black">{errorT('productAnalysis')}</h2>
+        <p className="mt-2 text-sm text-rose-200 print:text-slate-700">{errorT('chartAnalysisFailed', { message: analysisError ?? errorT('canonicalAnalysisUnavailable') })}</p>
+        {onRetryAnalysis && <button type="button" onClick={onRetryAnalysis} className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white print:hidden">{errorT('retryChartAnalysis')}</button>}
       </section>
     );
   }
 
   if (!analysis) {
     return (
-      <section aria-label={t('productReport')} className="rounded-xl border border-amber-700/50 bg-amber-950/20 p-5 print:border-slate-300 print:bg-white">
-        <h2 className="text-lg font-semibold text-slate-100 print:text-black">{t('productAnalysis')}</h2>
+      <section aria-label={errorT('productReport')} className="rounded-xl border border-amber-700/50 bg-amber-950/20 p-5 print:border-slate-300 print:bg-white">
+        <h2 className="text-lg font-semibold text-slate-100 print:text-black">{errorT('productAnalysis')}</h2>
         <p className="mt-2 text-sm text-amber-200 print:text-slate-700">
-          {t('productAnalysisUnavailable')}
+          {errorT('productAnalysisUnavailable')}
         </p>
       </section>
     );
@@ -82,10 +83,10 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
   }, {}) ?? {};
 
   return (
-    <div aria-label="Career and Wealth product report" className="mt-8 space-y-5 border-t border-slate-700 pt-8 print:border-slate-300">
+    <div aria-label={t('product.ariaLabel')} className="mt-8 space-y-5 border-t border-slate-700 pt-8 print:border-slate-300">
       <header className="space-y-2">
-        <p className="text-xs font-mono uppercase tracking-widest text-indigo-300 print:text-slate-600">Canonical product analysis report</p>
-        <h2 className="text-2xl font-bold text-slate-100 print:text-black">Career & Wealth Analysis</h2>
+        <p className="text-xs font-mono uppercase tracking-widest text-indigo-300 print:text-slate-600">{t('product.eyebrow')}</p>
+        <h2 className="text-2xl font-bold text-slate-100 print:text-black">{t('product.title')}</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Value label="Analysis status" value={analysis.status} />
           <Value label="Analysis as-of" value={analysis.asOf} />
@@ -93,7 +94,7 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
           <Value label="Engine / rules" value={analysis.engineVersion + ' / ' + analysis.rulesVersion} />
         </div>
         <p className="text-xs text-slate-400 print:text-slate-600">
-          This report is a presentation of the attached canonical analysis snapshot. It does not recalculate chart placements, Dasha, Career or Wealth conclusions.
+          {t('product.snapshotDescription')}
         </p>
       </header>
 
@@ -161,7 +162,7 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
           <Value label="Suitability" value={analysis.wealth.riskAndSuitability?.suitability ?? 'UNAVAILABLE'} />
         </div>
         <p className="text-xs text-slate-400 print:text-slate-600">
-          Astrological indications are not actual income, assets, debt, liquidity, inheritance, realized gains or investment suitability. D2 and unvalidated lifecycle event rules remain unavailable.
+          {t('product.wealthDisclaimer')}
         </p>
       </ReportSection>
 
@@ -171,7 +172,7 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
           <ul className="list-disc pl-5 text-sm text-slate-300 print:text-black">
             {Object.entries(sourceCounts).map(([source, count]) => <li key={source}>{source}: {count}</li>)}
           </ul>
-        ) : <p className="text-sm text-slate-400 print:text-slate-600">No validated financial facts are attached. No financial values have been inferred.</p>}
+        ) : <p className="text-sm text-slate-400 print:text-slate-600">{t('product.noFinancialFacts')}</p>}
       </ReportSection>
 
       <ReportSection title="Vimshottari Dasha and selected period" status={dasha.status}>

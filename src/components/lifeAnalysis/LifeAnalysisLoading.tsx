@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Sparkles } from 'lucide-react';
 
 export const LifeAnalysisLoading: React.FC = () => {
+  const { t } = useTranslation('reports');
   return (
     <div
       role="status"
@@ -9,7 +11,7 @@ export const LifeAnalysisLoading: React.FC = () => {
       aria-live="polite"
       className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-10 text-center flex flex-col items-center justify-center gap-4 my-6"
     >
-      <span className="sr-only">Preparing Life Analysis…</span>
+      <span className="sr-only">{t('lifeAnalysis.loadingScreenReader')}</span>
 
       <div className="relative">
         <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
@@ -20,10 +22,10 @@ export const LifeAnalysisLoading: React.FC = () => {
 
       <div className="space-y-1.5">
         <h3 className="text-base font-semibold text-slate-100">
-          Synthesizing Life Analysis
+          {t('lifeAnalysis.loadingTitle')}
         </h3>
         <p className="text-xs text-slate-400 max-w-md">
-          Harmonizing deterministic domain interpretations (Career V2, Wealth V2), cross-domain timing, and AI synthesis projections...
+          {t('lifeAnalysis.loadingDescription')}
         </p>
       </div>
 

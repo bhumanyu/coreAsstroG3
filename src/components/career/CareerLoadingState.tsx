@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Briefcase } from 'lucide-react';
 
 export const CareerLoadingState: React.FC = () => {
+  const { t } = useTranslation('career');
   return (
     <div
       role="status"
@@ -9,7 +11,7 @@ export const CareerLoadingState: React.FC = () => {
       aria-live="polite"
       className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-10 text-center flex flex-col items-center justify-center gap-4 my-6"
     >
-      <span className="sr-only">Analyzing Vocational Trajectory…</span>
+      <span className="sr-only">{t('status.loadingScreenReader')}</span>
 
       <div className="relative">
         <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
@@ -20,10 +22,10 @@ export const CareerLoadingState: React.FC = () => {
 
       <div className="space-y-1.5">
         <h3 className="text-base font-semibold text-slate-100">
-          Analyzing Vocational Trajectory
+          {t('status.loadingTitle')}
         </h3>
         <p className="text-xs text-slate-400 max-w-md">
-          Synthesizing natal 10th house promise, Dasamsa (D10) vocational confirmation, active planetary timing, and transit triggers...
+          {t('status.loadingDescription')}
         </p>
       </div>
 

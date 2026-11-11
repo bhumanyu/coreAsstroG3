@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   WEALTH_FINANCIAL_CONCEPTS,
   type WealthFinancialConcept,
@@ -16,13 +17,6 @@ const PERIODS: readonly WealthFinancialPeriod[] = [
   'INSTANT', 'DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUAL', 'CUSTOM'
 ];
 
-const ERROR_MESSAGES = {
-  INVALID_FACT: 'Check the entered value, currency, concept and reference date. No changes were saved.',
-  CORRUPT: 'Saved financial facts are damaged or unsupported. They have been left unchanged.',
-  UNAVAILABLE: 'Browser storage is unavailable. Your existing financial facts were not changed.',
-  QUOTA: 'Browser storage is full. Remove an unused local record or free storage and try again.'
-} as const;
-
 function conceptLabel(concept: WealthFinancialConcept): string {
   return concept.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase());
 }
@@ -39,6 +33,7 @@ export interface WealthFinancialFactsManagerProps {
 }
 
 export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerProps> = ({ service: suppliedService }) => {
+  const { t } = useTranslation('wealth');
   const service = useMemo(() => suppliedService ?? new WealthFinancialFactsService(), [suppliedService]);
   const [facts, setFacts] = useState<readonly WealthFinancialDatum<unknown>[]>([]);
   const [concept, setConcept] = useState<WealthFinancialConcept>('INCOME');
@@ -59,7 +54,7 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
   const refresh = () => {
     const result = service.listFacts();
     if (!result.ok) {
-      setError(ERROR_MESSAGES[result.error]);
+      setError(t(`financialFacts.errors.${result.error}`));
       setStorageReady(false);
       return;
     }
@@ -96,12 +91,12 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
     }, editingId);
 
     if (!result.ok) {
-      setError(ERROR_MESSAGES[result.error]);
+      setError(t(`financialFacts.errors.${result.error}`));
       setStatus('');
       return;
     }
     setError('');
-    setStatus(editingId ? 'Financial fact updated on this browser/device.' : 'Financial fact saved on this browser/device.');
+    setStatus(editingId ? t('financialFacts.updated') : t('financialFacts.saved'));
     resetForm();
     refresh();
   };
@@ -123,35 +118,35 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
     if (!deletingFact) return;
     const result = service.deleteFact(deletingFact.id);
     if (!result.ok) {
-      setError(ERROR_MESSAGES[result.error]);
+      setError(t(`financialFacts.errors.${result.error}`));
       setStatus('');
       return;
     }
     setDeletingFact(undefined);
     setError('');
-    setStatus('Financial fact deleted from this browser/device.');
+    setStatus(t('financialFacts.deleted'));
     refresh();
   };
 
   return (
     <section aria-labelledby="wealth-facts-manager-heading" className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4">
       <header className="space-y-1">
-        <h2 id="wealth-facts-manager-heading" className="text-base font-semibold text-slate-100">Manage user-reported financial facts</h2>
-        <p className="text-xs text-slate-400">Add, edit or delete values you explicitly report. Records are stored only in this browser/device; they are not synced, transmitted or encrypted. Anyone with access to this browser profile may be able to read them.</p>
-        <p className="text-xs text-amber-200">These records are separate from astrological indications and CW-05. They do not change chart calculations, confidence, financial suitability or predictions.</p>
+        <h2 id="wealth-facts-manager-heading" className="text-base font-semibold text-slate-100">{t('financialFacts.manageTitle')}</h2>
+        <p className="text-xs text-slate-400">{t('financialFacts.manageDescription')}</p>
+        <p className="text-xs text-amber-200">{t('disclaimers.factsSeparate')}</p>
       </header>
 
       <form onSubmit={handleSave} className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Financial concept
-          <select aria-label="Financial concept" value={concept} onChange={event => setConcept(event.target.value as WealthFinancialConcept)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2">
+          {t('financialFacts.concept')}
+          <select aria-label={t('financialFacts.concept')} value={concept} onChange={event => setConcept(event.target.value as WealthFinancialConcept)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2">
             {WEALTH_FINANCIAL_CONCEPTS.map(item => <option key={item} value={item}>{conceptLabel(item)}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm text-slate-300">
-          {monetary ? 'Amount / value' : 'Description'}
+          {t(monetary ? 'financialFacts.amount' : 'financialFacts.descriptionLabel')}
           <input
-            aria-label={monetary ? 'Amount / value' : 'Description'}
+            aria-label={t(monetary ? 'financialFacts.amount' : 'financialFacts.descriptionLabel')}
             type={monetary ? 'number' : 'text'}
             min={monetary ? 0 : undefined}
             step={monetary ? '0.01' : undefined}
@@ -164,34 +159,34 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
         {monetary && (
           <>
             <label className="flex flex-col gap-1 text-sm text-slate-300">
-              Currency (ISO 4217)
-              <input aria-label="Currency" maxLength={3} value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} required className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
+              {t('financialFacts.currency')}
+              <input aria-label={t('financialFacts.currency')} maxLength={3} value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} required className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
             </label>
             <label className="flex flex-col gap-1 text-sm text-slate-300">
-              Reporting period
-              <select aria-label="Reporting period" value={period} onChange={event => setPeriod(event.target.value as WealthFinancialPeriod)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2">
+              {t('financialFacts.reportingPeriod')}
+              <select aria-label={t('financialFacts.reportingPeriod')} value={period} onChange={event => setPeriod(event.target.value as WealthFinancialPeriod)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2">
                 {PERIODS.map(item => <option key={item} value={item}>{item}</option>)}
               </select>
             </label>
           </>
         )}
         <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Reference date
-          <input aria-label="Reference date" type="date" value={asOf} onChange={event => setAsOf(event.target.value)} required className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
+          {t('financialFacts.referenceDate')}
+          <input aria-label={t('financialFacts.referenceDate')} type="date" value={asOf} onChange={event => setAsOf(event.target.value)} required className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
         </label>
         <label className="flex flex-col gap-1 text-sm text-slate-300">
-          Label (optional)
-          <input aria-label="Financial fact label" value={label} onChange={event => setLabel(event.target.value)} maxLength={100} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
+          {t('financialFacts.labelOptional')}
+          <input aria-label={t('financialFacts.financialFactLabel')} value={label} onChange={event => setLabel(event.target.value)} maxLength={100} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
         </label>
         <label className="md:col-span-2 flex flex-col gap-1 text-sm text-slate-300">
-          Source note (optional)
-          <textarea aria-label="Source note" value={sourceNote} onChange={event => setSourceNote(event.target.value)} maxLength={500} rows={2} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
+          {t('financialFacts.sourceNoteOptional')}
+          <textarea aria-label={t('financialFacts.sourceNote')} value={sourceNote} onChange={event => setSourceNote(event.target.value)} maxLength={500} rows={2} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" />
         </label>
         <div className="md:col-span-2 flex flex-wrap gap-2">
           <button type="submit" disabled={!storageReady || !value.trim() || !asOf} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
-            {editingId ? 'Update financial fact' : 'Save financial fact'}
+            {t(editingId ? 'financialFacts.update' : 'financialFacts.save')}
           </button>
-          {editingId && <button type="button" onClick={resetForm} className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300">Cancel edit</button>}
+          {editingId && <button type="button" onClick={resetForm} className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300">{t('financialFacts.cancelEdit')}</button>}
         </div>
       </form>
 
@@ -199,9 +194,9 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
       {status && <p role="status" className="text-sm text-emerald-300">{status}</p>}
 
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-slate-200">Saved financial facts ({facts.length})</h3>
+        <h3 className="text-sm font-semibold text-slate-200">{t('financialFacts.savedCount', { count: facts.length })}</h3>
         {facts.length === 0 ? (
-          <p className="text-sm text-slate-400">No user-reported financial facts are stored on this browser/device.</p>
+          <p className="text-sm text-slate-400">{t('financialFacts.noneStored')}</p>
         ) : (
           <ul className="space-y-2">
             {facts.map(fact => (
@@ -210,12 +205,12 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-100">{fact.userReportedProvenance?.label || conceptLabel(fact.concept)}</p>
                     <p className="mt-1 text-sm text-slate-300">{displayValue(fact)}</p>
-                    <p className="mt-1 text-xs text-slate-500">{fact.asOf?.slice(0, 10)}{fact.period ? ' · ' + fact.period : ''} · Reported by user</p>
+                    <p className="mt-1 text-xs text-slate-500">{fact.asOf?.slice(0, 10)}{fact.period ? ' · ' + fact.period : ''} · {t('financialFacts.reportedByUser')}</p>
                     {fact.userReportedProvenance?.sourceNote && <p className="mt-1 text-xs text-slate-400">{fact.userReportedProvenance.sourceNote}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => handleEdit(fact)} className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300">Edit</button>
-                    <button type="button" onClick={() => setDeletingFact(fact)} className="rounded-lg border border-rose-800 px-3 py-1.5 text-xs text-rose-300">Delete</button>
+                    <button type="button" onClick={() => handleEdit(fact)} className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300">{t('financialFacts.edit')}</button>
+                    <button type="button" onClick={() => setDeletingFact(fact)} className="rounded-lg border border-rose-800 px-3 py-1.5 text-xs text-rose-300">{t('financialFacts.delete')}</button>
                   </div>
                 </div>
               </li>
@@ -227,11 +222,11 @@ export const WealthFinancialFactsManager: React.FC<WealthFinancialFactsManagerPr
       {deletingFact && (
         <div role="dialog" aria-modal="true" aria-labelledby="delete-financial-fact-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <div className="w-full max-w-md space-y-4 rounded-xl border border-slate-700 bg-slate-900 p-5">
-            <h3 id="delete-financial-fact-title" className="text-lg font-semibold text-slate-100">Delete financial fact?</h3>
-            <p className="text-sm text-slate-300">Delete this user-reported record from this browser/device? It cannot be recovered after deletion.</p>
+            <h3 id="delete-financial-fact-title" className="text-lg font-semibold text-slate-100">{t('financialFacts.deleteTitle')}</h3>
+            <p className="text-sm text-slate-300">{t('financialFacts.deleteConfirmation')}</p>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setDeletingFact(undefined)} className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300">Cancel</button>
-              <button type="button" onClick={handleDelete} className="rounded-lg border border-rose-800 bg-rose-950 px-3 py-2 text-sm text-rose-200">Delete financial fact</button>
+              <button type="button" onClick={() => setDeletingFact(undefined)} className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300">{t('financialFacts.cancel')}</button>
+              <button type="button" onClick={handleDelete} className="rounded-lg border border-rose-800 bg-rose-950 px-3 py-2 text-sm text-rose-200">{t('financialFacts.deleteFact')}</button>
             </div>
           </div>
         </div>

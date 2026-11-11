@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningChainNodeViewModel } from '../../product/analysis/reasoningViewModel';
 import { ReasoningNode } from './ReasoningNode';
 import { GitBranch } from 'lucide-react';
@@ -8,6 +9,7 @@ export interface ReasoningChainProps {
 }
 
 export const ReasoningChain: React.FC<ReasoningChainProps> = ({ chain }) => {
+  const { t } = useTranslation('reports');
   if (!chain || chain.length === 0) {
     return null;
   }
@@ -20,13 +22,13 @@ export const ReasoningChain: React.FC<ReasoningChainProps> = ({ chain }) => {
             <GitBranch className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Deterministic Evidence Framework</h2>
-            <p className="text-xs text-slate-400">The evidence layers contributing to this conclusion</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('reasoning.frameworkTitle')}</h2>
+            <p className="text-xs text-slate-400">{t('reasoning.frameworkDescription')}</p>
           </div>
         </div>
 
         <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-          {chain.length} Evidence Layers
+          {t('reasoning.evidenceLayers', { count: chain.length })}
         </span>
       </div>
 

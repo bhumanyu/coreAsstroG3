@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningAiViewModel } from '../../product/analysis/reasoningViewModel';
 import { BrainCircuit, Sparkles, ShieldCheck, AlertCircle } from 'lucide-react';
 
@@ -7,6 +8,7 @@ export interface ReasoningAISectionProps {
 }
 
 export const ReasoningAISection: React.FC<ReasoningAISectionProps> = ({ ai }) => {
+  const { t } = useTranslation('reports');
   const isAvailable = Boolean(ai?.available && ai?.status === 'AVAILABLE');
   const status = ai?.status ?? 'UNAVAILABLE';
 
@@ -19,10 +21,10 @@ export const ReasoningAISection: React.FC<ReasoningAISectionProps> = ({ ai }) =>
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold text-slate-100">AI Explanation</h2>
+              <h2 className="text-base font-semibold text-slate-100">{t('reasoning.aiTitle')}</h2>
               {isAvailable ? (
                 <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-mono-code font-medium bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-md">
-                  Derived from deterministic evidence
+                  {t('reasoning.derivedFromEvidence')}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono-code font-medium bg-slate-800 border border-slate-700 text-slate-400 rounded-md">
@@ -40,7 +42,7 @@ export const ReasoningAISection: React.FC<ReasoningAISectionProps> = ({ ai }) =>
               )}
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Rule-grounded narrative commentary and classical text concordance
+              {t('reasoning.aiDescription')}
             </p>
           </div>
         </div>
@@ -77,12 +79,12 @@ export const ReasoningAISection: React.FC<ReasoningAISectionProps> = ({ ai }) =>
         </>
       ) : (
         <div className="py-2 text-xs text-slate-400 leading-relaxed font-sans">
-          AI explanation is currently unavailable. The deterministic conclusion remains available above.
+          {t('reasoning.aiUnavailable')}
         </div>
       )}
 
       <div className="text-[11px] text-slate-500 italic pt-2 border-t border-slate-800/60">
-        Note: Natural language explanation is strictly descriptive and does not compute, modify, or override the deterministic calculation engine.
+        {t('reasoning.aiDisclaimer')}
       </div>
     </div>
   );

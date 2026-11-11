@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { OverviewFinding } from '../../product/analysis/overviewViewModel';
 import { formatDirection, formatEvidenceRole } from './overviewFormat';
 import { Layers, CheckCircle } from 'lucide-react';
@@ -8,6 +9,7 @@ export interface KeyFindingsCardProps {
 }
 
 export const FindingRow: React.FC<{ readonly finding: OverviewFinding }> = ({ finding }) => {
+  const { t } = useTranslation('dashboard');
   const roleText = formatEvidenceRole(finding.role);
   const directionText = formatDirection(finding.direction);
 
@@ -33,7 +35,7 @@ export const FindingRow: React.FC<{ readonly finding: OverviewFinding }> = ({ fi
 
       {finding.evidenceIds.length > 0 && (
         <div className="flex items-center gap-2 pt-1 text-[10px] font-mono-code text-slate-400">
-          <span>Sources: {finding.evidenceIds.length} evidential rule {finding.evidenceIds.length === 1 ? 'input' : 'inputs'}</span>
+          <span>{t(finding.evidenceIds.length === 1 ? 'findings.sourceSingular' : 'findings.sourcePlural', { count: finding.evidenceIds.length })}</span>
         </div>
       )}
     </div>
@@ -41,9 +43,10 @@ export const FindingRow: React.FC<{ readonly finding: OverviewFinding }> = ({ fi
 };
 
 export const KeyFindingsCard: React.FC<KeyFindingsCardProps> = ({ findings }) => {
+  const { t } = useTranslation('dashboard');
   return (
     <section
-      aria-label="Key Cross-Domain Findings"
+      aria-label={t('findings.ariaLabel')}
       className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between"
     >
       <div>
@@ -53,10 +56,10 @@ export const KeyFindingsCard: React.FC<KeyFindingsCardProps> = ({ findings }) =>
           </div>
           <div>
             <h3 className="text-base font-semibold text-slate-100">
-              Key Cross-Domain Findings
+              {t('findings.title')}
             </h3>
             <span className="text-xs text-slate-400">
-              High-priority astrological synthesis drivers
+              {t('findings.subtitle')}
             </span>
           </div>
         </div>
@@ -69,7 +72,7 @@ export const KeyFindingsCard: React.FC<KeyFindingsCardProps> = ({ findings }) =>
           ) : (
             <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800/60 text-center text-xs text-slate-400">
               <CheckCircle className="w-4 h-4 text-emerald-400 mx-auto mb-1.5" aria-hidden="true" />
-              <span>No prominent findings generated for the current astrological chart.</span>
+              <span>{t('findings.empty')}</span>
             </div>
           )}
         </div>

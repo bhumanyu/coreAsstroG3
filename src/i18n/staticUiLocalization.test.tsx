@@ -14,6 +14,8 @@ import { RelationshipMatrix } from '../components/RelationshipMatrix';
 import { NakshatraExplorer } from '../components/NakshatraExplorer';
 import { EngineValidator } from '../components/EngineValidator';
 import { KundaliChart } from '../components/KundaliChart';
+import { OverviewPage } from '../pages/OverviewPage';
+import { WealthFinancialFactsManager } from '../components/wealth/WealthFinancialFactsManager';
 
 describe('shared UI localization', () => {
   it('renders shell and report status copy in Hindi', async () => {
@@ -80,5 +82,25 @@ describe('shared UI localization', () => {
     expect(screen.getByText('उत्तर भारतीय')).toBeInTheDocument();
     expect(screen.getByText('दक्षिण भारतीय')).toBeInTheDocument();
     expect(screen.getAllByText('Sun').length).toBeGreaterThan(0);
+  });
+
+  it('switches representative phase-four surfaces to Hindi without resetting entered financial values', async () => {
+    await i18n.changeLanguage('en');
+    render(
+      <>
+        <OverviewPage status="LOADING" />
+        <WealthFinancialFactsManager />
+      </>
+    );
+
+    const amount = screen.getByLabelText('Amount / value');
+    fireEvent.change(amount, { target: { value: '1250' } });
+    expect(screen.getByText('Synthesizing Life Overview')).toBeInTheDocument();
+
+    await i18n.changeLanguage('hi');
+
+    expect(screen.getByText('जीवन अवलोकन का संश्लेषण हो रहा है')).toBeInTheDocument();
+    expect(screen.getByText('उपयोगकर्ता द्वारा बताए गए वित्तीय तथ्य प्रबंधित करें')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('1250')).toBeInTheDocument();
   });
 });

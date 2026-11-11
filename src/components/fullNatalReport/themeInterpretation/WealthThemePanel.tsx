@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   WealthThemeInterpretation,
   WealthEvidenceFamily
@@ -21,6 +22,7 @@ export const WealthThemePanel: React.FC<WealthThemePanelProps> = ({
   wealth,
   id = 'wealth-theme-panel'
 }) => {
+  const { t } = useTranslation('reports');
   const safeEvidence = [...(wealth.evidence || [])];
   const timingEvidence = safeEvidence.filter(
     (e) => e.dimension === 'TIMING' || e.timingEvidence !== undefined
@@ -32,45 +34,45 @@ export const WealthThemePanel: React.FC<WealthThemePanelProps> = ({
   // Define unified structural domains for Wealth combining House + Lord
   const wealthDomainGroups = [
     {
-      domainName: '2nd House & Lord Domain (Accumulated Wealth & Treasury)',
+      domainName: t('theme.wealth.domains.accumulation'),
       families: [
         WealthEvidenceFamily.SECOND_HOUSE,
         WealthEvidenceFamily.SECOND_LORD
       ],
-      description: 'Liquid assets, savings, ancestral inheritance, and sustained family wealth.'
+      description: t('theme.wealth.domainDescriptions.accumulation')
     },
     {
-      domainName: '11th House & Lord Domain (Income, Inflow & Periodic Gains)',
+      domainName: t('theme.wealth.domains.gains'),
       families: [
         WealthEvidenceFamily.ELEVENTH_HOUSE,
         WealthEvidenceFamily.ELEVENTH_LORD
       ],
-      description: 'Cash-flow velocity, enterprise earnings, network bonuses, and recurring profits.'
+      description: t('theme.wealth.domainDescriptions.gains')
     },
     {
-      domainName: '9th House & Lord Domain (Bhagya, Fortune & Higher Grace)',
+      domainName: t('theme.wealth.domains.fortune'),
       families: [
         WealthEvidenceFamily.NINTH_HOUSE,
         WealthEvidenceFamily.NINTH_LORD
       ],
-      description: 'Divine luck, effortless windfalls, ethical prosperity, and long-range fortune.'
+      description: t('theme.wealth.domainDescriptions.fortune')
     },
     {
-      domainName: '5th House & Lord Domain (Speculation, Merit & Enterprise)',
+      domainName: t('theme.wealth.domains.speculation'),
       families: [
         WealthEvidenceFamily.FIFTH_HOUSE,
         WealthEvidenceFamily.FIFTH_LORD
       ],
-      description: 'Purva Punya, intelligent investment decisions, creative ventures, and market instincts.'
+      description: t('theme.wealth.domainDescriptions.speculation')
     },
     {
-      domainName: 'Natural Significators & Financial Karakas (Jupiter, Venus, Mercury)',
+      domainName: t('theme.wealth.domains.significators'),
       families: [
         WealthEvidenceFamily.JUPITER,
         WealthEvidenceFamily.VENUS,
         WealthEvidenceFamily.MERCURY
       ],
-      description: 'Universal graha archetypes governing expansion (Guru), luxury (Shukra), and commerce (Budha).'
+      description: t('theme.wealth.domainDescriptions.significators')
     }
   ];
 
@@ -84,10 +86,10 @@ export const WealthThemePanel: React.FC<WealthThemePanelProps> = ({
           </div>
           <div>
             <h3 className="text-base font-bold font-serif-astro text-slate-100">
-              Wealth & Prosperity
+              {t('theme.wealth.header')}
             </h3>
             <p className="text-xs text-slate-400">
-              Deterministic wealth analysis based on accumulation, gains, fortune, speculation, supporting factors, and timing.
+              {t('theme.wealth.description')}
             </p>
           </div>
         </div>
@@ -96,7 +98,7 @@ export const WealthThemePanel: React.FC<WealthThemePanelProps> = ({
       {/* 1. Theme Overview Card */}
       <ThemeOverviewCard
         id={`${id}-overview`}
-        title="Wealth Synthesis & Financial Trajectory"
+        title={t('theme.wealth.synthesis')}
         status={wealth.conclusion.status}
         confidence={wealth.conclusion.confidence}
         summary={wealth.conclusion.summary}
@@ -108,7 +110,7 @@ export const WealthThemePanel: React.FC<WealthThemePanelProps> = ({
       {/* 2. Natal Wealth Promise Card */}
       <ThemePromiseCard
         id={`${id}-promise`}
-        title="Natal Wealth Promise (Root Structural Potential)"
+        title={t('theme.wealth.promise')}
         status={wealth.wealthNatalPromise.status}
         confidence={wealth.wealthNatalPromise.evidenceConfidence}
         primarySupport={wealth.wealthNatalPromise.primarySupport}
@@ -127,22 +129,22 @@ export const WealthThemePanel: React.FC<WealthThemePanelProps> = ({
         {/* Yoga Confirmation */}
         <ThemeConfirmationCard
           id={`${id}-yoga-confirmation`}
-          title="Dhana Yoga Confirmation"
+          title={t('theme.wealth.yoga')}
           relationship={wealth.metadata.yogaConfirmationStatus}
           type="YOGA"
           statement={
             wealth.metadata.yogaConfirmationStatus === 'CONFIRMS'
-              ? 'Classical wealth-generating Yogas identified and reinforce natal financial potential.'
+              ? t('theme.wealth.yogaConfirmed')
               : wealth.metadata.yogaConfirmationStatus === 'ABSENT'
-              ? 'No qualifying Dhana/Lakshmi Yoga confirmation identified.'
-              : 'Yoga confirmation unavailable.'
+              ? t('theme.wealth.yogaAbsent')
+              : t('theme.wealth.yogaUnavailable')
           }
           unavailableReason={
             wealth.metadata.yogaConfirmationStatus === 'CONFIRMS'
-              ? 'Classical wealth-generating Yogas identified and reinforce natal financial potential.'
+              ? t('theme.wealth.yogaConfirmed')
               : wealth.metadata.yogaConfirmationStatus === 'ABSENT'
-              ? 'No qualifying Dhana/Lakshmi Yoga confirmation identified.'
-              : 'Yoga confirmation unavailable.'
+              ? t('theme.wealth.yogaAbsent')
+              : t('theme.wealth.yogaUnavailable')
           }
           evidence={yogaEvidence}
         />
@@ -150,17 +152,17 @@ export const WealthThemePanel: React.FC<WealthThemePanelProps> = ({
         {/* D2 (Hora) Status - Explicitly Unavailable in current engine */}
         <ThemeConfirmationCard
           id={`${id}-d2-confirmation`}
-          title="D2 (Hora) Divisional Confirmation"
+          title={t('theme.wealth.d2')}
           relationship="UNAVAILABLE"
           type="VARGA"
           isAvailable={false}
-          unavailableReason="D2 confirmation is not implemented in the current Wealth interpretation version."
+          unavailableReason={t('theme.wealth.d2Unavailable')}
         />
 
         {/* Timing Card */}
         <ThemeTimingCard
           id={`${id}-timing`}
-          title="Timing / Activation"
+          title={t('theme.wealth.timing')}
           timingEvidence={timingEvidence}
         />
       </div>

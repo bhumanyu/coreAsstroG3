@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Clock,
   Calendar,
@@ -26,6 +27,7 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
   onNavigateEvidence,
   onSelectTab
 }) => {
+  const { t } = useTranslation('dasha');
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<readonly string[] | null>(null);
 
   const handleOpenEvidence = (evidenceIds?: readonly string[]) => {
@@ -52,16 +54,16 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
         <header className="space-y-2 border-b border-slate-800 pb-4">
           <h1 className="text-2xl font-bold font-serif-astro text-slate-100 flex items-center gap-2.5">
             <Clock className="w-6 h-6 text-indigo-400" aria-hidden="true" />
-            Dasha & Timing
+            {t('timing.pageTitle')}
           </h1>
           <p className="text-xs text-slate-400">
-            Deterministic Vimshottari lifecycle progressions and domain activation analysis
+            {t('timing.pageDescription')}
           </p>
         </header>
 
         <EmptyState
-          title="Dasha & Timing Data Unavailable"
-          message="No Vimshottari or Active Dasha calculations were found for the current chart. Please verify natal planetary calculations."
+          title={t('timing.pageUnavailableTitle')}
+          message={t('timing.pageUnavailableMessage')}
           icon={<Clock className="w-6 h-6 text-indigo-400" aria-hidden="true" />}
         />
       </main>
@@ -82,10 +84,10 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold font-serif-astro text-slate-100 tracking-wide">
-                Dasha & Timing
+                {t('timing.pageTitle')}
               </h1>
               <p className="text-xs text-slate-400">
-                Deterministic multi-tier Vimshottari lifecycle and domain activation matrix
+                {t('timing.pageDescription')}
               </p>
             </div>
           </div>
@@ -95,7 +97,7 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
           {viewModel.asOf && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
               <Calendar className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-              <span className="text-slate-500">As Of:</span>
+              <span className="text-slate-500">{t('timing.asOf')}:</span>
               <span className="font-semibold text-indigo-300">
                 {viewModel.asOf.split('T')[0]}
               </span>
@@ -118,11 +120,11 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-200">
           <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
           <div className="space-y-1">
-            <p className="font-semibold">Partial Timing Resolution</p>
+            <p className="font-semibold">{t('timing.partialResolution')}</p>
             <p className="text-amber-300/80 leading-relaxed">
               {viewModel.unresolvedEvidenceIds && viewModel.unresolvedEvidenceIds.length > 0
-                ? 'Some supporting evidence could not be resolved. The affected timing explanations may be incomplete.'
-                : 'Vimshottari timeline sequence is available, but active period resolution was partial. Some active dasha cards may be omitted.'}
+                ? t('timing.unresolvedEvidence')
+                : t('timing.partialActivePeriod')}
             </p>
           </div>
         </div>
@@ -174,7 +176,7 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
               <div className="flex items-center gap-2 text-slate-100">
                 <FileText className="w-4 h-4 text-indigo-400" aria-hidden="true" />
                 <h3 id="evidence-modal-title" className="font-semibold text-sm">
-                  Dasha Astrological Evidence ({modalEvidenceList.length} Rules)
+                        {t('timing.evidenceModalTitle', { count: modalEvidenceList.length })}
                 </h3>
               </div>
               <button
@@ -216,14 +218,14 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
                     )}
                     {item.source && (
                       <p className="text-[10px] font-mono-code text-slate-500 pt-1 border-t border-slate-800/50">
-                        Source: {item.source}
+                        {t('timing.source')}: {item.source}
                       </p>
                     )}
                   </div>
                 ))
               ) : (
                 <div className="text-center py-6 text-slate-400">
-                  No detailed rule evidence items found matching the selected IDs.
+                  {t('timing.noMatchingEvidence')}
                 </div>
               )}
             </div>
@@ -235,7 +237,7 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
                 onClick={handleCloseEvidenceModal}
                 className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors cursor-pointer"
               >
-                Close
+                {t('timing.close')}
               </button>
             </div>
           </div>

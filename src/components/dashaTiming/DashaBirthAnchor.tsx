@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Anchor, Compass, Calendar } from 'lucide-react';
 import type { DashaBirthAnchorProduct } from '../../product/dasha-timing/dashaTimingTypes';
 import { formatPlanetName } from '../fullNatalReport/reportUtils';
@@ -8,6 +9,7 @@ export interface DashaBirthAnchorProps {
 }
 
 export const DashaBirthAnchor: React.FC<DashaBirthAnchorProps> = ({ birthAnchor }) => {
+  const { t } = useTranslation('dasha');
   if (!birthAnchor) {
     return null;
   }
@@ -19,7 +21,7 @@ export const DashaBirthAnchor: React.FC<DashaBirthAnchorProps> = ({ birthAnchor 
 
   return (
     <div
-      aria-label="Vimshottari Birth Dasha Anchor"
+      aria-label={t('timing.birthAnchorAria')}
       className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4"
     >
       <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
@@ -29,15 +31,15 @@ export const DashaBirthAnchor: React.FC<DashaBirthAnchorProps> = ({ birthAnchor 
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-100">
-              Birth Dasha Anchor (Janma Nakshatra)
+              {t('timing.birthAnchorTitle')}
             </h3>
             <p className="text-xs text-slate-400">
-              Initial Vimshottari period determined by Moon's natal nakshatra degree
+              {t('timing.birthAnchorDescription')}
             </p>
           </div>
         </div>
         <span className="text-[10px] font-mono-code uppercase px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-          Vimshottari Baseline
+          {t('timing.vimshottariBaseline')}
         </span>
       </div>
 
@@ -46,7 +48,7 @@ export const DashaBirthAnchor: React.FC<DashaBirthAnchorProps> = ({ birthAnchor 
         <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-1">
           <span className="text-[10px] uppercase text-slate-400 flex items-center gap-1">
             <Compass className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-            Moon Nakshatra
+            {t('timing.moonNakshatra')}
           </span>
           <p className="text-sm font-bold text-indigo-300">
             {birthAnchor.nakshatra}
@@ -57,7 +59,7 @@ export const DashaBirthAnchor: React.FC<DashaBirthAnchorProps> = ({ birthAnchor 
         <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-1">
           <span className="text-[10px] uppercase text-slate-400 flex items-center gap-1">
             <Anchor className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
-            Starting Dasha Lord
+            {t('timing.startingDashaLord')}
           </span>
           <p className="text-sm font-bold text-purple-300 font-serif-astro">
             {formatPlanetName(birthAnchor.nakshatraLord)}
@@ -68,7 +70,7 @@ export const DashaBirthAnchor: React.FC<DashaBirthAnchorProps> = ({ birthAnchor 
         <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-1">
           <span className="text-[10px] uppercase text-slate-400 flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
-            Balance at Birth
+            {t('timing.balanceAtBirth')}
           </span>
           <p className="text-sm font-bold text-amber-300">
             {hasBalance

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Horoscope } from '../types';
 import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
 import type { AppState } from '../app/AppState';
@@ -18,6 +19,7 @@ export const AiExplanationPage: React.FC<AiExplanationPageProps> = ({
   lifeAnalysisState,
   onRetry
 }) => {
+  const { t } = useTranslation('reports');
   const effectiveState = lifeAnalysisState ?? state.lifeAnalysisState;
   const career = effectiveState?.career;
   const wealth = effectiveState?.wealth;
@@ -44,11 +46,11 @@ export const AiExplanationPage: React.FC<AiExplanationPageProps> = ({
           <div className="flex items-center justify-center gap-2 text-slate-300 font-semibold">
             <AlertCircle className="w-5 h-5 text-amber-400" />
             <h2 className="text-lg font-semibold text-slate-100">
-              AI Explanation Unavailable
+              {t('ai.unavailable')}
             </h2>
           </div>
           <p className="text-sm text-slate-400 max-w-md mx-auto">
-            Canonical analysis artifacts are not yet ready or failed to compute.
+            {t('ai.notReady')}
           </p>
           {onRetry && (
             <div className="pt-2">
@@ -58,7 +60,7 @@ export const AiExplanationPage: React.FC<AiExplanationPageProps> = ({
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>Retry Analysis</span>
+                <span>{t('ai.retry')}</span>
               </button>
             </div>
           )}

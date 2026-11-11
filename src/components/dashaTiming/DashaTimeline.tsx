@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar, ChevronDown, ChevronUp, Clock, CheckCircle2 } from 'lucide-react';
 import type { DashaTimelinePeriodProduct, DashaTimelineProduct } from '../../product/dasha-timing/dashaTimingTypes';
 import { formatPlanetName } from '../fullNatalReport/reportUtils';
@@ -15,13 +16,14 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
   activeMahadashaStart,
   activeMahadashaEnd
 }) => {
+  const { t } = useTranslation('dasha');
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   if (timeline.availability === 'UNAVAILABLE' || timeline.periods.length === 0) {
     return (
       <EmptyState
-        title="Vimshottari Timeline Unavailable"
-        message="Vimshottari 120-year planetary progression timeline could not be resolved."
+        title={t('timing.timelineUnavailableTitle')}
+        message={t('timing.timelineUnavailableMessage')}
         icon={<Clock className="w-5 h-5 text-indigo-400" aria-hidden="true" />}
       />
     );
@@ -40,15 +42,15 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
           </div>
           <div>
             <h2 id="timeline-heading" className="text-base sm:text-lg font-semibold text-slate-100">
-              Vimshottari 120-Year Mahadasha Timeline
+              {t('timing.timelineTitle')}
             </h2>
             <p className="text-xs text-slate-400">
-              Complete chronological lifecycle sequence of major planetary cycles
+              {t('timing.timelineDescription')}
             </p>
           </div>
         </div>
         <span className="text-xs font-mono-code text-slate-400 bg-slate-900 px-2.5 py-1 rounded-full border border-slate-800">
-          {timeline.periods.length} Mahadashas
+          {t('timing.mahadashaCount', { count: timeline.periods.length })}
         </span>
       </div>
 
@@ -80,29 +82,29 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
                     {isActive && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-mono-code font-bold uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                         <CheckCircle2 className="w-3 h-3 text-indigo-400" aria-hidden="true" />
-                        Active
+                        {t('timing.active')}
                       </span>
                     )}
                   </div>
                   <span className="text-[10px] font-mono-code text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                    Cycle #{period.index ?? idx + 1}
+                    {t('timing.cycle', { count: period.index ?? idx + 1 })}
                   </span>
                 </div>
 
                 {/* Dates & Duration */}
                 <div className="space-y-1 text-xs font-mono-code">
                   <div className="flex justify-between text-slate-300">
-                    <span className="text-slate-500">Start:</span>
+                    <span className="text-slate-500">{t('timing.start')}:</span>
                     <span>{period.start}</span>
                   </div>
                   <div className="flex justify-between text-slate-300">
-                    <span className="text-slate-500">End:</span>
+                    <span className="text-slate-500">{t('timing.end')}:</span>
                     <span>{period.end}</span>
                   </div>
                   {period.durationYears !== undefined && (
                     <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800/40">
-                      <span>Duration:</span>
-                      <span className="text-indigo-300 font-semibold">{period.durationYears} Years</span>
+                      <span>{t('timing.duration')}:</span>
+                      <span className="text-indigo-300 font-semibold">{t('timing.years', { count: period.durationYears })}</span>
                     </div>
                   )}
                 </div>
@@ -114,7 +116,7 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
                     onClick={() => toggleExpand(idx)}
                     className="w-full mt-2 pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs font-mono-code text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
                   >
-                    <span>{isExpanded ? 'Hide Antardashas' : `View ${period.antardashas.length} Antardashas`}</span>
+                    <span>{t(isExpanded ? 'timing.hideAntardashas' : 'timing.viewAntardashas', { count: period.antardashas.length })}</span>
                     {isExpanded ? (
                       <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
                     ) : (
@@ -128,7 +130,7 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
               {isExpanded && hasSubPeriods && (
                 <div className="bg-slate-950/80 border-t border-slate-800/80 p-3 space-y-1.5 rounded-b-2xl max-h-48 overflow-y-auto">
                   <span className="text-[10px] font-mono-code uppercase text-slate-500 block mb-1">
-                    Antardasha Sequence:
+                    {t('timing.antardashaSequence')}:
                   </span>
                   {period.antardashas!.map((ad, adIdx) => (
                     <div

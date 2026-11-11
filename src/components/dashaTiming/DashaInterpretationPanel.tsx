@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { BookOpen, ShieldCheck, HelpCircle } from 'lucide-react';
 import type { DashaInterpretationProduct } from '../../product/dasha-timing/dashaTimingTypes';
 import { formatConfidence } from '../fullNatalReport/reportUtils';
@@ -14,11 +15,12 @@ export const DashaInterpretationPanel: React.FC<DashaInterpretationPanelProps> =
   interpretation,
   onOpenEvidence
 }) => {
+  const { t } = useTranslation('dasha');
   if (!interpretation || interpretation.status === 'UNAVAILABLE') {
     return (
       <EmptyState
-        title="Dasha Interpretation Unavailable"
-        message="Deterministic astrological interpretation is not available for the active period."
+        title={t('timing.interpretationUnavailableTitle')}
+        message={t('timing.interpretationUnavailableMessage')}
         icon={<BookOpen className="w-5 h-5 text-indigo-400" aria-hidden="true" />}
       />
     );
@@ -35,10 +37,10 @@ export const DashaInterpretationPanel: React.FC<DashaInterpretationPanelProps> =
           </div>
           <div>
             <h2 id="interpretation-heading" className="text-base sm:text-lg font-semibold text-slate-100">
-              Active Dasha Astrological Interpretation
+              {t('timing.interpretationTitle')}
             </h2>
             <p className="text-xs text-slate-400">
-              Deterministic rule synthesis across planetary ownership, yogas, aspects, and functional nature
+              {t('timing.interpretationDescription')}
             </p>
           </div>
         </div>
@@ -47,7 +49,7 @@ export const DashaInterpretationPanel: React.FC<DashaInterpretationPanelProps> =
           {confidence && (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-mono-code">
               <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-              <span className="text-slate-400">Confidence:</span>
+              <span className="text-slate-400">{t('timing.confidence')}:</span>
               <span className="font-semibold text-indigo-300">
                 {formatConfidence(confidence)}
               </span>
@@ -61,7 +63,7 @@ export const DashaInterpretationPanel: React.FC<DashaInterpretationPanelProps> =
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Explore Evidence</span>
+              <span>{t('timing.exploreEvidence')}</span>
             </button>
           )}
         </div>
@@ -107,7 +109,7 @@ export const DashaInterpretationPanel: React.FC<DashaInterpretationPanelProps> =
         </div>
       ) : (
         <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs text-slate-400">
-          No individual rule evidence items were recorded for the active dasha period.
+          {t('timing.noRuleEvidence')}
         </div>
       )}
     </section>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
 import { AnalysisEmptyState } from '../../product/analysis/AnalysisEmptyState';
 
@@ -11,13 +12,14 @@ export const ReasoningErrorState: React.FC<ReasoningErrorStateProps> = ({
   errorMessage,
   onRetry
 }) => {
+  const { t } = useTranslation('reports');
   return (
     <div className="py-6">
       <AnalysisEmptyState
-        title="Reasoning Computation Error"
+        title={t('reasoning.status.errorTitle')}
         message={
           errorMessage ||
-          'An error occurred while compiling astrological reasoning. Please verify birth details and retry.'
+          t('reasoning.status.errorMessage')
         }
         icon={<AlertTriangle className="w-6 h-6 text-rose-400" aria-hidden="true" />}
         onRetry={onRetry}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Compass, Sparkles, TrendingUp, AlertTriangle, ShieldCheck } from 'lucide-react';
 import type {
   LifeAnalysisOverallViewModel,
@@ -22,6 +23,7 @@ export const LifeAnalysisOverview: React.FC<LifeAnalysisOverviewProps> = ({
   completeness,
   confidence
 }) => {
+  const { t } = useTranslation('reports');
   return (
     <section
       aria-labelledby="overview-heading"
@@ -36,10 +38,10 @@ export const LifeAnalysisOverview: React.FC<LifeAnalysisOverviewProps> = ({
           </div>
           <div>
             <h2 id="overview-heading" className="text-lg font-semibold text-slate-100">
-              Life Domain Synthesis Overview
+              {t('lifeAnalysis.overviewTitle')}
             </h2>
             <p className="text-xs text-slate-400">
-              Unified cross-domain deterministic synthesis & alignment
+              {t('lifeAnalysis.overviewDescription')}
             </p>
           </div>
         </div>
@@ -58,7 +60,7 @@ export const LifeAnalysisOverview: React.FC<LifeAnalysisOverviewProps> = ({
             )}`}
           >
             <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
-            Confidence: {formatEnum(confidence)}
+            {t('lifeAnalysis.confidence')}: {formatEnum(confidence)}
           </span>
           <span className="px-2.5 py-1 rounded-full text-[11px] font-mono-code bg-slate-800/80 text-slate-300 border border-slate-700">
             {completeness.label}
@@ -75,7 +77,7 @@ export const LifeAnalysisOverview: React.FC<LifeAnalysisOverviewProps> = ({
           <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 mb-2">
               <TrendingUp className="w-4 h-4" aria-hidden="true" />
-              <span>Strongest Areas of Focus</span>
+              <span>{t('lifeAnalysis.strongestAreas')}</span>
             </div>
             {overall.strongestDomainNames.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -91,7 +93,7 @@ export const LifeAnalysisOverview: React.FC<LifeAnalysisOverviewProps> = ({
               </div>
             ) : (
               <span className="text-xs text-slate-400">
-                No explicitly dominant domain singled out
+                {t('lifeAnalysis.noDominantDomain')}
               </span>
             )}
           </div>
@@ -99,7 +101,7 @@ export const LifeAnalysisOverview: React.FC<LifeAnalysisOverviewProps> = ({
           <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 mb-2">
               <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-              <span>Challenged / Deliberate Growth Areas</span>
+              <span>{t('lifeAnalysis.growthAreas')}</span>
             </div>
             {overall.challengedDomainNames.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -114,7 +116,7 @@ export const LifeAnalysisOverview: React.FC<LifeAnalysisOverviewProps> = ({
               </div>
             ) : (
               <span className="text-xs text-slate-400">
-                No severe domain-level challenges detected
+                {t('lifeAnalysis.noChallenges')}
               </span>
             )}
           </div>

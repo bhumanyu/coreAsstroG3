@@ -6,6 +6,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ProductAnalysisState } from '../app/AppState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import {
@@ -40,6 +41,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
   onRetry,
   onNavigate
 }) => {
+  const { t } = useTranslation('reports');
   const [focusedDomain, setFocusedDomain] = useState<ReasoningDomain | 'ALL'>('ALL');
 
   const status = productAnalysisState?.status;
@@ -89,7 +91,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
         >
           <div className="flex items-center gap-2 text-slate-400">
             <Compass className="w-4 h-4 text-indigo-400 shrink-0" aria-hidden="true" />
-            <span className="font-medium text-slate-300">Exploration Links:</span>
+            <span className="font-medium text-slate-300">{t('reasoning.explorationLinks')}</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -100,7 +102,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors font-medium"
             >
               <Briefcase className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
-              <span>View detailed Career analysis</span>
+              <span>{t('reasoning.viewCareer')}</span>
             </button>
 
             <button
@@ -110,7 +112,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors font-medium"
             >
               <Clock className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
-              <span>View Dasha & Timing</span>
+              <span>{t('reasoning.viewDasha')}</span>
             </button>
 
             <button
@@ -120,7 +122,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors font-medium"
             >
               <Layers className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
-              <span>View Detailed Analysis</span>
+              <span>{t('reasoning.viewDetailed')}</span>
             </button>
           </div>
         </div>
@@ -149,7 +151,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
                 : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
-            <span>All Domains</span>
+            <span>{t('reasoning.allDomains')}</span>
           </button>
 
           <button
@@ -163,7 +165,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
             }`}
           >
             <Briefcase className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Career Reasoning</span>
+            <span>{t('reasoning.career')}</span>
           </button>
 
           <button
@@ -177,18 +179,18 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
             }`}
           >
             <Coins className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Wealth Reasoning</span>
+            <span>{t('reasoning.wealth')}</span>
           </button>
         </div>
 
         <div className="hidden sm:flex items-center gap-2 text-xs font-mono-code text-slate-400">
-          <span>Focus:</span>
+          <span>{t('reasoning.focus')}</span>
           <span className="text-indigo-300 font-bold">
             {focusedDomain === 'CAREER'
-              ? 'Career Domain'
+              ? t('reasoning.careerDomain')
               : focusedDomain === 'WEALTH'
-                ? 'Wealth Domain'
-                : 'All Domains'}
+                ? t('reasoning.wealthDomain')
+                : t('reasoning.allDomains')}
           </span>
         </div>
       </div>
@@ -196,7 +198,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
       {/* Unified Cross-Domain Evidence Framework (§4, §39) */}
       <section
         id="section-cross-domain-evidence"
-        aria-label="Cross-Domain Evidence Framework"
+        aria-label={t('reasoning.evidence.ariaLabel')}
         className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -205,15 +207,15 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
               <Network className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-100">Cross-Domain Evidence Framework</h2>
+              <h2 className="text-base font-semibold text-slate-100">{t('reasoning.evidence.title')}</h2>
               <p className="text-xs text-slate-400">
-                Deduplicated evidence items categorized by astrological role
+                {t('reasoning.evidence.description')}
               </p>
             </div>
           </div>
 
           <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-            {dedupedEvidence.length} evidence items
+            {t('reasoning.evidence.count', { count: dedupedEvidence.length })}
           </span>
         </div>
 
@@ -242,12 +244,12 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
       {/* Career Reasoning Section (§2b) */}
       <section
         id="section-career-reasoning"
-        aria-label="Career & Vocational Reasoning"
+        aria-label={t('reasoning.careerAria')}
         className="space-y-6 pt-2"
       >
         <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
           <Briefcase className="w-5 h-5 text-indigo-400" aria-hidden="true" />
-          <h2 className="text-xl font-bold text-slate-100">Career Reasoning</h2>
+          <h2 className="text-xl font-bold text-slate-100">{t('reasoning.career')}</h2>
         </div>
 
         <ReasoningHero hero={career.hero} />
@@ -264,12 +266,12 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
       {/* Wealth Reasoning Section (§2b) */}
       <section
         id="section-wealth-reasoning"
-        aria-label="Wealth & Asset Accumulation Reasoning"
+        aria-label={t('reasoning.wealthAria')}
         className="space-y-6 pt-6 border-t border-slate-800/80"
       >
         <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
           <Coins className="w-5 h-5 text-amber-400" aria-hidden="true" />
-          <h2 className="text-xl font-bold text-slate-100">Wealth Reasoning</h2>
+          <h2 className="text-xl font-bold text-slate-100">{t('reasoning.wealth')}</h2>
         </div>
 
         <ReasoningHero hero={wealth.hero} />

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Compass, Layers } from 'lucide-react';
 import type { LifeAnalysisProductState } from '../../product/life-analysis/lifeAnalysisTypes';
 import { LifeAnalysisLoading } from './LifeAnalysisLoading';
@@ -26,6 +27,7 @@ export const LifeAnalysisPage: React.FC<LifeAnalysisPageProps> = ({
   onRetry,
   onNavigateToDashaTiming
 }) => {
+  const { t } = useTranslation('reports');
   if (state.status === 'LOADING') {
     return <LifeAnalysisLoading />;
   }
@@ -42,8 +44,8 @@ export const LifeAnalysisPage: React.FC<LifeAnalysisPageProps> = ({
   if (!state.analysis) {
     return (
       <EmptyState
-        title="Life Analysis Unavailable"
-        message="No life domain synthesis data could be calculated for the current chart."
+        title={t('lifeAnalysis.unavailableTitle')}
+        message={t('lifeAnalysis.unavailableMessage')}
         icon={<Compass className="w-5 h-5 text-indigo-400" aria-hidden="true" />}
       />
     );
@@ -63,7 +65,7 @@ export const LifeAnalysisPage: React.FC<LifeAnalysisPageProps> = ({
 
       {/* 2. Partial State Notice if applicable */}
       {analysis.status === 'PARTIAL' && (
-        <LifeAnalysisPartial message="Partial life domain analysis rendered. One or more domains had incomplete upstream astrological inputs." />
+        <LifeAnalysisPartial message={t('lifeAnalysis.partialMessage')} />
       )}
 
       {/* 3. Overall Synthesis Overview */}
@@ -81,7 +83,7 @@ export const LifeAnalysisPage: React.FC<LifeAnalysisPageProps> = ({
         <div className="flex items-center gap-2">
           <Layers className="w-5 h-5 text-indigo-400" aria-hidden="true" />
           <h2 id="domain-cards-heading" className="text-base sm:text-lg font-semibold text-slate-100">
-            Domain-Specific Analysis Cards
+            {t('lifeAnalysis.domainCards')}
           </h2>
         </div>
 

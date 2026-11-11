@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sparkles, Brain, AlertCircle } from 'lucide-react';
 import type { AiExplanationResult } from '../../ai/browser';
 import { AiExplanationEvidenceList } from '../ai/AiExplanationEvidenceList';
@@ -10,6 +11,7 @@ interface AiExplanationSectionProps {
 export const AiExplanationSection: React.FC<AiExplanationSectionProps> = ({
   explanation
 }) => {
+  const { t } = useTranslation('reports');
   if (!explanation) {
     return (
       <section
@@ -18,7 +20,7 @@ export const AiExplanationSection: React.FC<AiExplanationSectionProps> = ({
       >
         <Sparkles className="w-5 h-5 text-purple-400" aria-hidden="true" />
         <span id="ai-explanation-empty-heading" className="text-xs sm:text-sm font-medium text-slate-300">
-          AI synthesis narrative explanation not requested or unavailable.
+          {t('lifeAnalysis.aiUnavailable')}
         </span>
       </section>
     );
@@ -32,10 +34,10 @@ export const AiExplanationSection: React.FC<AiExplanationSectionProps> = ({
       >
         <div className="flex items-center gap-2 text-amber-400 text-sm font-semibold">
           <AlertCircle className="w-4 h-4" aria-hidden="true" />
-          <span id="ai-explanation-error-heading">AI Explanation Note</span>
+          <span id="ai-explanation-error-heading">{t('lifeAnalysis.aiNote')}</span>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed">
-          Deterministic life domain analysis is fully computed and available above. AI natural language explanation could not be generated: {explanation.message}
+          {t('lifeAnalysis.aiError', { message: explanation.message })}
         </p>
       </section>
     );
@@ -57,14 +59,14 @@ export const AiExplanationSection: React.FC<AiExplanationSectionProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 id="ai-explanation-heading" className="text-base sm:text-lg font-semibold text-slate-100">
-                AI Synthesis Explanation
+                {t('lifeAnalysis.aiTitle')}
               </h2>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider">
                 {explanation.task}
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              AI explanation based on the verified deterministic analysis.
+              {t('lifeAnalysis.aiDescription')}
             </p>
           </div>
         </div>
@@ -82,7 +84,7 @@ export const AiExplanationSection: React.FC<AiExplanationSectionProps> = ({
       <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-5 space-y-2">
         <h3 className="text-xs font-semibold uppercase tracking-wider font-mono-code text-purple-400 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-          Synthesized Interpretation
+          {t('lifeAnalysis.synthesizedInterpretation')}
         </h3>
         <p className="text-sm sm:text-base text-slate-200 leading-relaxed font-serif-astro">
           {explanation.conclusion}
@@ -93,7 +95,7 @@ export const AiExplanationSection: React.FC<AiExplanationSectionProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {explanation.supportingEvidence.length > 0 && (
           <AiExplanationEvidenceList
-            title="Supporting Synthesis Factors"
+            title={t('lifeAnalysis.supportingFactors')}
             items={explanation.supportingEvidence}
             variant="supporting"
           />
@@ -101,7 +103,7 @@ export const AiExplanationSection: React.FC<AiExplanationSectionProps> = ({
 
         {explanation.challengingEvidence.length > 0 && (
           <AiExplanationEvidenceList
-            title="Challenging Synthesis Factors"
+            title={t('lifeAnalysis.challengingFactors')}
             items={explanation.challengingEvidence}
             variant="challenging"
           />

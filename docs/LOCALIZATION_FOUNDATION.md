@@ -25,8 +25,14 @@ This branch implements the first localization foundation for CoreAstroG3 based o
 - `src/components/language/LanguageSwitcher.tsx`.
 - Tests for persistence, switching, Western digits and resource parity.
 
+## PR-I18N-003 Phase 4 static UI
+- Phase 4 adds bilingual static copy for overview, career/wealth page navigation and state surfaces, Dasha/timing status and controls, reasoning and evidence-confidence surfaces, financial facts/disclaimers, AI status, and product/theme report headers through the existing `useTranslation('namespace')` convention.
+- Canonical planetary and chart data, engine-generated interpretation/report prose, AI narrative text, status/enum/contract identifiers and API/calculation data remain unchanged.
+- `overviewFormat.ts` and `userFacingInterpretation.ts` are deliberately not localized or modified. Their English vocabulary is canonical formatter output; only surrounding static UI labels are translated. This keeps formatter values stable across languages and preserves existing contract/tests.
+- Hindi language switching changes presentation only; it does not reset form input or trigger analysis/controller work.
+
 ## Remaining work
-This is the foundation/shell milestone, not complete bilingual UI. Birth form, detailed analysis, charts, career, wealth, Dasha, research, validation, AI interpretations and report/export content still require incremental migration. Hindi terminology needs Jyotish review before release.
+This remains an incremental bilingual UI migration; static labels across all detailed career, wealth, Dasha, reasoning and full natal report cards should continue to move into these namespaces in follow-on slices. Birth form, chart, research, validation and export surfaces also need incremental migration. Hindi Jyotish terminology needs review before release.
 
 ## Validation
 Tests have been added but have not been executed in this GitHub-only editing environment. Regenerate package-lock with the repository-pinned Node/npm toolchain, then run `npm ci`, `npm run lint`, focused Vitest tests and `npm run build`. Do not treat this PR as release-ready before those checks and browser state-preservation acceptance pass.

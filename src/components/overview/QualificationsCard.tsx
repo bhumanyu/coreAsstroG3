@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { OverviewQualification } from '../../product/analysis/overviewViewModel';
 import { formatSeverity } from './overviewFormat';
 import { ShieldAlert, CheckCircle2 } from 'lucide-react';
@@ -10,6 +11,7 @@ export interface QualificationsCardProps {
 export const QualificationsCard: React.FC<QualificationsCardProps> = ({
   qualifications
 }) => {
+  const { t } = useTranslation('dashboard');
   const renderSeverityBadge = (severity: 'LOW' | 'MEDIUM' | 'HIGH') => {
     const text = formatSeverity(severity);
     switch (severity) {
@@ -37,7 +39,7 @@ export const QualificationsCard: React.FC<QualificationsCardProps> = ({
 
   return (
     <section
-      aria-label="Astrological Qualifications & Constraints"
+      aria-label={t('qualifications.ariaLabel')}
       className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between"
     >
       <div>
@@ -47,10 +49,10 @@ export const QualificationsCard: React.FC<QualificationsCardProps> = ({
           </div>
           <div>
             <h3 className="text-base font-semibold text-slate-100">
-              Qualifications & Modifiers
+              {t('qualifications.title')}
             </h3>
             <span className="text-xs text-slate-400">
-              Astrological mitigating conditions and caveats
+              {t('qualifications.subtitle')}
             </span>
           </div>
         </div>
@@ -76,7 +78,7 @@ export const QualificationsCard: React.FC<QualificationsCardProps> = ({
           ) : (
             <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800/60 text-center text-xs text-slate-400">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 mx-auto mb-1.5" aria-hidden="true" />
-              <span>No adverse astrological qualifications or mitigating constraints detected.</span>
+              <span>{t('qualifications.empty')}</span>
             </div>
           )}
         </div>

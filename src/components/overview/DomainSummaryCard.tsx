@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { OverviewDomain } from '../../product/analysis/overviewViewModel';
 import {
   formatStrength,
@@ -19,6 +20,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
   domainKey,
   onOpen
 }) => {
+  const { t } = useTranslation('dashboard');
   const isCareer = domainKey === 'career';
   const Icon = isCareer ? Briefcase : Coins;
   const iconColor = isCareer ? 'text-indigo-400' : 'text-amber-400';
@@ -29,7 +31,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
 
   return (
     <div
-      aria-label={`${domain.name} Summary`}
+      aria-label={t('domain.summaryAria', { domain: domain.name })}
       className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm"
     >
       <div>
@@ -46,7 +48,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
                 {domain.name}
               </h3>
               <span className="text-xs text-slate-400">
-                {isCareer ? 'Vocation & Status Potential' : 'Financial Capacity & Prosperity'}
+                {t(isCareer ? 'domain.careerSubtitle' : 'domain.wealthSubtitle')}
               </span>
             </div>
           </div>
@@ -64,7 +66,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
         {/* Synthesis Summary */}
         <div className="mt-4">
           <p className="text-sm text-slate-300 leading-relaxed">
-            {domain.summary || 'Summary unavailable for this domain.'}
+            {domain.summary || t('domain.summaryUnavailable')}
           </p>
         </div>
 
@@ -72,7 +74,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
         {domain.topEvidence.length > 0 && (
           <div className="mt-5 space-y-2.5">
             <h4 className="text-xs font-mono-code uppercase font-semibold text-slate-400 tracking-wider">
-              Top Evidentiary Drivers
+              {t('domain.topDrivers')}
             </h4>
             <div className="space-y-2">
               {domain.topEvidence.map((evidence, idx) => (
@@ -110,14 +112,14 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
         <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
           <span className="text-xs text-slate-400 inline-flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
-            <span>Deterministic Analysis</span>
+            <span>{t('domain.deterministicAnalysis')}</span>
           </span>
           <button
             type="button"
             onClick={onOpen}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer group"
           >
-            <span>{isCareer ? 'Explore Career Details' : 'Explore Wealth Details'}</span>
+            <span>{t(isCareer ? 'domain.exploreCareer' : 'domain.exploreWealth')}</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
           </button>
         </div>

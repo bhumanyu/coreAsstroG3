@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningConclusionViewModel } from '../../product/analysis/reasoningViewModel';
 import {
   formatConfidence,
@@ -14,6 +15,7 @@ export interface ReasoningConclusionProps {
 }
 
 export const ReasoningConclusion: React.FC<ReasoningConclusionProps> = ({ conclusion }) => {
+  const { t } = useTranslation('reports');
   const statusBadgeClass = getConclusionStatusBadgeClass(conclusion.status);
   const strengthBadgeClass = getPromiseStrengthBadgeClass(conclusion.strength);
 
@@ -25,9 +27,9 @@ export const ReasoningConclusion: React.FC<ReasoningConclusionProps> = ({ conclu
             <Sparkles className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Synthesized Astrological Verdict</h2>
+            <h2 className="text-base font-semibold text-slate-100">{t('reasoning.verdictTitle')}</h2>
             <p className="text-xs text-slate-400">
-              Unified analytical conclusion synthesizing natal promise, harmonics, and timing
+              {t('reasoning.verdictDescription')}
             </p>
           </div>
         </div>
@@ -56,22 +58,22 @@ export const ReasoningConclusion: React.FC<ReasoningConclusionProps> = ({ conclu
       <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-800/60 text-xs font-mono-code">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-slate-300 bg-slate-800/50 px-2.5 py-1 rounded-lg border border-slate-700/60">
-            {conclusion.evidenceCount} Evidence Items
+            {t('reasoning.evidenceItems', { count: conclusion.evidenceCount })}
           </span>
           <span className="inline-flex items-center gap-1.5 text-emerald-300 bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-800/60">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
-            <span>{conclusion.supportingEvidenceCount} Supporting</span>
+            <span>{t('reasoning.supporting', { count: conclusion.supportingEvidenceCount })}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 text-rose-300 bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-800/60">
             <XCircle className="w-3.5 h-3.5 text-rose-400" aria-hidden="true" />
-            <span>{conclusion.challengingEvidenceCount} Challenging</span>
+            <span>{t('reasoning.challenging', { count: conclusion.challengingEvidenceCount })}</span>
           </span>
         </div>
 
         {conclusion.provenanceAvailable && (
           <div className="inline-flex items-center gap-1.5 text-indigo-300 bg-indigo-950/30 px-2.5 py-1 rounded-lg border border-indigo-800/50">
             <FileText className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-            <span>Rule Provenance Available</span>
+            <span>{t('reasoning.provenanceAvailable')}</span>
           </div>
         )}
       </div>

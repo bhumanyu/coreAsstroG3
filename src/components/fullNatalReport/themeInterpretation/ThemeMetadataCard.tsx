@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CareerThemeInterpretationMetadata
 } from '../../../engine/themeInterpretation/themeInterpretationTypes';
@@ -19,6 +20,7 @@ export const ThemeMetadataCard: React.FC<ThemeMetadataCardProps> = ({
   metadata,
   id
 }) => {
+  const { t } = useTranslation('reports');
   const completenessLabel = formatCompleteness(metadata.dataCompleteness);
 
   return (
@@ -30,10 +32,10 @@ export const ThemeMetadataCard: React.FC<ThemeMetadataCardProps> = ({
         <span className="flex items-center gap-1.5 font-bold uppercase">
           <Terminal className="w-3.5 h-3.5 text-indigo-400" />
           <ChevronRight className="w-3.5 h-3.5 group-open:rotate-90 transition-transform" />
-          Technical Engine Audit & Metadata
+          {t('theme.metadata.title')}
         </span>
         <span
-          aria-label={`Data Completeness: ${completenessLabel}`}
+          aria-label={t('theme.metadata.completenessAria', { status: completenessLabel })}
           className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${
             metadata.dataCompleteness === 'COMPLETE'
               ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
@@ -49,19 +51,19 @@ export const ThemeMetadataCard: React.FC<ThemeMetadataCardProps> = ({
       <div className="pt-3 border-t border-slate-800/60 space-y-3 font-mono-code text-[11px]">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-300">
           <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
-            <span className="text-slate-500 block text-[10px]">Evaluated Rules</span>
+            <span className="text-slate-500 block text-[10px]">{t('theme.metadata.evaluatedRules')}</span>
             <span className="text-sm font-bold text-slate-100">{metadata.evaluatedRulesCount}</span>
           </div>
           <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
-            <span className="text-slate-500 block text-[10px]">Triggered Rules</span>
+            <span className="text-slate-500 block text-[10px]">{t('theme.metadata.triggeredRules')}</span>
             <span className="text-sm font-bold text-emerald-400">{metadata.triggeredRulesCount}</span>
           </div>
           <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
-            <span className="text-slate-500 block text-[10px]">Evidence Items</span>
+            <span className="text-slate-500 block text-[10px]">{t('theme.metadata.evidenceItems')}</span>
             <span className="text-sm font-bold text-indigo-300">{metadata.evidenceItemCount}</span>
           </div>
           <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
-            <span className="text-slate-500 block text-[10px]">Varga Status</span>
+            <span className="text-slate-500 block text-[10px]">{t('theme.metadata.vargaStatus')}</span>
             <span className="text-sm font-bold text-slate-200">{metadata.vargaConfirmationStatus}</span>
           </div>
         </div>
@@ -70,7 +72,7 @@ export const ThemeMetadataCard: React.FC<ThemeMetadataCardProps> = ({
         {metadata.evidenceFamiliesRepresented && metadata.evidenceFamiliesRepresented.length > 0 && (
           <div className="space-y-1">
             <span className="text-slate-400 text-[10px] uppercase font-semibold">
-              Evidence Families Represented ({metadata.evidenceFamiliesRepresented.length})
+              {t('theme.metadata.evidenceFamilies', { count: metadata.evidenceFamiliesRepresented.length })}
             </span>
             <div className="flex flex-wrap gap-1">
               {metadata.evidenceFamiliesRepresented.map((fam, idx) => (
@@ -89,7 +91,7 @@ export const ThemeMetadataCard: React.FC<ThemeMetadataCardProps> = ({
         {metadata.ruleErrors && metadata.ruleErrors.length > 0 ? (
           <div className="bg-rose-950/30 border border-rose-500/30 p-2.5 rounded-lg space-y-1 text-rose-300">
             <div className="flex items-center gap-1 font-bold">
-              <AlertCircle className="w-3.5 h-3.5" /> Rule Execution Notices ({metadata.ruleErrors.length})
+              <AlertCircle className="w-3.5 h-3.5" /> {t('theme.metadata.ruleNotices', { count: metadata.ruleErrors.length })}
             </div>
             <ul className="space-y-0.5 text-[10px]">
               {metadata.ruleErrors.map((err, idx) => (
@@ -101,7 +103,7 @@ export const ThemeMetadataCard: React.FC<ThemeMetadataCardProps> = ({
           </div>
         ) : (
           <div className="flex items-center gap-1 text-emerald-400 text-[10px]">
-            <CheckCircle className="w-3 h-3" /> All deterministic rule evaluators executed cleanly with no exceptions.
+            <CheckCircle className="w-3 h-3" /> {t('theme.metadata.allRulesClean')}
           </div>
         )}
       </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { BrainCircuit } from 'lucide-react';
 import { AnalysisEmptyState } from '../../product/analysis/AnalysisEmptyState';
 
@@ -7,11 +8,12 @@ export interface ReasoningUnavailableStateProps {
 }
 
 export const ReasoningUnavailableState: React.FC<ReasoningUnavailableStateProps> = ({ onRetry }) => {
+  const { t } = useTranslation('reports');
   return (
     <div className="py-6">
       <AnalysisEmptyState
-        title="Astrological Reasoning Unavailable"
-        message="No reasoning graph could be calculated for the current chart. Please calculate or select an astrological birth profile to inspect the decision hierarchy and rule evidence."
+        title={t('reasoning.status.unavailableTitle')}
+        message={t('reasoning.status.unavailableMessage')}
         icon={<BrainCircuit className="w-6 h-6 text-indigo-400" aria-hidden="true" />}
         onRetry={onRetry}
       />

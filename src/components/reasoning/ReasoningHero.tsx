@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeading } from '../layout/PageHeading';
 import type { ReasoningHeroViewModel } from '../../product/analysis/reasoningViewModel';
 import {
@@ -22,6 +23,7 @@ export interface ReasoningHeroProps {
 }
 
 export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
+  const { t } = useTranslation('reports');
   const warnings = hero.warnings || [];
 
   const statusBadgeClass = getConclusionStatusBadgeClass(hero.status);
@@ -30,9 +32,9 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
   return (
     <div className="space-y-4">
       <PageHeading
-        eyebrow="Explainable Astrological Intelligence"
+        eyebrow={t('reasoning.heroEyebrow')}
         title={hero.title}
-        description="Deterministic evidence framework, divisional alignment, chronological dasha timing, and evidentiary provenance."
+        description={t('reasoning.heroDescription')}
       >
         <div className="flex flex-wrap items-center gap-2">
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${statusBadgeClass}`}>
@@ -53,7 +55,7 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono-code">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
               <span>
-                {warnings.length} {warnings.length === 1 ? 'Notice' : 'Notices'}
+                {t(warnings.length === 1 ? 'reasoning.notice' : 'reasoning.notices', { count: warnings.length })}
               </span>
             </div>
           )}
@@ -64,8 +66,8 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono-code uppercase text-slate-400 block">Total Evidence Items</span>
-            <span className="text-xl font-bold text-slate-100">{hero.evidenceCount} Evidence Items</span>
+            <span className="text-[11px] font-mono-code uppercase text-slate-400 block">{t('reasoning.totalEvidence')}</span>
+            <span className="text-xl font-bold text-slate-100">{t('reasoning.evidenceItems', { count: hero.evidenceCount })}</span>
           </div>
           <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
             <HelpCircle className="w-5 h-5" aria-hidden="true" />
@@ -74,8 +76,8 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono-code uppercase text-emerald-400/80 block">Supporting Factors</span>
-            <span className="text-xl font-bold text-emerald-300">{hero.supportingEvidenceCount} Factors</span>
+            <span className="text-[11px] font-mono-code uppercase text-emerald-400/80 block">{t('reasoning.supportingFactors')}</span>
+            <span className="text-xl font-bold text-emerald-300">{t('reasoning.factorCount', { count: hero.supportingEvidenceCount })}</span>
           </div>
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
@@ -84,8 +86,8 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono-code uppercase text-rose-400/80 block">Challenging Factors</span>
-            <span className="text-xl font-bold text-rose-300">{hero.challengingEvidenceCount} Factors</span>
+            <span className="text-[11px] font-mono-code uppercase text-rose-400/80 block">{t('reasoning.challengingFactors')}</span>
+            <span className="text-xl font-bold text-rose-300">{t('reasoning.factorCount', { count: hero.challengingEvidenceCount })}</span>
           </div>
           <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
             <XCircle className="w-5 h-5" aria-hidden="true" />

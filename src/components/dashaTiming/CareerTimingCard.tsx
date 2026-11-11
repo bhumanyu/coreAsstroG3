@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Briefcase, HelpCircle, Layers, ShieldCheck } from 'lucide-react';
 import type {
   CareerTimingProduct,
@@ -19,11 +20,12 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
   hierarchy,
   onOpenEvidence
 }) => {
+  const { t } = useTranslation('dasha');
   if (!timing || timing.status === 'UNAVAILABLE') {
     return (
       <EmptyState
-        title="Career Timing Unavailable"
-        message="Career domain timing activations were not resolved for this period."
+        title={t('timing.careerUnavailableTitle')}
+        message={t('timing.careerUnavailableMessage')}
         icon={<Briefcase className="w-5 h-5 text-indigo-400" aria-hidden="true" />}
       />
     );
@@ -47,15 +49,15 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
           </div>
           <div>
             <h3 id="career-timing-card-heading" className="text-sm sm:text-base font-semibold text-slate-100">
-              Career & Vocation Domain Timing
+              {t('timing.careerTitle')}
             </h3>
             <p className="text-xs text-slate-400">
-              Deterministic activation of 10th house, D10 Dasamsa, and professional karakas
+              {t('timing.careerDescription')}
             </p>
           </div>
         </div>
         <span className="text-[10px] font-mono-code uppercase px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-          Career Field Activations
+          {t('timing.careerFieldActivations')}
         </span>
       </div>
 
@@ -66,14 +68,14 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-indigo-400" aria-hidden="true" />
               <span className="text-xs font-mono-code font-bold text-indigo-200">
-                Hierarchical Synthesis (MD &gt; AD &gt; PD)
+                {t('timing.hierarchicalSynthesis')}
               </span>
             </div>
             <div className="flex items-center gap-2">
               {typeof hierarchy.confidence === 'number' && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-mono-code text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
                   <ShieldCheck className="w-3 h-3 text-emerald-400" aria-hidden="true" />
-                  {Math.round(hierarchy.confidence * 100)}% Conf
+                  {t('timing.confidencePercent', { count: Math.round(hierarchy.confidence * 100) })}
                 </span>
               )}
               <span
@@ -81,7 +83,7 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
                   hierarchy.overallEffect
                 )}`}
               >
-                Synthesized: {formatEnum(hierarchy.overallEffect)}
+                {t('timing.synthesized')}: {formatEnum(hierarchy.overallEffect)}
               </span>
             </div>
           </div>
@@ -100,7 +102,7 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
                 className="inline-flex items-center gap-1 text-[11px] font-mono-code text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>View Synthesized Evidence ({hierarchy.evidenceIds.length} rules)</span>
+                <span>{t('timing.viewSynthesizedEvidence', { count: hierarchy.evidenceIds.length })}</span>
               </button>
             </div>
           )}
@@ -136,11 +138,11 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
 
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono-code uppercase px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 font-semibold">
-                      Role: {p.role}
+                      {t('timing.role')}: {p.role}
                     </span>
                     {p.planet && (
                       <p className="text-xs font-serif-astro font-semibold text-indigo-300">
-                        Lord: {formatPlanetName(p.planet)}
+                        {t('timing.lord')}: {formatPlanetName(p.planet)}
                       </p>
                     )}
                   </div>
@@ -154,7 +156,7 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
 
                 <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px] font-mono-code">
                   <span className="text-slate-500">
-                    {hasEvidence ? `${p.evidenceIds.length} evidence pts` : 'Rule derived'}
+                    {hasEvidence ? t('timing.evidencePoints', { count: p.evidenceIds.length }) : t('timing.ruleDerived')}
                   </span>
                   {hasEvidence && onOpenEvidence && (
                     <button
@@ -163,7 +165,7 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
                       className="inline-flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
                     >
                       <HelpCircle className="w-3 h-3" aria-hidden="true" />
-                      <span>Why?</span>
+                      <span>{t('timing.why')}</span>
                     </button>
                   )}
                 </div>
@@ -173,7 +175,7 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
         </div>
       ) : (
         <div className="text-xs text-slate-400 p-3 bg-slate-950/40 rounded-xl border border-slate-800">
-          No period timing activations were found for Career.
+          {t('timing.noCareerPeriods')}
         </div>
       )}
     </article>

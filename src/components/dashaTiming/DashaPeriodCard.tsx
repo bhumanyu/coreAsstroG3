@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar, Shield, Sparkles, Home, Star } from 'lucide-react';
 import type { DashaCurrentPeriodProduct } from '../../product/dasha-timing/dashaTimingTypes';
 import { formatPlanetName, formatSignName } from '../fullNatalReport/reportUtils';
@@ -13,6 +14,7 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({
   period,
   isPrimary = false
 }) => {
+  const { t } = useTranslation('dasha');
   const { level, planet, start, end, placement, ownedHouses, functionalRoles, functionalNature, dignity, state, confidence } = period;
 
   const levelConfigs = {
@@ -62,7 +64,7 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({
 
         {confidence && (
           <span className="text-[11px] font-mono-code text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
-            Confidence: <span className="text-indigo-300 font-semibold">{formatEnum(confidence)}</span>
+            {t('timing.confidence')}: <span className="text-indigo-300 font-semibold">{formatEnum(confidence)}</span>
           </span>
         )}
       </div>
@@ -75,9 +77,9 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({
           </h3>
           {placement && (
             <p className="text-xs text-slate-300 flex items-center gap-1.5 mt-0.5">
-              <span className="text-slate-400 font-mono-code">Placed in:</span>
+              <span className="text-slate-400 font-mono-code">{t('timing.placedIn')}</span>
               <span className="font-semibold text-slate-200">
-                {formatSignName(placement.sign)} (House {placement.house})
+                {formatSignName(placement.sign)} ({t('timing.house')} {placement.house})
               </span>
             </p>
           )}
@@ -100,7 +102,7 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({
           <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 space-y-0.5">
             <span className="text-[10px] font-mono-code uppercase text-slate-400 flex items-center gap-1">
               <Home className="w-3 h-3 text-indigo-400" aria-hidden="true" />
-              Owned Houses
+              {t('timing.ownedHouses')}
             </span>
             <p className="font-mono-code font-bold text-slate-200">
               {ownedHouses.map(h => `H${h}`).join(', ')}
@@ -113,7 +115,7 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({
           <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 space-y-0.5">
             <span className="text-[10px] font-mono-code uppercase text-slate-400 flex items-center gap-1">
               <Shield className="w-3 h-3 text-purple-400" aria-hidden="true" />
-              Functional Nature
+              {t('timing.functionalNature')}
             </span>
             <p className="font-medium text-purple-300 truncate" title={functionalRoles.map(formatEnum).join(', ')}>
               {functionalRoles.map(formatEnum).join(', ')}
@@ -126,7 +128,7 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({
           <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 space-y-0.5 col-span-2 sm:col-span-1">
             <span className="text-[10px] font-mono-code uppercase text-slate-400 flex items-center gap-1">
               <Star className="w-3 h-3 text-amber-400" aria-hidden="true" />
-              Dignity / State
+              {t('timing.dignityState')}
             </span>
             <div className="flex flex-wrap gap-1 font-mono-code text-[11px]">
               {dignity && (

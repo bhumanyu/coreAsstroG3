@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Coins,
   HelpCircle,
@@ -28,11 +29,12 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
   hierarchy,
   onOpenEvidence
 }) => {
+  const { t } = useTranslation('dasha');
   if (!timing || timing.status === 'UNAVAILABLE') {
     return (
       <EmptyState
-        title="Wealth Timing Unavailable"
-        message="Wealth domain multi-dimensional timing matrix was not resolved for this period."
+        title={t('timing.wealthUnavailableTitle')}
+        message={t('timing.wealthUnavailableMessage')}
         icon={<Coins className="w-5 h-5 text-amber-400" aria-hidden="true" />}
       />
     );
@@ -56,15 +58,15 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
           </div>
           <div>
             <h3 id="wealth-timing-card-heading" className="text-sm sm:text-base font-semibold text-slate-100">
-              Wealth & Prosperity 4-Dimension Timing Matrix
+              {t('timing.wealthTitle')}
             </h3>
             <p className="text-xs text-slate-400">
-              Per-dimension (Accumulation × Gains × Fortune × Speculation) × Per-period (MD × AD × PD) activations
+              {t('timing.wealthDescription')}
             </p>
           </div>
         </div>
         <span className="text-[10px] font-mono-code uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
-          4D Timing Matrix
+          {t('timing.matrixTitle')}
         </span>
       </div>
 
@@ -75,7 +77,7 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-amber-400" aria-hidden="true" />
               <span className="text-xs font-mono-code font-bold text-amber-200">
-                Synthesized 4-Dimension Hierarchy (MD &gt; AD &gt; PD)
+                {t('timing.synthesizedHierarchy')}
               </span>
             </div>
             {hierarchy.evidenceIds && hierarchy.evidenceIds.length > 0 && onOpenEvidence && (
@@ -85,7 +87,7 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
                 className="inline-flex items-center gap-1 text-[11px] font-mono-code text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>View Evidence ({hierarchy.evidenceIds.length} rules)</span>
+                <span>{t('timing.viewEvidence', { count: hierarchy.evidenceIds.length })}</span>
               </button>
             )}
           </div>
@@ -133,32 +135,32 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
         <table className="w-full text-xs text-left border-collapse font-mono-code">
           <thead>
             <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[10px] uppercase">
-              <th className="py-2.5 px-3 font-semibold">Active Period & Role</th>
+              <th className="py-2.5 px-3 font-semibold">{t('timing.activePeriodRole')}</th>
               <th className="py-2.5 px-3 font-semibold">
                 <span className="flex items-center gap-1">
                   <Landmark className="w-3 h-3 text-emerald-400" aria-hidden="true" />
-                  Accumulation (2H)
+                  {t('timing.accumulation')}
                 </span>
               </th>
               <th className="py-2.5 px-3 font-semibold">
                 <span className="flex items-center gap-1">
                   <TrendingUp className="w-3 h-3 text-cyan-400" aria-hidden="true" />
-                  Gains (11H)
+                  {t('timing.gains')}
                 </span>
               </th>
               <th className="py-2.5 px-3 font-semibold">
                 <span className="flex items-center gap-1">
                   <Trophy className="w-3 h-3 text-amber-400" aria-hidden="true" />
-                  Fortune (9H)
+                  {t('timing.fortune')}
                 </span>
               </th>
               <th className="py-2.5 px-3 font-semibold">
                 <span className="flex items-center gap-1">
                   <Target className="w-3 h-3 text-purple-400" aria-hidden="true" />
-                  Speculation (5H)
+                  {t('timing.speculation')}
                 </span>
               </th>
-              <th className="py-2.5 px-3 font-semibold text-right">Evidence</th>
+              <th className="py-2.5 px-3 font-semibold text-right">{t('timing.evidence')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
@@ -237,10 +239,10 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
                         className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 transition-colors cursor-pointer text-[11px]"
                       >
                         <HelpCircle className="w-3 h-3" aria-hidden="true" />
-                        <span>Why?</span>
+                        <span>{t('timing.why')}</span>
                       </button>
                     ) : (
-                      <span className="text-slate-500 text-[10px]">Rule</span>
+                      <span className="text-slate-500 text-[10px]">{t('timing.rule')}</span>
                     )}
                   </td>
                 </tr>
@@ -283,32 +285,32 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
                     className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[11px] font-mono-code cursor-pointer"
                   >
                     <HelpCircle className="w-3 h-3" aria-hidden="true" />
-                    <span>Why?</span>
+                    <span>{t('timing.why')}</span>
                   </button>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs font-mono-code">
                 <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5">Accumulation (2H)</span>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">{t('timing.accumulation')}</span>
                   <span className={`text-[10px] font-bold ${getEffectBadgeClass(p.dimensions.accumulation)} px-1.5 py-0.5 rounded border inline-block`}>
                     {formatEnum(p.dimensions.accumulation)}
                   </span>
                 </div>
                 <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5">Gains (11H)</span>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">{t('timing.gains')}</span>
                   <span className={`text-[10px] font-bold ${getEffectBadgeClass(p.dimensions.gains)} px-1.5 py-0.5 rounded border inline-block`}>
                     {formatEnum(p.dimensions.gains)}
                   </span>
                 </div>
                 <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5">Fortune (9H)</span>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">{t('timing.fortune')}</span>
                   <span className={`text-[10px] font-bold ${getEffectBadgeClass(p.dimensions.fortune)} px-1.5 py-0.5 rounded border inline-block`}>
                     {formatEnum(p.dimensions.fortune)}
                   </span>
                 </div>
                 <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block mb-0.5">Speculation (5H)</span>
+                  <span className="text-[10px] text-slate-400 block mb-0.5">{t('timing.speculation')}</span>
                   <span className={`text-[10px] font-bold ${getEffectBadgeClass(p.dimensions.speculation)} px-1.5 py-0.5 rounded border inline-block`}>
                     {formatEnum(p.dimensions.speculation)}
                   </span>
@@ -326,7 +328,7 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
       </div>
 
       <p className="text-[11px] text-slate-500 italic pt-1">
-        Classical Principle: 2nd House treasury accumulation operates independently from 5th House speculative ventures across all planetary periods.
+        {t('timing.classicalPrinciple')}
       </p>
     </article>
   );
