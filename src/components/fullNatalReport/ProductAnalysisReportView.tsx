@@ -22,10 +22,11 @@ function ReportSection({ title, status, children }: { title: string; status?: st
 }
 
 function Value({ label, value }: { label: string; value?: string | number | null }) {
+  const { t } = useTranslation('reports');
   return (
     <div className="min-w-0">
       <div className="text-[11px] uppercase tracking-wide text-slate-400 print:text-slate-600">{label}</div>
-      <div className="break-words text-sm text-slate-100 print:text-black">{value ?? 'Not available'}</div>
+      <div className="break-words text-sm text-slate-100 print:text-black">{value ?? t('product.notAvailable')}</div>
     </div>
   );
 }
@@ -88,59 +89,59 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
         <p className="text-xs font-mono uppercase tracking-widest text-indigo-300 print:text-slate-600">{t('product.eyebrow')}</p>
         <h2 className="text-2xl font-bold text-slate-100 print:text-black">{t('product.title')}</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Value label="Analysis status" value={analysis.status} />
-          <Value label="Analysis as-of" value={analysis.asOf} />
-          <Value label="Analysis ID" value={analysis.analysisId} />
-          <Value label="Engine / rules" value={analysis.engineVersion + ' / ' + analysis.rulesVersion} />
+          <Value label={t('product.labels.analysisStatus')} value={analysis.status} />
+          <Value label={t('product.labels.analysisAsOf')} value={analysis.asOf} />
+          <Value label={t('product.labels.analysisId')} value={analysis.analysisId} />
+          <Value label={t('product.labels.engineRules')} value={analysis.engineVersion + ' / ' + analysis.rulesVersion} />
         </div>
         <p className="text-xs text-slate-400 print:text-slate-600">
           {t('product.snapshotDescription')}
         </p>
       </header>
 
-      <ReportSection title="Career — C11 conclusion" status={analysis.career.status ?? analysis.status}>
+      <ReportSection title={t('product.sections.career')} status={analysis.career.status ?? analysis.status}>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Value label="Promise strength" value={career.promise.strength} />
-          <Value label="C11 confidence" value={career.conclusion.confidence} />
-          <Value label="Profession qualification" value={career.profession.status} />
-          <Value label="D10 relationship" value={career.d10.relationship} />
+          <Value label={t('product.labels.promiseStrength')} value={career.promise.strength} />
+          <Value label={t('product.labels.careerConfidence')} value={career.conclusion.confidence} />
+          <Value label={t('product.labels.professionQualification')} value={career.profession.status} />
+          <Value label={t('product.labels.d10Relationship')} value={career.d10.relationship} />
         </div>
-        <Value label="Career conclusion" value={career.conclusion.statement ?? career.promise.statement} />
+        <Value label={t('product.labels.careerConclusion')} value={career.conclusion.statement ?? career.promise.statement} />
         <div className="grid grid-cols-3 gap-3">
-          <Value label="Primary evidence" value={career.conclusion.primaryEvidenceCount} />
-          <Value label="Supporting evidence" value={career.conclusion.supportingEvidenceCount} />
-          <Value label="Challenging evidence" value={career.conclusion.challengingEvidenceCount} />
+          <Value label={t('product.labels.primaryEvidence')} value={career.conclusion.primaryEvidenceCount} />
+          <Value label={t('product.labels.supportingEvidence')} value={career.conclusion.supportingEvidenceCount} />
+          <Value label={t('product.labels.challengingEvidence')} value={career.conclusion.challengingEvidenceCount} />
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-slate-200 print:text-black">Qualified profession candidates</h4>
+          <h4 className="text-sm font-semibold text-slate-200 print:text-black">{t('product.qualifiedProfessionCandidates')}</h4>
           {career.profession.candidates.length > 0 ? (
             <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-300 print:text-black">
               {career.profession.candidates.map(candidate => (
                 <li key={candidate.candidateId}>
-                  {candidate.family} — {candidate.basis}; evidence: {candidate.domainEvidenceIds.join(', ') || 'not linked'}
+                  {candidate.family} — {candidate.basis}; {t('product.evidence')}: {candidate.domainEvidenceIds.join(', ') || t('product.notLinked')}
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-slate-400 print:text-slate-600">UNAVAILABLE — no qualified profession candidates are present in the canonical analysis.</p>}
+          ) : <p className="text-sm text-slate-400 print:text-slate-600">{t('product.noQualifiedProfessionCandidates')}</p>}
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Value label="Outcome qualification" value={career.outcomeQualification?.status ?? 'UNAVAILABLE'} />
-          <Value label="Career event taxonomy" value={careerTimeline?.status ?? 'UNAVAILABLE'} />
+          <Value label={t('product.labels.outcomeQualification')} value={career.outcomeQualification?.status ?? 'UNAVAILABLE'} />
+          <Value label={t('product.labels.careerEventTaxonomy')} value={careerTimeline?.status ?? 'UNAVAILABLE'} />
         </div>
         <p className="text-xs text-slate-400 print:text-slate-600">
-          Event-specific forecasts remain unavailable unless their individual rules are validated and release-enabled. Generic timing windows are not specific event claims.
+          {t('product.eventForecastDisclaimer')}
         </p>
         {careerTimeline && (
-          <Value label="Generic candidate windows" value={careerTimeline.genericWindows.length} />
+          <Value label={t('product.labels.genericCandidateWindows')} value={careerTimeline.genericWindows.length} />
         )}
       </ReportSection>
 
-      <ReportSection title="Wealth — CW-05 conclusion" status={analysis.wealth.overall.status}>
+      <ReportSection title={t('product.sections.wealth')} status={analysis.wealth.overall.status}>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Value label="Promise" value={analysis.wealth.overall.promise} />
-          <Value label="CW-05 confidence" value={wealth.conclusion.confidence} />
-          <Value label="D2 relationship" value={analysis.wealth.d2.relationship} />
-          <Value label="C04 lifecycle" value={wealth.lifecycle.status} />
+          <Value label={t('product.labels.wealthPromise')} value={analysis.wealth.overall.promise} />
+          <Value label={t('product.labels.wealthConfidence')} value={wealth.conclusion.confidence} />
+          <Value label={t('product.labels.d2Relationship')} value={analysis.wealth.d2.relationship} />
+          <Value label={t('product.labels.c04Lifecycle')} value={wealth.lifecycle.status} />
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {(['accumulation', 'gains', 'fortune', 'speculation'] as const).map(dimension => (
@@ -149,25 +150,25 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
                 <span className="text-sm font-semibold capitalize text-slate-200 print:text-black">{dimension}</span>
                 <StateLabel value={analysis.wealth.dimensions[dimension].status} />
               </div>
-              <p className="mt-1 text-sm text-slate-300 print:text-black">{analysis.wealth.dimensions[dimension].statement ?? 'No dimension statement is available.'}</p>
+              <p className="mt-1 text-sm text-slate-300 print:text-black">{analysis.wealth.dimensions[dimension].statement ?? t('product.noDimensionStatement')}</p>
             </div>
           ))}
         </div>
-        <Value label="D2 qualification" value={analysis.wealth.d2.statement} />
+        <Value label={t('product.labels.d2Qualification')} value={analysis.wealth.d2.statement} />
         <div className="grid grid-cols-2 gap-3">
-          <Value label="Speculative propensity source" value={analysis.wealth.speculativePropensity?.source ?? 'UNAVAILABLE'} />
-          <Value label="Speculative propensity" value={analysis.wealth.speculativePropensity?.status ?? 'UNAVAILABLE'} />
-          <Value label="Actual exposure" value={analysis.wealth.riskAndSuitability?.actualExposure ?? 'UNAVAILABLE'} />
-          <Value label="Trading history" value={analysis.wealth.riskAndSuitability?.tradingHistory ?? 'UNAVAILABLE'} />
-          <Value label="Suitability" value={analysis.wealth.riskAndSuitability?.suitability ?? 'UNAVAILABLE'} />
+          <Value label={t('product.labels.speculativePropensitySource')} value={analysis.wealth.speculativePropensity?.source ?? 'UNAVAILABLE'} />
+          <Value label={t('product.labels.speculativePropensity')} value={analysis.wealth.speculativePropensity?.status ?? 'UNAVAILABLE'} />
+          <Value label={t('product.labels.actualExposure')} value={analysis.wealth.riskAndSuitability?.actualExposure ?? 'UNAVAILABLE'} />
+          <Value label={t('product.labels.tradingHistory')} value={analysis.wealth.riskAndSuitability?.tradingHistory ?? 'UNAVAILABLE'} />
+          <Value label={t('product.labels.suitability')} value={analysis.wealth.riskAndSuitability?.suitability ?? 'UNAVAILABLE'} />
         </div>
         <p className="text-xs text-slate-400 print:text-slate-600">
           {t('product.wealthDisclaimer')}
         </p>
       </ReportSection>
 
-      <ReportSection title="User-supplied financial facts — C01" status={financialData?.status ?? 'UNAVAILABLE'}>
-        <Value label="Financial records supplied" value={financialData?.data.length ?? 0} />
+      <ReportSection title={t('product.sections.financialFacts')} status={financialData?.status ?? 'UNAVAILABLE'}>
+        <Value label={t('product.labels.financialRecordsSupplied')} value={financialData?.data.length ?? 0} />
         {Object.entries(sourceCounts).length > 0 ? (
           <ul className="list-disc pl-5 text-sm text-slate-300 print:text-black">
             {Object.entries(sourceCounts).map(([source, count]) => <li key={source}>{source}: {count}</li>)}
@@ -175,42 +176,42 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
         ) : <p className="text-sm text-slate-400 print:text-slate-600">{t('product.noFinancialFacts')}</p>}
       </ReportSection>
 
-      <ReportSection title="Vimshottari Dasha and selected period" status={dasha.status}>
+      <ReportSection title={t('product.sections.dasha')} status={dasha.status}>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <Value label="Analysis as-of" value={dasha.hero.asOf} />
-          <Value label="Current period" value={dasha.hero.currentPeriodLabel} />
-          <Value label="Current hierarchy entries" value={dasha.hierarchy.length} />
+          <Value label={t('product.labels.analysisAsOf')} value={dasha.hero.asOf} />
+          <Value label={t('product.labels.currentPeriod')} value={dasha.hero.currentPeriodLabel} />
+          <Value label={t('product.labels.currentHierarchyEntries')} value={dasha.hierarchy.length} />
         </div>
         {selectedPeriod?.status === 'OK' ? (
           <>
-            <Value label="Selected MD–AD" value={selectedPeriod.synthesis.period.mahadashaId + ' / ' + selectedPeriod.synthesis.period.antardashaId} />
-            <Value label="Selected interval" value={selectedPeriod.synthesis.period.interval.start + ' — ' + selectedPeriod.synthesis.period.interval.end} />
-            <Value label="Temporal relation" value={selectedPeriod.synthesis.period.temporalRelation} />
-            <Value label="Qualification status" value={selectedPeriod.synthesis.qualificationStatus} />
+            <Value label={t('product.labels.selectedMdAd')} value={selectedPeriod.synthesis.period.mahadashaId + ' / ' + selectedPeriod.synthesis.period.antardashaId} />
+            <Value label={t('product.labels.selectedInterval')} value={selectedPeriod.synthesis.period.interval.start + ' — ' + selectedPeriod.synthesis.period.interval.end} />
+            <Value label={t('product.labels.temporalRelation')} value={selectedPeriod.synthesis.period.temporalRelation} />
+            <Value label={t('product.labels.qualificationStatus')} value={selectedPeriod.synthesis.qualificationStatus} />
           </>
         ) : (
-          <Value label="Selected period" value={selectedPeriod ? selectedPeriod.status + (selectedPeriod.error ? ': ' + selectedPeriod.error : '') : 'NOT_SELECTED'} />
+          <Value label={t('product.labels.selectedPeriod')} value={selectedPeriod ? selectedPeriod.status + (selectedPeriod.error ? ': ' + selectedPeriod.error : '') : 'NOT_SELECTED'} />
         )}
       </ReportSection>
 
-      <ReportSection title="Evidence, warnings and reproducibility" status={analysis.status}>
+      <ReportSection title={t('product.sections.evidence')} status={analysis.status}>
         <div className="grid grid-cols-2 gap-3">
-          <Value label="Career evidence references" value={analysis.career.evidence.length} />
-          <Value label="Wealth evidence references" value={analysis.wealth.evidence.length} />
-          <Value label="Warnings" value={analysis.warnings.length} />
-          <Value label="AI explanation status" value={analysis.ai.status} />
+          <Value label={t('product.labels.careerEvidenceReferences')} value={analysis.career.evidence.length} />
+          <Value label={t('product.labels.wealthEvidenceReferences')} value={analysis.wealth.evidence.length} />
+          <Value label={t('product.labels.warnings')} value={analysis.warnings.length} />
+          <Value label={t('product.labels.aiExplanationStatus')} value={analysis.ai.status} />
         </div>
         <details className="rounded-lg border border-slate-700 p-3 print:border-slate-300">
-          <summary className="cursor-pointer text-sm font-semibold text-slate-200 print:text-black">Evidence references</summary>
+          <summary className="cursor-pointer text-sm font-semibold text-slate-200 print:text-black">{t('product.evidenceReferences')}</summary>
           <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <h4 className="text-xs font-semibold text-slate-300 print:text-black">Career</h4>
+              <h4 className="text-xs font-semibold text-slate-300 print:text-black">{t('product.career')}</h4>
               <ul className="list-disc pl-5 text-xs text-slate-400 print:text-black">
                 {analysis.career.evidence.map(item => <li key={item.id}>{item.id} — {item.title}</li>)}
               </ul>
             </div>
             <div>
-              <h4 className="text-xs font-semibold text-slate-300 print:text-black">Wealth</h4>
+              <h4 className="text-xs font-semibold text-slate-300 print:text-black">{t('product.wealth')}</h4>
               <ul className="list-disc pl-5 text-xs text-slate-400 print:text-black">
                 {analysis.wealth.evidence.map(item => <li key={item.id}>{item.id} — {item.title}</li>)}
               </ul>
@@ -222,9 +223,9 @@ export const ProductAnalysisReportView: React.FC<ProductAnalysisReportViewProps>
             {analysis.warnings.map((warning, index) => <li key={warning.code + '-' + index}>{warning.domain} / {warning.code}: {warning.message}</li>)}
           </ul>
         )}
-        <Value label="Methodology" value={analysis.methodology.ayanamsa + ' / ' + analysis.methodology.zodiacSystem + ' / ' + analysis.methodology.houseSystem} />
+        <Value label={t('product.labels.methodology')} value={analysis.methodology.ayanamsa + ' / ' + analysis.methodology.zodiacSystem + ' / ' + analysis.methodology.houseSystem} />
         <p className="text-xs text-slate-400 print:text-slate-600">
-          This report reflects analysis ID {analysis.analysisId} as of {analysis.asOf}. Refreshing or changing birth details creates a different analysis snapshot.
+          {t('product.snapshotFootnote', { analysisId: analysis.analysisId, asOf: analysis.asOf })}
         </p>
       </ReportSection>
     </div>

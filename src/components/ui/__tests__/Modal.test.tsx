@@ -27,7 +27,7 @@ describe('Modal Design System Component', () => {
     expect(screen.getByText('Select Reference Epoch', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('Modal Body Content')).toBeInTheDocument();
 
-    const closeBtn = screen.getByRole('button', { name: 'Close modal' });
+    const closeBtn = screen.getByRole('button', { name: 'Close' });
     fireEvent.click(closeBtn);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });

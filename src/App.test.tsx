@@ -474,7 +474,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.getByText('Methodology & Engine Scope')).toBeInTheDocument();
 
     // In Detailed Analysis, the Research Tools panel is present
-    expect(screen.getByText('Research & Classical Inspection Tools')).toBeInTheDocument();
+    expect(screen.getByText('Research & Developer Tools')).toBeInTheDocument();
 
     // Click Horoscope & Charts research tool from the panel
     const horoscopeBtn = screen.getByRole('button', { name: 'Horoscope & Charts' });
