@@ -2,6 +2,7 @@ import React from 'react';
 import type { WealthConclusionViewModel } from '../../product/analysis/wealthViewModel';
 import { formatConfidence } from './wealthFormat';
 import { Award, ShieldCheck, GitFork, ArrowUpRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface WealthConclusionSectionProps {
   readonly conclusion: WealthConclusionViewModel;
@@ -12,11 +13,12 @@ export const WealthConclusionSection: React.FC<WealthConclusionSectionProps> = (
   conclusion,
   onOpenReasoning
 }) => {
+  const { t } = useTranslation('wealth');
   const isIntegrated = conclusion.integratedSynthesisAvailable;
-  const title = isIntegrated ? 'Integrated Wealth Synthesis' : 'Wealth Conclusion';
+  const title = isIntegrated ? t('ui.conclusion.integratedTitle') : t('ui.conclusion.title');
   const subtitle = isIntegrated
-    ? 'Unified conclusion synthesizing promise, divisional validation, and timing'
-    : 'Natal promise and available activation evidence indicate foundational financial trajectory';
+    ? t('ui.conclusion.integratedSubtitle')
+    : t('ui.conclusion.subtitle');
 
   return (
     <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-indigo-900/40 rounded-2xl p-6 space-y-5 shadow-xl shadow-indigo-950/10">
@@ -60,21 +62,21 @@ export const WealthConclusionSection: React.FC<WealthConclusionSectionProps> = (
             <span className="text-purple-400 font-bold mr-1.5">
               {conclusion.primaryEvidenceCount}
             </span>
-            <span>Primary Drivers</span>
+            <span>{t('ui.conclusion.primaryDrivers')}</span>
           </div>
 
           <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-mono-code">
             <span className="text-emerald-400 font-bold mr-1.5">
               {conclusion.supportingEvidenceCount}
             </span>
-            <span>Supporting Factors</span>
+            <span>{t('ui.conclusion.supportingFactors')}</span>
           </div>
 
           <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-mono-code">
             <span className="text-rose-400 font-bold mr-1.5">
               {conclusion.challengingEvidenceCount}
             </span>
-            <span>Challenging Factors</span>
+            <span>{t('ui.conclusion.challengingFactors')}</span>
           </div>
         </div>
 
@@ -85,7 +87,7 @@ export const WealthConclusionSection: React.FC<WealthConclusionSectionProps> = (
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 transition-colors"
           >
             <GitFork className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-            <span>Trace Full Evidential Reasoning</span>
+            <span>{t('ui.conclusion.traceReasoning')}</span>
             <ArrowUpRight className="w-3 h-3 opacity-70" aria-hidden="true" />
           </button>
         )}

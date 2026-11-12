@@ -42,7 +42,7 @@ export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ 
       )}
 
       <div className="space-y-2 rounded-xl border border-slate-800/80 bg-slate-950/30 p-4">
-        <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-slate-300" aria-hidden="true" /><h3 className="text-xs font-semibold text-slate-200">Qualification diagnostics</h3></div>
+        <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-slate-300" aria-hidden="true" /><h3 className="text-xs font-semibold text-slate-200">{t('lifecycle.diagnostics')}</h3></div>
         {lifecycle.diagnostics.length > 0 ? lifecycle.diagnostics.slice(0, 12).map((item, index) => (
           <div key={item.code + '-' + (item.eventType ?? 'all') + '-' + index} className="text-xs text-slate-400"><span className="font-mono text-slate-300">{item.code}</span>{item.eventType ? ' · ' + item.eventType.replaceAll('_', ' ') : ''}: {item.message}</div>
         )) : <p className="text-xs text-slate-400">{t('lifecycle.noDiagnostics')}</p>}

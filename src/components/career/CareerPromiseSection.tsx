@@ -2,12 +2,14 @@ import React from 'react';
 import type { CareerPromiseViewModel } from '../../product/analysis/careerViewModel';
 import { formatStrength, formatConfidence } from './careerFormat';
 import { Briefcase, Award, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface CareerPromiseSectionProps {
   readonly promise: CareerPromiseViewModel;
 }
 
 export const CareerPromiseSection: React.FC<CareerPromiseSectionProps> = ({ promise }) => {
+  const { t } = useTranslation('career');
   const formattedStrength = formatStrength(promise.strength);
   const formattedConfidence = formatConfidence(promise.confidence);
 
@@ -19,8 +21,8 @@ export const CareerPromiseSection: React.FC<CareerPromiseSectionProps> = ({ prom
             <Briefcase className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Natal Vocational Promise</h2>
-            <p className="text-xs text-slate-400">Foundational 10th house, Lagna, and planetary governance</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('ui.promise.title')}</h2>
+            <p className="text-xs text-slate-400">{t('ui.promise.description')}</p>
           </div>
         </div>
 
@@ -50,7 +52,7 @@ export const CareerPromiseSection: React.FC<CareerPromiseSectionProps> = ({ prom
         <div className="pt-2 space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-mono-code uppercase tracking-wider text-slate-400">
             <Award className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
-            <span>Dominant Vocational Manifestations</span>
+            <span>{t('ui.promise.manifestations')}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {promise.manifestations.map((manifestation, idx) => (

@@ -2,6 +2,7 @@ import React from 'react';
 import type { CareerQualificationViewModel } from '../../product/analysis/careerViewModel';
 import { formatSeverity, getSeverityBadgeClass } from './careerFormat';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface CareerQualificationsSectionProps {
   readonly qualifications: readonly CareerQualificationViewModel[];
@@ -10,6 +11,7 @@ export interface CareerQualificationsSectionProps {
 export const CareerQualificationsSection: React.FC<CareerQualificationsSectionProps> = ({
   qualifications
 }) => {
+  const { t } = useTranslation('career');
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -18,13 +20,13 @@ export const CareerQualificationsSection: React.FC<CareerQualificationsSectionPr
             <AlertTriangle className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Qualifications & Modifiers</h2>
-            <p className="text-xs text-slate-400">Combustions, retrogression, debilities, and functional mitigating factors</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('ui.qualifications.title')}</h2>
+            <p className="text-xs text-slate-400">{t('ui.qualifications.description')}</p>
           </div>
         </div>
 
         <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-          {qualifications.length} {qualifications.length === 1 ? 'Condition' : 'Conditions'}
+          {qualifications.length} {t(qualifications.length === 1 ? 'ui.qualifications.condition' : 'ui.qualifications.conditions')}
         </span>
       </div>
 
@@ -60,7 +62,7 @@ export const CareerQualificationsSection: React.FC<CareerQualificationsSectionPr
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
           <span>
-            No modifying afflictions, combustions, or debility mitigations detected for this career profile.
+            {t('ui.qualifications.none')}
           </span>
         </div>
       )}

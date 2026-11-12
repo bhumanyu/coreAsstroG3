@@ -11,6 +11,7 @@ import {
   getEvidenceRoleBadgeClass
 } from './careerFormat';
 import { Clock, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface CareerDashaSectionProps {
   readonly dasha: CareerDashaViewModel;
@@ -23,6 +24,7 @@ const LEVEL_LABELS: Record<'MD' | 'AD' | 'PD', string> = {
 };
 
 const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }) => {
+  const { t } = useTranslation('career');
   const roleLabel = formatEvidenceRole(period.role);
   const directionLabel = formatDirection(period.direction);
   const effectLabel = formatActivationEffect(period.effect);
@@ -42,7 +44,7 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
 
       <div className="flex items-baseline justify-between">
         <span className="text-base font-bold text-slate-100 font-sans">
-          {period.planet || 'Unknown Planet'}
+          {period.planet || t('ui.dasha.unknownPlanet')}
         </span>
         <div className="flex items-center gap-1.5">
           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${directionClass}`}>
@@ -64,6 +66,7 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
 };
 
 export const CareerDashaSection: React.FC<CareerDashaSectionProps> = ({ dasha }) => {
+  const { t } = useTranslation('career');
   const isAvailable = dasha.status === 'AVAILABLE';
 
   return (
@@ -74,8 +77,8 @@ export const CareerDashaSection: React.FC<CareerDashaSectionProps> = ({ dasha })
             <Clock className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Career Timing & Vimshottari Dasha Hierarchy</h2>
-            <p className="text-xs text-slate-400">Chronological activation via Mahadasha, Antardasha, and Pratyantardasha levels</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('ui.dasha.title')}</h2>
+            <p className="text-xs text-slate-400">{t('ui.dasha.description')}</p>
           </div>
         </div>
 
@@ -87,7 +90,7 @@ export const CareerDashaSection: React.FC<CareerDashaSectionProps> = ({ dasha })
                 : 'bg-slate-800/60 border-slate-700/80 text-slate-400'
             }`}
           >
-            {isAvailable ? 'Active Window' : 'Unavailable'}
+            {isAvailable ? t('ui.dasha.activeWindow') : t('ui.dasha.unavailable')}
           </span>
         </div>
       </div>
@@ -110,7 +113,7 @@ export const CareerDashaSection: React.FC<CareerDashaSectionProps> = ({ dasha })
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            Vimshottari dasha timing calculations are currently unavailable for this career analysis.
+            {t('ui.dasha.unavailableMessage')}
           </span>
         </div>
       )}

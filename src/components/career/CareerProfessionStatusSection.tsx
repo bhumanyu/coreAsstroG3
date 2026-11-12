@@ -1,75 +1,89 @@
 import React from 'react';
 import type { CareerProfessionViewModel } from '../../product/analysis/careerViewModel';
 import { getMissingInputLabel } from '../../product/analysis/careerQualificationPresentation';
+import { useTranslation } from 'react-i18next';
 
 export interface CareerProfessionStatusSectionProps {
   readonly profession: CareerProfessionViewModel;
 }
 
-export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSectionProps> = ({
-  profession
-}) => (
+export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSectionProps> = ({ profession }) => {
+  const { t } = useTranslation('career');
+  const statusCopyKeyByLabel: Record<string, string> = {
+    'Analysis complete': 'complete',
+    'Partial analysis': 'partial',
+    'Insufficient data': 'insufficient'
+  };
+  const statusCopyKey = statusCopyKeyByLabel[profession.statusCopy.label];
+  const statusLabel = statusCopyKey ? t(`ui.profession.${statusCopyKey}Label`) : profession.statusCopy.label;
+  const statusExplanation = statusCopyKey ? t(`ui.profession.${statusCopyKey}Explanation`) : profession.statusCopy.explanation;
+  const missingInputKeys: Record<string, string> = {
+    career10HFoundation: 'missingCareer10H',
+    career10LFoundation: 'missingCareer10L',
+    careerD10CanonicalAnalysis: 'missingD10',
+    domainEvidence: 'missingDomainEvidence'
+  };
+  return (
   <section
     aria-labelledby="career-profession-status-heading"
     className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 space-y-2"
   >
     <div className="flex items-center justify-between gap-3">
       <h2 id="career-profession-status-heading" className="text-sm font-semibold text-slate-100">
-        Profession Analysis Status
+        {t('ui.profession.title')}
       </h2>
       <span className="rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-xs text-slate-300">
         {profession.status}
       </span>
     </div>
-    <p className="text-sm text-slate-200">{profession.statusCopy.label}</p>
-    <p className="text-xs leading-relaxed text-slate-400">{profession.statusCopy.explanation}</p>
+    <p className="text-sm text-slate-200">{statusLabel}</p>
+    <p className="text-xs leading-relaxed text-slate-400">{statusExplanation}</p>
     {profession.missingInputs.length > 0 && (
       <div className="space-y-1 pt-1">
-        <h3 className="text-xs font-semibold text-slate-300">Missing inputs</h3>
+        <h3 className="text-xs font-semibold text-slate-300">{t('ui.profession.missingInputs')}</h3>
         <ul
-          aria-label="Missing profession analysis inputs"
+          aria-label={t('ui.profession.missingInputsAria')}
           className="list-disc space-y-1 pl-5 text-xs text-slate-400"
         >
-          {profession.missingInputs.map((input) => (
-            <li key={input}>{getMissingInputLabel(input)}</li>
-          ))}
+          {profession.missingInputs.map((input) => {
+            const key = missingInputKeys[input];
+            return <li key={input}>{key ? t(`ui.profession.${key}`) : getMissingInputLabel(input)}</li>;
+          })}
         </ul>
       </div>
     )}
     <div className="space-y-2 pt-3">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-xs font-semibold text-slate-300">Profession family ranking</h3>
+        <h3 className="text-xs font-semibold text-slate-300">{t('ui.profession.ranking')}</h3>
         <span className="text-[11px] text-slate-400">{profession.ranking.status}</span>
       </div>
       <p className="text-xs leading-relaxed text-slate-400">
-        Evidence-weighted policy points compare broad profession families. Scores are not probabilities,
-        job-title predictions, salary estimates, or employability forecasts. D1 establishes the promise;
-        D10 only qualifies an existing expression.
+        {t('ui.profession.rankingDescription')}
       </p>
       {profession.ranking.diagnostics.length > 0 && (
-        <ul aria-label="Profession ranking diagnostics" className="list-disc space-y-1 pl-5 text-xs text-slate-400">
+        <ul aria-label={t('ui.profession.rankingDiagnostics')} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
           {profession.ranking.diagnostics.map((diagnostic) => <li key={diagnostic}>{diagnostic}</li>)}
         </ul>
       )}
       {profession.ranking.rankedCandidates.length > 0 ? (
-        <ol aria-label="Ranked profession families" className="space-y-2">
+        <ol aria-label={t('ui.profession.rankingAria')} className="space-y-2">
           {profession.ranking.rankedCandidates.map((candidate) => (
             <li key={candidate.candidateId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h4 className="text-sm font-medium text-slate-100">
                   #{candidate.rank} · {candidate.domain} / {candidate.family}
                 </h4>
-                <span className="text-xs text-slate-300">{candidate.score} policy points · {candidate.confidence} confidence</span>
+                <span className="text-xs text-slate-300">{t('ui.profession.scorePoints', { points: candidate.score })} · {t('ui.profession.confidence', { confidence: candidate.confidence })}</span>
               </div>
               <p className="text-xs text-slate-400">{candidate.alternativeExplanation}</p>
               {candidate.scoreContributions.length > 0 && (
-                <ul aria-label={`Score contributions for ${candidate.domain} ${candidate.family}`} className="space-y-1 text-xs text-slate-400">
+                <ul aria-label={t('ui.profession.contributionsAria', { domain: candidate.domain, family: candidate.family })} className="space-y-1 text-xs text-slate-400">
                   {candidate.scoreContributions.map((contribution) => (
                     <li key={`${contribution.referenceType}:${contribution.referenceId}`}>
                       <span className="font-medium text-slate-300">{contribution.referenceType}</span>
                       {' · '}{contribution.referenceId}{' · '}
                       <span className={contribution.points < 0 ? 'text-amber-300' : 'text-slate-200'}>
-                        {contribution.points > 0 ? '+' : ''}{contribution.points} points
+                        {t(contribution.points > 0 ? 'ui.profession.pointsPositive' : 'ui.profession.points', { points: contribution.points })}
                       </span>
                       {' — '}{contribution.explanation}
                     </li>
@@ -77,46 +91,44 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                 </ul>
               )}
               <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
-                <div><dt className="inline font-semibold text-slate-300">D10: </dt><dd className="inline">{candidate.d10Status} ({candidate.d10Direction})</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">Evidence coverage: </dt><dd className="inline">{candidate.evidenceCoverage.status} · {candidate.evidenceCoverage.occurrenceCount} occurrences · {candidate.evidenceCoverage.rootIdentityCount} roots</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10')}: </dt><dd className="inline">{candidate.d10Status} ({candidate.d10Direction})</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.evidenceCoverage')}: </dt><dd className="inline">{candidate.evidenceCoverage.status} · {t('ui.profession.occurrences', { count: candidate.evidenceCoverage.occurrenceCount })} · {t('ui.profession.roots', { count: candidate.evidenceCoverage.rootIdentityCount })}</dd></div>
               </dl>
               {candidate.reasons.length > 0 && (
-                <ul aria-label={`Reasons for ${candidate.domain} ${candidate.family}`} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
+                <ul aria-label={t('ui.profession.reasonsAria', { domain: candidate.domain, family: candidate.family })} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
                   {candidate.reasons.map((reason) => <li key={reason}>{reason}</li>)}
                 </ul>
               )}
               {candidate.counterEvidenceReasons.length > 0 && (
-                <ul aria-label={`Counter-evidence for ${candidate.domain} ${candidate.family}`} className="list-disc space-y-1 pl-5 text-xs text-amber-300">
+                <ul aria-label={t('ui.profession.counterEvidenceAria', { domain: candidate.domain, family: candidate.family })} className="list-disc space-y-1 pl-5 text-xs text-amber-300">
                   {candidate.counterEvidenceReasons.map((reason) => <li key={reason}>{reason}</li>)}
                 </ul>
               )}
               <p className="text-[11px] text-slate-500">
-                Supporting occurrences: {candidate.supportingEvidenceOccurrenceIds.join(', ') || 'None'}.
-                D10 occurrences: {candidate.d10EvidenceOccurrenceIds.join(', ') || 'None'}.
-                Counter occurrences: {candidate.counterEvidenceOccurrenceIds.join(', ') || 'None'}.
+                {t('ui.profession.supportingOccurrences')}: {candidate.supportingEvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
+                {t('ui.profession.d10Occurrences')}: {candidate.d10EvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
+                {t('ui.profession.counterOccurrences')}: {candidate.counterEvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
               </p>
             </li>
           ))}
         </ol>
       ) : (
         <p className="text-xs leading-relaxed text-slate-400">
-          No profession-family ranking is available. This can mean the C11 D1 promise gate is not met,
-          no supported profession family was derived, or required evidence is unavailable.
+          {t('ui.profession.noRanking')}
         </p>
       )}
     </div>
     <div className="space-y-2 pt-2">
-      <h3 className="text-xs font-semibold text-slate-300">Expression-derived profession candidates</h3>
+      <h3 className="text-xs font-semibold text-slate-300">{t('ui.profession.expressionCandidates')}</h3>
       <p className="text-xs text-slate-500">
-        These pattern-scoped candidates are inputs to the ranking, not specific job-title predictions.
-        They are not ranked recommendations unless the C11 D1 promise gate is satisfied.
+        {t('ui.profession.candidateDescription')}
       </p>
       {profession.candidates.length === 0 ? (
         <p className="text-xs leading-relaxed text-slate-400">
-          No profession candidates are available from the current inputs. This is not a negative career conclusion.
+          {t('ui.profession.noCandidates')}
         </p>
       ) : (
-        <ul aria-label="Profession candidates" className="space-y-3">
+        <ul aria-label={t('ui.profession.candidatesAria')} className="space-y-3">
           {profession.candidates.map((candidate) => (
             <li
               key={candidate.candidateId}
@@ -126,26 +138,26 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                 {candidate.domain} · {candidate.family} ({candidate.candidateId})
               </h4>
               <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
-                <div><dt className="inline font-semibold text-slate-300">Basis: </dt><dd className="inline">{candidate.basis}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">D10 status: </dt><dd className="inline">{candidate.d10Status}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">Pattern refs: </dt><dd className="inline">{candidate.patternIds.join(', ') || 'None'}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">Expressions: </dt><dd className="inline">{candidate.expressionTypes.join(', ') || 'None'}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">Mechanism types: </dt><dd className="inline">{candidate.mechanismTypes.join(', ') || 'None'}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.basis')}: </dt><dd className="inline">{candidate.basis}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10Status')}: </dt><dd className="inline">{candidate.d10Status}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.patternRefs')}: </dt><dd className="inline">{candidate.patternIds.join(', ') || t('ui.axes.none')}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.expressions')}: </dt><dd className="inline">{candidate.expressionTypes.join(', ') || t('ui.axes.none')}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.mechanismTypes')}: </dt><dd className="inline">{candidate.mechanismTypes.join(', ') || t('ui.axes.none')}</dd></div>
               </dl>
               {candidate.evidence.length > 0 && (
-                <ul aria-label={`Evidence for ${candidate.domain} ${candidate.family}`} className="space-y-2">
+                <ul aria-label={t('ui.profession.evidenceForAria', { domain: candidate.domain, family: candidate.family })} className="space-y-2">
                   {candidate.evidence.map((evidence) => (
                     <li key={evidence.evidenceId} className="border-t border-slate-800 pt-2 text-xs text-slate-400">
                       <p>{evidence.statement}</p>
                       <dl className="mt-1 grid gap-1 sm:grid-cols-2">
-                        <div><dt className="inline font-semibold text-slate-300">Evidence ID: </dt><dd className="inline">{evidence.evidenceId}</dd></div>
-                        <div><dt className="inline font-semibold text-slate-300">Rule ID: </dt><dd className="inline">{evidence.ruleId}</dd></div>
-                        <div><dt className="inline font-semibold text-slate-300">Source IDs: </dt><dd className="inline">{evidence.sourceIds.join(', ') || 'None'}</dd></div>
+                        <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.evidenceId')}: </dt><dd className="inline">{evidence.evidenceId}</dd></div>
+                        <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.ruleId')}: </dt><dd className="inline">{evidence.ruleId}</dd></div>
+                        <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.sourceIds')}: </dt><dd className="inline">{evidence.sourceIds.join(', ') || t('ui.axes.none')}</dd></div>
                         {evidence.linkage && (
-                          <div><dt className="inline font-semibold text-slate-300">Linkage: </dt><dd className="inline">{evidence.linkage}</dd></div>
+                          <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.linkage')}: </dt><dd className="inline">{evidence.linkage}</dd></div>
                         )}
                         {evidence.unresolvedMechanismIds && evidence.unresolvedMechanismIds.length > 0 && (
-                          <div><dt className="inline font-semibold text-slate-300">Unresolved mechanism IDs: </dt><dd className="inline">{evidence.unresolvedMechanismIds.join(', ')}</dd></div>
+                          <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.unresolvedMechanisms')}: </dt><dd className="inline">{evidence.unresolvedMechanismIds.join(', ')}</dd></div>
                         )}
                       </dl>
                     </li>
@@ -158,4 +170,5 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
       )}
     </div>
   </section>
-);
+  );
+};

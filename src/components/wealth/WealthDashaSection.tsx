@@ -11,6 +11,7 @@ import {
   getEvidenceRoleBadgeClass
 } from './wealthFormat';
 import { Clock, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface WealthDashaSectionProps {
   readonly dasha: WealthDashaViewModel;
@@ -23,6 +24,7 @@ const LEVEL_LABELS: Record<'MD' | 'AD' | 'PD', string> = {
 };
 
 const PeriodCard: React.FC<{ period: WealthDashaPeriodViewModel }> = ({ period }) => {
+  const { t } = useTranslation('wealth');
   const roleLabel = formatEvidenceRole(period.role);
   const directionLabel = formatDirection(period.direction);
   const effectLabel = formatActivationEffect(period.effect);
@@ -42,7 +44,7 @@ const PeriodCard: React.FC<{ period: WealthDashaPeriodViewModel }> = ({ period }
 
       <div className="flex items-baseline justify-between">
         <span className="text-base font-bold text-slate-100 font-sans">
-          {period.planet || 'Unknown Planet'}
+          {period.planet || t('ui.dasha.unknownPlanet')}
         </span>
         <div className="flex items-center gap-1.5">
           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${directionClass}`}>
@@ -64,15 +66,16 @@ const PeriodCard: React.FC<{ period: WealthDashaPeriodViewModel }> = ({ period }
 };
 
 export const WealthDashaSection: React.FC<WealthDashaSectionProps> = ({ dasha }) => {
+  const { t } = useTranslation('wealth');
   const isUnavailable = dasha.status === 'UNAVAILABLE';
   const isPartial = dasha.status === 'PARTIAL';
   const isAvailable = dasha.status === 'AVAILABLE' || dasha.status === 'PARTIAL';
 
   const badgeLabel = isPartial
-    ? 'Partial Window'
+    ? t('ui.dasha.partialWindow')
     : isAvailable
-      ? 'Active Window'
-      : 'Unavailable';
+      ? t('ui.dasha.activeWindow')
+      : t('ui.dasha.unavailable');
 
   const badgeClass = isPartial
     ? 'bg-amber-950/60 border-amber-800/80 text-amber-300'
@@ -88,8 +91,8 @@ export const WealthDashaSection: React.FC<WealthDashaSectionProps> = ({ dasha })
             <Clock className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Wealth Timing & Vimshottari Dasha Hierarchy</h2>
-            <p className="text-xs text-slate-400">Chronological activation via Mahadasha, Antardasha, and Pratyantardasha levels</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('ui.dasha.title')}</h2>
+            <p className="text-xs text-slate-400">{t('ui.dasha.description')}</p>
           </div>
         </div>
 
@@ -120,7 +123,7 @@ export const WealthDashaSection: React.FC<WealthDashaSectionProps> = ({ dasha })
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            Vimshottari dasha timing calculations are currently unavailable for this wealth analysis.
+            {t('ui.dasha.unavailableMessage')}
           </span>
         </div>
       )}

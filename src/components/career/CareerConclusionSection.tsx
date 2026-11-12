@@ -2,6 +2,7 @@ import React from 'react';
 import type { CareerConclusionViewModel } from '../../product/analysis/careerViewModel';
 import { formatConfidence } from './careerFormat';
 import { Sparkles, Network, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface CareerConclusionSectionProps {
   readonly conclusion: CareerConclusionViewModel;
@@ -12,13 +13,14 @@ export const CareerConclusionSection: React.FC<CareerConclusionSectionProps> = (
   conclusion,
   onOpenReasoning
 }) => {
+  const { t } = useTranslation('career');
   const formattedConfidence = formatConfidence(conclusion.confidence);
   const title = conclusion.integratedSynthesisAvailable
-    ? 'Integrated Vocational Synthesis'
-    : 'Career Conclusion';
+    ? t('ui.conclusion.integratedTitle')
+    : t('ui.conclusion.title');
   const subtitle = conclusion.integratedSynthesisAvailable
-    ? 'Unified conclusion synthesizing promise, divisional validation, and timing'
-    : 'Natal promise and available activation evidence indicate…';
+    ? t('ui.conclusion.integratedSubtitle')
+    : t('ui.conclusion.subtitle');
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -53,13 +55,13 @@ export const CareerConclusionSection: React.FC<CareerConclusionSectionProps> = (
       <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-800/60">
         <div className="flex flex-wrap items-center gap-3 text-xs font-mono-code">
           <span className="text-purple-300 bg-purple-950/40 px-2.5 py-1 rounded-lg border border-purple-800/60">
-            {conclusion.primaryEvidenceCount} Primary Drivers
+            {conclusion.primaryEvidenceCount} {t('ui.conclusion.primaryDrivers')}
           </span>
           <span className="text-emerald-300 bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-800/60">
-            {conclusion.supportingEvidenceCount} Supporting Factors
+            {conclusion.supportingEvidenceCount} {t('ui.conclusion.supportingFactors')}
           </span>
           <span className="text-rose-300 bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-800/60">
-            {conclusion.challengingEvidenceCount} Challenging Factors
+            {conclusion.challengingEvidenceCount} {t('ui.conclusion.challengingFactors')}
           </span>
         </div>
 
@@ -70,7 +72,7 @@ export const CareerConclusionSection: React.FC<CareerConclusionSectionProps> = (
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium text-indigo-300 hover:text-indigo-100 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 transition-colors cursor-pointer"
           >
             <Network className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Trace Full Evidential Reasoning</span>
+            <span>{t('ui.conclusion.traceReasoning')}</span>
             <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         )}

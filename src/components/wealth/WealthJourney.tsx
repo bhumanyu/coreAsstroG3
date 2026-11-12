@@ -1,5 +1,6 @@
 import React from 'react';
 import { Compass, CheckCircle2, CircleDashed } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface WealthJourneyStep {
   readonly id: string;
@@ -12,18 +13,19 @@ export interface WealthJourneyProps {
   readonly steps: readonly WealthJourneyStep[];
 }
 
-const stateLabels: Record<WealthJourneyStep['state'], string> = {
-  AVAILABLE: 'Available',
-  PARTIAL: 'Partial',
-  UNAVAILABLE: 'Unavailable'
-};
-
-export const WealthJourney: React.FC<WealthJourneyProps> = ({ steps }) => (
-  <nav aria-label="Guided wealth journey" className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5 space-y-3">
+export const WealthJourney: React.FC<WealthJourneyProps> = ({ steps }) => {
+  const { t } = useTranslation('wealth');
+  const stateLabels: Record<WealthJourneyStep['state'], string> = {
+    AVAILABLE: t('ui.journey.available'),
+    PARTIAL: t('ui.journey.partial'),
+    UNAVAILABLE: t('ui.journey.unavailable')
+  };
+  return (
+  <nav aria-label={t('ui.journey.aria')} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5 space-y-3">
     <div className="flex items-center gap-2">
       <Compass className="h-4 w-4 text-indigo-300" aria-hidden="true" />
-      <h2 className="text-sm font-semibold text-slate-100">Your Wealth Journey</h2>
-      <span className="text-xs text-slate-500">CW-05 · C01 · D01–D03</span>
+      <h2 className="text-sm font-semibold text-slate-100">{t('ui.journey.title')}</h2>
+      <span className="text-xs text-slate-500">{t('ui.journey.scope')}</span>
     </div>
     <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
       {steps.map((step, index) => (
@@ -44,4 +46,5 @@ export const WealthJourney: React.FC<WealthJourneyProps> = ({ steps }) => (
       ))}
     </ol>
   </nav>
-);
+  );
+};

@@ -2,12 +2,14 @@ import React from 'react';
 import type { WealthD2ViewModel } from '../../product/analysis/wealthViewModel';
 import { formatD2Relationship, getD2RelationshipBadgeClass } from './wealthFormat';
 import { Layers, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface WealthD2SectionProps {
   readonly d2: WealthD2ViewModel;
 }
 
 export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
+  const { t } = useTranslation('wealth');
   const formattedRelationship = formatD2Relationship(d2.relationship);
   const badgeClass = getD2RelationshipBadgeClass(d2.relationship);
   const isAvailable = d2.relationship !== 'UNAVAILABLE';
@@ -20,8 +22,8 @@ export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
             <Layers className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Hora (D2) Divisional Alignment</h2>
-            <p className="text-xs text-slate-400">Harmonic verification of liquid asset retention and prosperity</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('ui.d2.title')}</h2>
+            <p className="text-xs text-slate-400">{t('ui.d2.description')}</p>
           </div>
         </div>
 
@@ -44,7 +46,7 @@ export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
           <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
             <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" aria-hidden="true" />
             <span>
-              Hora is evaluated strictly as a qualitative harmonic relationship with the natal Rasi (D1) 2nd and 11th houses.
+              {t('ui.d2.evaluated')}
             </span>
           </div>
         </div>
@@ -52,7 +54,7 @@ export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            {d2.statement ?? (d2.relationship === 'UNAVAILABLE' ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.' : '')}
+            {d2.statement ?? (d2.relationship === 'UNAVAILABLE' ? t('ui.d2.unavailable') : '')}
           </span>
         </div>
       )}

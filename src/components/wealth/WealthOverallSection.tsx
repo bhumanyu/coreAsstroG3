@@ -8,12 +8,14 @@ import {
   getConclusionStatusBadgeClass
 } from './wealthFormat';
 import { Coins, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface WealthOverallSectionProps {
   readonly overall: WealthOverallViewModel;
 }
 
 export const WealthOverallSection: React.FC<WealthOverallSectionProps> = ({ overall }) => {
+  const { t } = useTranslation('wealth');
   const formattedStrength = formatStrength(overall.promise);
   const formattedStatus = formatConclusionStatus(overall.status);
   const formattedConfidence = formatConfidence(overall.confidence);
@@ -29,8 +31,8 @@ export const WealthOverallSection: React.FC<WealthOverallSectionProps> = ({ over
             <Coins className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Natal Wealth Foundation & Overall Status</h2>
-            <p className="text-xs text-slate-400">Independent evaluation of natal promise, synthesized conclusion, and analytical confidence</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('ui.overall.title')}</h2>
+            <p className="text-xs text-slate-400">{t('ui.overall.description')}</p>
           </div>
         </div>
 
@@ -57,34 +59,34 @@ export const WealthOverallSection: React.FC<WealthOverallSectionProps> = ({ over
         <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono-code uppercase">
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-            <span>Natal Promise</span>
+            <span>{t('ui.overall.natalPromise')}</span>
           </div>
           <div className="text-sm font-bold text-slate-100 font-sans">
             {formattedStrength}
           </div>
-          <p className="text-[11px] text-slate-400">Inherent capacity from 2nd/11th lords and Dhana yogas</p>
+          <p className="text-[11px] text-slate-400">{t('ui.overall.promiseDescription')}</p>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono-code uppercase">
             <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" aria-hidden="true" />
-            <span>Domain Conclusion</span>
+            <span>{t('ui.overall.domainConclusion')}</span>
           </div>
           <div className="text-sm font-bold text-slate-100 font-sans">
             {formattedStatus}
           </div>
-          <p className="text-[11px] text-slate-400">Synthesized status across classical wealth factors</p>
+          <p className="text-[11px] text-slate-400">{t('ui.overall.conclusionDescription')}</p>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono-code uppercase">
             <ShieldCheck className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
-            <span>Analytical Confidence</span>
+            <span>{t('ui.overall.confidence')}</span>
           </div>
           <div className="text-sm font-bold text-slate-100 font-sans">
             {formattedConfidence}
           </div>
-          <p className="text-[11px] text-slate-400">Completeness of chart factors and evidential backing</p>
+          <p className="text-[11px] text-slate-400">{t('ui.overall.confidenceDescription')}</p>
         </div>
       </div>
 
