@@ -15,15 +15,15 @@ export const WealthTransitSection: React.FC<WealthTransitSectionProps> = ({ tran
   const formattedEffect = enumLabel(tEnum, 'transitEffect', transit.effect);
 
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4 light:bg-white/80 light:border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80 light:border-slate-200">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
             <Orbit className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{t('ui.transit.title')}</h2>
-            <p className="text-xs text-slate-400">{t('ui.transit.description')}</p>
+            <h2 className="text-base font-semibold text-slate-100 light:text-slate-900">{t('ui.transit.title')}</h2>
+            <p className="text-xs text-slate-400 light:text-slate-500">{t('ui.transit.description')}</p>
           </div>
         </div>
 
@@ -32,7 +32,7 @@ export const WealthTransitSection: React.FC<WealthTransitSectionProps> = ({ tran
             className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${
               isAvailable
                 ? 'bg-sky-950/60 border-sky-800/80 text-sky-300'
-                : 'bg-slate-800/60 border-slate-700/80 text-slate-400'
+                : 'bg-slate-800/60 border-slate-700/80 text-slate-400 light:bg-slate-100 light:border-slate-200 light:text-slate-500'
             }`}
           >
             {formattedEffect}
@@ -43,17 +43,17 @@ export const WealthTransitSection: React.FC<WealthTransitSectionProps> = ({ tran
       {isAvailable ? (
         <div className="space-y-2">
           {transit.statement ? (
-            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+            <p className="text-xs text-slate-300 light:text-slate-700 leading-relaxed font-sans">
               {transit.statement}
             </p>
           ) : (
-            <p className="text-xs text-slate-400 font-sans italic">
+            <p className="text-xs text-slate-400 light:text-slate-500 font-sans italic">
               {t('ui.transit.active')}
             </p>
           )}
         </div>
       ) : (
-        <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+        <div className="flex items-center gap-2 text-xs text-slate-400 light:text-slate-500 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60 light:bg-slate-50 light:border-slate-200">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
             {transit.statement || t('ui.transit.unavailable')}

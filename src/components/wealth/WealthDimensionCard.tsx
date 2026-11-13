@@ -25,18 +25,18 @@ export const WealthDimensionCard: React.FC<WealthDimensionCardProps> = ({ dimens
   );
 
   return (
-    <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+    <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between light:bg-slate-50 light:border-slate-200">
       <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+        <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2 light:border-slate-200">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-slate-900 border border-slate-800">
+            <div className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 light:bg-slate-50 light:border-slate-200">
               {icon}
             </div>
             <div>
-              <span className="text-sm font-bold text-slate-100 font-sans block">
+              <span className="text-sm font-bold text-slate-100 light:text-slate-900 font-sans block">
                 {dimension.label}
               </span>
-              <span className="text-[11px] font-mono-code text-slate-400 block">
+              <span className="text-[11px] font-mono-code text-slate-400 light:text-slate-500 block">
                 {dimension.houseLabel}
               </span>
             </div>
@@ -50,11 +50,11 @@ export const WealthDimensionCard: React.FC<WealthDimensionCardProps> = ({ dimens
         </div>
 
         {dimension.statement ? (
-          <p className="text-xs text-slate-300 leading-relaxed font-sans pt-1">
+          <p className="text-xs text-slate-300 light:text-slate-700 leading-relaxed font-sans pt-1">
             {dimension.statement}
           </p>
         ) : (
-          <p className="text-xs text-slate-400 italic font-sans pt-1">
+          <p className="text-xs text-slate-400 light:text-slate-500 italic font-sans pt-1">
             Dimension analysis pending classical factor evaluation.
           </p>
         )}

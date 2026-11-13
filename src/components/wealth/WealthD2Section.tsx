@@ -17,15 +17,15 @@ export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
   const isAvailable = d2.relationship !== 'UNAVAILABLE';
 
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4 light:bg-white/80 light:border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80 light:border-slate-200">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400">
             <Layers className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{t('ui.d2.title')}</h2>
-            <p className="text-xs text-slate-400">{t('ui.d2.description')}</p>
+            <h2 className="text-base font-semibold text-slate-100 light:text-slate-900">{t('ui.d2.title')}</h2>
+            <p className="text-xs text-slate-400 light:text-slate-500">{t('ui.d2.description')}</p>
           </div>
         </div>
 
@@ -41,11 +41,11 @@ export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
       {isAvailable ? (
         <div className="space-y-3">
           {d2.statement && (
-            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+            <p className="text-xs text-slate-300 light:text-slate-700 leading-relaxed font-sans">
               {d2.statement}
             </p>
           )}
-          <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
+          <div className="flex items-center gap-2 text-xs text-slate-400 light:text-slate-500 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60 light:bg-slate-50 light:border-slate-200">
             <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" aria-hidden="true" />
             <span>
               {t('ui.d2.evaluated')}
@@ -53,7 +53,7 @@ export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
+        <div className="flex items-center gap-2 text-xs text-slate-400 light:text-slate-500 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60 light:bg-slate-50 light:border-slate-200">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
             {d2.statement ?? (d2.relationship === 'UNAVAILABLE' ? t('ui.d2.unavailable') : '')}

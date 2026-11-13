@@ -23,15 +23,15 @@ export const WealthOverallSection: React.FC<WealthOverallSectionProps> = ({ over
   const statusBadgeClass = getConclusionStatusBadgeClass(overall.status);
 
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-5 light:bg-white/80 light:border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80 light:border-slate-200">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
             <Coins className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{t('ui.overall.title')}</h2>
-            <p className="text-xs text-slate-400">{t('ui.overall.description')}</p>
+            <h2 className="text-base font-semibold text-slate-100 light:text-slate-900">{t('ui.overall.title')}</h2>
+            <p className="text-xs text-slate-400 light:text-slate-500">{t('ui.overall.description')}</p>
           </div>
         </div>
 
@@ -47,7 +47,7 @@ export const WealthOverallSection: React.FC<WealthOverallSectionProps> = ({ over
           >
             {formattedStatus}
           </span>
-          <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
+          <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300 light:bg-slate-100 light:border-slate-200 light:text-slate-700">
             {formattedConfidence}
           </span>
         </div>
@@ -55,48 +55,48 @@ export const WealthOverallSection: React.FC<WealthOverallSectionProps> = ({ over
 
       {/* Three separate dimension metric cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono-code uppercase">
+        <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5 light:bg-slate-50 light:border-slate-200">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 light:text-slate-500 font-mono-code uppercase">
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
             <span>{t('ui.overall.natalPromise')}</span>
           </div>
-          <div className="text-sm font-bold text-slate-100 font-sans">
+          <div className="text-sm font-bold text-slate-100 light:text-slate-900 font-sans">
             {formattedStrength}
           </div>
-          <p className="text-[11px] text-slate-400">{t('ui.overall.promiseDescription')}</p>
+          <p className="text-[11px] text-slate-400 light:text-slate-500">{t('ui.overall.promiseDescription')}</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono-code uppercase">
+        <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5 light:bg-slate-50 light:border-slate-200">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 light:text-slate-500 font-mono-code uppercase">
             <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" aria-hidden="true" />
             <span>{t('ui.overall.domainConclusion')}</span>
           </div>
-          <div className="text-sm font-bold text-slate-100 font-sans">
+          <div className="text-sm font-bold text-slate-100 light:text-slate-900 font-sans">
             {formattedStatus}
           </div>
-          <p className="text-[11px] text-slate-400">{t('ui.overall.conclusionDescription')}</p>
+          <p className="text-[11px] text-slate-400 light:text-slate-500">{t('ui.overall.conclusionDescription')}</p>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono-code uppercase">
+        <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5 light:bg-slate-50 light:border-slate-200">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 light:text-slate-500 font-mono-code uppercase">
             <ShieldCheck className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
             <span>{t('ui.overall.confidence')}</span>
           </div>
-          <div className="text-sm font-bold text-slate-100 font-sans">
+          <div className="text-sm font-bold text-slate-100 light:text-slate-900 font-sans">
             {formattedConfidence}
           </div>
-          <p className="text-[11px] text-slate-400">{t('ui.overall.confidenceDescription')}</p>
+          <p className="text-[11px] text-slate-400 light:text-slate-500">{t('ui.overall.confidenceDescription')}</p>
         </div>
       </div>
 
       {overall.headline && (
-        <h3 className="text-sm font-semibold text-slate-200">
+        <h3 className="text-sm font-semibold text-slate-200 light:text-slate-900">
           {overall.headline}
         </h3>
       )}
 
       {overall.statement && (
-        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+        <p className="text-xs text-slate-300 light:text-slate-700 leading-relaxed font-sans">
           {overall.statement}
         </p>
       )}

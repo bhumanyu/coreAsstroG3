@@ -45,18 +45,18 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
   return (
     <article
       aria-labelledby="wealth-analysis-heading"
-      className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-md"
+      className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-md light:bg-white/80 light:border-slate-200"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/80 light:border-slate-200">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
             <Coins className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h3 id="wealth-analysis-heading" className="text-base font-semibold text-slate-100">
+            <h3 id="wealth-analysis-heading" className="text-base font-semibold text-slate-100 light:text-slate-900">
               Wealth & Prosperity Domain (2nd & 11th Houses)
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 light:text-slate-500">
               Multi-dimensional analysis across accumulation, gains, fortune, and speculation
             </p>
           </div>
@@ -84,25 +84,25 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
       )}
 
       {detail.statement && (
-        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-serif-astro">
+        <p className="text-xs sm:text-sm text-slate-300 light:text-slate-700 leading-relaxed font-serif-astro">
           {detail.statement}
         </p>
       )}
 
       {/* Structural Factors — 3 Distinct Concepts: Natal Promise ≠ D2 Hora ≠ Timing */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1">
-          <span className="text-[10px] uppercase font-mono-code text-slate-400 flex items-center gap-1">
+        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1 light:bg-slate-50 light:border-slate-200">
+          <span className="text-[10px] uppercase font-mono-code text-slate-400 light:text-slate-500 flex items-center gap-1">
             <ShieldCheck className="w-3 h-3 text-amber-400" aria-hidden="true" />
             Natal Promise
           </span>
-          <p className="text-xs font-semibold text-slate-200">
+          <p className="text-xs font-semibold text-slate-200 light:text-slate-900">
             {formatEnum(detail.natalPromise)}
           </p>
         </div>
 
-        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1">
-          <span className="text-[10px] uppercase font-mono-code text-slate-400 flex items-center gap-1">
+        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1 light:bg-slate-50 light:border-slate-200">
+          <span className="text-[10px] uppercase font-mono-code text-slate-400 light:text-slate-500 flex items-center gap-1">
             <Compass className="w-3 h-3 text-purple-400" aria-hidden="true" />
             D2 Hora
           </span>
@@ -111,16 +111,16 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
           >
             {formatEnum('UNAVAILABLE')}
           </span>
-          <p className="mt-1 text-[10px] leading-relaxed text-slate-400">D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-400 light:text-slate-500">D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.</p>
           {detail.traceCompleteness && (
-            <p className="mt-1 text-[10px] text-slate-400">
+            <p className="mt-1 text-[10px] text-slate-400 light:text-slate-500">
               Trace completeness: {formatEnum(detail.traceCompleteness.status)} · {detail.traceCompleteness.diagnostics.length} diagnostic(s)
             </p>
           )}
         </div>
 
-        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1">
-          <span className="text-[10px] uppercase font-mono-code text-slate-400 flex items-center gap-1">
+        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1 light:bg-slate-50 light:border-slate-200">
+          <span className="text-[10px] uppercase font-mono-code text-slate-400 light:text-slate-500 flex items-center gap-1">
             <Activity className="w-3 h-3 text-emerald-400" aria-hidden="true" />
             Current Dasha
           </span>
@@ -133,8 +133,8 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
           </span>
         </div>
 
-        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1">
-          <span className="text-[10px] uppercase font-mono-code text-slate-400 flex items-center gap-1">
+        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 space-y-1 light:bg-slate-50 light:border-slate-200">
+          <span className="text-[10px] uppercase font-mono-code text-slate-400 light:text-slate-500 flex items-center gap-1">
             <Zap className="w-3 h-3 text-amber-400" aria-hidden="true" />
             Current Transit
           </span>
@@ -150,14 +150,14 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
 
       {/* 4 Wealth Dimensions Matrix */}
       <div className="space-y-2 pt-2">
-        <span className="text-[11px] font-mono-code text-slate-400 block">
+        <span className="text-[11px] font-mono-code text-slate-400 light:text-slate-500 block">
           {detail.manifestationSynthesis
             ? '4 Classical Wealth Dimensions (CW-04 Manifestation):'
             : '4 Classical Wealth Dimensions:'}
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mb-1">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1 light:bg-slate-50 light:border-slate-200">
+            <div className="flex items-center gap-1.5 text-xs text-slate-300 light:text-slate-700 font-medium mb-1">
               <Vault className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
               <span>Accumulation (2H)</span>
             </div>
@@ -165,14 +165,14 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
               {formatEnum(detail.manifestationSynthesis?.dimensions.ACCUMULATION?.status ?? detail.accumulationStatus)}
             </span>
             {detail.manifestationSynthesis?.dimensions.ACCUMULATION?.summary && (
-              <p className="text-[11px] text-slate-400 leading-tight">
+              <p className="text-[11px] text-slate-400 light:text-slate-500 leading-tight">
                 {detail.manifestationSynthesis.dimensions.ACCUMULATION.summary}
               </p>
             )}
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mb-1">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1 light:bg-slate-50 light:border-slate-200">
+            <div className="flex items-center gap-1.5 text-xs text-slate-300 light:text-slate-700 font-medium mb-1">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
               <span>Gains (11H)</span>
             </div>
@@ -180,14 +180,14 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
               {formatEnum(detail.manifestationSynthesis?.dimensions.GAINS?.status ?? detail.gainsStatus)}
             </span>
             {detail.manifestationSynthesis?.dimensions.GAINS?.summary && (
-              <p className="text-[11px] text-slate-400 leading-tight">
+              <p className="text-[11px] text-slate-400 light:text-slate-500 leading-tight">
                 {detail.manifestationSynthesis.dimensions.GAINS.summary}
               </p>
             )}
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mb-1">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1 light:bg-slate-50 light:border-slate-200">
+            <div className="flex items-center gap-1.5 text-xs text-slate-300 light:text-slate-700 font-medium mb-1">
               <Trophy className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
               <span>Fortune (9H)</span>
             </div>
@@ -195,14 +195,14 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
               {formatEnum(detail.manifestationSynthesis?.dimensions.FORTUNE?.status ?? detail.fortuneStatus)}
             </span>
             {detail.manifestationSynthesis?.dimensions.FORTUNE?.summary && (
-              <p className="text-[11px] text-slate-400 leading-tight">
+              <p className="text-[11px] text-slate-400 light:text-slate-500 leading-tight">
                 {detail.manifestationSynthesis.dimensions.FORTUNE.summary}
               </p>
             )}
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">
-            <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mb-1">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1 light:bg-slate-50 light:border-slate-200">
+            <div className="flex items-center gap-1.5 text-xs text-slate-300 light:text-slate-700 font-medium mb-1">
               <Target className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
               <span>Speculation (5H)</span>
             </div>
@@ -210,7 +210,7 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
               {formatEnum(detail.manifestationSynthesis?.dimensions.SPECULATION?.status ?? detail.speculationStatus)}
             </span>
             {detail.manifestationSynthesis?.dimensions.SPECULATION?.summary && (
-              <p className="text-[11px] text-slate-400 leading-tight">
+              <p className="text-[11px] text-slate-400 light:text-slate-500 leading-tight">
                 {detail.manifestationSynthesis.dimensions.SPECULATION.summary}
               </p>
             )}
@@ -218,7 +218,7 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
         </div>
 
         {/* Note on independence of accumulation vs speculation */}
-        <p className="text-[11px] text-slate-400/80 italic mt-1.5">
+        <p className="text-[11px] text-slate-400/80 light:text-slate-500 italic mt-1.5">
           Note: High accumulation capacity (2nd House) reflects wealth retention and stability, which functions independently from speculative risk tolerance (5th House). Speculation is strictly isolated.
         </p>
       </div>

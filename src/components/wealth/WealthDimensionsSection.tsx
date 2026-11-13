@@ -13,21 +13,21 @@ export const WealthDimensionsSection: React.FC<WealthDimensionsSectionProps> = (
 }) => {
   const { t } = useTranslation('wealth');
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4 light:bg-white/80 light:border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80 light:border-slate-200">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
             <PieChart className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{t('indicators.title')}</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="text-base font-semibold text-slate-100 light:text-slate-900">{t('indicators.title')}</h2>
+            <p className="text-xs text-slate-400 light:text-slate-500">
               {t('disclaimers.chartIndications')}
             </p>
           </div>
         </div>
 
-        <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
+        <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300 light:bg-slate-100 light:border-slate-200 light:text-slate-700">
           {t('indicators.count')}
         </span>
       </div>

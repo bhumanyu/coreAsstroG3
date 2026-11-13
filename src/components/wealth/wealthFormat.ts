@@ -243,7 +243,7 @@ export function getConclusionStatusBadgeClass(status?: ConclusionStatus | string
     case 'CHALLENGED':
       return 'bg-rose-950/60 border-rose-800/80 text-rose-300';
     default:
-      return 'bg-slate-800/60 border-slate-700/80 text-slate-400';
+      return 'bg-slate-800/60 border-slate-700/80 text-slate-400 light:bg-slate-100 light:border-slate-200 light:text-slate-500';
   }
 }
 
@@ -261,7 +261,7 @@ export function getPromiseStrengthBadgeClass(strength?: PromiseStrength | string
   if (upper === 'WEAK' || upper === 'VERY_WEAK') {
     return 'bg-rose-950/60 border-rose-800/80 text-rose-300';
   }
-  return 'bg-slate-800/60 border-slate-700/80 text-slate-300';
+  return 'bg-slate-800/60 border-slate-700/80 text-slate-300 light:bg-slate-100 light:border-slate-200 light:text-slate-700';
 }
 
 /**
@@ -276,7 +276,7 @@ export function getDirectionBadgeClass(direction?: ProductDirection | string): s
     case 'MIXED':
       return 'bg-amber-950/60 border-amber-800/80 text-amber-300';
     default:
-      return 'bg-slate-800/60 border-slate-700/80 text-slate-300';
+      return 'bg-slate-800/60 border-slate-700/80 text-slate-300 light:bg-slate-100 light:border-slate-200 light:text-slate-700';
   }
 }
 
@@ -292,7 +292,7 @@ export function getSeverityBadgeClass(severity?: 'LOW' | 'MEDIUM' | 'HIGH' | str
     case 'LOW':
       return 'bg-blue-950/60 border-blue-800/80 text-blue-300';
     default:
-      return 'bg-slate-800/60 border-slate-700/80 text-slate-300';
+      return 'bg-slate-800/60 border-slate-700/80 text-slate-300 light:bg-slate-100 light:border-slate-200 light:text-slate-700';
   }
 }
 
@@ -310,7 +310,7 @@ export function getD2RelationshipBadgeClass(rel?: string): string {
     case 'CONFLICTS':
       return 'bg-rose-950/60 border-rose-800/80 text-rose-300';
     default:
-      return 'bg-slate-800/60 border-slate-700/80 text-slate-400';
+      return 'bg-slate-800/60 border-slate-700/80 text-slate-400 light:bg-slate-100 light:border-slate-200 light:text-slate-500';
   }
 }
 
@@ -332,7 +332,7 @@ export function getEvidenceRoleBadgeClass(role?: ProductEvidenceRole | string): 
     case 'CONFLICTING':
       return 'bg-orange-950/60 border-orange-800/80 text-orange-300';
     default:
-      return 'bg-slate-800/60 border-slate-700/80 text-slate-300';
+      return 'bg-slate-800/60 border-slate-700/80 text-slate-300 light:bg-slate-100 light:border-slate-200 light:text-slate-700';
   }
 }
 
@@ -341,5 +341,5 @@ export function getEvidenceRoleBadgeClass(role?: ProductEvidenceRole | string): 
  */
 /** Neutral styling for chart propensity states; colors must not imply financial risk. */
 export function getSpeculativeRiskBadgeClass(_status?: string): string {
-  return 'bg-slate-800/60 border-slate-700/80 text-slate-300';
+  return 'bg-slate-800/60 border-slate-700/80 text-slate-300 light:bg-slate-100 light:border-slate-200 light:text-slate-700';
 }

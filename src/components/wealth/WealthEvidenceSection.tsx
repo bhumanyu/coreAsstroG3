@@ -21,20 +21,20 @@ export const WealthEvidenceSection: React.FC<WealthEvidenceSectionProps> = ({
   const { t } = useTranslation('wealth');
   const { t: tEnum } = useTranslation('enums');
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4 light:bg-white/80 light:border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80 light:border-slate-200">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
             <FileText className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{t('ui.evidence.title')}</h2>
-            <p className="text-xs text-slate-400">{t('ui.evidence.description')}</p>
+            <h2 className="text-base font-semibold text-slate-100 light:text-slate-900">{t('ui.evidence.title')}</h2>
+            <p className="text-xs text-slate-400 light:text-slate-500">{t('ui.evidence.description')}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
+          <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300 light:bg-slate-100 light:border-slate-200 light:text-slate-700">
             {evidence.length} {t(evidence.length === 1 ? 'ui.evidence.factor' : 'ui.evidence.factors')}
           </span>
           {onOpenReasoning && (
@@ -61,11 +61,11 @@ export const WealthEvidenceSection: React.FC<WealthEvidenceSectionProps> = ({
           return (
             <div
               key={item.id}
-              className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2 hover:border-slate-700/80 transition-colors"
+              className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2 hover:border-slate-700/80 transition-colors light:bg-slate-50 light:border-slate-200 light:hover:border-slate-200"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-200">
+                  <span className="text-xs font-bold text-slate-200 light:text-slate-900">
                     {item.title}
                   </span>
                 </div>
@@ -80,11 +80,11 @@ export const WealthEvidenceSection: React.FC<WealthEvidenceSectionProps> = ({
                 </div>
               </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed font-sans">
+              <p className="text-xs text-slate-300 light:text-slate-700 leading-relaxed font-sans">
                 {item.explanation}
               </p>
 
-              <p className="text-[11px] text-slate-500">{item.sourceLabel}</p>
+              <p className="text-[11px] text-slate-500 light:text-slate-500">{item.sourceLabel}</p>
               <TechnicalEvidenceDetails evidence={item} />
             </div>
           );

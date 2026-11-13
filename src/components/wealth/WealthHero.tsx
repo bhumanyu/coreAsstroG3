@@ -46,35 +46,35 @@ export const WealthHero: React.FC<WealthHeroProps> = ({ hero }) => {
         aria-label={t('ui.hero.chartPositions')}
         className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 pb-2"
       >
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 light:bg-slate-50 light:border-slate-200 light:text-slate-700">
           <Compass className="w-4 h-4 text-indigo-400 shrink-0" aria-hidden="true" />
           <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">{t('ui.hero.ascendant')}</span>
-            <span className="font-semibold text-slate-200">{ascendant}</span>
+            <span className="text-slate-400 light:text-slate-500 block text-[10px] uppercase font-mono-code">{t('ui.hero.ascendant')}</span>
+            <span className="font-semibold text-slate-200 light:text-slate-900">{ascendant}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 light:bg-slate-50 light:border-slate-200 light:text-slate-700">
           <Moon className="w-4 h-4 text-sky-400 shrink-0" aria-hidden="true" />
           <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">{t('ui.hero.moonSign')}</span>
-            <span className="font-semibold text-slate-200">{moon}</span>
+            <span className="text-slate-400 light:text-slate-500 block text-[10px] uppercase font-mono-code">{t('ui.hero.moonSign')}</span>
+            <span className="font-semibold text-slate-200 light:text-slate-900">{moon}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 light:bg-slate-50 light:border-slate-200 light:text-slate-700">
           <Sun className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">{t('ui.hero.sunSign')}</span>
-            <span className="font-semibold text-slate-200">{sun}</span>
+            <span className="text-slate-400 light:text-slate-500 block text-[10px] uppercase font-mono-code">{t('ui.hero.sunSign')}</span>
+            <span className="font-semibold text-slate-200 light:text-slate-900">{sun}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 light:bg-slate-50 light:border-slate-200 light:text-slate-700">
           <Star className="w-4 h-4 text-purple-400 shrink-0" aria-hidden="true" />
           <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">{t('ui.hero.nakshatra')}</span>
-            <span className="font-semibold text-slate-200">{nakshatra}</span>
+            <span className="text-slate-400 light:text-slate-500 block text-[10px] uppercase font-mono-code">{t('ui.hero.nakshatra')}</span>
+            <span className="font-semibold text-slate-200 light:text-slate-900">{nakshatra}</span>
           </div>
         </div>
       </div>

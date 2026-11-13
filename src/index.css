@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where(.light, .light *, [data-theme="light"], [data-theme="light"] *));
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -46,7 +47,7 @@
   }
 
   html.light {
-    background-color: #f8fafc;
+    background-color: #e8e6f8;
     color-scheme: light;
   }
 
@@ -70,12 +71,14 @@
     color: #e2e8f0;
   }
 
-  /* Light mode body styling: subtle soft slate and luminous lavender highlight */
+  /* Light mode body styling: Wizz Air-style pastel canvas — lavender base,
+     centered pink-magenta bloom, peach glow at bottom, lavender top-left */
   .light body {
     background:
-      radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.05) 0%, transparent 40%),
-      linear-gradient(180deg, #f8fafc 0%, #f1f5f9 40%, #e2e8f0 100%);
+      radial-gradient(ellipse 70% 55% at 50% 60%, rgba(244, 114, 182, 0.45) 0%, rgba(232, 121, 249, 0.25) 40%, transparent 70%),
+      radial-gradient(ellipse 50% 35% at 50% 95%, rgba(253, 186, 140, 0.3) 0%, transparent 60%),
+      radial-gradient(ellipse 45% 30% at 15% 10%, rgba(196, 181, 253, 0.4) 0%, transparent 60%),
+      linear-gradient(180deg, #dcd9f7 0%, #e9e6fa 40%, #e6e3f8 100%);
     background-attachment: fixed;
     color: #0f172a;
   }
@@ -104,8 +107,8 @@
   }
 
   .light .app-shell {
-    background-image: linear-gradient(rgba(100, 116, 139, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(100, 116, 139, 0.06) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(100, 116, 139, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(100, 116, 139, 0.03) 1px, transparent 1px);
   }
 
   /* Glassmorphism panels */
@@ -202,7 +205,7 @@
 }
 
 .light ::-webkit-scrollbar-track {
-  background: rgba(241, 245, 249, 0.8);
+  background: rgba(232, 230, 248, 0.8);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -238,6 +241,190 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ============================================================
+   Light-mode overrides for components that hardcode dark
+   Tailwind classes (no `light:` variants). The :not([class*="light:"])
+   guards ensure elements with explicit light: utilities always
+   keep their intended styling.
+   ============================================================ */
+
+/* Dark slate surfaces -> frosted white glass cards */
+.light [class*="bg-slate-900"]:not([class*="light:"]),
+.light [class*="bg-slate-950"]:not([class*="light:"]),
+.light [class*="bg-slate-800"]:not([class*="light:"]) {
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #0f172a;
+}
+
+/* Translucent white fills used on dark UIs -> frosted white */
+.light [class*="bg-white/5"]:not([class*="light:"]),
+.light [class*="bg-white/10"]:not([class*="light:"]) {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+/* White-alpha borders -> soft white borders */
+.light [class*="border-white/"]:not([class*="light:"]) {
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* White text -> dark slate, except on colored/gradient accent
+   elements (buttons, badges) where white must be preserved */
+.light [class*="text-white"]:not([class*="light:"]):not([class*="bg-gradient"]):not([class*="from-"]):not([class*="via-"]):not([class*="bg-indigo"]):not([class*="bg-violet"]):not([class*="bg-purple"]):not([class*="bg-fuchsia"]):not([class*="bg-pink"]):not([class*="bg-rose"]):not([class*="bg-red"]):not([class*="bg-orange"]):not([class*="bg-amber"]):not([class*="bg-yellow"]):not([class*="bg-emerald"]):not([class*="bg-green"]):not([class*="bg-teal"]):not([class*="bg-cyan"]):not([class*="bg-sky"]):not([class*="bg-blue"]) {
+  color: #0f172a;
+}
+
+/* Muted slate text -> readable slate (general first, specific shades after) */
+.light [class*="text-slate-"]:not([class*="light:"]) {
+  color: #334155;
+}
+
+.light [class*="text-slate-3"]:not([class*="light:"]),
+.light [class*="text-slate-4"]:not([class*="light:"]),
+.light [class*="text-slate-5"]:not([class*="light:"]),
+.light [class*="text-slate-6"]:not([class*="light:"]) {
+  color: #475569;
+}
+
+.light [class*="text-slate-1"]:not([class*="light:"]),
+.light [class*="text-slate-2"]:not([class*="light:"]) {
+  color: #0f172a;
+}
+
+/* Slate borders -> light slate borders */
+.light [class*="border-slate-"]:not([class*="light:"]) {
+  border-color: rgba(226, 232, 240, 0.9);
+}
+
+/* Indigo-tinted dark surfaces (chart grids, highlights) -> soft violet wash */
+.light [class*="bg-indigo-9"]:not([class*="light:"]) {
+  background-color: rgba(217, 70, 239, 0.07);
+}
+
+.light [class*="bg-indigo-8"]:not([class*="light:"]) {
+  background-color: rgba(217, 70, 239, 0.1);
+}
+
+.light [class*="border-indigo-"]:not([class*="light:"]) {
+  border-color: rgba(232, 121, 249, 0.5);
+}
+
+.light [class*="ring-indigo-"]:not([class*="light:"]) {
+  --tw-ring-color: rgba(217, 70, 239, 0.35);
+}
+
+/* Indigo accent text -> violet for theme cohesion */
+.light [class*="text-indigo-3"]:not([class*="light:"]),
+.light [class*="text-indigo-4"]:not([class*="light:"]) {
+  color: #7c3aed;
+}
+
+.light [class*="text-amber-3"]:not([class*="light:"]),
+.light [class*="text-amber-4"]:not([class*="light:"]) {
+  color: #d97706;
+}
+
+.light [class*="text-emerald-3"]:not([class*="light:"]),
+.light [class*="text-emerald-4"]:not([class*="light:"]) {
+  color: #059669;
+}
+
+.light [class*="text-rose-3"]:not([class*="light:"]),
+.light [class*="text-rose-4"]:not([class*="light:"]) {
+  color: #e11d48;
+}
+
+.light [class*="text-purple-3"]:not([class*="light:"]),
+.light [class*="text-purple-4"]:not([class*="light:"]) {
+  color: #7c3aed;
+}
+
+.light [class*="text-sky-3"]:not([class*="light:"]),
+.light [class*="text-sky-4"]:not([class*="light:"]) {
+  color: #0284c7;
+}
+
+.light [class*="text-cyan-3"]:not([class*="light:"]),
+.light [class*="text-cyan-4"]:not([class*="light:"]) {
+  color: #0891b2;
+}
+
+.light [class*="text-teal-3"]:not([class*="light:"]),
+.light [class*="text-teal-4"]:not([class*="light:"]) {
+  color: #0d9488;
+}
+
+.light [class*="text-orange-3"]:not([class*="light:"]),
+.light [class*="text-orange-4"]:not([class*="light:"]) {
+  color: #ea580c;
+}
+
+.light [class*="text-yellow-3"]:not([class*="light:"]),
+.light [class*="text-yellow-4"]:not([class*="light:"]) {
+  color: #ca8a04;
+}
+
+/* SVG strokes drawn for dark backgrounds (e.g. Kundali chart lines)
+   -> fuchsia/violet to match the pastel theme */
+.light [class*="stroke-indigo-"]:not([class*="light:"]) {
+  stroke: rgb(217 70 239 / 0.5);
+}
+
+.light [class*="stroke-violet-"]:not([class*="light:"]) {
+  stroke: rgb(139 92 246 / 0.5);
+}
+
+.light [class*="stroke-slate-"]:not([class*="light:"]) {
+  stroke: rgb(100 116 139 / 0.4);
+}
+
+/* ============================================================
+   Subtle accent shift: primary accents move from indigo toward
+   fuchsia/magenta in light mode (active nav, primary buttons,
+   highlighted surfaces).
+   ============================================================ */
+
+/* Active nav pills & light indigo highlight backgrounds */
+.light [class*="light:bg-indigo-50"]:not([class*="bg-gradient"]),
+.light [class*="light:bg-indigo-500/15"]:not([class*="bg-gradient"]),
+.light [class*="light:bg-indigo-500/10"]:not([class*="bg-gradient"]),
+.light [class*="bg-indigo-500/10"]:not([class*="light:"]):not([class*="bg-gradient"]),
+.light [class*="bg-indigo-500/15"]:not([class*="light:"]):not([class*="bg-gradient"]) {
+  background-color: rgba(232, 121, 249, 0.16);
+}
+
+/* Indigo accent text in light mode -> fuchsia-violet */
+.light [class*="light:text-indigo-600"],
+.light [class*="light:text-indigo-700"] {
+  color: #a21caf;
+}
+
+.light [class*="text-indigo-600"]:not([class*="light:"]):not([class*="bg-indigo-600"]),
+.light [class*="text-indigo-700"]:not([class*="light:"]):not([class*="bg-indigo-600"]) {
+  color: #a21caf;
+}
+
+/* Primary gradient buttons (indigo -> violet) -> fuchsia -> pink */
+.light [class*="from-indigo-600"][class*="to-violet-600"],
+.light [class*="from-indigo-500"][class*="to-violet-500"],
+.light [class*="from-violet-600"][class*="to-indigo-600"] {
+  background-image: linear-gradient(to right, #d946ef, #e879f9);
+}
+
+.light [class*="from-indigo-600"][class*="to-violet-600"]:hover,
+.light [class*="from-indigo-500"][class*="to-violet-500"]:hover,
+.light [class*="from-violet-600"][class*="to-indigo-600"]:hover {
+  background-image: linear-gradient(to right, #c026d3, #d946ef);
+}
+
+/* Focus rings: indigo -> fuchsia for cohesion */
+.light [class*="focus-visible:ring-indigo-500"],
+.light [class*="ring-indigo-500"]:not([class*="light:"]) {
+  --tw-ring-color: rgb(217 70 239 / 0.5);
 }
 
 /* Print Styles */
