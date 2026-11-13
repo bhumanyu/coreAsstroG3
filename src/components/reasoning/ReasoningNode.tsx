@@ -112,6 +112,9 @@ function resolveNodeBadge(node: ReasoningChainNodeViewModel, t: EnumLabelTransla
   return null;
 }
 
+// Reasoning chain nodes carry domain narrative statements (not
+// ProductEvidence), so they are outside the UserFacingEvidence
+// projection; enum badges are already localized via enumLabel.
 export const ReasoningNode: React.FC<ReasoningNodeProps> = ({ node, stepNumber }) => {
   const { t } = useTranslation('enums');
   const badge = resolveNodeBadge(node, t);

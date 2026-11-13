@@ -11,6 +11,7 @@ import type { DashaTimingProjectionState, ProductAnalysisState } from '../app/Ap
 import type { ProductAnalysis } from '../product/analysis';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectDashaViewModel } from '../product/analysis/dashaViewModel';
+import { resolveUserFacingCopy } from '../product/life-analysis/userFacingInterpretation';
 import {
   selectDashaPeriodOptions,
   selectSelectedPeriod
@@ -79,7 +80,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   onNavigate,
   onSelectPeriod
 }) => {
-  const { t } = useTranslation('dasha');
+  const { t, i18n } = useTranslation('dasha');
   const status = productAnalysisState?.status;
   const analysis = productAnalysisState?.analysis;
   const errorMessage = productAnalysisState?.error;
@@ -87,8 +88,8 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   const selectionError = selectionState?.error;
 
   const viewModel = useMemo(
-    () => (analysis ? selectDashaViewModel(analysis) : undefined),
-    [analysis]
+    () => (analysis ? selectDashaViewModel(analysis, resolveUserFacingCopy(i18n.language)) : undefined),
+    [analysis, i18n.language]
   );
 
   const dashPeriodOptions = useMemo(

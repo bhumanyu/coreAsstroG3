@@ -326,10 +326,20 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           {
             id: 'ev_1',
             title: '10th Lord Strength',
-            statement: 'Mars exalted in Lagna.',
-            direction: 'SUPPORT',
+            roleLabel: 'Primary factor',
+            directionLabel: 'Supportive',
+            explanation: 'Mars exalted in Lagna.',
+            sourceLabel: 'Chart analysis',
             role: 'PRIMARY',
-            source: 'ENGINE'
+            direction: 'SUPPORT',
+            derivedFromIds: [],
+            technical: {
+              id: 'ev_1',
+              source: 'ENGINE',
+              direction: 'SUPPORT',
+              role: 'PRIMARY',
+              statement: 'Mars exalted in Lagna. Effect: SUPPORT'
+            }
           }
         ],
         SUPPORTING: [],

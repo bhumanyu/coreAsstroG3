@@ -45,9 +45,15 @@ function validHouse(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 12;
 }
 
+// Trailing provenance clauses look like `Label: UPPERCASE_ENUM` (e.g.
+// `Dignity: NEUTRAL`, `Wealth relevance: PRIMARY`, `Effect: SUPPORT`).
+// The enum token must be at least two characters so ordinary prose like
+// `Note: A planet` is never stripped.
+const PROVENANCE_CLAUSE = /\b[A-Za-z][A-Za-z0-9 ]{0,40}:\s*[A-Z][A-Z0-9_]+\b\.?/g;
+
 function cleanStatement(statement: string): string {
   return statement
-    .replace(/\b(?:Career relevance|Effect):\s*[A-Z][A-Z0-9_]*\.?/gi, '')
+    .replace(PROVENANCE_CLAUSE, '')
     .replace(/\s+([,.])/g, '$1')
     .replace(/([,.])\s*([,.])/g, '$1')
     .replace(/\s{2,}/g, ' ')
@@ -68,17 +74,23 @@ export function buildUserFacingEvidence(
     ?? copy.unknownEvidenceDirectionLabel;
   const houses = (evidence.houses ?? []).filter(validHouse);
   const house = validHouse(evidence.house) ? evidence.house : undefined;
-  const planet = evidence.planet?.trim();
+  const planetKey = evidence.planet?.trim().toUpperCase();
+  const planetLabel = planetKey
+    ? lookup(copy.evidencePlanetLabels, planetKey)
+    : undefined;
 
+  // Title policy: titles are always derived from structured fields
+  // (houses / recognized planet label / source). Domain-provided
+  // `evidence.title` is never used because it can leak raw enum codes.
   let title = sourceLabel;
   if (houses.length >= 2) {
     title = copy.evidenceHousePairTitle(houses[0], houses[1]);
-  } else if (house !== undefined && planet) {
-    title = copy.evidencePlanetTitle(planet, house);
+  } else if (house !== undefined && planetLabel) {
+    title = copy.evidencePlanetTitle(planetLabel, house);
   } else if (house !== undefined) {
     title = copy.evidenceHouseTitle(house, evidence.sourceType);
-  } else if (planet) {
-    title = copy.evidencePlanetTitle(planet);
+  } else if (planetLabel) {
+    title = copy.evidencePlanetTitle(planetLabel);
   }
 
   const explanation = cleanStatement(evidence.statement)

@@ -11,7 +11,6 @@ import type {
   ProductStatus,
   ProductAvailability,
   ProductDirection,
-  ProductEvidence,
   ProductEvidenceRole,
   ProductDashaPeriod,
   ProductWarning,
@@ -19,6 +18,14 @@ import type {
   TransitProductResult
 } from './productAnalysisTypes';
 import { selectDashaHierarchy, selectAllEvidence } from './productAnalysisSelectors';
+import {
+  buildUserFacingEvidence,
+  type UserFacingEvidence
+} from '../life-analysis/evidencePresentation';
+import {
+  ENGLISH_USER_FACING_COPY,
+  type UserFacingCopyProvider
+} from '../life-analysis/userFacingInterpretation';
 
 export interface DashaPeriodViewModel {
   readonly level: ProductDashaPeriod['level'];
@@ -71,7 +78,7 @@ export interface DashaQualificationViewModel {
 
 export interface DashaEvidenceViewModel {
   readonly total: number;
-  readonly groups: Record<ProductEvidenceRole, readonly ProductEvidence[]>;
+  readonly groups: Record<ProductEvidenceRole, readonly UserFacingEvidence[]>;
 }
 
 export interface DashaViewModel {
@@ -129,7 +136,10 @@ export function mapDomainTransit(transit?: TransitProductResult): DashaDomainTra
  * - Transit surfaced as timing/trigger context
  * - No predictive percentages or scoring calculations
  */
-export function selectDashaViewModel(analysis: ProductAnalysis): DashaViewModel {
+export function selectDashaViewModel(
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): DashaViewModel {
   // 1. Hierarchy: ordered MD/AD/PD periods from selectDashaHierarchy
   const rawPeriods = selectDashaHierarchy(analysis);
   const hierarchy: readonly DashaPeriodViewModel[] = rawPeriods.map(mapDashaPeriod);
@@ -194,7 +204,7 @@ export function selectDashaViewModel(analysis: ProductAnalysis): DashaViewModel 
 
   // 6. Evidence: combine career + wealth evidence, dedupe by id, group by ProductEvidenceRole
   const allEvidence = selectAllEvidence(analysis);
-  const groups: Record<ProductEvidenceRole, ProductEvidence[]> = {
+  const groups: Record<ProductEvidenceRole, UserFacingEvidence[]> = {
     PRIMARY: [],
     SUPPORTING: [],
     CHALLENGING: [],
@@ -204,10 +214,11 @@ export function selectDashaViewModel(analysis: ProductAnalysis): DashaViewModel 
     NEUTRAL: []
   };
   for (const item of allEvidence) {
-    if (groups[item.role]) {
-      groups[item.role].push(item);
+    const projected = buildUserFacingEvidence(item, copy);
+    if (groups[projected.role]) {
+      groups[projected.role].push(projected);
     } else {
-      groups.NEUTRAL.push(item);
+      groups.NEUTRAL.push(projected);
     }
   }
   const evidence: DashaEvidenceViewModel = {

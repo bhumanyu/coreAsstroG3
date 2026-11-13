@@ -2,6 +2,9 @@ import React from 'react';
 import { CheckCircle2, CircleAlert } from 'lucide-react';
 import type { AiExplanationEvidence } from '../../ai/product/aiExplanationTypes';
 
+// Out of scope for UserFacingEvidence projection: items are AiEvidence
+// from the AI explanation context pipeline (separate type/flow), not
+// canonical ProductEvidence.
 interface AiExplanationEvidenceListProps {
   readonly title: string;
   readonly items: readonly AiExplanationEvidence[];

@@ -10,7 +10,6 @@ export interface KeyFindingsCardProps {
 }
 
 export const FindingRow: React.FC<{ readonly finding: OverviewFinding }> = ({ finding }) => {
-  const { t } = useTranslation('dashboard');
   const { t: tEnum } = useTranslation('enums');
   const roleText = enumLabel(tEnum, 'productEvidenceRole', finding.role);
   const directionText = enumLabel(tEnum, 'productDirection', finding.direction);
@@ -36,12 +35,6 @@ export const FindingRow: React.FC<{ readonly finding: OverviewFinding }> = ({ fi
       </p>
       <p className="text-[10px] text-slate-500">{finding.sourceLabel}</p>
       <TechnicalEvidenceDetails evidence={finding} />
-
-      {finding.evidenceIds.length > 0 && (
-        <div className="flex items-center gap-2 pt-1 text-[10px] font-mono-code text-slate-400">
-          <span>{t(finding.evidenceIds.length === 1 ? 'findings.sourceSingular' : 'findings.sourcePlural', { count: finding.evidenceIds.length })}</span>
-        </div>
-      )}
     </div>
   );
 };

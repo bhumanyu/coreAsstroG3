@@ -8,6 +8,7 @@ import {
 import { Network, ArrowRight, ShieldCheck, Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { enumLabel } from '../../i18n/enumLabels';
+import { TechnicalEvidenceDetails } from '../reasoning/TechnicalEvidenceDetails';
 
 export interface DashaEvidenceSectionProps {
   readonly evidence: DashaEvidenceViewModel;
@@ -105,8 +106,10 @@ export const DashaEvidenceSection: React.FC<DashaEvidenceSectionProps> = ({
                         </div>
 
                         <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                          {item.statement}
+                          {item.explanation}
                         </p>
+
+                        <TechnicalEvidenceDetails evidence={item} />
 
                         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800/60 text-[10px] font-mono-code text-slate-400">
                           {item.ruleId && (
@@ -115,12 +118,10 @@ export const DashaEvidenceSection: React.FC<DashaEvidenceSectionProps> = ({
                               <span>{item.ruleId}</span>
                             </span>
                           )}
-                          {item.source && (
-                            <span className="flex items-center gap-1 text-slate-500">
-                              <Database className="w-3 h-3" aria-hidden="true" />
-                              <span>{item.source}</span>
-                            </span>
-                          )}
+                          <span className="flex items-center gap-1 text-slate-500">
+                            <Database className="w-3 h-3" aria-hidden="true" />
+                            <span>{item.sourceLabel}</span>
+                          </span>
                         </div>
                       </div>
                     );

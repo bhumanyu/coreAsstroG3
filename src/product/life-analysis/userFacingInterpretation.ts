@@ -21,6 +21,7 @@ import type {
   PromiseStrength,
   TransitEffect
 } from '../analysis/productAnalysisTypes';
+import type { EvidenceSource } from '../../domain/careerWealth/provenance/evidenceProvenance';
 import { HINDI_USER_FACING_COPY } from './userFacingInterpretation.hi';
 
 export { HINDI_USER_FACING_COPY };
@@ -211,7 +212,8 @@ export interface UserFacingCopyProvider {
   readonly additionalDetailLabel: (index: number) => string;
   readonly evidenceRoleLabels: Readonly<Record<ProductEvidenceRole, string>>;
   readonly evidenceDirectionLabels: Readonly<Record<ProductDirection, string>>;
-  readonly evidenceSourceLabels: Readonly<Record<string, string>>;
+  readonly evidenceSourceLabels: Readonly<Record<EvidenceSource, string>>;
+  readonly evidencePlanetLabels: Readonly<Record<string, string>>;
   readonly unknownEvidenceRoleLabel: string;
   readonly unknownEvidenceDirectionLabel: string;
   readonly unknownEvidenceSourceLabel: string;
@@ -257,7 +259,8 @@ type UserFacingCopyMapKey =
   | 'titles'
   | 'evidenceRoleLabels'
   | 'evidenceDirectionLabels'
-  | 'evidenceSourceLabels';
+  | 'evidenceSourceLabels'
+  | 'evidencePlanetLabels';
 type UserFacingCopyStringKey =
   | 'confidenceUnavailable'
   | 'foundationUnavailable'
@@ -472,6 +475,17 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
     DASHA: 'Planetary period analysis',
     TRANSIT: 'Transit analysis'
   }),
+  evidencePlanetLabels: Object.freeze({
+    SUN: 'Sun',
+    MOON: 'Moon',
+    MARS: 'Mars',
+    MERCURY: 'Mercury',
+    JUPITER: 'Jupiter',
+    VENUS: 'Venus',
+    SATURN: 'Saturn',
+    RAHU: 'Rahu',
+    KETU: 'Ketu'
+  }),
   unknownEvidenceRoleLabel: 'Evidence factor',
   unknownEvidenceDirectionLabel: 'Direction not assessed',
   unknownEvidenceSourceLabel: 'Chart analysis',
@@ -513,7 +527,8 @@ export const USER_FACING_COPY_CONTRACT = Object.freeze({
     explanations: Object.keys(EXPLANATIONS),
     evidenceRoleLabels: Object.keys(englishUserFacingCopy.evidenceRoleLabels),
     evidenceDirectionLabels: Object.keys(englishUserFacingCopy.evidenceDirectionLabels),
-    evidenceSourceLabels: Object.keys(englishUserFacingCopy.evidenceSourceLabels)
+    evidenceSourceLabels: Object.keys(englishUserFacingCopy.evidenceSourceLabels),
+    evidencePlanetLabels: Object.keys(englishUserFacingCopy.evidencePlanetLabels)
   } satisfies Record<UserFacingCopyMapKey, readonly string[]>),
   strings: Object.freeze([
     'confidenceUnavailable',

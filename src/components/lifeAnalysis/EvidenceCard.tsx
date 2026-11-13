@@ -12,6 +12,10 @@ import type {
 import { formatDomainDisplayName } from '../../product/life-analysis/domainPresentationUtils';
 import { formatEnum } from './lifeAnalysisUx';
 
+// Out of scope for UserFacingEvidence projection: this card renders
+// EvidenceDetailViewModel from the separate life-analysis "Why" flow
+// (domain interpretation evidence with its own rule/chartFact model),
+// not canonical ProductEvidence.
 interface EvidenceCardProps {
   readonly evidence: EvidenceDetailViewModel;
   readonly allEvidenceMap?: ReadonlyMap<string, EvidenceDetailViewModel>;

@@ -243,6 +243,17 @@ const hindiUserFacingCopy: UserFacingCopyProvider = {
     DASHA: 'ग्रह अवधि का विश्लेषण',
     TRANSIT: 'गोचर विश्लेषण'
   }),
+  evidencePlanetLabels: Object.freeze({
+    SUN: 'सूर्य',
+    MOON: 'चंद्र',
+    MARS: 'मंगल',
+    MERCURY: 'बुध',
+    JUPITER: 'गुरु',
+    VENUS: 'शुक्र',
+    SATURN: 'शनि',
+    RAHU: 'राहु',
+    KETU: 'केतु'
+  }),
   unknownEvidenceRoleLabel: 'साक्ष्य कारक',
   unknownEvidenceDirectionLabel: 'दिशा का आकलन नहीं हुआ',
   unknownEvidenceSourceLabel: 'कुंडली विश्लेषण',
