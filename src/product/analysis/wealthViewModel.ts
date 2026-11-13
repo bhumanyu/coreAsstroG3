@@ -23,6 +23,9 @@ import type {
 import { createUnavailableWealthFinancialDataSet, validateWealthFinancialDataSet, type WealthFinancialDatum } from '../../domain/wealth/wealthFinancialData';
 import { WEALTH_LIFECYCLE_RULE_CATALOGUE, type WealthLifecycleAnalysis } from '../../domain/wealth/wealthLifecycleTypes';
 import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
+import {
+  buildUserFacingAssessment
+} from '../life-analysis/userFacingInterpretation';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -496,11 +499,25 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const supportingCount = evidence.filter((e) => e.direction === 'SUPPORT').length;
   const challengingCount = evidence.filter((e) => e.direction === 'CHALLENGE').length;
 
+  const assessment = buildUserFacingAssessment({
+    overallStatus: wealth.synthesis?.overallStatus,
+    natalStrength: wealth.synthesis?.natalStrength,
+    dashaDirection: wealth.synthesis?.dashaDirection,
+    timingStatus: wealth.synthesis?.timingStatus,
+    confidence: wealth.synthesis?.confidence,
+    details: Object.entries(wealth.synthesis?.dimensionStatuses ?? {}).map(
+      ([label, status]) => ({ label, status })
+    )
+  });
   const conclusion: WealthConclusionViewModel = {
     headline: wealth.synthesis?.headline ?? wealth.overall.headline,
-    statement: wealth.synthesis?.statement ?? wealth.overall.statement,
+    statement: assessment.summary,
     confidence: wealth.overall.confidence,
-    integratedSynthesisAvailable: Boolean(wealth.synthesis),
+    integratedSynthesisAvailable: Boolean(
+      wealth.synthesis?.overallStatus ||
+      wealth.synthesis?.dimensionStatuses ||
+      wealth.synthesis?.confidence
+    ),
     primaryEvidenceCount: primaryCount,
     supportingEvidenceCount: supportingCount,
     challengingEvidenceCount: challengingCount,

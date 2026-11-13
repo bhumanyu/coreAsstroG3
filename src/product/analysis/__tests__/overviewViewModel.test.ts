@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   selectOverviewViewModel,
   selectTopEvidence,
@@ -22,6 +25,9 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
           strength: 'VERY_STRONG',
           confidence: 'HIGH',
           statement: 'Exceptional executive promise.'
+        },
+        synthesis: {
+          statement: 'This diagnostic statement must not be presented.'
         }
       },
       wealth: {
@@ -31,6 +37,9 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
           promise: 'STRONG',
           confidence: 'HIGH',
           statement: 'Solid wealth indicators.'
+        },
+        synthesis: {
+          statement: 'This diagnostic statement must not be presented.'
         }
       }
     });
@@ -40,12 +49,80 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     expect(vm.career.strength).toBe('VERY_STRONG');
     expect(vm.career.status).toBe('STRONGLY_SUPPORTED');
     expect(vm.career.confidence).toBe('HIGH');
-    expect(vm.career.summary).toBe('Exceptional executive promise.');
+    expect(vm.career.summary).toContain('Not assessed');
 
     expect(vm.wealth.strength).toBe('STRONG');
     expect(vm.wealth.status).toBe('STRONGLY_SUPPORTED');
     expect(vm.wealth.confidence).toBe('HIGH');
-    expect(vm.wealth.summary).toBe('Solid wealth indicators.');
+    expect(vm.wealth.summary).toContain('Not assessed');
+  });
+
+  it('builds summaries and all assessment dimensions from structured synthesis fields', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        synthesis: {
+          ...base.career.synthesis,
+          finalStatus: 'MIXED',
+          finalDirection: 'MIXED',
+          finalStrength: 'MIXED',
+          natalDirection: 'MIXED',
+          natalStrength: 'STRONG',
+          dashaDirection: 'SUPPORT',
+          timingStatus: 'NOT_ACTIVE',
+          confidence: 'HIGH'
+        }
+      },
+      wealth: {
+        ...base.wealth,
+        synthesis: {
+          overallStatus: 'MIXED',
+          dimensionStatuses: {
+            ACCUMULATION: 'STRONG',
+            GAINS: 'CHALLENGED',
+            FORTUNE: 'MIXED',
+            SPECULATION: 'INSUFFICIENT_DATA'
+          },
+          confidence: 'MEDIUM',
+          natalStrength: 'STRONG',
+          dashaDirection: 'SUPPORT',
+          timingStatus: 'INSUFFICIENT_DATA'
+        }
+      }
+    });
+
+    const vm = selectOverviewViewModel(analysis);
+    for (const domain of [vm.career, vm.wealth]) {
+      expect(domain.assessment.foundation.label).not.toBe('Not assessed');
+      expect(domain.assessment.dashaSupport.label).not.toBe('Not assessed');
+      expect(domain.assessment.timing.label).not.toBe('Not assessed');
+      expect(domain.assessment.confidence.label).not.toBe('Not assessed');
+    }
+    expect(vm.career.summary).not.toContain('MIXED (');
+    expect(vm.career.summary).not.toContain('NOT_ACTIVE');
+    expect(JSON.stringify(vm.career.assessment)).not.toContain('NOT_ACTIVE');
+    expect(vm.wealth.summary).not.toContain('MIXED (');
+    expect(vm.wealth.summary).not.toContain('NOT_ACTIVE');
+    expect(JSON.stringify(vm.wealth.assessment)).not.toContain('NOT_ACTIVE');
+    expect(vm.overall.summary).not.toContain('MIXED (');
+    expect(vm.overall.summary).not.toContain('NOT_ACTIVE');
+    expect(JSON.stringify(vm.overall.assessment)).not.toContain('NOT_ACTIVE');
+    expect(vm.wealth.assessment.details).toHaveLength(4);
+  });
+
+  it('does not use diagnostic synthesis statements in product view models', () => {
+    const sourceDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+    const viewModelFiles = [
+      'analysis/overviewViewModel.ts',
+      'analysis/careerViewModel.ts',
+      'analysis/wealthViewModel.ts',
+      'analysis/reasoningViewModel.ts'
+    ];
+    for (const file of viewModelFiles) {
+      const source = readFileSync(join(sourceDirectory, file), 'utf8');
+      expect(source, file).not.toMatch(/synthesis(?:\?\.|\.)statement/);
+    }
   });
 
   it('(1b) career status is undefined when not provided, avoiding conflation with strength', () => {

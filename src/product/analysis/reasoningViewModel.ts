@@ -24,6 +24,9 @@ import type {
   AiProductState
 } from './productAnalysisTypes';
 import { selectAllEvidence, selectDashaHierarchy } from './productAnalysisSelectors';
+import {
+  buildUserFacingAssessment
+} from '../life-analysis/userFacingInterpretation';
 
 export type ReasoningDomain = 'CAREER' | 'WEALTH';
 
@@ -437,13 +440,29 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     })
   );
 
+  const assessment = buildUserFacingAssessment({
+    outcome: career.synthesis?.finalStatus,
+    natalDirection: career.synthesis?.natalDirection,
+    natalStrength: career.synthesis?.natalStrength,
+    dashaDirection: career.synthesis?.dashaDirection,
+    timingStatus: career.synthesis?.timingStatus,
+    confidence: career.synthesis?.confidence
+  });
   const conclusion: ReasoningConclusionViewModel = {
     headline: career.synthesis?.headline ?? career.promise.headline,
-    statement: career.synthesis?.statement ?? career.promise.statement,
+    statement: assessment.summary,
     status,
     strength,
     confidence,
-    integratedSynthesisAvailable: Boolean(career.synthesis),
+    integratedSynthesisAvailable: Boolean(
+      career.synthesis?.finalStatus ||
+      career.synthesis?.finalDirection ||
+      career.synthesis?.natalDirection ||
+      career.synthesis?.natalStrength ||
+      career.synthesis?.dashaDirection ||
+      career.synthesis?.timingStatus ||
+      career.synthesis?.confidence
+    ),
     evidenceCount,
     supportingEvidenceCount,
     challengingEvidenceCount,
@@ -489,9 +508,7 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
       id: 'node_career_conclusion',
       label: 'Integrated Vocational Conclusion',
       type: 'SYNTHESIS',
-      statement:
-        career.synthesis?.statement ??
-        career.promise.statement
+      statement: assessment.summary
     }
   ];
 
@@ -602,13 +619,27 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     })
   );
 
+  const assessment = buildUserFacingAssessment({
+    overallStatus: wealth.synthesis?.overallStatus,
+    natalStrength: wealth.synthesis?.natalStrength,
+    dashaDirection: wealth.synthesis?.dashaDirection,
+    timingStatus: wealth.synthesis?.timingStatus,
+    confidence: wealth.synthesis?.confidence,
+    details: Object.entries(wealth.synthesis?.dimensionStatuses ?? {}).map(
+      ([label, status]) => ({ label, status })
+    )
+  });
   const conclusion: ReasoningConclusionViewModel = {
     headline: wealth.synthesis?.headline ?? wealth.overall.headline,
-    statement: wealth.synthesis?.statement ?? wealth.overall.statement,
+    statement: assessment.summary,
     status,
     strength,
     confidence,
-    integratedSynthesisAvailable: Boolean(wealth.synthesis),
+    integratedSynthesisAvailable: Boolean(
+      wealth.synthesis?.overallStatus ||
+      wealth.synthesis?.dimensionStatuses ||
+      wealth.synthesis?.confidence
+    ),
     evidenceCount,
     supportingEvidenceCount,
     challengingEvidenceCount,
@@ -654,9 +685,7 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
       id: 'node_wealth_conclusion',
       label: 'Integrated Financial Verdict',
       type: 'SYNTHESIS',
-      statement:
-        wealth.synthesis?.statement ??
-        wealth.overall.statement
+      statement: assessment.summary
     }
   ];
 

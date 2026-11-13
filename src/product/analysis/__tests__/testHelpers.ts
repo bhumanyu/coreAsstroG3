@@ -124,7 +124,15 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
       ],
       synthesis: {
         headline: 'Strong Career Outlook',
-        statement: 'Unified vocational trajectory indicates high executive capacity.'
+        statement: 'Unified vocational trajectory indicates high executive capacity.',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        dashaDirection: 'SUPPORT',
+        timingStatus: 'ACTIVE'
       }
     },
     wealth: {
@@ -191,7 +199,18 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
       ],
       synthesis: {
         headline: 'Favorable Wealth Outlook',
-        statement: 'Long-term asset growth underpinned by solid Dhana yogas.'
+        statement: 'Long-term asset growth underpinned by solid Dhana yogas.',
+        overallStatus: 'STRONG',
+        dimensionStatuses: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'STRONG'
+        },
+        confidence: 'HIGH',
+        natalStrength: 'MODERATE',
+        dashaDirection: 'SUPPORT',
+        timingStatus: 'SUPPORT'
       }
     },
     dasha: {

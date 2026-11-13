@@ -60,6 +60,12 @@ export const OverallAssessmentCard: React.FC<OverallAssessmentCardProps> = ({ ov
       </span>
     );
   };
+  const assessmentDimensions = [
+    overall.assessment.foundation,
+    overall.assessment.dashaSupport,
+    overall.assessment.timing,
+    overall.assessment.confidence
+  ];
 
   return (
     <section
@@ -92,6 +98,30 @@ export const OverallAssessmentCard: React.FC<OverallAssessmentCardProps> = ({ ov
           {overall.summary}
         </p>
       </div>
+
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {assessmentDimensions.map((dimension) => (
+          <div key={dimension.title} className="rounded-xl bg-slate-950/50 border border-slate-800/80 p-3">
+            <h3 className="text-xs font-semibold text-slate-300">{dimension.title}</h3>
+            <p className="mt-1 text-sm text-indigo-300">{dimension.label}</p>
+            <p className="mt-1 text-xs text-slate-400 leading-relaxed">{dimension.explanation}</p>
+          </div>
+        ))}
+      </div>
+
+      <details className="mt-3 rounded-xl bg-slate-950/40 border border-slate-800/80 p-3">
+        <summary className="cursor-pointer text-xs font-medium text-slate-300">
+          {overall.assessment.detailsLabel}
+        </summary>
+        <div className="mt-3 space-y-2">
+          {overall.assessment.details.map((detail) => (
+            <div key={detail.label} className="text-xs">
+              <p className="font-medium text-slate-300">{detail.label}</p>
+              <p className="mt-0.5 text-slate-400 leading-relaxed">{detail.explanation}</p>
+            </div>
+          ))}
+        </div>
+      </details>
     </section>
   );
 };

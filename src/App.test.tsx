@@ -218,7 +218,8 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
         ...readyProductAnalysis.career,
         synthesis: {
           ...readyProductAnalysis.career.synthesis,
-          statement: 'Statement from Chart B - Fresh Result'
+          finalStatus: 'CHALLENGED',
+          finalDirection: 'CHALLENGE'
         }
       }
     };
@@ -255,7 +256,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
 
     // Wait for Chart B's result to appear
     await waitFor(() => {
-      expect(screen.getByText('Statement from Chart B - Fresh Result')).toBeInTheDocument();
+      expect(screen.getByText(/Career: Challenging outlook\./)).toBeInTheDocument();
     });
 
     // Now resolve first request with stale data
@@ -278,7 +279,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     // Wait a tick and verify stale text did NOT overwrite Chart B
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText('Stale Statement from Chart A - Should Be Discarded')).not.toBeInTheDocument();
-    expect(screen.getByText('Statement from Chart B - Fresh Result')).toBeInTheDocument();
+    expect(screen.getByText(/Career: Challenging outlook\./)).toBeInTheDocument();
   });
 
   it('6. Retry handler: retrying from an ERROR state re-invokes ProductAnalysisService.analyzeRun', async () => {
@@ -381,7 +382,8 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
         ...readyProductAnalysis.career,
         synthesis: {
           ...readyProductAnalysis.career.synthesis,
-          statement: 'Statement from Chart B - Fresh Selection'
+          finalStatus: 'CHALLENGED',
+          finalDirection: 'CHALLENGE'
         }
       }
     };
@@ -413,7 +415,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
 
     // Chart B resolves and renders
     await waitFor(() => {
-      expect(screen.getByText('Statement from Chart B - Fresh Selection')).toBeInTheDocument();
+      expect(screen.getByText(/Career: Challenging outlook\./)).toBeInTheDocument();
     });
 
     // Now late retry on Chart A resolves
@@ -434,7 +436,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
 
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText('Late Retry Result Chart A - Should Be Discarded')).not.toBeInTheDocument();
-    expect(screen.getByText('Statement from Chart B - Fresh Selection')).toBeInTheDocument();
+    expect(screen.getByText(/Career: Challenging outlook\./)).toBeInTheDocument();
   });
 
   it('8. Tab routing: navigating to Product and Research pages renders cleanly and consumes aggregate', async () => {

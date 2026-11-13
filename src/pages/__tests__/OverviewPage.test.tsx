@@ -62,13 +62,13 @@ describe('OverviewPage (P-UI-03)', () => {
     // Career Domain
     expect(screen.getByText('Career & Professional Life')).toBeInTheDocument();
     expect(
-      screen.getByText('High vocational promise across 10th lord and Lagna.')
+      screen.getByText('Supportive outlook. Supportive. Supportive. Currently active. High evidence confidence.')
     ).toBeInTheDocument();
 
     // Wealth Domain
     expect(screen.getByText('Wealth & Financial Assets')).toBeInTheDocument();
     expect(
-      screen.getByText('Solid 2nd house foundation supporting liquid wealth.')
+      screen.getByText('Strong indications. Moderate foundation. Supportive. Supportive. High evidence confidence.')
     ).toBeInTheDocument();
 
     // Key Findings & Qualifications

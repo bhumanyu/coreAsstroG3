@@ -1042,7 +1042,17 @@ function mapCareer(
     evidence,
     synthesis: {
       headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
-      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion
+      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
+      ...(detail?.canonicalFinalSynthesis ? {
+        finalStatus: detail.canonicalFinalSynthesis.finalStatus,
+        finalDirection: detail.canonicalFinalSynthesis.finalDirection,
+        finalStrength: detail.canonicalFinalSynthesis.finalStrength,
+        confidence: detail.canonicalFinalSynthesis.confidence,
+        natalDirection: detail.canonicalFinalSynthesis.natalDirection,
+        natalStrength: detail.canonicalFinalSynthesis.natalStrength,
+        dashaDirection: detail.canonicalFinalSynthesis.dashaDirection,
+        timingStatus: detail.canonicalFinalSynthesis.timingStatus
+      } : {})
     }
   };
 }
@@ -1170,7 +1180,20 @@ function mapWealth(
     evidence,
     synthesis: {
       headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
-      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion
+      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
+      ...(detail?.finalSynthesis ? {
+        overallStatus: detail.finalSynthesis.finalStatus,
+        dimensionStatuses: detail.finalSynthesis.dimensions ? {
+          ACCUMULATION: detail.finalSynthesis.dimensions.ACCUMULATION.finalStatus,
+          GAINS: detail.finalSynthesis.dimensions.GAINS.finalStatus,
+          FORTUNE: detail.finalSynthesis.dimensions.FORTUNE.finalStatus,
+          SPECULATION: detail.finalSynthesis.dimensions.SPECULATION.finalStatus
+        } : undefined,
+        confidence: detail.finalSynthesis.confidence,
+        natalStrength: detail.finalSynthesis.primaryStrength,
+        dashaDirection: detail.finalSynthesis.activationStatus,
+        timingStatus: detail.finalSynthesis.timingStatus
+      } : {})
     }
   };
 }

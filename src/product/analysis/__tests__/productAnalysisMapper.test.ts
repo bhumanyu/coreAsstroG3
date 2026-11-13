@@ -268,6 +268,74 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysis.career.eventTimeline?.observedOutcomeReportIds).toEqual(['report-1']);
   });
 
+  it('projects structured canonical career and wealth synthesis while retaining diagnostic statements', () => {
+    const lifeAnalysisViewModel: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        canonicalFinalSynthesis: {
+          finalStatus: 'MIXED',
+          finalDirection: 'MIXED',
+          finalStrength: 'MIXED',
+          confidence: 'HIGH',
+          natalDirection: 'MIXED',
+          natalStrength: 'STRONG',
+          dashaDirection: 'SUPPORT',
+          timingStatus: 'NOT_ACTIVE'
+        } as NonNullable<LifeAnalysisViewModel['careerDetail']>['canonicalFinalSynthesis']
+      },
+      wealthDetail: {
+        ...sampleViewModel.wealthDetail!,
+        finalSynthesis: {
+          finalStatus: 'MIXED',
+          confidence: 'MEDIUM',
+          primaryStrength: 'STRONG',
+          activationStatus: 'SUPPORT',
+          timingStatus: 'INSUFFICIENT_DATA',
+          dimensions: {
+            ACCUMULATION: { finalStatus: 'STRONG' },
+            GAINS: { finalStatus: 'CHALLENGED' },
+            FORTUNE: { finalStatus: 'MIXED' },
+            SPECULATION: { finalStatus: 'INSUFFICIENT_DATA' }
+          }
+        } as NonNullable<LifeAnalysisViewModel['wealthDetail']>['finalSynthesis']
+      }
+    };
+
+    const analysis = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel,
+      context: sampleContext
+    });
+
+    expect(analysis.career.synthesis).toMatchObject({
+      finalStatus: 'MIXED',
+      finalDirection: 'MIXED',
+      finalStrength: 'MIXED',
+      confidence: 'HIGH',
+      natalDirection: 'MIXED',
+      natalStrength: 'STRONG',
+      dashaDirection: 'SUPPORT',
+      timingStatus: 'NOT_ACTIVE'
+    });
+    expect(analysis.wealth.synthesis).toMatchObject({
+      overallStatus: 'MIXED',
+      dimensionStatuses: {
+        ACCUMULATION: 'STRONG',
+        GAINS: 'CHALLENGED',
+        FORTUNE: 'MIXED',
+        SPECULATION: 'INSUFFICIENT_DATA'
+      },
+      confidence: 'MEDIUM',
+      natalStrength: 'STRONG',
+      dashaDirection: 'SUPPORT',
+      timingStatus: 'INSUFFICIENT_DATA'
+    });
+    expect(analysis.career.synthesis?.statement).toBe(sampleViewModel.careerDetail?.promiseStatement);
+    expect(analysis.wealth.synthesis?.statement).toBe(sampleViewModel.wealthDetail?.promiseStatement);
+  });
+
   it('1.1 projects canonical Career analytical axes into the product DTO without sharing mutable arrays', () => {
     const axes = {
       version: 'B01-AXIS-PROJECTION-v1',

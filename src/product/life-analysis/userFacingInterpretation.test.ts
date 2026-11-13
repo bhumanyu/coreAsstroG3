@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildDomainAssessmentNarrative,
+  buildUserFacingAssessment,
   explainUserFacingClassification,
   formatEvidenceConfidence,
   formatIndicationStrength,
@@ -95,5 +96,33 @@ describe('user-facing interpretation', () => {
 
   it('safely title-cases a future unknown code rather than displaying the enum', () => {
     expect(formatUserFacingClassification('FUTURE_NEW_STATE')).toBe('Future New State');
+  });
+
+  it('builds all assessment dimensions without treating MIXED or NOT_ACTIVE as predictions', () => {
+    const assessment = buildUserFacingAssessment({
+      outcome: 'MIXED',
+      natalDirection: 'MIXED',
+      natalStrength: 'STRONG',
+      dashaDirection: 'MIXED',
+      timingStatus: 'NOT_ACTIVE',
+      confidence: 'HIGH'
+    });
+
+    expect(assessment.foundation.label).toContain('combination');
+    expect(assessment.dashaSupport.label).toContain('combination');
+    expect(assessment.timing.label).toContain('No clear activation');
+    expect(assessment.timing.explanation).toContain('timing observation');
+    expect(assessment.confidence.label).toBe('High evidence confidence');
+    expect(assessment.confidence.explanation).toContain('evidence is relatively complete');
+    expect(JSON.stringify(assessment)).not.toMatch(/\bMIXED\s*\(|\bNOT_ACTIVE\b/);
+  });
+
+  it('returns a safe not-assessed fallback when structured synthesis is missing', () => {
+    const assessment = buildUserFacingAssessment({});
+    expect(assessment.summary).toContain('Not assessed');
+    expect(assessment.foundation.label).toBe('Not assessed');
+    expect(assessment.dashaSupport.label).toBe('Not assessed');
+    expect(assessment.timing.label).toBe('Not assessed');
+    expect(assessment.confidence.label).toBe('Not assessed');
   });
 });

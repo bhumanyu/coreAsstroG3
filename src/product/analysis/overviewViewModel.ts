@@ -18,11 +18,17 @@ import type {
 } from './productAnalysisTypes';
 import { selectDashaHierarchy, selectAllEvidence } from './productAnalysisSelectors';
 import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
+import {
+  buildUserFacingAssessment,
+  combineUserFacingAssessments,
+  type UserFacingAssessment
+} from '../life-analysis/userFacingInterpretation';
 
 export interface OverviewOverall {
   readonly status: ProductStatus;
   readonly confidence: ProductConfidence;
   readonly summary: string;
+  readonly assessment: UserFacingAssessment;
 }
 
 export interface OverviewChart {
@@ -38,6 +44,7 @@ export interface OverviewDomain {
   readonly status?: string;
   readonly confidence: ProductConfidence;
   readonly summary: string;
+  readonly assessment: UserFacingAssessment;
   readonly topEvidence: readonly ProductEvidence[];
 }
 
@@ -187,17 +194,36 @@ export function selectOverviewQualifications(
  * Builds the canonical OverviewViewModel projection over ProductAnalysis.
  */
 export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewViewModel {
-  const overallSummary =
-    analysis.career.synthesis?.statement ||
-    analysis.wealth.synthesis?.statement ||
-    (analysis.reasoning.primaryConclusions.length > 0
-      ? analysis.reasoning.primaryConclusions.map((c) => c.conclusion).join(' ')
-      : 'Comprehensive astrological synthesis across career, wealth, and planetary timing.');
+  const careerAssessment = buildUserFacingAssessment({
+    outcome: analysis.career.synthesis?.finalStatus,
+    natalDirection: analysis.career.synthesis?.natalDirection,
+    natalStrength: analysis.career.synthesis?.natalStrength,
+    dashaDirection: analysis.career.synthesis?.dashaDirection,
+    timingStatus: analysis.career.synthesis?.timingStatus,
+    confidence: analysis.career.synthesis?.confidence,
+    details: [
+      { label: 'Final outcome', status: analysis.career.synthesis?.finalStatus },
+      { label: 'Integrated direction', status: analysis.career.synthesis?.finalDirection },
+      { label: 'Integrated strength', status: analysis.career.synthesis?.finalStrength }
+    ]
+  });
+  const wealthAssessment = buildUserFacingAssessment({
+    overallStatus: analysis.wealth.synthesis?.overallStatus,
+    natalStrength: analysis.wealth.synthesis?.natalStrength,
+    dashaDirection: analysis.wealth.synthesis?.dashaDirection,
+    timingStatus: analysis.wealth.synthesis?.timingStatus,
+    confidence: analysis.wealth.synthesis?.confidence,
+    details: Object.entries(analysis.wealth.synthesis?.dimensionStatuses ?? {}).map(
+      ([label, status]) => ({ label, status })
+    )
+  });
+  const overallAssessment = combineUserFacingAssessments(careerAssessment, wealthAssessment);
 
   const overall: OverviewOverall = {
     status: analysis.status,
     confidence: deriveOverallConfidence(analysis),
-    summary: overallSummary
+    summary: overallAssessment.summary,
+    assessment: overallAssessment
   };
 
   const chart: OverviewChart = {
@@ -212,10 +238,8 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
     strength: analysis.career.promise.strength,
     status: analysis.career.status ?? analysis.career.promise.status,
     confidence: analysis.career.promise.confidence,
-    summary:
-      analysis.career.promise.statement ??
-      analysis.career.synthesis?.statement ??
-      '',
+    summary: careerAssessment.summary,
+    assessment: careerAssessment,
     topEvidence: selectTopEvidence(analysis.career.evidence, 3)
   };
 
@@ -224,10 +248,8 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
     strength: analysis.wealth.overall.promise,
     status: analysis.wealth.overall.status,
     confidence: analysis.wealth.overall.confidence,
-    summary:
-      analysis.wealth.overall.statement ??
-      analysis.wealth.synthesis?.statement ??
-      '',
+    summary: wealthAssessment.summary,
+    assessment: wealthAssessment,
     topEvidence: selectTopEvidence(analysis.wealth.evidence, 3)
   };
 

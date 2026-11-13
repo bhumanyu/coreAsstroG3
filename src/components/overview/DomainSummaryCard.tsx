@@ -24,6 +24,12 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
 
   const strengthText = enumLabelWithFallback(tEnum, 'promiseStrength', 'productDirection', domain.strength);
   const confidenceText = enumLabel(tEnum, 'productConfidence', domain.confidence);
+  const assessmentDimensions = [
+    domain.assessment.foundation,
+    domain.assessment.dashaSupport,
+    domain.assessment.timing,
+    domain.assessment.confidence
+  ];
 
   return (
     <div
@@ -65,6 +71,30 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
             {domain.summary || t('domain.summaryUnavailable')}
           </p>
         </div>
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {assessmentDimensions.map((dimension) => (
+            <div key={dimension.title} className="rounded-xl bg-slate-950/50 border border-slate-800/80 p-3">
+              <h4 className="text-xs font-semibold text-slate-300">{dimension.title}</h4>
+              <p className="mt-1 text-sm text-indigo-300">{dimension.label}</p>
+              <p className="mt-1 text-xs text-slate-400 leading-relaxed">{dimension.explanation}</p>
+            </div>
+          ))}
+        </div>
+
+        <details className="mt-3 rounded-xl bg-slate-950/40 border border-slate-800/80 p-3">
+          <summary className="cursor-pointer text-xs font-medium text-slate-300">
+            {domain.assessment.detailsLabel}
+          </summary>
+          <div className="mt-3 space-y-2">
+            {domain.assessment.details.map((detail) => (
+              <div key={detail.label} className="text-xs">
+                <p className="font-medium text-slate-300">{detail.label}</p>
+                <p className="mt-0.5 text-slate-400 leading-relaxed">{detail.explanation}</p>
+              </div>
+            ))}
+          </div>
+        </details>
 
         {/* Top Evidentiary Drivers */}
         {domain.topEvidence.length > 0 && (

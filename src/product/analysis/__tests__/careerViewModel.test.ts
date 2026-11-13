@@ -220,7 +220,7 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     expect(vm.dasha.pd).toBeDefined();
   });
 
-  it('14. anti-overclaim: falls back to promise when synthesis is undefined and marks integratedSynthesisAvailable:false', () => {
+  it('14. anti-overclaim: uses a not-assessed fallback when structured synthesis is absent', () => {
     const base = createProductAnalysis();
     const analysisWithoutSynthesis = createProductAnalysis({
       career: {
@@ -231,8 +231,35 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
 
     const vm = selectCareerViewModel(analysisWithoutSynthesis);
 
-    expect(vm.conclusion.statement).toBe(base.career.promise.statement);
+    expect(vm.conclusion.statement).toContain('Not assessed');
     expect(vm.conclusion.headline).toBe(base.career.promise.headline);
     expect(vm.conclusion.integratedSynthesisAvailable).toBe(false);
+  });
+
+  it('builds a non-enum conclusion from structured career synthesis fields', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        synthesis: {
+          ...base.career.synthesis,
+          finalStatus: 'MIXED',
+          finalDirection: 'MIXED',
+          finalStrength: 'MIXED',
+          natalDirection: 'MIXED',
+          natalStrength: 'STRONG',
+          dashaDirection: 'SUPPORT',
+          timingStatus: 'NOT_ACTIVE',
+          confidence: 'HIGH'
+        }
+      }
+    });
+    const vm = selectCareerViewModel(analysis);
+
+    expect(vm.conclusion.statement).toContain('Mixed outlook');
+    expect(vm.conclusion.statement).not.toContain('MIXED (');
+    expect(vm.conclusion.statement).not.toContain('NOT_ACTIVE');
+    expect(JSON.stringify(vm.conclusion)).not.toContain('NOT_ACTIVE');
+    expect(vm.conclusion.integratedSynthesisAvailable).toBe(true);
   });
 });

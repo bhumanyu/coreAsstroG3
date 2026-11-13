@@ -7,6 +7,19 @@
  */
 
 import type { ProductMethodology } from '../../core/analysis/AnalysisContext';
+import type {
+  CareerFinalConfidence,
+  CareerFinalDirection,
+  CareerFinalStatus,
+  CareerFinalStrength,
+  CareerFinalTimingStatus
+} from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
+import type {
+  CareerWealthFinalSynthesis,
+  FinalDomainStatus,
+  SynthesisAxisStatus
+} from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
+import type { WealthDimension } from '../../domain/wealth/wealthTypes';
 
 export type ProductStatus = 'READY' | 'PARTIAL' | 'ERROR';
 export type ProductAnalysisStatus = ProductStatus;
@@ -553,7 +566,16 @@ export interface CareerProductAnalysis {
   readonly evidence: readonly ProductEvidence[];
   readonly synthesis?: {
     readonly headline?: string;
+    /** Diagnostic-only engine prose; must never be rendered as user-facing copy. */
     readonly statement?: string;
+    readonly finalStatus?: CareerFinalStatus;
+    readonly finalDirection?: CareerFinalDirection;
+    readonly finalStrength?: CareerFinalStrength;
+    readonly confidence?: CareerFinalConfidence;
+    readonly natalDirection?: CareerFinalDirection;
+    readonly natalStrength?: CareerFinalStrength;
+    readonly dashaDirection?: CareerFinalDirection;
+    readonly timingStatus?: CareerFinalTimingStatus;
   };
   readonly profession?: {
     readonly available: boolean;
@@ -667,7 +689,14 @@ export interface WealthProductAnalysis {
   readonly evidence: readonly ProductEvidence[];
   readonly synthesis?: {
     readonly headline?: string;
+    /** Diagnostic-only engine prose; must never be rendered as user-facing copy. */
     readonly statement?: string;
+    readonly overallStatus?: FinalDomainStatus;
+    readonly dimensionStatuses?: Readonly<Partial<Record<WealthDimension, FinalDomainStatus>>>;
+    readonly confidence?: CareerWealthFinalSynthesis['confidence'];
+    readonly natalStrength?: NonNullable<CareerWealthFinalSynthesis['primaryStrength']>;
+    readonly dashaDirection?: SynthesisAxisStatus;
+    readonly timingStatus?: SynthesisAxisStatus;
   };
 }
 

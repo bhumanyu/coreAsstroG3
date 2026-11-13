@@ -29,6 +29,9 @@ import {
   type CareerProfessionStatusCopy
 } from './careerQualificationPresentation';
 import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
+import {
+  buildUserFacingAssessment
+} from '../life-analysis/userFacingInterpretation';
 
 export interface CareerHeroViewModel {
   readonly ascendantSign?: string;
@@ -305,11 +308,32 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
     derivedFromIds: e.derivedFromIds ?? []
   }));
 
+  const assessment = buildUserFacingAssessment({
+    outcome: career.synthesis?.finalStatus,
+    natalDirection: career.synthesis?.natalDirection,
+    natalStrength: career.synthesis?.natalStrength,
+    dashaDirection: career.synthesis?.dashaDirection,
+    timingStatus: career.synthesis?.timingStatus,
+    confidence: career.synthesis?.confidence,
+    details: [
+      { label: 'Final outcome', status: career.synthesis?.finalStatus },
+      { label: 'Integrated direction', status: career.synthesis?.finalDirection },
+      { label: 'Integrated strength', status: career.synthesis?.finalStrength }
+    ]
+  });
   const conclusion: CareerConclusionViewModel = {
     headline: career.synthesis?.headline ?? career.promise.headline,
-    statement: career.synthesis?.statement ?? career.promise.statement,
+    statement: assessment.summary,
     confidence: career.promise.confidence,
-    integratedSynthesisAvailable: Boolean(career.synthesis),
+    integratedSynthesisAvailable: Boolean(
+      career.synthesis?.finalStatus ||
+      career.synthesis?.finalDirection ||
+      career.synthesis?.natalDirection ||
+      career.synthesis?.natalStrength ||
+      career.synthesis?.dashaDirection ||
+      career.synthesis?.timingStatus ||
+      career.synthesis?.confidence
+    ),
     primaryEvidenceCount: evidence.filter((e) => e.role === 'PRIMARY').length,
     supportingEvidenceCount: evidence.filter((e) => e.direction === 'SUPPORT').length,
     challengingEvidenceCount: evidence.filter((e) => e.direction === 'CHALLENGE').length

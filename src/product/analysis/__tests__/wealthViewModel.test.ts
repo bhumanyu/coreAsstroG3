@@ -280,17 +280,23 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     expect(vm.conclusion.challengingFactorCount).toBe(1);
   });
 
-  it('8. synthesis-availability overclaim guard: flags integratedSynthesisAvailable and falls back to overall', () => {
+  it('8. synthesis-availability guard: requires structured data and does not display diagnostic text', () => {
     const defaultAnalysis = createProductAnalysis();
 
     // Case A: synthesis exists
-    const analysisWithSynthesis = createProductAnalysis();
+    const analysisWithSynthesis = createProductAnalysis({
+      wealth: {
+        ...defaultAnalysis.wealth,
+        synthesis: {
+          statement: 'This diagnostic statement must not be presented.'
+        }
+      }
+    });
     const vmWith = selectWealthViewModel(analysisWithSynthesis);
-    expect(vmWith.conclusion.integratedSynthesisAvailable).toBe(true);
-    expect(vmWith.conclusion.headline).toBe('Favorable Wealth Outlook');
-    expect(vmWith.conclusion.statement).toBe(
-      'Long-term asset growth underpinned by solid Dhana yogas.'
-    );
+    expect(vmWith.conclusion.integratedSynthesisAvailable).toBe(false);
+    expect(vmWith.conclusion.headline).toBe('Stable Accumulation');
+    expect(vmWith.conclusion.statement).toContain('Not assessed');
+    expect(vmWith.conclusion.integratedSynthesisAvailable).toBe(false);
 
     // Case B: synthesis is undefined -> fall back to overall.*
     const analysisWithoutSynthesis = createProductAnalysis({
@@ -307,7 +313,35 @@ describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
     const vmWithout = selectWealthViewModel(analysisWithoutSynthesis);
     expect(vmWithout.conclusion.integratedSynthesisAvailable).toBe(false);
     expect(vmWithout.conclusion.headline).toBe('Overall Wealth Headline');
-    expect(vmWithout.conclusion.statement).toBe('Overall wealth statement fallback.');
+    expect(vmWithout.conclusion.statement).toContain('Not assessed');
+  });
+
+  it('builds wealth assessment dimensions from structured synthesis statuses', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      wealth: {
+        ...base.wealth,
+        synthesis: {
+          overallStatus: 'MIXED',
+          dimensionStatuses: {
+            ACCUMULATION: 'STRONG',
+            GAINS: 'CHALLENGED',
+            FORTUNE: 'MIXED',
+            SPECULATION: 'INSUFFICIENT_DATA'
+          },
+          confidence: 'MEDIUM',
+          natalStrength: 'STRONG',
+          dashaDirection: 'SUPPORT',
+          timingStatus: 'INSUFFICIENT_DATA'
+        }
+      }
+    });
+    const vm = selectWealthViewModel(analysis);
+    expect(vm.conclusion.statement).toContain('Mixed outlook');
+    expect(vm.conclusion.statement).not.toContain('MIXED (');
+    expect(vm.conclusion.statement).not.toContain('NOT_ACTIVE');
+    expect(JSON.stringify(vm.conclusion)).not.toContain('NOT_ACTIVE');
+    expect(vm.conclusion.integratedSynthesisAvailable).toBe(true);
   });
 
   it('9. accumulation != speculation regression test: accumulation and speculation are not conflated', () => {
