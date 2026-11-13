@@ -130,7 +130,7 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
             }
           }}
           placeholder={placeholder ?? t('searchCityPlaceholder')}
-          className="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-lg pl-9 pr-9 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-500"
+          className="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-lg pl-9 pr-9 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-500 light:bg-slate-50 light:border-slate-300 light:text-slate-900 light:placeholder:text-slate-400"
         />
         {loading ? (
           <Loader2 className="w-4 h-4 text-indigo-400 animate-spin absolute right-3" />
@@ -142,7 +142,7 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
               setResults([]);
               setOpen(false);
             }}
-            className="text-xs text-slate-500 hover:text-slate-300 absolute right-3 px-1"
+            className="text-xs text-slate-500 hover:text-slate-300 absolute right-3 px-1 light:text-slate-500 light:hover:text-slate-700"
             aria-label={t('clearSearch')}
           >
             ✕
@@ -153,22 +153,22 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
       </div>
 
       {loading && (
-        <div role="status" aria-live="polite" className="mt-1 text-xs text-slate-400">
+        <div role="status" aria-live="polite" className="mt-1 text-xs text-slate-400 light:text-slate-500">
           {t('searchingPlaces')}
         </div>
       )}
       {!loading && noResults && (
-        <div role="status" aria-live="polite" className="mt-1 text-xs text-slate-400">
+        <div role="status" aria-live="polite" className="mt-1 text-xs text-slate-400 light:text-slate-500">
           {t('noPlaces')}
         </div>
       )}
       {!loading && searchError && (
-        <div role="alert" aria-live="polite" className="mt-1 flex items-center gap-2 text-xs text-rose-400">
+        <div role="alert" aria-live="polite" className="mt-1 flex items-center gap-2 text-xs text-rose-400 light:text-rose-600">
           <span>{t(searchError)}</span>
           <button
             type="button"
             onClick={() => setRetryCount((count) => count + 1)}
-            className="underline underline-offset-2 hover:text-rose-300"
+            className="underline underline-offset-2 hover:text-rose-300 light:hover:text-rose-500"
             aria-label={t('retry')}
           >
             {t('retry')}
@@ -177,7 +177,7 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
       )}
 
       {open && results.length > 0 && (
-        <ul className="absolute z-50 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-800 text-sm">
+        <ul className="absolute z-50 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-800 text-sm light:bg-white light:border-slate-200 light:divide-slate-100">
           {results.map((place, idx) => {
             const subtitle = [place.admin1, place.country].filter(Boolean).join(', ');
             return (
@@ -185,13 +185,13 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSelect(place)}
-                  className="w-full px-3.5 py-2.5 text-left hover:bg-slate-800 transition-colors flex flex-col justify-center cursor-pointer group"
+                  className="w-full px-3.5 py-2.5 text-left hover:bg-slate-800 transition-colors flex flex-col justify-center cursor-pointer group light:hover:bg-slate-100"
                 >
-                  <span className="font-semibold text-slate-200 group-hover:text-indigo-400">
+                  <span className="font-semibold text-slate-200 group-hover:text-indigo-400 light:text-slate-900 light:group-hover:text-indigo-600">
                     {place.name}
                   </span>
                   {subtitle && (
-                    <span className="text-xs text-slate-400 mt-0.5">
+                    <span className="text-xs text-slate-400 mt-0.5 light:text-slate-500">
                       {subtitle} ({place.latitude.toFixed(2)}°, {place.longitude.toFixed(2)}°) • {place.timezone}
                     </span>
                   )}

@@ -350,7 +350,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   {tBirth('profilePrivacy')}
                 </p>
                 {profileListError && (
-                  <p role="alert" className="mb-2 text-xs text-rose-400">{tProfiles(`errors.${profileListError}`)}</p>
+                  <p role="alert" className="mb-2 text-xs text-rose-400 light:text-rose-600">{tProfiles(`errors.${profileListError}`)}</p>
                 )}
                 {savedProfiles.length > 0 ? (
                   <ul className="space-y-1.5">
@@ -367,7 +367,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                           type="button"
                           onClick={() => handleDeleteProfile(profile)}
                           aria-label={tBirth('deleteProfile', { name: profile.label })}
-                          className="shrink-0 rounded-lg border border-slate-700/60 dark:border-slate-700/60 light:border-slate-200 px-2.5 py-2 text-[11px] font-medium text-slate-400 hover:text-rose-300 hover:border-rose-500/40 transition-colors cursor-pointer"
+                          className="shrink-0 rounded-lg border border-slate-700/60 dark:border-slate-700/60 light:border-slate-200 px-2.5 py-2 text-[11px] font-medium text-slate-400 hover:text-rose-300 hover:border-rose-500/40 transition-colors cursor-pointer light:text-slate-500 light:hover:text-rose-600 light:hover:border-rose-400"
                         >
                           {tBirth('delete')}
                         </button>
@@ -420,7 +420,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     </label>
                     <DateTimeSelector dateTimeStr={dateTimeStr} onChange={(value) => { setDateTimeStr(value); setSelectedAmbiguousInstant(''); }} />
                     {validationErrors.some((e) => e.field === 'dateTimeStr') && (
-                      <p className="mt-1 text-xs text-rose-400">
+                      <p className="mt-1 text-xs text-rose-400 light:text-rose-600">
                         {validationMessage(validationErrors.find((e) => e.field === 'dateTimeStr'))}
                       </p>
                     )}
@@ -450,13 +450,13 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       <option value="Pacific/Auckland" />
                     </datalist>
                     {timeZoneStatus === 'UNRESOLVED' && (
-                      <p role="alert" className="mt-1 text-xs text-amber-300">
+                      <p role="alert" className="mt-1 text-xs text-amber-300 light:text-amber-600">
                         {tDateTime('timeZoneUnresolved')}
                       </p>
                     )}
-                    {timeZoneStatus === 'INVALID' && <p role="alert" className="mt-1 text-xs text-rose-400">{tDateTime('timeZoneInvalid')}</p>}
+                    {timeZoneStatus === 'INVALID' && <p role="alert" className="mt-1 text-xs text-rose-400 light:text-rose-600">{tDateTime('timeZoneInvalid')}</p>}
                     {validationErrors.some((e) => e.field === 'timeZone') && (
-                      <p className="mt-1 text-xs text-rose-400">
+                      <p className="mt-1 text-xs text-rose-400 light:text-rose-600">
                         {validationMessage(validationErrors.find((e) => e.field === 'timeZone'))}
                       </p>
                     )}
@@ -464,26 +464,26 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                 </div>
 
                 {localDateTimeResolution.status === 'UNIQUE' && (
-                  <p className="text-xs text-slate-400" aria-live="polite">
-                    {tDateTime('resolvedInstant')} <span className="font-mono text-slate-200">{localDateTimeResolution.candidates[0].instant}</span>
+                  <p className="text-xs text-slate-400 light:text-slate-600" aria-live="polite">
+                    {tDateTime('resolvedInstant')} <span className="font-mono text-slate-200 light:text-slate-900">{localDateTimeResolution.candidates[0].instant}</span>
                     {' '}({localDateTimeResolution.candidates[0].offsetLabel})
                   </p>
                 )}
                 {localDateTimeResolution.status === 'AMBIGUOUS' && selectedAmbiguousInstant && (
-                  <p className="text-xs text-slate-400" aria-live="polite">
-                    {tDateTime('selectedInstant')} <span className="font-mono text-slate-200">{selectedAmbiguousInstant}</span>
+                  <p className="text-xs text-slate-400 light:text-slate-600" aria-live="polite">
+                    {tDateTime('selectedInstant')} <span className="font-mono text-slate-200 light:text-slate-900">{selectedAmbiguousInstant}</span>
                   </p>
                 )}
                 {localDateTimeResolution.status === 'AMBIGUOUS' && (
                   <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
-                    <label htmlFor="birth-time-ambiguity" className="block text-xs font-semibold text-amber-200 mb-1">
+                    <label htmlFor="birth-time-ambiguity" className="block text-xs font-semibold text-amber-200 light:text-amber-700 mb-1">
                       {tDateTime('ambiguous')}
                     </label>
                     <select
                       id="birth-time-ambiguity"
                       value={selectedAmbiguousInstant}
                       onChange={(event) => setSelectedAmbiguousInstant(event.target.value)}
-                      className="w-full rounded-lg border border-amber-500/40 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                      className="w-full rounded-lg border border-amber-500/40 bg-slate-950 px-3 py-2 text-sm text-slate-100 light:bg-slate-50 light:text-slate-900"
                     >
                       <option value="">{tDateTime('chooseOccurrence')}</option>
                       {localDateTimeResolution.candidates.map((candidate) => (
@@ -495,7 +495,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   </div>
                 )}
                 {localDateTimeResolution.status === 'NONEXISTENT' && (
-                  <p role="alert" className="text-xs text-rose-400">
+                  <p role="alert" className="text-xs text-rose-400 light:text-rose-600">
                     {tDateTime('nonexistent')}
                   </p>
                 )}
@@ -517,7 +517,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono-code"
                     />
                     {validationErrors.some((e) => e.field === 'latitude') && (
-                      <p className="mt-1 text-xs text-rose-400">
+                      <p className="mt-1 text-xs text-rose-400 light:text-rose-600">
                         {validationMessage(validationErrors.find((e) => e.field === 'latitude'))}
                       </p>
                     )}
@@ -538,7 +538,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono-code"
                     />
                     {validationErrors.some((e) => e.field === 'longitude') && (
-                      <p className="mt-1 text-xs text-rose-400">
+                      <p className="mt-1 text-xs text-rose-400 light:text-rose-600">
                         {validationMessage(validationErrors.find((e) => e.field === 'longitude'))}
                       </p>
                     )}
@@ -562,7 +562,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     <option value={AyanamsaType.FAGAN_BRADLEY}>Fagan-Bradley (Western Sidereal)</option>
                   </select>
                   {validationErrors.some((e) => e.field === 'ayanamsa') && (
-                    <p className="mt-1 text-xs text-rose-400">
+                    <p className="mt-1 text-xs text-rose-400 light:text-rose-600">
                       {validationMessage(validationErrors.find((e) => e.field === 'ayanamsa'))}
                     </p>
                   )}
@@ -575,12 +575,12 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       type="checkbox"
                       checked={saveAsProfile}
                       onChange={(e) => setSaveAsProfile(e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-500 focus:ring-indigo-500 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-600 bg-slate-950 text-indigo-500 focus:ring-indigo-500 cursor-pointer light:bg-white light:border-slate-300 light:accent-indigo-500"
                     />
                     <span>{tBirth('saveAsProfile')}</span>
                   </label>
                   {profileSaveWarning && (
-                    <p role="alert" className="text-xs text-amber-300 sm:order-first sm:w-full">
+                    <p role="alert" className="text-xs text-amber-300 light:text-amber-600 sm:order-first sm:w-full">
                       {tBirth('profileSaveWarning', { message: tProfiles(`errors.${profileSaveWarning}`) })}
                     </p>
                   )}
