@@ -6,7 +6,14 @@ export interface CareerJourneyStep {
   readonly id: string;
   readonly title: string;
   readonly description: string;
-  readonly state: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly state:
+    | 'AVAILABLE'
+    | 'PARTIAL'
+    | 'UNAVAILABLE'
+    | 'ABSENT'
+    | 'NOT_ASSESSED'
+    | 'EXECUTED_NO_CANDIDATES'
+    | 'QUALIFICATION_BLOCKED';
 }
 
 export interface CareerJourneyProps {
@@ -18,7 +25,11 @@ export const CareerJourney: React.FC<CareerJourneyProps> = ({ steps }) => {
   const stateLabel: Record<CareerJourneyStep['state'], string> = {
     AVAILABLE: t('ui.journey.available'),
     PARTIAL: t('ui.journey.partial'),
-    UNAVAILABLE: t('ui.journey.unavailable')
+    UNAVAILABLE: t('ui.journey.unavailable'),
+    ABSENT: t('ui.journey.absent'),
+    NOT_ASSESSED: t('ui.journey.notAssessed'),
+    EXECUTED_NO_CANDIDATES: t('ui.journey.executedNoCandidates'),
+    QUALIFICATION_BLOCKED: t('ui.journey.qualificationBlocked')
   };
   return (
   <nav aria-label={t('ui.journey.aria')} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5 space-y-3">
@@ -30,7 +41,7 @@ export const CareerJourney: React.FC<CareerJourneyProps> = ({ steps }) => {
     <ol className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
       {steps.map((step, index) => (
         <li key={step.id}>
-          <a href={`#${step.id}`} className="group flex h-full min-h-16 items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/50 p-3 text-left transition-colors hover:border-indigo-500/60 hover:bg-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
+          <a href={`#${step.id}`} data-state={step.state} className="group flex h-full min-h-16 items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/50 p-3 text-left transition-colors hover:border-indigo-500/60 hover:bg-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
             <span className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true">
               {step.state === 'AVAILABLE' ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <CircleDashed className="h-4 w-4 text-amber-300" />}
             </span>

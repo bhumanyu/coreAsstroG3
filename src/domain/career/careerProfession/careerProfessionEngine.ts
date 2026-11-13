@@ -23,6 +23,7 @@ import type {
   CareerProfessionInput,
   CareerProfessionAnalysis,
   CareerProfessionAnalysisStatus,
+  CareerProfessionAnalysisDiagnostic,
   CareerProfessionCandidate,
   CareerProfessionEvidence,
   CareerProfessionProvenance,
@@ -160,8 +161,8 @@ export function buildCareerProfessionAnalysis(
   }
 
   // Compute status based on minimum-input contract
-  // INSUFFICIENT_DATA: no candidate-establishing input was present/consumed
-  // PARTIAL: candidates established but some optional inputs missing
+  // INSUFFICIENT_DATA: no profession candidates were established
+  // PARTIAL: candidates established but some tracked inputs are missing
   // COMPLETE: candidates established and all optional inputs present
   let status: CareerProfessionAnalysisStatus;
   if (!anyCandidateEstablished) {
@@ -180,6 +181,29 @@ export function buildCareerProfessionAnalysis(
     natalPromiseDirection: input.natalPromiseDirection
   });
 
+  const diagnostics: CareerProfessionAnalysisDiagnostic[] = [];
+  if (missingInputs.length > 0) {
+    diagnostics.push('PROFESSION_INPUTS_MISSING');
+  }
+  if (candidates.length === 0) {
+    if (unresolvedExpressionTypes.length > 0 && mappedTypes.length === 0) {
+      diagnostics.push('NO_PROFESSION_RULE_MATCHED');
+    } else {
+      diagnostics.push('NO_PROFESSION_CANDIDATES_AVAILABLE');
+    }
+  }
+  if (
+    candidates.length > 0 &&
+    ranking.status === 'UNAVAILABLE' &&
+    ranking.diagnostics.some(diagnostic =>
+      diagnostic === 'D1_PROMISE_DIRECTION_NOT_PROVIDED' ||
+      diagnostic === 'D1_NATAL_PROMISE_NOT_ESTABLISHED' ||
+      diagnostic === 'D1_NATAL_PROMISE_MIXED_CONTESTED'
+    )
+  ) {
+    diagnostics.push('PROFESSION_RANKING_REJECTED_BY_D1_GATE');
+  }
+
   // Sort and deduplicate candidates
   const sortedCandidates = canonicalSortProfessionCandidates(
     deduplicateProfessionCandidates(d10QualifiedCandidates)
@@ -190,6 +214,7 @@ export function buildCareerProfessionAnalysis(
     candidates: sortedCandidates,
     ranking,
     status: status as 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA',
+    diagnostics,
     unresolvedExpressionTypes,
     mappedTypes,
     missingInputs,

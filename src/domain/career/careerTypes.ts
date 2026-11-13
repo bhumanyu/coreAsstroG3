@@ -132,6 +132,7 @@ export interface CareerInternalArtifacts {
   readonly natal: CareerNatalAnalysis;
   readonly expression: CareerExpressionAnalysis;
   readonly canonicalExpression?: CareerExpressionCanonicalResult;
+  readonly canonicalExpressionAnalysis?: CareerExpressionCanonicalResult;
   readonly mechanismCandidates?: readonly CareerMechanismCandidate[];
   readonly careerDashaEvidence: readonly DomainEvidence[];
 }

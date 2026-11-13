@@ -90,7 +90,12 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         available: true,
         primaryStyle: 'Strategic Leadership',
         leadershipPotential: 'HIGH',
-        secondaryTraits: ['Analytical Reasoning', 'Organizational Governance']
+        secondaryTraits: ['Analytical Reasoning', 'Organizational Governance'],
+        candidates: [{
+          expressionId: 'expr-candidate',
+          expressionType: 'LEADERSHIP_EXPRESSION',
+          qualificationStatus: 'CANDIDATE'
+        }]
       };
 
       render(<CareerExpressionSection expression={expression} />);
@@ -100,12 +105,15 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       expect(screen.getByText('HIGH')).toBeInTheDocument();
       expect(screen.getByText('Analytical Reasoning')).toBeInTheDocument();
       expect(screen.getByText('Organizational Governance')).toBeInTheDocument();
+      expect(screen.getByText('Leadership expression')).toBeInTheDocument();
+      expect(screen.getByText('Candidate')).toBeInTheDocument();
     });
 
     it('renders clean fallback when expression data is unavailable', () => {
       const expression: CareerExpressionViewModel = {
         available: false,
-        secondaryTraits: []
+        secondaryTraits: [],
+        candidates: []
       };
 
       render(<CareerExpressionSection expression={expression} />);

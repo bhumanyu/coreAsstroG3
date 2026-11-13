@@ -202,6 +202,30 @@ describe('B04 deterministic profession-family ranking', () => {
     expect(result.diagnostics).toContain('D1_NATAL_PROMISE_NOT_ESTABLISHED');
   });
 
+  it('distinguishes a mixed, contested D1 promise without admitting ranking', () => {
+    const item = candidate({
+      id: 'candidate-mixed-promise', domain: 'TECHNOLOGY', family: 'TECHNICAL_LEADERSHIP'
+    });
+    const result = buildCareerProfessionRanking({
+      candidates: [item],
+      natalPromiseDirection: 'MIXED'
+    });
+
+    expect(result.status).toBe('UNAVAILABLE');
+    expect(result.rankedCandidates).toEqual([]);
+    expect(result.diagnostics).toContain('D1_NATAL_PROMISE_MIXED_CONTESTED');
+  });
+
+  it('distinguishes a missing D1 direction from an unestablished promise', () => {
+    const result = buildCareerProfessionRanking({
+      candidates: [],
+      natalPromiseDirection: undefined
+    });
+
+    expect(result.status).toBe('UNAVAILABLE');
+    expect(result.diagnostics).toContain('D1_PROMISE_DIRECTION_NOT_PROVIDED');
+  });
+
   it('is stable under candidate and evidence input permutation', () => {
     const a = candidate({
       id: 'candidate-a', domain: 'TECHNOLOGY', family: 'TECHNICAL_LEADERSHIP',

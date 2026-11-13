@@ -54,12 +54,30 @@ export function resolveCareerDashaActivation(
   context: CareerDashaActivationContext
 ): CareerDashaActivationHierarchy {
   const { mdTiming, adTiming, pdTiming } = context;
+  const mdContext = mdTiming.planet ? findPlanetContext(context, mdTiming.planet) : undefined;
+  const adContext = adTiming.planet ? findPlanetContext(context, adTiming.planet) : undefined;
+  const pdContext = pdTiming.planet ? findPlanetContext(context, pdTiming.planet) : undefined;
 
-  const md = resolveLevel(context, 'MD', 'PRIMARY_DRIVER', mdTiming);
-  const ad = resolveLevel(context, 'AD', 'MODIFIER', adTiming);
-  const pd = resolveLevel(context, 'PD', 'REFINEMENT', pdTiming);
+  const md = resolveLevel(context, 'MD', 'PRIMARY_DRIVER', mdTiming, mdContext);
+  const ad = resolveLevel(context, 'AD', 'MODIFIER', adTiming, adContext);
+  const pd = resolveLevel(context, 'PD', 'REFINEMENT', pdTiming, pdContext);
 
-  return resolveCareerDashaHierarchy(md, ad, pd);
+  const diagnosticTrace = Object.freeze({
+    structuralPrimarySupport: context.structuralPrimarySupport,
+    planetContextResolution: Object.freeze([
+      Object.freeze({ level: 'MD' as const, planet: mdTiming.planet, resolved: mdContext !== undefined }),
+      Object.freeze({ level: 'AD' as const, planet: adTiming.planet, resolved: adContext !== undefined }),
+      Object.freeze({ level: 'PD' as const, planet: pdTiming.planet, resolved: pdContext !== undefined })
+    ]),
+    levels: Object.freeze([md, ad, pd].map(level => Object.freeze({
+      level: level.level,
+      planet: level.planet,
+      direction: level.direction,
+      effect: level.effect
+    })))
+  });
+
+  return resolveCareerDashaHierarchy(md, ad, pd, diagnosticTrace);
 }
 
 function resolveLevel(
@@ -422,7 +440,8 @@ function buildActivationStatement(
 function resolveCareerDashaHierarchy(
   md: CareerDashaActivation,
   ad: CareerDashaActivation,
-  pd: CareerDashaActivation
+  pd: CareerDashaActivation,
+  diagnosticTrace: CareerDashaActivationHierarchy['diagnosticTrace']
 ): CareerDashaActivationHierarchy {
   // Build DashaTimingEvidence for each level
   const mdEvidence: DashaTimingEvidence = Object.freeze({
@@ -463,7 +482,8 @@ function resolveCareerDashaHierarchy(
     overallDirection,
     overallStrength,
     dominantLevel: hierarchyResult.dominantLevel,
-    statement
+    statement,
+    diagnosticTrace
   });
 }
 

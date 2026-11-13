@@ -1199,8 +1199,15 @@ export function interpretCareerV2(
     natal: canonicalNatalAnalysis,
     expression: canonicalExpressionAnalysis,
     canonicalExpression: careerMechanismCandidates !== undefined ? canonicalMechanismExpressionResult : undefined,
+    canonicalExpressionAnalysis: careerMechanismCandidates !== undefined ? canonicalMechanismExpressionResult : undefined,
     mechanismCandidates: careerMechanismCandidates, // Pass through explicitly (may be empty array)
-    careerDashaEvidence: canonicalDashaAnalysis.evidence
+    careerDashaEvidence: canonicalDashaAnalysis.evidence,
+    careerAvailabilityDiagnosticTrace: Object.freeze({
+      structuralPrimarySupportPassedToC9: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.structuralPrimarySupport,
+      c9PlanetContextResolution: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.planetContextResolution,
+      c9LevelResultsBeforeHierarchy: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels,
+      natalPromiseDirectionPassedToProfessionRanking: canonicalC11Result.natalDirection
+    })
   });
 
   return buildDomainInterpretation({

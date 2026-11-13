@@ -5,14 +5,85 @@ import type { ProductDashaPeriod } from '../productAnalysisTypes';
 import { ENGLISH_USER_FACING_COPY } from '../../life-analysis/userFacingInterpretation';
 
 describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
-  it('1. natal promise passthrough: passes strength, confidence, headline, and statement', () => {
+  it('1. natal promise preserves strength and confidence while formatting its statement', () => {
     const analysis = createProductAnalysis();
     const vm = selectCareerViewModel(analysis);
 
     expect(vm.promise.strength).toBe('STRONG');
     expect(vm.promise.confidence).toBe('HIGH');
     expect(vm.promise.headline).toBe('Executive Trajectory');
-    expect(vm.promise.statement).toBe('High vocational promise across 10th lord and Lagna.');
+    expect(vm.promise.statement).toContain('Strong');
+    expect(vm.promise.statement).not.toContain('SUPPORTED');
+    expect(vm.promise.statement).not.toContain('SUPPORT');
+  });
+
+  it('formats raw natal promise enum values instead of exposing them to the card', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        promise: { ...base.career.promise, status: 'MIXED', statement: 'MIXED / NEUTRAL / NOT_ACTIVE' },
+        synthesis: {
+          ...base.career.synthesis,
+          finalStatus: 'MIXED',
+          natalDirection: 'MIXED',
+          natalStrength: 'STRONG'
+        }
+      }
+    });
+
+    const vm = selectCareerViewModel(analysis);
+
+    expect(vm.promise.statement).toContain('Mixed');
+    expect(vm.promise.statement).not.toMatch(/\b(MIXED|NEUTRAL|NOT_ACTIVE)\b/);
+  });
+
+  it('preserves canonical expression candidate qualification without promoting candidates', () => {
+    const base = createProductAnalysis();
+    const candidates = [
+      { expressionId: 'expr-qualified', expressionType: 'AUTHORITY_EXPRESSION', qualificationStatus: 'QUALIFIED' as const },
+      { expressionId: 'expr-candidate', expressionType: 'LEADERSHIP_EXPRESSION', qualificationStatus: 'CANDIDATE' as const },
+      { expressionId: 'expr-unresolved', expressionType: 'RESEARCH_WORK', qualificationStatus: 'UNRESOLVED' as const },
+      { expressionId: 'expr-not-applicable', expressionType: 'SERVICE_WORK', qualificationStatus: 'NOT_APPLICABLE' as const }
+    ];
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        expression: { candidates }
+      }
+    });
+
+    const vm = selectCareerViewModel(analysis);
+
+    expect(vm.expression.available).toBe(true);
+    expect(vm.expression.candidates).toEqual(candidates);
+    expect(vm.expression.candidates.find(candidate => candidate.expressionId === 'expr-candidate')?.qualificationStatus)
+      .toBe('CANDIDATE');
+  });
+
+  it('surfaces B06 diagnostics through the career view model', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        eventTimeline: {
+          reasoningVersion: 'B06',
+          methodVersion: 'B06-EVENT-SPECIFIC-TIMELINE-v1',
+          status: 'UNAVAILABLE',
+          taxonomy: [],
+          eventCandidates: [],
+          genericWindows: [],
+          observedOutcomeReportIds: [],
+          diagnostics: ['NO_P2_09B_SOURCE_WINDOWS_AVAILABLE'],
+          guaranteedEventsAvailable: false,
+          numericProbabilityAvailable: false,
+          statement: 'No source windows were supplied.'
+        }
+      }
+    });
+
+    expect(selectCareerViewModel(analysis).eventTimelineDiagnostics)
+      .toEqual(['NO_P2_09B_SOURCE_WINDOWS_AVAILABLE']);
   });
 
   it('2. manifestations: preserves dominantManifestations array and handles undefined', () => {

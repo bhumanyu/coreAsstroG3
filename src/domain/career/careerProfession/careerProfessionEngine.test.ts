@@ -71,6 +71,24 @@ describe('Career Profession Engine (P2-10A)', () => {
 
       // AGENCY mechanism has no matching profession rule, so no candidate emitted
       expect(result.candidates).toHaveLength(0);
+      expect(result.diagnostics).toContain('NO_PROFESSION_CANDIDATES_AVAILABLE');
+    });
+
+    it('reports candidates rejected by the D1 ranking gate separately from no matches', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const result = buildCareerProfessionAnalysis({
+        expressions: createMockExpressionAnalysisResult([
+          createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
+        ]),
+        mechanisms: [authorityMechanism],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation(),
+        natalPromiseDirection: 'MIXED'
+      });
+
+      expect(result.candidates).toHaveLength(1);
+      expect(result.diagnostics).toContain('PROFESSION_RANKING_REJECTED_BY_D1_GATE');
+      expect(result.ranking?.diagnostics).toContain('D1_NATAL_PROMISE_MIXED_CONTESTED');
     });
   });
 
@@ -814,6 +832,26 @@ describe('Career Profession Engine (P2-10A)', () => {
 
       // AUTHORITY_EXPRESSION has a matching rule, so unresolved should be empty
       expect(result.unresolvedExpressionTypes).toHaveLength(0);
+    });
+
+    it('distinguishes unmatched expressions from missing inputs and ranking rejection', () => {
+      const unmatchedExpression = createMockExpressionCandidate(
+        'UNMAPPED_EXPRESSION' as any,
+        'PATTERN_1',
+        ['NO_MATCHING_MECHANISM']
+      );
+      const result = buildCareerProfessionAnalysis({
+        expressions: createMockExpressionAnalysisResult([unmatchedExpression]),
+        mechanisms: [],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      });
+
+      expect(result.candidates).toHaveLength(0);
+      expect(result.unresolvedExpressionTypes).toContain('UNMAPPED_EXPRESSION');
+      expect(result.mappedTypes).toEqual([]);
+      expect(result.diagnostics).toContain('NO_PROFESSION_RULE_MATCHED');
+      expect(result.diagnostics).toContain('PROFESSION_INPUTS_MISSING');
     });
 
     it('should compute mappedTypes from actually consumed expression types', () => {

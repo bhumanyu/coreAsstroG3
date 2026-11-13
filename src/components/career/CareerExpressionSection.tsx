@@ -2,6 +2,7 @@ import React from 'react';
 import type { CareerExpressionViewModel } from '../../product/analysis/careerViewModel';
 import { Target, Compass, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerExpressionSectionProps {
   readonly expression: CareerExpressionViewModel;
@@ -9,6 +10,7 @@ export interface CareerExpressionSectionProps {
 
 export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = ({ expression }) => {
   const { t } = useTranslation('career');
+  const { t: tEnum } = useTranslation('enums');
   if (!expression.available) {
     return (
       <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 space-y-3">
@@ -77,6 +79,22 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {expression.candidates.length > 0 && (
+        <div className="space-y-2 border-t border-slate-800 pt-3">
+          <span className="text-[11px] font-mono-code uppercase tracking-wider text-slate-400 block">
+            {t('ui.expression.candidates')}
+          </span>
+          <ul className="space-y-2">
+            {expression.candidates.map(candidate => (
+              <li key={candidate.expressionId} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-slate-200">{enumLabel(tEnum, 'professionExpressionType', candidate.expressionType)}</span>
+                <span className="text-slate-400">{enumLabel(tEnum, 'careerExpressionQualification', candidate.qualificationStatus)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

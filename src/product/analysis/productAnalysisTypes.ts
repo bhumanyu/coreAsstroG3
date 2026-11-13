@@ -143,6 +143,11 @@ export interface CareerExpressionProduct {
   readonly primaryStyle?: string;
   readonly leadershipPotential?: string;
   readonly secondaryTraits?: readonly string[];
+  readonly candidates?: readonly {
+    readonly expressionId: string;
+    readonly expressionType: string;
+    readonly qualificationStatus: 'QUALIFIED' | 'CANDIDATE' | 'UNRESOLVED' | 'NOT_APPLICABLE';
+  }[];
 }
 
 export interface D10ProductResult {
@@ -623,6 +628,7 @@ export interface CareerProductAnalysis {
     readonly unresolvedExpressionTypes: readonly string[];
     readonly mappedTypes: readonly string[];
     readonly missingInputs: readonly string[];
+    readonly diagnostics?: readonly string[];
     readonly d10Status: string;
     readonly ranking: ProductCareerProfessionRanking;
   };

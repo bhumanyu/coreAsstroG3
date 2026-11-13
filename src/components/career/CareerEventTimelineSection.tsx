@@ -5,6 +5,7 @@ import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerEventTimelineSectionProps {
   readonly eventTimeline: ProductCareerEventTimeline;
+  readonly diagnostics?: readonly string[];
 }
 
 function formatTiming(timing: ProductCareerEventTimeline['genericWindows'][number]['timing'], untimedLabel: string): string {
@@ -13,7 +14,7 @@ function formatTiming(timing: ProductCareerEventTimeline['genericWindows'][numbe
     : untimedLabel;
 }
 
-export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProps> = ({ eventTimeline }) => {
+export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProps> = ({ eventTimeline, diagnostics = eventTimeline.diagnostics }) => {
   const { t } = useTranslation('career');
   const { t: tEnum } = useTranslation('enums');
   return (
@@ -140,9 +141,9 @@ export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProp
       )}
     </div>
 
-    {eventTimeline.diagnostics.length > 0 && (
+    {diagnostics.length > 0 && (
       <ul aria-label={t('ui.timeline.diagnostics')} className="list-disc pl-4 text-xs text-slate-500">
-        {eventTimeline.diagnostics.map(item => <li key={item}>{item}</li>)}
+        {diagnostics.map(item => <li key={item}>{item}</li>)}
       </ul>
     )}
   </section>

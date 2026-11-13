@@ -184,6 +184,7 @@ export interface LifeAnalysisDomainSummaryViewModel {
 
 export interface LifeAnalysisCareerDetailViewModel {
   readonly canonicalFinalSynthesis?: import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerFinalSynthesisResult;
+  readonly canonicalExpressionAnalysis?: import('../../domain/career/careerExpression/careerExpressionTypes').CareerExpressionCanonicalResult;
   readonly analyticalAxes?: import('../../domain/career/careerFinalSynthesis/careerAnalyticalAxes').CareerAnalyticalAxes;
   readonly careerOutcomeAnalysis?: import('../../domain/career/careerOutcomeQualification/careerOutcomeTypes').CareerOutcomeAnalysis;
   readonly careerEventTimeline?: import('../../domain/career/careerEventTimeline/careerEventTimelineTypes').CareerEventTimelineAnalysis;

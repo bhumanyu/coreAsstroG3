@@ -991,7 +991,12 @@ function mapCareer(
       ? {
         primaryStyle: detail.capacityLevel ? String(detail.capacityLevel) : undefined,
         leadershipPotential: detail.actionableTakeaways?.[0],
-        secondaryTraits: detail.actionableTakeaways?.slice(1)
+        secondaryTraits: detail.actionableTakeaways?.slice(1),
+        candidates: detail.canonicalExpressionAnalysis?.expressions.map(candidate => ({
+          expressionId: candidate.expressionId,
+          expressionType: candidate.expressionType,
+          qualificationStatus: candidate.qualificationStatus
+        }))
       }
       : undefined,
     profession: detail?.profession ? {
@@ -1034,6 +1039,7 @@ function mapCareer(
       unresolvedExpressionTypes: detail.profession.unresolvedExpressionTypes,
       mappedTypes: detail.profession.mappedTypes,
       missingInputs: detail.profession.missingInputs,
+      diagnostics: detail.profession.diagnostics ?? [],
       d10Status: deriveAggregateD10Status(detail.profession.candidates),
       ranking: mapCareerProfessionRanking(detail.profession.ranking)
     } : undefined,

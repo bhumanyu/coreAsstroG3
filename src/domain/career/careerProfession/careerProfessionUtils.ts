@@ -218,6 +218,7 @@ export function freezeProfessionAnalysis(
     readonly candidates: readonly CareerProfessionCandidate[];
     readonly ranking?: CareerProfessionAnalysis['ranking'];
     readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
+    readonly diagnostics?: CareerProfessionAnalysis['diagnostics'];
     readonly unresolvedExpressionTypes: readonly string[];
     readonly mappedTypes: readonly string[];
     readonly missingInputs: readonly string[];
@@ -229,6 +230,7 @@ export function freezeProfessionAnalysis(
     candidates: Object.freeze(
       analysis.candidates.map(freezeProfessionCandidate)
     ),
+    diagnostics: Object.freeze([...(analysis.diagnostics ?? [])]),
     unresolvedExpressionTypes: Object.freeze([...analysis.unresolvedExpressionTypes] as any),
     mappedTypes: Object.freeze([...analysis.mappedTypes] as any),
     missingInputs: Object.freeze([...analysis.missingInputs]),

@@ -62,6 +62,11 @@ export interface CareerExpressionViewModel {
   readonly primaryStyle?: string;
   readonly leadershipPotential?: string;
   readonly secondaryTraits?: readonly string[];
+  readonly candidates: readonly {
+    readonly expressionId: string;
+    readonly expressionType: string;
+    readonly qualificationStatus: 'QUALIFIED' | 'CANDIDATE' | 'UNRESOLVED' | 'NOT_APPLICABLE';
+  }[];
 }
 
 export interface CareerD10ViewModel {
@@ -174,6 +179,7 @@ export interface CareerProfessionViewModel {
   readonly unresolvedExpressionTypes: readonly string[];
   readonly mappedTypes: readonly string[];
   readonly missingInputs: readonly string[];
+  readonly diagnostics: readonly string[];
   readonly d10Status: string;
   readonly ranking: ProductCareerProfessionRanking;
 }
@@ -188,6 +194,7 @@ export interface CareerViewModel {
   readonly pathwayPotential?: ProductCareerPathwayAnalysis;
   /** B06: source-backed generic windows and explicit unvalidated event taxonomy. */
   readonly eventTimeline?: ProductCareerEventTimeline;
+  readonly eventTimelineDiagnostics: readonly string[];
   readonly hero: CareerHeroViewModel;
   readonly promise: CareerPromiseViewModel;
   readonly expression: CareerExpressionViewModel;
@@ -233,22 +240,36 @@ export function selectCareerViewModel(
     strength: career.promise.strength,
     confidence: career.promise.confidence,
     headline: career.promise.headline,
-    statement: career.promise.statement,
+    statement: buildUserFacingAssessment({
+      outcome: career.promise.status,
+      natalDirection: career.synthesis?.natalDirection,
+      natalStrength: career.synthesis?.natalStrength ?? career.promise.strength,
+      natalPromiseStatus: career.promise.status,
+      confidence: career.promise.confidence,
+      copy
+    }).summary,
     manifestations: career.promise.dominantManifestations ?? []
   };
 
+  const expressionCandidates = career.expression?.candidates ?? [];
   const hasExpressionData = Boolean(
     career.expression &&
     (career.expression.primaryStyle ||
       career.expression.leadershipPotential ||
-      (career.expression.secondaryTraits && career.expression.secondaryTraits.length > 0))
+      (career.expression.secondaryTraits && career.expression.secondaryTraits.length > 0) ||
+      expressionCandidates.length > 0)
   );
 
   const expression: CareerExpressionViewModel = {
     available: hasExpressionData,
     primaryStyle: career.expression?.primaryStyle,
     leadershipPotential: career.expression?.leadershipPotential,
-    secondaryTraits: career.expression?.secondaryTraits ?? []
+    secondaryTraits: career.expression?.secondaryTraits ?? [],
+    candidates: expressionCandidates.map(candidate => ({
+      expressionId: candidate.expressionId,
+      expressionType: candidate.expressionType,
+      qualificationStatus: candidate.qualificationStatus
+    }))
   };
 
   const d10: CareerD10ViewModel = {
@@ -345,6 +366,7 @@ export function selectCareerViewModel(
         unresolvedExpressionTypes: [],
         mappedTypes: [],
         missingInputs: [],
+        diagnostics: ['PROFESSION_ANALYSIS_NOT_PROVIDED'],
         d10Status: 'NOT_PROVIDED',
         ranking: {
           policyVersion: 'B04-PROFESSION-RANKING-v1',
@@ -391,6 +413,7 @@ export function selectCareerViewModel(
       unresolvedExpressionTypes: professionData.unresolvedExpressionTypes,
       mappedTypes: professionData.mappedTypes,
       missingInputs: professionData.missingInputs,
+      diagnostics: professionData.diagnostics ?? [],
       d10Status: professionData.d10Status,
       ranking: professionData.ranking
     };
@@ -402,6 +425,7 @@ export function selectCareerViewModel(
     outcomeQualification: career.outcomeQualification,
     pathwayPotential: career.pathwayPotential,
     eventTimeline: career.eventTimeline,
+    eventTimelineDiagnostics: career.eventTimeline?.diagnostics ?? [],
     hero,
     promise,
     expression,

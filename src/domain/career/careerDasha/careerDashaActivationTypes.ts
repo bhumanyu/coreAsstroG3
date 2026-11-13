@@ -115,6 +115,22 @@ export interface CareerDashaActivationHierarchy {
   readonly overallStrength: CareerDashaActivationStrength;
   readonly dominantLevel: 'MD' | 'AD' | 'PD' | 'NONE';
   readonly statement: string;
+  readonly diagnosticTrace?: CareerDashaActivationDiagnosticTrace;
+}
+
+export interface CareerDashaActivationDiagnosticTrace {
+  readonly structuralPrimarySupport: number;
+  readonly planetContextResolution: readonly {
+    readonly level: CareerDashaActivationLevel;
+    readonly planet?: Planet;
+    readonly resolved: boolean;
+  }[];
+  readonly levels: readonly {
+    readonly level: CareerDashaActivationLevel;
+    readonly planet?: Planet;
+    readonly direction: CareerDashaActivationDirection;
+    readonly effect: CareerDashaActivationEffect;
+  }[];
 }
 
 export interface CareerDashaTiming {

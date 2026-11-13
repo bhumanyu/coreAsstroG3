@@ -6,6 +6,62 @@ import { CareerPage } from '../CareerPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 import { analyzeCareerPathways } from '../../domain/career/careerPathway';
+import type { ProductCareerAnalyticalAxes, ProductCareerAxisStatus } from '../../product/analysis/productAnalysisTypes';
+
+function careerAxes(riskStatus: ProductCareerAxisStatus): ProductCareerAnalyticalAxes {
+  const axisBase = {
+    supportingEvidenceOccurrenceIds: [],
+    conflictingEvidenceOccurrenceIds: [],
+    ruleIds: [],
+    confidence: { status: 'NOT_ASSESSED' as const, reason: 'Test fixture.' },
+    methodVersion: 'B01-test'
+  };
+  const coverage = (status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT') => ({
+    status,
+    availableSources: [],
+    missingSources: [],
+    evidenceOccurrenceCount: 1
+  });
+
+  return {
+    version: 'B01-test',
+    promise: {
+      ...axisBase,
+      axis: 'PROMISE',
+      status: 'AVAILABLE',
+      result: { direction: 'SUPPORT', strength: 'STRONG' },
+      coverage: coverage('COMPLETE')
+    },
+    activation: {
+      ...axisBase,
+      axis: 'ACTIVATION',
+      status: 'AVAILABLE',
+      result: { direction: 'SUPPORT', effect: 'ACTIVATES', strength: 'STRONG', dominantLevel: 'MD' },
+      coverage: coverage('COMPLETE')
+    },
+    sustainability: {
+      ...axisBase,
+      axis: 'SUSTAINABILITY',
+      status: 'UNAVAILABLE',
+      result: { assessment: 'NOT_ASSESSED', requiredEvidenceFamily: 'CAREER_SUSTAINABILITY' },
+      coverage: coverage('INSUFFICIENT')
+    },
+    risk: {
+      ...axisBase,
+      axis: 'RISK',
+      status: riskStatus,
+      result: { assessment: 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES', conflictCount: 0 },
+      coverage: coverage(riskStatus === 'AVAILABLE' ? 'COMPLETE' : 'INSUFFICIENT')
+    },
+    timing: {
+      ...axisBase,
+      axis: 'TIMING',
+      status: 'AVAILABLE',
+      result: { candidateWindows: [], untimedLevels: [], guarantee: 'NONE' },
+      coverage: coverage('COMPLETE')
+    }
+  };
+}
 
 describe('CareerPage (P-UI-04)', () => {
   beforeEach(async () => {
@@ -83,8 +139,8 @@ describe('CareerPage (P-UI-04)', () => {
     expect(screen.getByText('Natal Vocational Promise')).toBeInTheDocument();
     expect(screen.getByText('Executive Trajectory')).toBeInTheDocument();
     expect(
-      screen.getByText('High vocational promise across 10th lord and Lagna.')
-    ).toBeInTheDocument();
+      screen.queryByText('High vocational promise across 10th lord and Lagna.')
+    ).not.toBeInTheDocument();
 
     // Expression & Style
     expect(screen.getByText('Vocational Expression & Working Style')).toBeInTheDocument();
@@ -204,6 +260,7 @@ describe('CareerPage (P-UI-04)', () => {
     render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
 
     expect(screen.getByRole('heading', { name: 'Career Event Timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Candidate timeline/ })).toHaveAttribute('data-state', 'AVAILABLE');
     expect(screen.getByRole('list', { name: 'Qualified generic career windows' })).toHaveTextContent('Career opportunity window');
     expect(screen.getByRole('list', { name: 'Event-specific taxonomy validation status' })).toHaveTextContent('Promotion or role expansion');
     expect(screen.getByText(/No explicit B02 user-reported outcome references/)).toBeInTheDocument();
@@ -239,8 +296,59 @@ describe('CareerPage (P-UI-04)', () => {
     const journey = screen.getByRole('navigation', { name: 'Guided career journey' });
     expect(within(journey).getByRole('link', { name: /D10 qualification/ })).toHaveTextContent('Unavailable');
     expect(within(journey).getByRole('link', { name: /Activation & timing/ })).toHaveTextContent('Unavailable');
+    expect(within(journey).getByRole('link', { name: /Candidate timeline/ })).toHaveAttribute('data-state', 'ABSENT');
+    expect(within(journey).getByRole('link', { name: /Candidate timeline/ })).toHaveTextContent('Absent');
     expect(screen.getByText('B06 event timeline is unavailable. No event window is inferred by the page.')).toBeInTheDocument();
     expect(screen.getByText(/Vimshottari dasha timing calculations are currently unavailable/)).toBeInTheDocument();
+  });
+
+  it('distinguishes an executed B06 analysis with no source windows from unavailability', () => {
+    const base = createProductAnalysis();
+    const analysis = {
+      ...base,
+      career: {
+        ...base.career,
+        eventTimeline: {
+          reasoningVersion: 'B06' as const,
+          methodVersion: 'B06-EVENT-SPECIFIC-TIMELINE-v1',
+          status: 'GENERIC_WINDOWS_ONLY' as const,
+          taxonomy: [],
+          eventCandidates: [],
+          genericWindows: [],
+          observedOutcomeReportIds: [],
+          diagnostics: ['NO_P2_09B_SOURCE_WINDOWS_AVAILABLE'],
+          guaranteedEventsAvailable: false as const,
+          numericProbabilityAvailable: false as const,
+          statement: 'B06 ran, but no source windows were supplied.'
+        }
+      }
+    };
+
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
+
+    const timelineStep = screen.getByRole('link', { name: /Candidate timeline/ });
+    expect(timelineStep).toHaveAttribute('data-state', 'EXECUTED_NO_CANDIDATES');
+    expect(timelineStep).toHaveTextContent('Analysis ran; no candidates');
+    expect(screen.getByRole('list', { name: 'Career event timeline diagnostics' }))
+      .toHaveTextContent('NO_P2_09B_SOURCE_WINDOWS_AVAILABLE');
+  });
+
+  it('aggregates assessed risk axes by coverage and keeps Sustainability NOT_ASSESSED separate', () => {
+    const base = createProductAnalysis();
+    const partialAnalysis = createProductAnalysis({
+      career: { ...base.career, analyticalAxes: careerAxes('UNAVAILABLE') }
+    });
+    const completeAnalysis = createProductAnalysis({
+      career: { ...base.career, analyticalAxes: careerAxes('AVAILABLE') }
+    });
+    const { rerender } = render(<CareerPage productAnalysisState={{ status: 'READY', analysis: partialAnalysis }} />);
+    const risksStep = screen.getByRole('link', { name: /Risk & sustainability/ });
+
+    expect(risksStep).toHaveAttribute('data-state', 'PARTIAL');
+    expect(screen.getByText(/Assessment: Not assessed/)).toBeInTheDocument();
+
+    rerender(<CareerPage productAnalysisState={{ status: 'READY', analysis: completeAnalysis }} />);
+    expect(screen.getByRole('link', { name: /Risk & sustainability/ })).toHaveAttribute('data-state', 'AVAILABLE');
   });
 
   it('B05: dual pathway verdict is based on explicit canonical B02 candidates', () => {

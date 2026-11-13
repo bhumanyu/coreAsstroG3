@@ -64,6 +64,11 @@ import {
   SCENARIO_BIRTH_DETAILS,
   type ScenarioResult
 } from './golden/goldenCareerFixtures';
+import {
+  LIVE_C9_DIAGNOSTIC_FIXTURE,
+  resolveLiveC9DiagnosticAsOf
+} from './golden/liveC9DiagnosticFixture';
+import type { VimshottariTimeline } from '../../../engine/dasha/vimshottari';
 
 /**
  * Test harness for running golden scenarios
@@ -271,6 +276,82 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
+  it('captures live C9 diagnostic inputs and per-level outputs before hierarchy combination', () => {
+    const chart = calculateHoroscope(LIVE_C9_DIAGNOSTIC_FIXTURE.birthDetails);
+    const asOf = resolveLiveC9DiagnosticAsOf(chart.vimshottari as VimshottariTimeline);
+    const result = runGoldenScenario({
+      scenarioId: 'C9-LIVE-DIAGNOSTIC',
+      description: 'Live C9 diagnostic fixture',
+      asOf,
+      temporalContext: 'Jupiter MD, Mercury AD, Venus PD',
+      expectedC11Fields: Object.freeze({}),
+      blockedFields: Object.freeze([])
+    });
+    const conclusionData = result.interpretation.conclusionData as Record<string, unknown>;
+    const internalArtifacts = conclusionData.internalArtifacts as Record<string, unknown>;
+    const trace = internalArtifacts.careerAvailabilityDiagnosticTrace as Record<string, unknown>;
+
+    expect(result.canonicalC11.natalDirection).toBe('MIXED');
+    expect(result.canonicalC11.natalStrength).toBe('STRONG');
+    expect(trace).toMatchObject({
+      structuralPrimarySupportPassedToC9: expect.any(Number),
+      c9PlanetContextResolution: [
+        { level: 'MD', planet: 'JUPITER', resolved: true },
+        { level: 'AD', planet: 'MERCURY', resolved: true },
+        { level: 'PD', planet: 'VENUS', resolved: true }
+      ],
+      c9LevelResultsBeforeHierarchy: [
+        { level: 'MD', planet: 'JUPITER', direction: expect.any(String), effect: expect.any(String) },
+        { level: 'AD', planet: 'MERCURY', direction: expect.any(String), effect: expect.any(String) },
+        { level: 'PD', planet: 'VENUS', direction: expect.any(String), effect: expect.any(String) }
+      ],
+      natalPromiseDirectionPassedToProfessionRanking: 'MIXED'
+    });
+    expect(trace).toMatchInlineSnapshot(`
+      {
+        "c9LevelResultsBeforeHierarchy": [
+          {
+            "direction": "UNAVAILABLE",
+            "effect": "DOES_NOT_ACTIVATE",
+            "level": "MD",
+            "planet": "JUPITER",
+          },
+          {
+            "direction": "UNAVAILABLE",
+            "effect": "DOES_NOT_ACTIVATE",
+            "level": "AD",
+            "planet": "MERCURY",
+          },
+          {
+            "direction": "UNAVAILABLE",
+            "effect": "DOES_NOT_ACTIVATE",
+            "level": "PD",
+            "planet": "VENUS",
+          },
+        ],
+        "c9PlanetContextResolution": [
+          {
+            "level": "MD",
+            "planet": "JUPITER",
+            "resolved": true,
+          },
+          {
+            "level": "AD",
+            "planet": "MERCURY",
+            "resolved": true,
+          },
+          {
+            "level": "PD",
+            "planet": "VENUS",
+            "resolved": true,
+          },
+        ],
+        "natalPromiseDirectionPassedToProfessionRanking": "MIXED",
+        "structuralPrimarySupportPassedToC9": 6,
+      }
+    `);
+  });
+
   it('diagnoses producer provenance on the golden C11 path', () => {
     const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G01')!;
     const originalBuildCareerFinalAnalysis = careerFinalSynthesisIntegration.buildCareerFinalAnalysis;

@@ -55,6 +55,13 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
         </ul>
       </div>
     )}
+    {profession.diagnostics.length > 0 && (
+      <ul aria-label={t('ui.profession.analysisDiagnostics')} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
+        {profession.diagnostics.map((diagnostic) => (
+          <li key={diagnostic}>{enumLabel(tEnum, 'professionDiagnostic', diagnostic)}</li>
+        ))}
+      </ul>
+    )}
     <div className="space-y-2 pt-3">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-xs font-semibold text-slate-300">{t('ui.profession.ranking')}</h3>

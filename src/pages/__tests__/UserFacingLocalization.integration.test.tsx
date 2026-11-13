@@ -66,23 +66,23 @@ describe('user-facing assessment localization at page boundaries', () => {
     expect(assessmentAnalysis.career.synthesis?.natalDirection).toBe('MIXED');
   });
 
-  it('updates Career conclusion copy while leaving the domain statement unchanged', async () => {
+  it('updates Career promise and conclusion copy without exposing the domain statement', async () => {
     await act(async () => {
       await i18n.changeLanguage('en');
     });
     render(<CareerPage productAnalysisState={{ status: 'READY', analysis: assessmentAnalysis }} />);
 
-    expect(screen.getByText(/Strong foundation with mixed indications/)).toBeInTheDocument();
-    expect(screen.getByText('High vocational promise across 10th lord and Lagna.')).toBeInTheDocument();
+    expect(screen.getAllByText(/Strong foundation with mixed indications/).length).toBeGreaterThan(0);
+    expect(screen.queryByText('High vocational promise across 10th lord and Lagna.')).not.toBeInTheDocument();
 
     await act(async () => {
       await i18n.changeLanguage('hi');
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/मजबूत आधार के साथ मिश्रित संकेत/)).toBeInTheDocument();
+      expect(screen.getAllByText(/मजबूत आधार के साथ मिश्रित संकेत/).length).toBeGreaterThan(0);
     });
-    expect(screen.getByText('High vocational promise across 10th lord and Lagna.')).toBeInTheDocument();
+    expect(screen.queryByText('High vocational promise across 10th lord and Lagna.')).not.toBeInTheDocument();
     expect(assessmentAnalysis.career.synthesis?.natalDirection).toBe('MIXED');
   });
 

@@ -80,7 +80,9 @@ export function buildCareerProfessionRanking(params: {
       diagnostics: Object.freeze([
         natalPromiseDirection === undefined
           ? 'D1_PROMISE_DIRECTION_NOT_PROVIDED'
-          : 'D1_NATAL_PROMISE_NOT_ESTABLISHED'
+          : natalPromiseDirection === 'MIXED'
+            ? 'D1_NATAL_PROMISE_MIXED_CONTESTED'
+            : 'D1_NATAL_PROMISE_NOT_ESTABLISHED'
       ])
     });
   }

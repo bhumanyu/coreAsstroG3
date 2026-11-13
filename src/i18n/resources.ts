@@ -524,7 +524,11 @@ export const resources = {
           scope: 'Canonical C11 · B01–B06 outputs',
           available: 'Available',
           partial: 'Partial',
-          unavailable: 'Unavailable'
+          unavailable: 'Unavailable',
+          absent: 'Absent',
+          notAssessed: 'Not assessed by design',
+          executedNoCandidates: 'Analysis ran; no candidates',
+          qualificationBlocked: 'Qualification blocked'
         },
         conclusion: {
           integratedTitle: 'Integrated Vocational Synthesis',
@@ -612,7 +616,8 @@ export const resources = {
           description: 'Operational temperament, executive capacity, and functional orientation',
           operatingStyle: 'Primary Operating Style',
           leadership: 'Leadership Potential',
-          competencies: 'Functional Competencies & Traits'
+          competencies: 'Functional Competencies & Traits',
+          candidates: 'Canonical expression candidates'
         },
         promise: {
           title: 'Natal Vocational Promise',
@@ -636,6 +641,7 @@ export const resources = {
           title: 'Profession Analysis Status',
           missingInputs: 'Missing inputs',
           missingInputsAria: 'Missing profession analysis inputs',
+          analysisDiagnostics: 'Profession analysis diagnostics',
           ranking: 'Profession family ranking',
           rankingAria: 'Ranked profession families',
           rankingDiagnostics: 'Profession ranking diagnostics',
@@ -1985,6 +1991,12 @@ export const resources = {
         FOREIGN_WORK_EXPRESSION: 'International work',
         REMOTE_WORK_EXPRESSION: 'Remote work'
       },
+      careerExpressionQualification: {
+        QUALIFIED: 'Qualified',
+        CANDIDATE: 'Candidate',
+        UNRESOLVED: 'Unresolved',
+        NOT_APPLICABLE: 'Not applicable'
+      },
       professionMechanismType: {
         AGENCY: 'Agency',
         SELF_DIRECTION: 'Self-direction',
@@ -2049,7 +2061,14 @@ export const resources = {
         DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID: 'Duplicate domain-evidence occurrence ID',
         NO_PROFESSION_FAMILY_CANDIDATES_AVAILABLE: 'No profession-family candidates are available',
         D1_PROMISE_ESTABLISHED_BUT_ONE_OR_MORE_QUALIFICATION_OR_COVERAGE_INPUTS_ARE_PARTIAL: 'D1 promise is established, but one or more qualification or coverage inputs are partial',
-        PROFESSION_ANALYSIS_NOT_PROVIDED: 'Profession analysis was not provided'
+        PROFESSION_ANALYSIS_NOT_PROVIDED: 'Profession analysis was not provided',
+        D1_PROMISE_DIRECTION_NOT_PROVIDED: 'D1 promise direction was not provided',
+        D1_NATAL_PROMISE_NOT_ESTABLISHED: 'D1 natal promise is not established',
+        D1_NATAL_PROMISE_MIXED_CONTESTED: 'D1 natal promise is mixed and contested; ranking remains gated',
+        PROFESSION_INPUTS_MISSING: 'One or more profession-analysis inputs are missing',
+        NO_PROFESSION_RULE_MATCHED: 'Expression candidates were present, but no profession rule matched',
+        NO_PROFESSION_CANDIDATES_AVAILABLE: 'No profession candidates were produced',
+        PROFESSION_RANKING_REJECTED_BY_D1_GATE: 'Candidates exist, but the D1 promise gate rejected ranking'
       },
       careerRequiredCheck: {
         SKILLS_AND_EXPERIENCE_FIT: 'Skills and experience fit',
@@ -2901,7 +2920,11 @@ export const resources = {
           scope: 'प्रामाणिक C11 · B01–B06 आउटपुट',
           available: 'उपलब्ध',
           partial: 'आंशिक',
-          unavailable: 'उपलब्ध नहीं'
+          unavailable: 'उपलब्ध नहीं',
+          absent: 'अनुपस्थित',
+          notAssessed: 'डिज़ाइन के अनुसार आकलन नहीं किया गया',
+          executedNoCandidates: 'विश्लेषण चला; कोई उम्मीदवार नहीं',
+          qualificationBlocked: 'पुष्टि-प्रवेश अवरुद्ध'
         },
         conclusion: {
           integratedTitle: 'एकीकृत व्यावसायिक संश्लेषण',
@@ -2989,7 +3012,8 @@ export const resources = {
           description: 'कार्यगत स्वभाव, कार्यकारी क्षमता और कार्यात्मक दिशा',
           operatingStyle: 'प्रमुख कार्यशैली',
           leadership: 'नेतृत्व क्षमता',
-          competencies: 'कार्यात्मक क्षमताएँ और गुण'
+          competencies: 'कार्यात्मक क्षमताएँ और गुण',
+          candidates: 'प्रामाणिक अभिव्यक्ति उम्मीदवार'
         },
         promise: {
           title: 'जन्म-कुंडली के व्यावसायिक संकेत',
@@ -3013,6 +3037,7 @@ export const resources = {
           title: 'व्यवसाय विश्लेषण स्थिति',
           missingInputs: 'अनुपलब्ध इनपुट',
           missingInputsAria: 'व्यवसाय विश्लेषण के अनुपलब्ध इनपुट',
+          analysisDiagnostics: 'व्यवसाय विश्लेषण निदान',
           ranking: 'व्यवसाय समूह क्रम',
           rankingAria: 'क्रमबद्ध व्यवसाय समूह',
           rankingDiagnostics: 'व्यवसाय क्रम निदान',
@@ -4362,6 +4387,12 @@ export const resources = {
         FOREIGN_WORK_EXPRESSION: 'अंतरराष्ट्रीय कार्य',
         REMOTE_WORK_EXPRESSION: 'दूरस्थ कार्य'
       },
+      careerExpressionQualification: {
+        QUALIFIED: 'योग्य',
+        CANDIDATE: 'उम्मीदवार',
+        UNRESOLVED: 'अनिर्णीत',
+        NOT_APPLICABLE: 'लागू नहीं'
+      },
       professionMechanismType: {
         AGENCY: 'स्वायत्तता',
         SELF_DIRECTION: 'स्व-निर्देशन',
@@ -4426,7 +4457,14 @@ export const resources = {
         DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID: 'क्षेत्रीय साक्ष्य occurrence ID दोहराया गया है',
         NO_PROFESSION_FAMILY_CANDIDATES_AVAILABLE: 'पेशा-परिवार के संभावित विकल्प उपलब्ध नहीं हैं',
         D1_PROMISE_ESTABLISHED_BUT_ONE_OR_MORE_QUALIFICATION_OR_COVERAGE_INPUTS_ARE_PARTIAL: 'D1 संकेत स्थापित है, लेकिन पुष्टि या कवरेज के कुछ इनपुट आंशिक हैं',
-        PROFESSION_ANALYSIS_NOT_PROVIDED: 'पेशा विश्लेषण उपलब्ध नहीं कराया गया'
+        PROFESSION_ANALYSIS_NOT_PROVIDED: 'पेशा विश्लेषण उपलब्ध नहीं कराया गया',
+        D1_PROMISE_DIRECTION_NOT_PROVIDED: 'D1 संकेत की दिशा उपलब्ध नहीं कराई गई',
+        D1_NATAL_PROMISE_NOT_ESTABLISHED: 'D1 जन्मजात संकेत स्थापित नहीं है',
+        D1_NATAL_PROMISE_MIXED_CONTESTED: 'D1 जन्मजात संकेत मिश्रित और विवादित है; क्रम निर्धारण अभी भी अवरुद्ध है',
+        PROFESSION_INPUTS_MISSING: 'व्यवसाय विश्लेषण के एक या अधिक इनपुट अनुपलब्ध हैं',
+        NO_PROFESSION_RULE_MATCHED: 'अभिव्यक्ति उम्मीदवार थे, लेकिन कोई व्यवसाय नियम मेल नहीं खाया',
+        NO_PROFESSION_CANDIDATES_AVAILABLE: 'कोई व्यवसाय उम्मीदवार नहीं निकला',
+        PROFESSION_RANKING_REJECTED_BY_D1_GATE: 'उम्मीदवार मौजूद हैं, लेकिन D1 संकेत-शर्त ने क्रम निर्धारण अस्वीकार किया'
       },
       careerRequiredCheck: {
         SKILLS_AND_EXPERIENCE_FIT: 'कौशल और अनुभव का मेल',

@@ -72,34 +72,76 @@ export const CareerPage: React.FC<CareerPageProps> = ({
     return <CareerUnavailableState onRetry={onRetry} />;
   }
 
-  const professionState = viewModel.profession.ranking.status === 'AVAILABLE'
+  const professionDiagnostics = viewModel.profession.ranking.diagnostics;
+  const professionState = professionDiagnostics.includes('PROFESSION_ANALYSIS_NOT_PROVIDED')
+    ? 'ABSENT' as const
+    : professionDiagnostics.includes('NO_PROFESSION_FAMILY_CANDIDATES_AVAILABLE')
+      ? 'EXECUTED_NO_CANDIDATES' as const
+      : professionDiagnostics.includes('D1_NATAL_PROMISE_NOT_ESTABLISHED')
+        && viewModel.profession.candidates.length > 0
+        ? 'QUALIFICATION_BLOCKED' as const
+        : viewModel.profession.ranking.status === 'AVAILABLE'
     && viewModel.profession.status === 'COMPLETE'
     ? 'AVAILABLE' as const
     : viewModel.profession.ranking.status === 'PARTIAL'
       || viewModel.profession.status === 'PARTIAL'
       ? 'PARTIAL' as const
       : 'UNAVAILABLE' as const;
-  const pathwayState = viewModel.pathwayPotential?.status === 'AVAILABLE'
+  const pathwayState = !viewModel.pathwayPotential
+    ? 'ABSENT' as const
+    : viewModel.pathwayPotential.status === 'AVAILABLE'
     ? 'AVAILABLE' as const
     : viewModel.pathwayPotential?.status === 'PARTIAL' || viewModel.pathwayPotential?.status === 'UNRESOLVED'
       ? 'PARTIAL' as const
       : 'UNAVAILABLE' as const;
-  const eventState = viewModel.eventTimeline?.status === 'GENERIC_WINDOWS_ONLY'
-    && viewModel.eventTimeline.genericWindows.length > 0
-    ? 'AVAILABLE' as const
-    : viewModel.eventTimeline?.status === 'PARTIAL'
-      ? 'PARTIAL' as const
-      : 'UNAVAILABLE' as const;
-  const axesState = viewModel.analyticalAxes
-    && [viewModel.analyticalAxes.promise, viewModel.analyticalAxes.activation,
-      viewModel.analyticalAxes.sustainability, viewModel.analyticalAxes.risk,
-      viewModel.analyticalAxes.timing].some(axis => axis.status === 'AVAILABLE' || axis.status === 'PARTIAL')
-    ? 'AVAILABLE' as const : 'UNAVAILABLE' as const;
+  const eventState = !viewModel.eventTimeline
+    ? 'ABSENT' as const
+    : viewModel.eventTimelineDiagnostics.includes('NO_P2_09B_SOURCE_WINDOWS_AVAILABLE')
+      ? 'EXECUTED_NO_CANDIDATES' as const
+      : viewModel.eventTimeline.genericWindows.length === 0
+        && viewModel.eventTimelineDiagnostics.includes('UNLINKED_OR_UNQUALIFIED_GENERIC_WINDOWS_SUPPRESSED')
+        ? 'QUALIFICATION_BLOCKED' as const
+        : viewModel.eventTimeline.status === 'GENERIC_WINDOWS_ONLY'
+          && viewModel.eventTimeline.genericWindows.length > 0
+          ? 'AVAILABLE' as const
+          : viewModel.eventTimeline.status === 'PARTIAL'
+            ? 'PARTIAL' as const
+            : 'UNAVAILABLE' as const;
+  const axesState = !viewModel.analyticalAxes
+    ? 'ABSENT' as const
+    : (() => {
+      const assessedAxes = [
+        viewModel.analyticalAxes.promise,
+        viewModel.analyticalAxes.activation,
+        viewModel.analyticalAxes.risk,
+        viewModel.analyticalAxes.timing
+      ];
+      const allAvailable = assessedAxes.every(axis => axis.status === 'AVAILABLE');
+      const hasPartialCoverage = assessedAxes.some(axis => axis.status === 'AVAILABLE' || axis.status === 'PARTIAL');
+      const allBlocked = assessedAxes.every(axis => axis.status === 'BLOCKED');
+
+      if (allAvailable) return 'AVAILABLE' as const;
+      if (allBlocked) return 'QUALIFICATION_BLOCKED' as const;
+      if (hasPartialCoverage) return 'PARTIAL' as const;
+      return 'UNAVAILABLE' as const;
+    })();
+
+  const expressionState = !viewModel.expression.available
+    ? 'ABSENT' as const
+    : viewModel.expression.candidates.length > 0
+      && viewModel.expression.candidates.every(candidate => candidate.qualificationStatus === 'NOT_APPLICABLE')
+      ? 'NOT_ASSESSED' as const
+      : viewModel.expression.candidates.length > 0
+        && !viewModel.expression.candidates.some(candidate => candidate.qualificationStatus === 'QUALIFIED')
+        ? 'QUALIFICATION_BLOCKED' as const
+        : viewModel.expression.candidates.some(candidate => candidate.qualificationStatus !== 'QUALIFIED')
+          ? 'PARTIAL' as const
+          : 'AVAILABLE' as const;
 
   const journeySteps = [
     { id: 'career-overview', title: t('journey.overview'), description: t('journey.overviewDescription'), state: 'AVAILABLE' as const },
     { id: 'career-promise', title: t('journey.promise'), description: t('journey.promiseDescription'), state: 'AVAILABLE' as const },
-    { id: 'career-expressions', title: t('journey.expressions'), description: t('journey.expressionsDescription'), state: viewModel.expression.available ? 'AVAILABLE' as const : 'UNAVAILABLE' as const },
+    { id: 'career-expressions', title: t('journey.expressions'), description: t('journey.expressionsDescription'), state: expressionState },
     { id: 'career-professions', title: t('journey.professions'), description: t('journey.professionsDescription'), state: professionState },
     { id: 'career-pathways', title: t('journey.pathways'), description: t('journey.pathwaysDescription'), state: pathwayState },
     { id: 'career-d10', title: t('journey.d10'), description: t('journey.d10Description'), state: viewModel.d10.relationship === 'UNAVAILABLE' ? 'UNAVAILABLE' as const : viewModel.d10.relationship === 'PARTIALLY_CONFIRMS' ? 'PARTIAL' as const : 'AVAILABLE' as const },
@@ -144,7 +186,7 @@ export const CareerPage: React.FC<CareerPageProps> = ({
           ? <CareerOutcomeQualificationSection outcomeQualification={viewModel.outcomeQualification} />
           : <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">{t('unavailable.outcome')}</div>}
         {viewModel.eventTimeline
-          ? <CareerEventTimelineSection eventTimeline={viewModel.eventTimeline} />
+          ? <CareerEventTimelineSection eventTimeline={viewModel.eventTimeline} diagnostics={viewModel.eventTimelineDiagnostics} />
           : <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">{t('unavailable.timeline')}</div>}
       </section>
 

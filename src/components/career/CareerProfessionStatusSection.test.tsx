@@ -104,6 +104,21 @@ describe('CareerProfessionStatusSection', () => {
     expect(list).toHaveTextContent('Career domain evidence');
   });
 
+  it('distinguishes unmatched expressions and ranking-gate rejection', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      diagnostics: [
+        'NO_PROFESSION_RULE_MATCHED',
+        'PROFESSION_RANKING_REJECTED_BY_D1_GATE'
+      ]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const list = screen.getByRole('list', { name: 'Profession analysis diagnostics' });
+    expect(list).toHaveTextContent('Expression candidates were present, but no profession rule matched');
+    expect(list).toHaveTextContent('Candidates exist, but the D1 promise gate rejected ranking');
+  });
+
   it('uses the canonical profession status rather than display-copy wording as its key', () => {
     const profession = {
       ...selectCareerViewModel(createProductAnalysis()).profession,

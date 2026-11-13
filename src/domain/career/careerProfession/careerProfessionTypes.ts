@@ -231,9 +231,10 @@ export interface CareerProfessionCandidate {
  * Career profession analysis status.
  * Per spec §3: lifecycle status of a profession analysis.
  *
- * COMPLETE: All required inputs present and analysis complete.
- * PARTIAL: Some optional inputs missing but analysis can proceed.
- * INSUFFICIENT_DATA: Required inputs missing.
+ * COMPLETE: Candidate analysis completed with all tracked inputs present.
+ * PARTIAL: Candidates were established, but some tracked inputs are missing.
+ * INSUFFICIENT_DATA: No profession candidates were established; diagnostics
+ * distinguish missing inputs from unmatched expression types.
  */
 export type CareerProfessionAnalysisStatus =
   | 'COMPLETE'
@@ -309,11 +310,18 @@ export interface CareerProfessionAnalysis {
   /** Always populated by buildCareerProfessionAnalysis; optional only for legacy external fixtures. */
   readonly ranking?: CareerProfessionRanking;
   readonly status: CareerProfessionAnalysisStatus;
+  readonly diagnostics?: readonly CareerProfessionAnalysisDiagnostic[];
   readonly unresolvedExpressionTypes: readonly CareerExpressionType[];
   readonly mappedTypes: readonly CareerExpressionType[];
   readonly missingInputs: readonly string[];
   readonly provenance: CareerProfessionProvenance;
 }
+
+export type CareerProfessionAnalysisDiagnostic =
+  | 'PROFESSION_INPUTS_MISSING'
+  | 'NO_PROFESSION_RULE_MATCHED'
+  | 'NO_PROFESSION_CANDIDATES_AVAILABLE'
+  | 'PROFESSION_RANKING_REJECTED_BY_D1_GATE';
 
 /**
  * Career profession provenance.

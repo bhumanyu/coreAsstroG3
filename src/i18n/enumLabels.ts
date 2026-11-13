@@ -44,6 +44,7 @@ import type {
   CareerProfessionFamily
 } from '../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerExpressionType } from '../domain/career/careerExpression/careerExpressionTypes';
+import type { CareerExpressionQualificationStatus } from '../domain/career/careerExpression/careerExpressionTypes';
 import type { CareerMechanismType } from '../domain/career/careerMechanism/careerMechanismTypes';
 import type { AiExplanationResult } from '../ai/product/aiExplanationTypes';
 import type { CareerProfessionStatus } from '../product/analysis/careerQualificationPresentation';
@@ -241,6 +242,12 @@ export const ENUM_LABEL_KEYS = {
     FOREIGN_WORK_EXPRESSION: 'professionExpressionType.FOREIGN_WORK_EXPRESSION',
     REMOTE_WORK_EXPRESSION: 'professionExpressionType.REMOTE_WORK_EXPRESSION'
   } satisfies Record<CareerExpressionType, string>,
+  careerExpressionQualification: {
+    QUALIFIED: 'careerExpressionQualification.QUALIFIED',
+    CANDIDATE: 'careerExpressionQualification.CANDIDATE',
+    UNRESOLVED: 'careerExpressionQualification.UNRESOLVED',
+    NOT_APPLICABLE: 'careerExpressionQualification.NOT_APPLICABLE'
+  } satisfies Record<CareerExpressionQualificationStatus, string>,
   professionMechanismType: {
     AGENCY: 'professionMechanismType.AGENCY',
     SELF_DIRECTION: 'professionMechanismType.SELF_DIRECTION',
@@ -305,7 +312,14 @@ export const ENUM_LABEL_KEYS = {
     DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID: 'professionDiagnostic.DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID',
     NO_PROFESSION_FAMILY_CANDIDATES_AVAILABLE: 'professionDiagnostic.NO_PROFESSION_FAMILY_CANDIDATES_AVAILABLE',
     D1_PROMISE_ESTABLISHED_BUT_ONE_OR_MORE_QUALIFICATION_OR_COVERAGE_INPUTS_ARE_PARTIAL: 'professionDiagnostic.D1_PROMISE_ESTABLISHED_BUT_ONE_OR_MORE_QUALIFICATION_OR_COVERAGE_INPUTS_ARE_PARTIAL',
-    PROFESSION_ANALYSIS_NOT_PROVIDED: 'professionDiagnostic.PROFESSION_ANALYSIS_NOT_PROVIDED'
+    PROFESSION_ANALYSIS_NOT_PROVIDED: 'professionDiagnostic.PROFESSION_ANALYSIS_NOT_PROVIDED',
+    D1_PROMISE_DIRECTION_NOT_PROVIDED: 'professionDiagnostic.D1_PROMISE_DIRECTION_NOT_PROVIDED',
+    D1_NATAL_PROMISE_NOT_ESTABLISHED: 'professionDiagnostic.D1_NATAL_PROMISE_NOT_ESTABLISHED',
+    D1_NATAL_PROMISE_MIXED_CONTESTED: 'professionDiagnostic.D1_NATAL_PROMISE_MIXED_CONTESTED',
+    PROFESSION_INPUTS_MISSING: 'professionDiagnostic.PROFESSION_INPUTS_MISSING',
+    NO_PROFESSION_RULE_MATCHED: 'professionDiagnostic.NO_PROFESSION_RULE_MATCHED',
+    NO_PROFESSION_CANDIDATES_AVAILABLE: 'professionDiagnostic.NO_PROFESSION_CANDIDATES_AVAILABLE',
+    PROFESSION_RANKING_REJECTED_BY_D1_GATE: 'professionDiagnostic.PROFESSION_RANKING_REJECTED_BY_D1_GATE'
   } satisfies Partial<Record<ProductCareerProfessionRanking['diagnostics'][number], string>>,
   careerRequiredCheck: {
     SKILLS_AND_EXPERIENCE_FIT: 'careerRequiredCheck.SKILLS_AND_EXPERIENCE_FIT',
