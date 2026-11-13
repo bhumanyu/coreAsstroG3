@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { FunctionalRolesSection as FunctionalRolesSectionType, FunctionalRoleReportItem } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
-import { formatPlanetName, formatFunctionalRole } from './reportUtils';
+import { formatPlanetName } from './reportUtils';
 import { EvidenceList } from './EvidenceList';
 import { CollapsibleItem, SectionAccordion } from './ObservationAccordion';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface FunctionalRolesSectionProps {
   readonly section: FunctionalRolesSectionType;
@@ -13,6 +14,7 @@ interface FunctionalRolesSectionProps {
 
 export const FunctionalRolesSection: React.FC<FunctionalRolesSectionProps> = ({ section }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   if (section.status === 'UNAVAILABLE' || !section.items || section.items.length === 0) {
     return <EmptyState title={t('fullNatal.components.functionalRoles.unavailableTitle')} message={t('fullNatal.components.functionalRoles.unavailableMessage')} />;
   }
@@ -45,7 +47,7 @@ export const FunctionalRolesSection: React.FC<FunctionalRolesSectionProps> = ({ 
                       : 'bg-slate-800 text-slate-300 border-slate-700'
                   }`}
                 >
-                  {formatFunctionalRole(nature)}
+                  {enumLabel(tEnum, 'functionalNature', nature)}
                 </span>
               }
             >

@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { MajorLifePeriodsSection as MajorLifePeriodsSectionType } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
-import { formatPlanetName, formatLifeThemeLabel, formatConfidence } from './reportUtils';
+import { formatPlanetName, formatLifeThemeLabel } from './reportUtils';
 import { Calendar, Compass } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface MajorLifePeriodsSectionProps {
   readonly section: MajorLifePeriodsSectionType;
@@ -12,6 +13,7 @@ interface MajorLifePeriodsSectionProps {
 
 export const MajorLifePeriodsSection: React.FC<MajorLifePeriodsSectionProps> = ({ section }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   if (section.status === 'UNAVAILABLE' || !section.periods || section.periods.length === 0) {
     return <EmptyState title={t('fullNatal.components.majorLifePeriods.unavailableTitle')} message={t('fullNatal.components.majorLifePeriods.unavailableMessage')} />;
   }
@@ -32,7 +34,7 @@ export const MajorLifePeriodsSection: React.FC<MajorLifePeriodsSectionProps> = (
                 </span>
               </div>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                {t('fullNatal.components.majorLifePeriods.confidence', { value: formatConfidence(period.confidence) })}
+                {t('fullNatal.components.majorLifePeriods.confidence', { value: enumLabel(tEnum, 'productConfidence', period.confidence) })}
               </span>
             </div>
 

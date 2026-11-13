@@ -1,12 +1,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  formatVargaRelationship,
   formatYogaConfirmation,
   getVargaRelationshipStyle
 } from './themeUiUtils';
 import { Sparkles, Info } from 'lucide-react';
 import { ThemeInterpretationEvidence } from '../../../engine/themeInterpretation/themeInterpretationTypes';
+import { enumLabel } from '../../../i18n/enumLabels';
 
 interface ThemeConfirmationCardProps {
   readonly title: string;
@@ -30,12 +30,13 @@ export const ThemeConfirmationCard: React.FC<ThemeConfirmationCardProps> = ({
   id
 }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const isActuallyAvailable =
     isAvailable && relationship !== 'UNAVAILABLE' && relationship !== 'ABSENT';
 
   const relLabel =
     type === 'VARGA'
-      ? formatVargaRelationship(relationship)
+      ? enumLabel(tEnum, 'divisionalRelationship', relationship)
       : formatYogaConfirmation(relationship);
 
   const style = getVargaRelationshipStyle(relationship);

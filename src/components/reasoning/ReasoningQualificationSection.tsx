@@ -1,8 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReasoningQualificationViewModel } from '../../product/analysis/reasoningViewModel';
-import { formatSeverity, getSeverityBadgeClass } from './reasoningFormat';
+import { getSeverityBadgeClass } from './reasoningFormat';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface ReasoningQualificationSectionProps {
   readonly qualifications: readonly ReasoningQualificationViewModel[];
@@ -12,6 +13,7 @@ export const ReasoningQualificationSection: React.FC<ReasoningQualificationSecti
   qualifications
 }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const hasQualifications = qualifications && qualifications.length > 0;
 
   return (
@@ -36,7 +38,7 @@ export const ReasoningQualificationSection: React.FC<ReasoningQualificationSecti
         <div className="space-y-3">
           {qualifications.map((q, idx) => {
             const severityClass = getSeverityBadgeClass(q.severity);
-            const formattedSeverity = formatSeverity(q.severity);
+            const formattedSeverity = enumLabel(tEnum, 'qualificationSeverity', q.severity);
 
             return (
               <div

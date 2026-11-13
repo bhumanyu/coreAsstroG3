@@ -20,7 +20,10 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
   const { t: tEnum } = useTranslation('enums');
   const roleLabel = enumLabel(tEnum, 'productEvidenceRole', period.role);
   const directionLabel = enumLabel(tEnum, 'productDirection', period.direction);
-  const effectLabel = enumLabel(tEnum, 'activationEffect', period.effect);
+  const activationEffectLabel = enumLabel(tEnum, 'activationEffect', period.effect);
+  const effectLabel = activationEffectLabel === period.effect
+    ? enumLabel(tEnum, 'productDirection', period.effect)
+    : activationEffectLabel;
   const directionClass = getDirectionBadgeClass(period.direction);
   const roleClass = getEvidenceRoleBadgeClass(period.role);
 

@@ -1,8 +1,8 @@
 import React from 'react';
 import type { CareerConclusionViewModel } from '../../product/analysis/careerViewModel';
-import { formatConfidence } from './careerFormat';
 import { Sparkles, Network, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerConclusionSectionProps {
   readonly conclusion: CareerConclusionViewModel;
@@ -14,7 +14,8 @@ export const CareerConclusionSection: React.FC<CareerConclusionSectionProps> = (
   onOpenReasoning
 }) => {
   const { t } = useTranslation('career');
-  const formattedConfidence = formatConfidence(conclusion.confidence);
+  const { t: tEnum } = useTranslation('enums');
+  const confidenceLabel = enumLabel(tEnum, 'productConfidence', conclusion.confidence);
   const title = conclusion.integratedSynthesisAvailable
     ? t('ui.conclusion.integratedTitle')
     : t('ui.conclusion.title');
@@ -36,7 +37,7 @@ export const CareerConclusionSection: React.FC<CareerConclusionSectionProps> = (
         </div>
 
         <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-          {formattedConfidence}
+          {confidenceLabel}
         </span>
       </div>
 

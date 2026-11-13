@@ -1,8 +1,9 @@
 import React from 'react';
 import type { WealthD2ViewModel } from '../../product/analysis/wealthViewModel';
-import { formatD2Relationship, getD2RelationshipBadgeClass } from './wealthFormat';
+import { getD2RelationshipBadgeClass } from './wealthFormat';
 import { Layers, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthD2SectionProps {
   readonly d2: WealthD2ViewModel;
@@ -10,7 +11,8 @@ export interface WealthD2SectionProps {
 
 export const WealthD2Section: React.FC<WealthD2SectionProps> = ({ d2 }) => {
   const { t } = useTranslation('wealth');
-  const formattedRelationship = formatD2Relationship(d2.relationship);
+  const { t: tEnum } = useTranslation('enums');
+  const formattedRelationship = enumLabel(tEnum, 'divisionalRelationship', d2.relationship);
   const badgeClass = getD2RelationshipBadgeClass(d2.relationship);
   const isAvailable = d2.relationship !== 'UNAVAILABLE';
 

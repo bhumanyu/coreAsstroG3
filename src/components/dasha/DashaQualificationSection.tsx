@@ -1,7 +1,9 @@
 import React from 'react';
 import type { DashaQualificationViewModel } from '../../product/analysis/dashaViewModel';
-import { formatSeverity, getSeverityBadgeClass } from './dashaFormat';
+import { getSeverityBadgeClass } from './dashaFormat';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface DashaQualificationSectionProps {
   readonly qualifications: readonly DashaQualificationViewModel[];
@@ -10,6 +12,7 @@ export interface DashaQualificationSectionProps {
 export const DashaQualificationSection: React.FC<DashaQualificationSectionProps> = ({
   qualifications
 }) => {
+  const { t: tEnum } = useTranslation('enums');
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
       {/* Section Header */}
@@ -34,7 +37,7 @@ export const DashaQualificationSection: React.FC<DashaQualificationSectionProps>
       {qualifications.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {qualifications.map((q, index) => {
-            const severityLabel = formatSeverity(q.severity);
+            const severityLabel = enumLabel(tEnum, 'qualificationSeverity', q.severity);
             const severityClass = getSeverityBadgeClass(q.severity);
 
             return (

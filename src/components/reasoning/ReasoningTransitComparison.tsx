@@ -2,11 +2,10 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReasoningTransitViewModel } from '../../product/analysis/reasoningViewModel';
 import {
-  formatAvailability,
-  formatTransitEffect,
   getAvailabilityBadgeClass
 } from './reasoningFormat';
 import { Compass, AlertCircle, Briefcase, Coins } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface ReasoningTransitComparisonProps {
   readonly careerTransit?: ReasoningTransitViewModel;
@@ -18,15 +17,16 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
   wealthTransit
 }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const isCareerAvailable =
     careerTransit?.status === 'AVAILABLE' || careerTransit?.status === 'PARTIAL';
   const careerBadgeClass = getAvailabilityBadgeClass(careerTransit?.status ?? 'UNAVAILABLE');
-  const careerFormattedEffect = formatTransitEffect(careerTransit?.effect ?? 'UNAVAILABLE');
+  const careerFormattedEffect = enumLabel(tEnum, 'transitEffect', careerTransit?.effect ?? 'UNAVAILABLE');
 
   const isWealthAvailable =
     wealthTransit?.status === 'AVAILABLE' || wealthTransit?.status === 'PARTIAL';
   const wealthBadgeClass = getAvailabilityBadgeClass(wealthTransit?.status ?? 'UNAVAILABLE');
-  const wealthFormattedEffect = formatTransitEffect(wealthTransit?.effect ?? 'UNAVAILABLE');
+  const wealthFormattedEffect = enumLabel(tEnum, 'transitEffect', wealthTransit?.effect ?? 'UNAVAILABLE');
 
   return (
     <section
@@ -77,7 +77,7 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
                 <span
                   className={`px-2.5 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider border ${careerBadgeClass}`}
                 >
-                  {formatAvailability(careerTransit?.status ?? 'UNAVAILABLE')}
+                  {enumLabel(tEnum, 'dashaAvailability', careerTransit?.status ?? 'UNAVAILABLE')}
                 </span>
               </div>
             </div>
@@ -129,7 +129,7 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
                 <span
                   className={`px-2.5 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider border ${wealthBadgeClass}`}
                 >
-                  {formatAvailability(wealthTransit?.status ?? 'UNAVAILABLE')}
+                  {enumLabel(tEnum, 'dashaAvailability', wealthTransit?.status ?? 'UNAVAILABLE')}
                 </span>
               </div>
             </div>

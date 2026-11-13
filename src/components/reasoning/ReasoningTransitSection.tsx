@@ -2,11 +2,10 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReasoningTransitViewModel } from '../../product/analysis/reasoningViewModel';
 import {
-  formatAvailability,
-  formatTransitEffect,
   getAvailabilityBadgeClass
 } from './reasoningFormat';
 import { Compass, AlertCircle } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface ReasoningTransitSectionProps {
   readonly transit: ReasoningTransitViewModel;
@@ -14,9 +13,10 @@ export interface ReasoningTransitSectionProps {
 
 export const ReasoningTransitSection: React.FC<ReasoningTransitSectionProps> = ({ transit }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const isAvailableOrPartial = transit.status === 'AVAILABLE' || transit.status === 'PARTIAL';
   const badgeClass = getAvailabilityBadgeClass(transit.status);
-  const formattedEffect = formatTransitEffect(transit.effect);
+  const formattedEffect = enumLabel(tEnum, 'transitEffect', transit.effect);
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -38,7 +38,7 @@ export const ReasoningTransitSection: React.FC<ReasoningTransitSectionProps> = (
           <span
             className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${badgeClass}`}
           >
-            {formatAvailability(transit.status)}
+            {enumLabel(tEnum, 'dashaAvailability', transit.status)}
           </span>
         </div>
       </div>

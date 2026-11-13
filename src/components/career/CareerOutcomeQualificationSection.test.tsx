@@ -60,7 +60,7 @@ describe('CareerOutcomeQualificationSection', () => {
     expect(screen.getByRole('list', { name: 'Career outcome candidates' })).toHaveTextContent('Role or authority expansion');
     expect(screen.getByText(/Candidate only · No guaranteed outcome/)).toBeInTheDocument();
     expect(screen.getByText('Not assessed')).toBeInTheDocument();
-    expect(screen.getByText('D10: Challenging (High)')).toBeInTheDocument();
+    expect(screen.getByText('D10 chart: Challenging (High)')).toBeInTheDocument();
     expect(screen.getByText(/Candidate windows are not recorded as observed events/)).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'User-reported observed career outcomes' })).not.toBeInTheDocument();
   });
@@ -78,9 +78,9 @@ describe('CareerOutcomeQualificationSection', () => {
     render(<CareerOutcomeQualificationSection outcomeQualification={value} />);
 
     const observed = screen.getByRole('list', { name: 'User-reported observed career outcomes' });
-    expect(observed).toHaveTextContent('PROMOTION');
+    expect(observed).toHaveTextContent('Promotion');
     expect(observed).toHaveTextContent('User reported a promotion.');
-    expect(observed).toHaveTextContent('USER_REPORTED');
+    expect(observed).toHaveTextContent('User reported');
     expect(observed).not.toHaveTextContent('candidate-1');
   });
 

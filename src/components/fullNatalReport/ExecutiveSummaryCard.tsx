@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { ExecutiveSummarySection, LifeTheme } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
-import { formatLifeThemeLabel, formatConfidence } from './reportUtils';
+import { formatLifeThemeLabel } from './reportUtils';
 import { Award, AlertTriangle, Scale } from 'lucide-react';
 import { ObservationAccordion, SectionAccordion } from './ObservationAccordion';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface ExecutiveSummaryCardProps {
   readonly section: ExecutiveSummarySection;
@@ -13,6 +14,7 @@ interface ExecutiveSummaryCardProps {
 
 export const ExecutiveSummaryCard: React.FC<ExecutiveSummaryCardProps> = ({ section }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   if (section.status === 'UNAVAILABLE') {
     return <EmptyState title={t('fullNatal.components.executiveSummary.unavailableTitle')} message={t('fullNatal.components.executiveSummary.unavailableMessage')} />;
   }
@@ -28,7 +30,7 @@ export const ExecutiveSummaryCard: React.FC<ExecutiveSummaryCardProps> = ({ sect
             {t('fullNatal.components.executiveSummary.coreHeadline')}
           </span>
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-code font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
-            {t('fullNatal.components.executiveSummary.confidence', { value: formatConfidence(section.overallConfidence) })}
+            {t('fullNatal.components.executiveSummary.confidence', { value: enumLabel(tEnum, 'productConfidence', section.overallConfidence) })}
           </span>
         </div>
         <h3 className="text-base sm:text-lg font-bold font-serif-astro text-slate-100">

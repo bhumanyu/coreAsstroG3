@@ -6,7 +6,7 @@ import {
 } from './wealthFormat';
 import { Coins, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { enumLabel } from '../../i18n/enumLabels';
+import { enumLabel, enumLabelWithFallback } from '../../i18n/enumLabels';
 
 export interface WealthOverallSectionProps {
   readonly overall: WealthOverallViewModel;
@@ -15,7 +15,7 @@ export interface WealthOverallSectionProps {
 export const WealthOverallSection: React.FC<WealthOverallSectionProps> = ({ overall }) => {
   const { t } = useTranslation('wealth');
   const { t: tEnum } = useTranslation('enums');
-  const formattedStrength = enumLabel(tEnum, 'promiseStrength', overall.promise);
+  const formattedStrength = enumLabelWithFallback(tEnum, 'promiseStrength', 'productDirection', overall.promise);
   const formattedStatus = enumLabel(tEnum, 'wealthDimensionStatus', overall.status);
   const formattedConfidence = enumLabel(tEnum, 'productConfidence', overall.confidence);
 

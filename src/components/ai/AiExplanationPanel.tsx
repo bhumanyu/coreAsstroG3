@@ -23,6 +23,8 @@ import { AiExplanationEvidenceList } from './AiExplanationEvidenceList';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import type { LifeAnalysis } from '../../domain/synthesis';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface AiExplanationPanelProps {
   readonly analysisId?: string;
@@ -240,6 +242,7 @@ interface AiExplanationSuccessViewProps {
 const AiExplanationSuccessView: React.FC<AiExplanationSuccessViewProps> = ({
   result
 }) => {
+  const { t: tEnum } = useTranslation('enums');
   return (
     <div className="space-y-4">
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
@@ -253,7 +256,7 @@ const AiExplanationSuccessView: React.FC<AiExplanationSuccessViewProps> = ({
           </div>
 
           <span className="text-[10px] uppercase tracking-wide font-mono-code text-slate-500">
-            {result.status}
+            {enumLabel(tEnum, 'selectedPeriodAiStatus', result.status)}
           </span>
         </div>
 

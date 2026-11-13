@@ -4,11 +4,11 @@ import type {
   DashaDomainTransitViewModel
 } from '../../product/analysis/dashaViewModel';
 import {
-  formatAvailability,
-  formatTransitEffect,
   getAvailabilityBadgeClass
 } from './dashaFormat';
 import { Compass, Info, Briefcase, Coins } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface TransitTimingSectionProps {
   readonly transit: DashaTransitViewModel;
@@ -21,10 +21,11 @@ interface DomainTransitBlockProps {
 }
 
 const DomainTransitBlock: React.FC<DomainTransitBlockProps> = ({ label, transit, icon }) => {
+  const { t: tEnum } = useTranslation('enums');
   const isAvailable = transit.status !== 'UNAVAILABLE';
-  const availabilityLabel = formatAvailability(transit.status);
+  const availabilityLabel = enumLabel(tEnum, 'dashaAvailability', transit.status);
   const availabilityClass = getAvailabilityBadgeClass(transit.status);
-  const effectLabel = formatTransitEffect(transit.effect);
+  const effectLabel = enumLabel(tEnum, 'transitEffect', transit.effect);
 
   return (
     <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">

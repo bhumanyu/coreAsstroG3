@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { OverallSynthesisSection as OverallSynthesisSectionType } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
-import { formatLifeThemeLabel, formatConfidence } from './reportUtils';
+import { formatLifeThemeLabel } from './reportUtils';
 import { Award, AlertTriangle, Scale, Clock, RefreshCw, Sparkles } from 'lucide-react';
 import { ObservationAccordion, SectionAccordion } from './ObservationAccordion';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface OverallSynthesisSectionProps {
   readonly section: OverallSynthesisSectionType;
@@ -13,6 +14,7 @@ interface OverallSynthesisSectionProps {
 
 export const OverallSynthesisSection: React.FC<OverallSynthesisSectionProps> = ({ section }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   if (section.status === 'UNAVAILABLE') {
     return <EmptyState title={t('fullNatal.components.overallSynthesis.unavailableTitle')} message={t('fullNatal.components.overallSynthesis.unavailableMessage')} />;
   }
@@ -28,7 +30,7 @@ export const OverallSynthesisSection: React.FC<OverallSynthesisSectionProps> = (
             <Sparkles className="w-4 h-4" /> {t('fullNatal.components.overallSynthesis.finalConclusion')}
           </span>
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-code font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
-            {t('fullNatal.components.overallSynthesis.confidence', { value: formatConfidence(section.overallConfidence) })}
+            {t('fullNatal.components.overallSynthesis.confidence', { value: enumLabel(tEnum, 'productConfidence', section.overallConfidence) })}
           </span>
         </div>
         <p className="text-sm sm:text-base text-slate-200 leading-relaxed font-sans">

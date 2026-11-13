@@ -19,6 +19,8 @@ import type {
   ProductQualificationStatus
 } from '../../product/analysis/productAnalysisTypes';
 import { Calendar, Clock, AlertTriangle, CheckCircle2, FileText, Activity, ChevronDown, ChevronRight, Copy } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface SelectedPeriodReportProps {
   readonly synthesis: ProductSelectedPeriodSynthesis;
@@ -64,15 +66,12 @@ function formatDate(isoString: string): string {
   });
 }
 
-function formatActivationEffect(effect: ActivationEffect | string): string {
-  return effect.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-}
-
 export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
   synthesis,
   domainToggle = 'BOTH',
   onDomainToggle
 }) => {
+  const { t: tEnum } = useTranslation('enums');
   const showCareer = domainToggle === 'CAREER' || domainToggle === 'BOTH';
   const showWealth = domainToggle === 'WEALTH' || domainToggle === 'BOTH';
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
@@ -111,13 +110,13 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono-code ${TEMPORAL_BADGE_CLASSES[synthesis.period.temporalRelation]}`}
               >
                 <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>{synthesis.period.temporalRelation}</span>
+                <span>{enumLabel(tEnum, 'temporalRelation', synthesis.period.temporalRelation)}</span>
               </div>
               <div
                 className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-xs font-mono-code ${QUALIFICATION_BADGE_CLASSES[synthesis.qualificationStatus]}`}
                 title={QUALIFICATION_DESCRIPTIONS[synthesis.qualificationStatus]}
               >
-                <span>{synthesis.qualificationStatus}</span>
+                <span>{enumLabel(tEnum, 'productQualificationStatus', synthesis.qualificationStatus)}</span>
               </div>
             </div>
           </div>
@@ -321,7 +320,7 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
             {synthesis.missingInputs.map((input, idx) => (
               <div key={idx} className="bg-slate-950/40 border border-slate-800 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono-code text-slate-400">{input.domain}</span>
+                  <span className="text-xs font-mono-code text-slate-400">{enumLabel(tEnum, 'analysisDomain', input.domain)}</span>
                   <span className="text-xs font-mono-code text-amber-400">{input.code}</span>
                 </div>
                 <div className="text-xs text-slate-300">{input.description}</div>
@@ -344,20 +343,20 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-3">
             <div className="text-xs font-mono-code text-slate-400 mb-1">Career</div>
             <div className="text-xs text-slate-300">
-              Status: {synthesis.provenance.career.status}
+              Status: {enumLabel(tEnum, 'synthesisProvenanceStatus', synthesis.provenance.career.status)}
               {synthesis.provenance.career.version && (
                 <span className="ml-2 font-mono-code">v{synthesis.provenance.career.version}</span>
               )}
             </div>
             <div className="text-xs text-slate-400 mt-1">
-              Qualification Basis: {synthesis.provenance.career.qualificationBasis}
+              Qualification Basis: {enumLabel(tEnum, 'synthesisQualificationBasis', synthesis.provenance.career.qualificationBasis)}
             </div>
           </div>
 
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-3">
             <div className="text-xs font-mono-code text-slate-400 mb-1">Wealth</div>
             <div className="text-xs text-slate-300">
-              Status: {synthesis.provenance.wealth.status}
+              Status: {enumLabel(tEnum, 'synthesisProvenanceStatus', synthesis.provenance.wealth.status)}
               {synthesis.provenance.wealth.version && (
                 <span className="ml-2 font-mono-code">v{synthesis.provenance.wealth.version}</span>
               )}
@@ -370,6 +369,7 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
 };
 
 const ExpressionRow: React.FC<{ readonly expression: ProductSynthesisCareerExpressionRow }> = ({ expression }) => {
+  const { t: tEnum } = useTranslation('enums');
   const effectClass = ACTIVATION_EFFECT_CLASSES[expression.status] || ACTIVATION_EFFECT_CLASSES.UNAVAILABLE;
 
   return (
@@ -377,16 +377,16 @@ const ExpressionRow: React.FC<{ readonly expression: ProductSynthesisCareerExpre
       <div className="flex items-center justify-between">
         <span className="text-xs font-mono-code text-slate-400">{expression.expressionRefKey}</span>
         <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-mono-code ${effectClass}`}>
-          <span>{formatActivationEffect(expression.status)}</span>
+          <span>{enumLabel(tEnum, 'activationEffect', expression.status)}</span>
         </div>
       </div>
 
       <div className="text-xs text-slate-400">
-        Levels: {expression.linkedLevels.join(' → ')}
+        Levels: {expression.linkedLevels.map((level) => enumLabel(tEnum, 'dashaLevel', level)).join(' → ')}
       </div>
 
       <div className="text-xs text-slate-500">
-        Qualification: {expression.qualificationBasis}
+        Qualification: {enumLabel(tEnum, 'synthesisQualificationBasis', expression.qualificationBasis)}
         {expression.matchBasis && ` • Match: ${expression.matchBasis}`}
       </div>
 
@@ -398,33 +398,34 @@ const ExpressionRow: React.FC<{ readonly expression: ProductSynthesisCareerExpre
 };
 
 const WealthDimensionRow: React.FC<{ readonly dimension: ProductSynthesisWealthDimensionRow }> = ({ dimension }) => {
+  const { t: tEnum } = useTranslation('enums');
   const effectClass = ACTIVATION_EFFECT_CLASSES[dimension.effect] || ACTIVATION_EFFECT_CLASSES.UNAVAILABLE;
 
   return (
     <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono-code text-slate-400">{dimension.dimension}</span>
+        <span className="text-xs font-mono-code text-slate-400">{enumLabel(tEnum, 'wealthDimension', dimension.dimension)}</span>
         <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-mono-code ${effectClass}`}>
-          <span>{formatActivationEffect(dimension.effect)}</span>
+          <span>{enumLabel(tEnum, 'activationEffect', dimension.effect)}</span>
         </div>
       </div>
 
       <div className="text-xs text-slate-400">
-        Levels: {dimension.linkedLevels.join(' → ')}
+        Levels: {dimension.linkedLevels.map((level) => enumLabel(tEnum, 'dashaLevel', level)).join(' → ')}
       </div>
 
       <div className="text-xs text-slate-500">
-        Data Status: {dimension.dataStatus}
+        Data Status: {enumLabel(tEnum, 'wealthActivationDataStatus', dimension.dataStatus)}
       </div>
 
       {dimension.linkageTrace.length > 0 && (
-        <ul aria-label={`${dimension.dimension} Wealth activation linkage trace`} className="space-y-1 border-t border-slate-800 pt-2">
+        <ul aria-label={`${enumLabel(tEnum, 'wealthDimension', dimension.dimension)} Wealth activation linkage trace`} className="space-y-1 border-t border-slate-800 pt-2">
           {dimension.linkageTrace.map((trace, index) => (
             <li
               key={`${trace.level}:${trace.dashaRuleReference.ruleId}:${trace.promiseEvidenceId}:${trace.matchedHouse}:${index}`}
               className="text-xs text-slate-400"
             >
-              {trace.promiseEvidenceId} linked by {trace.level} rule {trace.dashaRuleReference.ruleId}
+              {trace.promiseEvidenceId} linked by {enumLabel(tEnum, 'dashaLevel', trace.level)} rule {trace.dashaRuleReference.ruleId}
               {' '}({trace.dashaRuleReference.source}) at house {trace.matchedHouse}
             </li>
           ))}
@@ -439,12 +440,13 @@ const WealthDimensionRow: React.FC<{ readonly dimension: ProductSynthesisWealthD
 };
 
 const EvidenceReference: React.FC<{ readonly reference: ProductSynthesisEvidenceReference }> = ({ reference }) => {
+  const { t: tEnum } = useTranslation('enums');
   return (
     <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-2.5 space-y-1">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono-code text-slate-400">{reference.stage}</span>
+        <span className="text-xs font-mono-code text-slate-400" title={reference.stage}>{enumLabel(tEnum, 'analysisDomain', reference.stage)}</span>
         {reference.classification && (
-          <span className="text-[10px] font-mono-code text-slate-500">{reference.classification}</span>
+          <span className="text-[10px] font-mono-code text-slate-500">{enumLabel(tEnum, 'evidenceClassification', reference.classification)}</span>
         )}
       </div>
 
@@ -461,7 +463,9 @@ const EvidenceReference: React.FC<{ readonly reference: ProductSynthesisEvidence
       )}
 
       {reference.provenanceStage && (
-        <div className="text-[10px] text-slate-600 font-mono-code">{reference.provenanceStage}</div>
+        <div className="text-[10px] text-slate-600 font-mono-code" title={reference.provenanceStage}>
+          {enumLabel(tEnum, 'evidenceProvenanceStage', reference.provenanceStage)}
+        </div>
       )}
     </div>
   );

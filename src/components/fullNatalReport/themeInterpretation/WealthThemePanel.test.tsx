@@ -31,7 +31,7 @@ describe('WealthThemePanel Component', () => {
 
     expect(screen.getAllByLabelText(/Conclusion Status:/i).length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText(/Evidence Confidence:/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Evidence Confidence:/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Evidence Confidence: High Confidence/i).length).toBeGreaterThan(0);
   });
 
   it('renders Natal Wealth Promise card', () => {

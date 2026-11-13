@@ -5,6 +5,7 @@ import { YogaModifier } from '../../engine/yoga/yogaTypes';
 import { formatPlanetName, formatYogaCategory } from './reportUtils';
 import { EvidenceList } from './EvidenceList';
 import { Sparkles } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface YogaCardProps {
   readonly yoga: YogaReportItem;
@@ -12,6 +13,7 @@ interface YogaCardProps {
 
 export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const status = yoga.finalStatus || 'PRESENT';
 
   return (
@@ -33,7 +35,7 @@ export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
         <div className="flex items-center gap-2">
           {yoga.strength && (
             <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-              {t('fullNatal.components.yogas.strength')} {yoga.strength}
+              {t('fullNatal.components.yogas.strength')} {enumLabel(tEnum, 'yogaStrength', yoga.strength)}
             </span>
           )}
           <span
@@ -47,7 +49,7 @@ export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
                 : 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30'
             }`}
           >
-            {status}
+            {enumLabel(tEnum, 'yogaFinalStatus', status)}
           </span>
         </div>
       </div>

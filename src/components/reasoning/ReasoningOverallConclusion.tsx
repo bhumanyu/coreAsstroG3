@@ -16,14 +16,11 @@ import type {
   ReasoningDomain
 } from '../../product/analysis/reasoningViewModel';
 import {
-  formatConclusionStatus,
-  formatPromiseStrength,
-  formatConfidence,
-  formatAvailability,
   getConclusionStatusBadgeClass,
   getPromiseStrengthBadgeClass,
   getAvailabilityBadgeClass
 } from './reasoningFormat';
+import { enumLabel } from '../../i18n/enumLabels';
 import {
   Briefcase,
   Coins,
@@ -52,6 +49,7 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
   onSelect
 }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const isCareer = item.domain === 'CAREER';
   const Icon = isCareer ? Briefcase : Coins;
   const isUnavailable = item.availability === 'UNAVAILABLE' || item.status === 'UNAVAILABLE';
@@ -97,7 +95,7 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
               className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono-code font-medium border ${availabilityBadgeClass}`}
               title={t('reasoning.detail.availabilityStatus')}
             >
-              {formatAvailability(item.availability)}
+              {enumLabel(tEnum, 'dashaAvailability', item.availability)}
             </span>
             {isSelected && (
               <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
@@ -113,14 +111,14 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
             <span className="text-[10px] text-slate-400 font-mono-code block mb-1">{t('reasoning.detail.conclusionStatus')}</span>
             <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${statusBadgeClass}`}>
               <BrainCircuit className="w-3 h-3" aria-hidden="true" />
-              <span>{formatConclusionStatus(item.status)}</span>
+              <span>{enumLabel(tEnum, 'conclusionStatus', item.status)}</span>
             </div>
           </div>
 
           <div className="bg-slate-950/40 rounded-lg p-2.5 border border-slate-800/60">
             <span className="text-[10px] text-slate-400 font-mono-code block mb-1">{t('reasoning.detail.promiseStrength')}</span>
             <div className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono-code font-medium border ${strengthBadgeClass}`}>
-              <span>{formatPromiseStrength(item.strength)}</span>
+              <span>{enumLabel(tEnum, 'promiseStrength', item.strength)}</span>
             </div>
           </div>
 
@@ -128,14 +126,14 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
             <span className="text-[10px] text-slate-400 font-mono-code block mb-1">{t('reasoning.detail.productConfidence')}</span>
             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono-code bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
               <ShieldCheck className="w-3 h-3 text-indigo-400" aria-hidden="true" />
-              <span>{formatConfidence(item.confidence)}</span>
+              <span>{enumLabel(tEnum, 'productConfidence', item.confidence)}</span>
             </div>
           </div>
 
           <div className="bg-slate-950/40 rounded-lg p-2.5 border border-slate-800/60">
             <span className="text-[10px] text-slate-400 font-mono-code block mb-1">{t('reasoning.detail.dataAvailability')}</span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono-code border ${availabilityBadgeClass}`}>
-              {formatAvailability(item.availability)}
+              {enumLabel(tEnum, 'dashaAvailability', item.availability)}
             </span>
           </div>
         </div>

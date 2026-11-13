@@ -129,7 +129,7 @@ export const ReasoningNode: React.FC<ReasoningNodeProps> = ({ node, stepNumber }
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-slate-100">{node.label}</span>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono-code uppercase bg-slate-800/80 text-slate-400 border border-slate-700/60">
-              {node.type}
+              {enumLabel(t, 'reasoningNodeType', node.type)}
             </span>
           </div>
 

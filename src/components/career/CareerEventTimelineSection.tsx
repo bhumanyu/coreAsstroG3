@@ -42,7 +42,7 @@ export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProp
           {eventTimeline.eventCandidates.map(candidate => (
             <li key={candidate.candidateId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-medium text-slate-100">{candidate.eventType.replaceAll('_', ' ')}</h4>
+                <h4 className="text-sm font-medium text-slate-100">{enumLabel(tEnum, 'careerEventType', candidate.eventType)}</h4>
                 <span className="text-xs text-slate-300">{t('ui.timeline.candidateNoGuarantee')}</span>
               </div>
               <p className="text-xs text-slate-400">{formatTiming(candidate.timing, t('ui.timeline.untimed'))}</p>
@@ -73,12 +73,12 @@ export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProp
           {eventTimeline.genericWindows.map(window => (
             <li key={window.windowId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-medium text-slate-100">{window.genericType.replaceAll('_', ' ')}</h4>
+                <h4 className="text-sm font-medium text-slate-100">{enumLabel(tEnum, 'careerGenericWindowType', window.genericType)}</h4>
                 <span className="text-xs text-slate-300">{t('ui.timeline.genericCandidateOnly')}</span>
               </div>
               <p className="text-xs text-slate-400">{formatTiming(window.timing, t('ui.timeline.untimed'))}</p>
               <p className="text-xs text-slate-400">
-                {t('ui.timeline.qualification')}: {window.qualificationBasis.replaceAll('_', ' ')}
+                {t('ui.timeline.qualification')}: {enumLabel(tEnum, 'careerWindowQualificationBasis', window.qualificationBasis)}
               </p>
               <p className="text-xs text-slate-400">
                 {t('ui.timeline.conditions')}: {window.conditions.join(', ').replaceAll('_', ' ')}
@@ -117,8 +117,8 @@ export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProp
         {eventTimeline.taxonomy.map(item => (
           <li key={item.eventType} className="rounded-md border border-slate-800 p-2 space-y-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-medium text-slate-200">{item.eventType.replaceAll('_', ' ')}</span>
-              <span className="text-xs text-amber-300">{t('ui.timeline.disabled', { status: item.validationStatus })}</span>
+              <span className="text-xs font-medium text-slate-200">{enumLabel(tEnum, 'careerEventType', item.eventType)}</span>
+              <span className="text-xs text-amber-300">{t('ui.timeline.disabled', { status: enumLabel(tEnum, 'careerEventValidationStatus', item.validationStatus) })}</span>
             </div>
             <p className="text-xs text-slate-500">{item.validationGap}</p>
             <p className="text-xs text-slate-500">

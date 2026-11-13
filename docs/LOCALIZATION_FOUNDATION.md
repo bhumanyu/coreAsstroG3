@@ -33,21 +33,25 @@ This branch implements the first localization foundation for CoreAstroG3 based o
 
 ## PR-I18N-006 — Dynamic enum labels
 - Canonical enum values are rendered through the typed `src/i18n/enumLabels.ts` registry and the `enums` namespace. Registry members are checked against both locales.
-- Enum labels and badges are presentation-only. Do not translate canonical enum values or identifiers in data, engine contracts, persisted state, or API payloads.
-- Keep domain prose unchanged, including `period.statement`, `dasha.currentActivation`, `axis.diagnostic`, `unavailableReason`, `alternativeExplanation`, `reasons`, `counterEvidenceReasons`, and `evidence.statement`. Evidence/rule IDs and `methodVersion` also remain canonical.
+- Apply this four-category rule consistently:
+  1. **Static UI copy** (headings, buttons, explanations written by the interface) is translated through the component's namespace.
+  2. **Display enums/classifications** (including confidence, status, effect, profession and dimension labels) are translated at render time through `enumLabel`; unknown values fall back to their raw value, never a translation key.
+  3. **Canonical identifiers and provenance** (IDs, rule/evidence references, method versions, source/reference IDs, persisted/API values) remain unchanged. Chart-source classifications such as `NATAL`, `D10`, and `TRANSIT` are display enums where explicitly registered; provenance/reference identifiers remain raw.
+  4. **Domain-generated prose** remains unchanged, including `period.statement`, `dasha.currentActivation`, `axis.diagnostic`, `unavailableReason`, `alternativeExplanation`, `reasons`, `counterEvidenceReasons`, `contribution.explanation`, and `evidence.statement`.
+- Enum labels and badges are presentation-only. Never translate canonical enum values or identifiers in data, engine contracts, persisted state, or API payloads.
+- `candidate.candidateId`, `patternIds`, `ruleId`, `evidenceId`, `sourceIds`, unresolved mechanism IDs, occurrence IDs, and `methodVersion` remain canonical. Ranking diagnostics are currently typed as `string[]` in the domain contract, so known codes have registered labels while unknown codes safely display their original code.
 - Planet, rashi, and nakshatra names remain canonical English data. `overviewFormat.ts` and `userFacingInterpretation.ts` remain English per the documented formatter decision.
 
 ## Remaining work
 The planned static-UI migration is implemented across the birth form, chart and research tools, career/wealth detail views, reasoning, full natal reports, and app fallback surfaces. `translationParity.test.ts` checks that all declared namespaces have matching English/Hindi keys, every resource namespace is registered with i18next, statically referenced keys exist in both locales, and computed career/wealth key families remain present.
 
 Remaining release work:
-- Browser acceptance in Hindi covered Overview, Career, Wealth, Dasha, Reports, and Research: no raw enum badges or `ns:key` strings appeared; `html lang="hi"` and the selected language persisted after reload.
+- Hindi browser acceptance was completed across Overview, Career, Wealth, Dasha, Reasoning, detailed Reports, and the Research/Developer tools routes. The visible-page scan found no exact raw display-enum tokens or `ns:key` strings; the app reported `html lang="hi"`. Hindi persistence across reload was verified separately.
 - The birth-form modal includes a compact language switcher within its focus-managed dialog; automated tests cover switching language while retaining unsaved form input.
-- Complete the remaining static-copy localization in `DashaHero`; its page title and supporting UI copy are still English.
 - Have a native Hindi reviewer review Jyotish terminology and phrasing before release, including बृहस्पति vs गुरु, चंद्र vs चंद्रमा, प्रत्यंतरदशा spelling, and धन/व्यवसाय/साक्ष्य distinctions. Do not mark this migration release-ready until that review is complete.
 - Keep canonical IDs, enum/status/contract values, chart data, and engine-generated prose unchanged; formatter output from `overviewFormat.ts` and `userFacingInterpretation.ts` remains intentionally English.
 
 ## Validation
-`npm run lint` and `npm run build` pass. The full `npx vitest --run` run completed with 372 passing files and 2 failing files (6,507 passed tests, 4 skipped): the existing RG-09 fixture guard (`CALCULATION_REFERENCE_FIXTURES` is empty) and a stale `WealthPage` status-label assertion. After updating the assertion to the rendered English label, the focused `WealthPage` and enum-registry tests pass (14/14).
+Latest follow-up validation: `npm run lint` passed; `npm run build` passed with the existing large-chunk warning; focused enum/report tests passed (5 files, 67 tests). The full Vitest suite passed 373 of 374 files (6,513 passed tests, 4 skipped); its sole failure is the RG-09 fixture guard because `CALCULATION_REFERENCE_FIXTURES` is empty. This remains an external-validation blocker; do not fabricate fixtures to force it to pass. Stale assertions should be updated to assert the rendered localized labels.
 
 Do not treat this migration as release-ready until native Hindi/Jyotish terminology review is complete.

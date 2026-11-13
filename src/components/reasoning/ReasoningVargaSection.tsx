@@ -1,8 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReasoningVargaViewModel } from '../../product/analysis/reasoningViewModel';
-import { formatVargaRelationship, getVargaRelationshipBadgeClass } from './reasoningFormat';
+import { getVargaRelationshipBadgeClass } from './reasoningFormat';
 import { Layers, CheckCircle2, AlertCircle } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface ReasoningVargaSectionProps {
   readonly varga: ReasoningVargaViewModel;
@@ -10,11 +11,12 @@ export interface ReasoningVargaSectionProps {
 
 export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ varga }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const relationship = varga.chart === 'D2' ? 'UNAVAILABLE' : varga.relationship;
   const statement = varga.chart === 'D2'
     ? t('reasoning.detail.d2Unavailable')
     : varga.statement;
-  const formattedRelationship = formatVargaRelationship(relationship);
+  const formattedRelationship = enumLabel(tEnum, 'divisionalRelationship', relationship);
   const badgeClass = getVargaRelationshipBadgeClass(relationship);
   const isAvailable = relationship !== 'UNAVAILABLE';
 

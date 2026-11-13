@@ -1,8 +1,8 @@
 import React from 'react';
 import type { WealthConclusionViewModel } from '../../product/analysis/wealthViewModel';
-import { formatConfidence } from './wealthFormat';
 import { Award, ShieldCheck, GitFork, ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthConclusionSectionProps {
   readonly conclusion: WealthConclusionViewModel;
@@ -14,6 +14,8 @@ export const WealthConclusionSection: React.FC<WealthConclusionSectionProps> = (
   onOpenReasoning
 }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
+  const confidenceLabel = enumLabel(tEnum, 'productConfidence', conclusion.confidence);
   const isIntegrated = conclusion.integratedSynthesisAvailable;
   const title = isIntegrated ? t('ui.conclusion.integratedTitle') : t('ui.conclusion.title');
   const subtitle = isIntegrated
@@ -36,7 +38,7 @@ export const WealthConclusionSection: React.FC<WealthConclusionSectionProps> = (
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono-code bg-indigo-950/60 border border-indigo-800/80 text-indigo-300">
             <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-            <span>{formatConfidence(conclusion.confidence)}</span>
+            <span>{confidenceLabel}</span>
           </span>
         </div>
       </div>

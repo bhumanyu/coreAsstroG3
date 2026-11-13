@@ -11,6 +11,15 @@ function hasTranslation(language: 'en' | 'hi', key: string): boolean {
   return typeof value === 'string';
 }
 
+function translation(language: 'en' | 'hi', key: string): string | undefined {
+  let value: unknown = resources[language].enums;
+  for (const segment of key.split('.')) {
+    if (!value || typeof value !== 'object' || !(segment in value)) return undefined;
+    value = (value as Record<string, unknown>)[segment];
+  }
+  return typeof value === 'string' ? value : undefined;
+}
+
 describe('canonical enum label registry', () => {
   it('has a non-empty English and Hindi translation for every registered enum member', () => {
     for (const family of Object.keys(ENUM_LABEL_KEYS) as EnumLabelFamily[]) {
@@ -28,5 +37,12 @@ describe('canonical enum label registry', () => {
     expect(enumLabel((key) => `localized:${key}`, 'productDirection', 'FUTURE_DIRECTION'))
       .toBe('FUTURE_DIRECTION');
     expect(enumLabel((key) => `localized:${key}`, 'productDirection', undefined)).toBe('');
+  });
+
+  it('returns an unknown enum value in Hindi rather than a translation key', () => {
+    expect(enumLabel((key) => translation('hi', key) ?? key, 'professionDomain', 'FUTURE_DOMAIN'))
+      .toBe('FUTURE_DOMAIN');
+    expect(enumLabel((key) => translation('hi', key) ?? key, 'professionDomain', 'FUTURE_DOMAIN'))
+      .not.toBe('enums.professionDomain.FUTURE_DOMAIN');
   });
 });

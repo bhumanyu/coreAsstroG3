@@ -1,8 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSynthesis } from '../../types';
-import { formatLifeThemeLabel, formatConfidence } from './reportUtils';
+import { formatLifeThemeLabel } from './reportUtils';
 import { Award, AlertTriangle, Clock } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface LifeThemeCardProps {
   readonly theme: ThemeSynthesis;
@@ -10,6 +11,7 @@ interface LifeThemeCardProps {
 
 export const LifeThemeCard: React.FC<LifeThemeCardProps> = ({ theme }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const state = theme.state || 'SUPPORTED';
 
   return (
@@ -28,7 +30,7 @@ export const LifeThemeCard: React.FC<LifeThemeCardProps> = ({ theme }) => {
 
         <div className="flex items-center gap-2">
           <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-            {t('fullNatal.components.lifeThemeCard.confidence', { value: formatConfidence(theme.confidence) })}
+            {t('fullNatal.components.lifeThemeCard.confidence', { value: enumLabel(tEnum, 'productConfidence', theme.confidence) })}
           </span>
           <span
             className={`px-2.5 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase border ${
@@ -41,7 +43,7 @@ export const LifeThemeCard: React.FC<LifeThemeCardProps> = ({ theme }) => {
                 : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}
           >
-            {state}
+            {enumLabel(tEnum, 'conclusionStatus', state)}
           </span>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import React from 'react';
 import type { CareerQualificationViewModel } from '../../product/analysis/careerViewModel';
-import { formatSeverity, getSeverityBadgeClass } from './careerFormat';
+import { getSeverityBadgeClass } from './careerFormat';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerQualificationsSectionProps {
   readonly qualifications: readonly CareerQualificationViewModel[];
@@ -12,6 +13,7 @@ export const CareerQualificationsSection: React.FC<CareerQualificationsSectionPr
   qualifications
 }) => {
   const { t } = useTranslation('career');
+  const { t: tEnum } = useTranslation('enums');
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -33,7 +35,7 @@ export const CareerQualificationsSection: React.FC<CareerQualificationsSectionPr
       {qualifications.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {qualifications.map((q, idx) => {
-            const severityLabel = formatSeverity(q.severity);
+            const severityLabel = enumLabel(tEnum, 'qualificationSeverity', q.severity);
             const severityClass = getSeverityBadgeClass(q.severity);
 
             return (

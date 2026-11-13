@@ -190,6 +190,27 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(unavailElements.length).toBeGreaterThanOrEqual(3);
   });
 
+  it('renders the Dasha hero enum labels and UI chrome in Hindi without raw availability values', async () => {
+    await i18n.changeLanguage('hi');
+    render(<DashaHero hero={{
+      availability: 'AVAILABLE',
+      status: 'READY',
+      asOf: '2026-09-08',
+      currentPeriodLabel: 'Jupiter → Saturn → Mercury',
+      mdPlanet: null,
+      adPlanet: null,
+      pdPlanet: null,
+      warnings: [{ code: 'TEST_NOTICE', message: 'Notice' }]
+    }} />);
+
+    expect(screen.getByRole('heading', { name: 'दशा और ग्रह समय' })).toBeInTheDocument();
+    expect(screen.getByText('उपलब्ध')).toBeInTheDocument();
+    expect(screen.getByText('1 सूचना')).toBeInTheDocument();
+    expect(screen.getAllByText('उपलब्ध नहीं')).toHaveLength(3);
+    expect(screen.queryByText('AVAILABLE')).not.toBeInTheDocument();
+    expect(screen.queryByText('enums:dashaAvailability.AVAILABLE')).not.toBeInTheDocument();
+  });
+
   it('3. TransitTimingSection: renders both career and wealth domain blocks and asserts context copy', () => {
     const transit: DashaTransitViewModel = {
       career: {
@@ -437,7 +458,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       expect(screen.getByText(/Jupiter MD → Saturn AD/i)).toBeInTheDocument();
       expect(screen.getByText(/Jan 1, 2020 – Jan 1, 2022/i)).toBeInTheDocument();
       expect(screen.getByText(/CURRENT/i)).toBeInTheDocument();
-      expect(screen.getByText('CANONICAL')).toBeInTheDocument();
+      expect(screen.getByText('Canonical')).toBeInTheDocument();
       expect(screen.queryByText(/Career Synthesis/i)).not.toBeInTheDocument();
       expect(screen.getByText(/Analysis as of:/i)).toBeInTheDocument();
     });
@@ -644,10 +665,10 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       expect(diagnosticList).toBeInTheDocument();
 
       const linkage = screen.getByRole('list', {
-        name: 'ACCUMULATION Wealth activation linkage trace'
+        name: 'Accumulation Wealth activation linkage trace'
       });
       expect(linkage).toHaveTextContent(
-        'WEALTH_2H_STRONG_001:HOUSE_2 linked by MD rule WEALTH_RULE_MD_2H (DASHA) at house 2'
+        'WEALTH_2H_STRONG_001:HOUSE_2 linked by Mahadasha (MD) rule WEALTH_RULE_MD_2H (DASHA) at house 2'
       );
     });
 
@@ -1156,7 +1177,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
       const mdSelect = screen.getByRole('combobox', { name: /Mahadasha/i });
       const adSelect = screen.getByRole('combobox', { name: /Antardasha/i });
-      const submitButton = screen.getByRole('button', { name: /Analyzing selected period/i });
+      const submitButton = screen.getByRole('button', { name: /Analyzing the selected period/i });
 
       // Selects should be disabled by fieldset
       expect(mdSelect).toBeDisabled();

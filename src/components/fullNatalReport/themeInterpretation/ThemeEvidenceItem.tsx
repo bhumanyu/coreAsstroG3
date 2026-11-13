@@ -4,11 +4,10 @@ import {
   ThemeInterpretationEvidence
 } from '../../../engine/themeInterpretation/themeInterpretationTypes';
 import {
-  formatEvidenceEffect,
-  formatEvidencePriority,
   getEffectStyle
 } from './themeUiUtils';
 import { Award, AlertTriangle, HelpCircle, ChevronRight } from 'lucide-react';
+import { enumLabel } from '../../../i18n/enumLabels';
 
 interface ThemeEvidenceItemProps {
   readonly evidence: ThemeInterpretationEvidence<any>;
@@ -20,9 +19,11 @@ export const ThemeEvidenceItem: React.FC<ThemeEvidenceItemProps> = ({
   id
 }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const effectStyle = getEffectStyle(evidence.effect);
-  const effectLabel = formatEvidenceEffect(evidence.effect);
-  const priorityLabel = formatEvidencePriority(evidence.priority);
+  const effectLabel = enumLabel(tEnum, 'themeEvidenceEffect', evidence.effect);
+  const priorityLabel = enumLabel(tEnum, 'themeEvidencePriority', evidence.priority);
+  const strengthLabel = enumLabel(tEnum, 'themeEvidenceStrength', evidence.strength);
 
   const getEffectIcon = () => {
     switch (evidence.effect) {
@@ -64,10 +65,10 @@ export const ThemeEvidenceItem: React.FC<ThemeEvidenceItemProps> = ({
             {effectLabel}
           </span>
           <span
-            aria-label={t('fullNatal.components.themeEvidence.strength', { value: evidence.strength })}
+            aria-label={t('fullNatal.components.themeEvidence.strength', { value: strengthLabel })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-slate-800 text-slate-300 border border-slate-700 uppercase"
           >
-            {evidence.strength}
+            {strengthLabel}
           </span>
           <span
             aria-label={t('fullNatal.components.themeEvidence.priority', { value: priorityLabel })}

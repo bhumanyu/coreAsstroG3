@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { CurrentDashaSection as CurrentDashaSectionType } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
-import { formatPlanetName, formatConfidence } from './reportUtils';
+import { formatPlanetName } from './reportUtils';
 import { EvidenceList } from './EvidenceList';
 import { Sparkles, Calendar } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface CurrentDashaSectionProps {
   readonly section: CurrentDashaSectionType;
@@ -17,6 +18,7 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
   onNavigateToDashaTiming
 }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   if (section.status === 'UNAVAILABLE' || !section.current) {
     return <EmptyState title={t('fullNatal.components.currentDasha.unavailableTitle')} message={t('fullNatal.components.currentDasha.unavailableMessage')} />;
   }
@@ -92,7 +94,7 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
       {current.confidence && (
         <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs font-mono-code flex items-center justify-between">
           <span className="text-slate-400">{t('fullNatal.components.currentDasha.interpretationConfidence')}</span>
-          <span className="font-bold text-indigo-300">{formatConfidence(current.confidence)}</span>
+          <span className="font-bold text-indigo-300">{enumLabel(tEnum, 'productConfidence', current.confidence)}</span>
         </div>
       )}
 

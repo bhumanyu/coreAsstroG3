@@ -32,7 +32,7 @@ export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ 
         <div className="space-y-3">
           {lifecycle.candidates.map(candidate => (
             <article key={candidate.id} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold text-slate-100">{candidate.type}</h3><span className="text-xs text-slate-400">{enumLabel(tEnum, 'wealthLifecycleEventStatus', candidate.status)}</span></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold text-slate-100">{enumLabel(tEnum, 'wealthLifecycleEventType', candidate.type)}</h3><span className="text-xs text-slate-400">{enumLabel(tEnum, 'wealthLifecycleEventStatus', candidate.status)}</span></div>
               <p className="text-xs text-slate-300">{candidate.timingLabel}</p>
               {candidate.limitations.map((item, index) => <p key={index} className="text-xs text-slate-400">{item}</p>)}
             </article>

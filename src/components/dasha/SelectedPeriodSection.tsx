@@ -17,6 +17,8 @@ import {
   validateSelectedPeriod
 } from '../../product/analysis/selectedPeriodViewModel';
 import { Calendar, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface SelectedPeriodSectionProps {
   readonly dashPeriodOptions?: ProductDashaPeriodOptions;
@@ -31,34 +33,6 @@ const TEMPORAL_BADGE_CLASSES: Record<ProductTemporalRelation, string> = {
   FUTURE: 'bg-blue-950/60 border-blue-800/80 text-blue-300',
   UNKNOWN: 'bg-amber-950/60 border-amber-800/80 text-amber-300'
 };
-
-const TEMPORAL_LABELS: Record<ProductTemporalRelation, string> = {
-  PAST: 'Past',
-  CURRENT: 'Current',
-  FUTURE: 'Future',
-  UNKNOWN: 'Unknown'
-};
-
-/**
- * Maps diagnostic codes to human-readable explanations.
- * Based on PeriodDiagnostic type from src/core/analysis/selectedMdAdPeriod.ts
- */
-export const DASHA_DIAGNOSTIC_EXPLANATIONS: Record<string, string> = {
-  'INVALID_MAHADASHA_INTERVAL': 'Invalid Mahadasha time interval (start must be before end)',
-  'INVALID_ANTARDASHA_INTERVAL': 'Invalid Antardasha time interval (start must be before end)',
-  'ANTARDASHA_OUTSIDE_MAHADASHA': 'Antardasha falls outside its parent Mahadasha',
-  'DUPLICATE_MAHADASHA_ID': 'Duplicate Mahadasha identifier detected',
-  'DUPLICATE_ANTARDASHA_ID': 'Duplicate Antardasha identifier detected',
-  'NON_CANONICAL_DATE_FORMAT': 'Date does not match canonical ISO format (YYYY-MM-DDTHH:mm:ss.sssZ)'
-};
-
-/**
- * Maps diagnostic code to human-readable explanation with fallback to raw code.
- * Shows raw code in parentheses when no explanation is available.
- */
-function mapDiagnosticToExplanation(code: string): string {
-  return DASHA_DIAGNOSTIC_EXPLANATIONS[code] || code;
-}
 
 function formatDate(isoString: string): string {
   const date = new Date(isoString);
@@ -76,6 +50,9 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
   isSubmitting = false,
   onSelectionChange
 }) => {
+  const { t } = useTranslation('dasha');
+  const { t: tEnum } = useTranslation('enums');
+  const mapDiagnosticToExplanation = (code: string) => enumLabel(tEnum, 'selectedPeriodDiagnostic', code);
   const [selectedMahadashaId, setSelectedMahadashaId] = useState<string>('');
   const [selectedAntardashaId, setSelectedAntardashaId] = useState<string>('');
 
@@ -127,22 +104,22 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
       <div className="flex items-center gap-2 border-b border-slate-800/80 pb-3">
         <Calendar className="w-4 h-4 text-indigo-400" aria-hidden="true" />
         <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-300">
-          Select Dasha Period
+          {t('selection.title')}
         </span>
       </div>
 
       <div className="space-y-4">
         {viewModel.status === 'EMPTY' && (
-          <div role="status" className="text-sm text-slate-300">No selectable Dasha periods are available.</div>
+          <div role="status" className="text-sm text-slate-300">{t('selection.empty')}</div>
         )}
 
         <fieldset disabled={isSubmitting || viewModel.status !== 'READY'}>
-          <legend className="sr-only">Dasha period selection</legend>
+          <legend className="sr-only">{t('selection.legend')}</legend>
 
           {/* Mahadasha Select */}
           <div className="space-y-2">
             <label htmlFor="mahadasha-select" className="text-xs font-mono-code text-slate-400">
-              Mahadasha (Major Period)
+              {t('selection.mahadashaLabel')}
             </label>
             <select
               id="mahadasha-select"
@@ -150,7 +127,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
               onChange={handleMahadashaChange}
               className="w-full bg-slate-950/60 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">Select a Mahadasha</option>
+              <option value="">{t('selection.selectMahadasha')}</option>
               {options.mahadashas.map(md => (
                 <option
                   key={md.id}
@@ -158,8 +135,8 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                   disabled={!md.valid}
                   title={!md.valid ? md.diagnostics.map(mapDiagnosticToExplanation).join(', ') : undefined}
                 >
-                  {md.planet} — {formatDate(md.start)} UTC → {formatDate(md.end)} UTC ({TEMPORAL_LABELS[md.temporalRelation]})
-                  {!md.valid && ' (Invalid)'}
+                  {md.planet} — {formatDate(md.start)} UTC → {formatDate(md.end)} UTC ({enumLabel(tEnum, 'temporalRelation', md.temporalRelation)})
+                  {!md.valid && ` (${t('selection.invalid')})`}
                 </option>
               ))}
             </select>
@@ -168,7 +145,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
           {/* Antardasha Select */}
           <div className="space-y-2">
             <label htmlFor="antardasha-select" className="text-xs font-mono-code text-slate-400">
-              Antardasha (Sub-period)
+              {t('selection.antardashaLabel')}
             </label>
             <select
               id="antardasha-select"
@@ -178,7 +155,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
               className="w-full bg-slate-950/60 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">
-                {selectedMahadashaId ? 'Select an Antardasha' : 'Select Mahadasha first'}
+                {selectedMahadashaId ? t('selection.selectAntardasha') : t('selection.selectMahadashaFirst')}
               </option>
               {selectedMahadasha?.antardashas.map(ad => (
                 <option
@@ -187,7 +164,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                   disabled={!ad.valid}
                   title={!ad.valid ? ad.diagnostics.map(mapDiagnosticToExplanation).join(', ') : undefined}
                 >
-                  {ad.planet} — {formatDate(ad.start)} UTC → {formatDate(ad.end)} UTC ({TEMPORAL_LABELS[ad.temporalRelation]})
+                  {ad.planet} — {formatDate(ad.start)} UTC → {formatDate(ad.end)} UTC ({enumLabel(tEnum, 'temporalRelation', ad.temporalRelation)})
                   {!ad.valid && ' (Invalid)'}
                 </option>
               ))}
@@ -200,12 +177,12 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
           (selectedMahadasha && selectedMahadasha.antardashas.some(ad => !ad.valid)) ? (
           <section
             role="alert"
-            aria-label="Unavailable Dasha periods"
+            aria-label={t('selection.unavailablePeriods')}
             className="bg-amber-950/40 border border-amber-800/60 rounded-lg p-3 space-y-2"
           >
             <div className="flex items-center gap-2 text-xs font-mono-code text-amber-400">
               <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Unavailable Dasha periods</span>
+              <span>{t('selection.unavailablePeriods')}</span>
             </div>
             <ul className="space-y-1 text-xs text-slate-300">
               {options.mahadashas.filter(md => !md.valid).map(md => (
@@ -230,12 +207,12 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
         {selectedMahadasha && selectedAntardasha && (
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono-code text-slate-400">Selected Period</span>
+              <span className="text-xs font-mono-code text-slate-400">{t('selection.selectedPeriod')}</span>
               <div
                 className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-mono-code ${TEMPORAL_BADGE_CLASSES[selectedAntardasha.temporalRelation]}`}
               >
                 <Clock className="w-3 h-3" aria-hidden="true" />
-                <span>{TEMPORAL_LABELS[selectedAntardasha.temporalRelation]}</span>
+                <span>{enumLabel(tEnum, 'temporalRelation', selectedAntardasha.temporalRelation)}</span>
               </div>
             </div>
             <div className="text-sm text-slate-200">
@@ -270,7 +247,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
 
         {/* Live region for submission status */}
         <div role="status" aria-live="polite" aria-atomic="true">
-          {isSubmitting ? 'Analyzing the selected period…' : ''}
+          {isSubmitting ? t('selection.analyzingSelectedPeriod') : ''}
         </div>
 
         {/* Submit Button */}
@@ -283,12 +260,12 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
           {isSubmitting ? (
             <>
               <Clock className="w-4 h-4 animate-spin" aria-hidden="true" />
-              <span>Analyzing selected period…</span>
+              <span>{t('selection.analyzingSelectedPeriod')}</span>
             </>
           ) : (
             <>
               <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-              <span>Analyze Selected Period</span>
+              <span>{t('selection.analyzeSelectedPeriod')}</span>
             </>
           )}
         </button>

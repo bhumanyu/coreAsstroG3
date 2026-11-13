@@ -1,6 +1,7 @@
 import React from 'react';
-import { formatConfidence } from './themeUiUtils';
+import { useTranslation } from 'react-i18next';
 import { EvidenceConfidence } from '../../../engine/themeInterpretation/themeInterpretationTypes';
+import { enumLabel } from '../../../i18n/enumLabels';
 
 interface ThemeConfidenceBadgeProps {
   readonly confidence: EvidenceConfidence | string;
@@ -13,7 +14,11 @@ export const ThemeConfidenceBadge: React.FC<ThemeConfidenceBadgeProps> = ({
   className = '',
   id
 }) => {
-  const label = formatConfidence(confidence);
+  const { t: tEnum } = useTranslation('enums');
+  const { t } = useTranslation('reports');
+  const label = t('fullNatal.components.themeEvidence.evidenceConfidence', {
+    value: enumLabel(tEnum, 'productConfidence', confidence)
+  });
 
   return (
     <span

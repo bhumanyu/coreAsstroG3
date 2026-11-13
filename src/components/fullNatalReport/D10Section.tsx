@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { D10Section as D10SectionType, DivisionalDomainMetadata, Planet } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
-import { formatPlanetName, formatSignName, formatConfidence } from './reportUtils';
+import { formatPlanetName, formatSignName } from './reportUtils';
 import { EvidenceList } from './EvidenceList';
 import { CollapsibleItem, SectionAccordion } from './ObservationAccordion';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface D10SectionProps {
   readonly section: D10SectionType;
@@ -13,6 +14,7 @@ interface D10SectionProps {
 
 export const D10Section: React.FC<D10SectionProps> = ({ section }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   if (section.status === 'UNAVAILABLE' || !section.details) {
     return <EmptyState title={t('fullNatal.components.divisional.d10UnavailableTitle')} message={t('fullNatal.components.divisional.d10UnavailableMessage')} />;
   }
@@ -36,7 +38,7 @@ export const D10Section: React.FC<D10SectionProps> = ({ section }) => {
             </div>
             <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
               <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.divisional.confidenceLevel')}</span>
-              <span className="text-xs font-mono-code font-bold text-indigo-300">{formatConfidence(details.confidence)}</span>
+              <span className="text-xs font-mono-code font-bold text-indigo-300">{enumLabel(tEnum, 'productConfidence', details.confidence)}</span>
             </div>
           </div>
         </CollapsibleItem>

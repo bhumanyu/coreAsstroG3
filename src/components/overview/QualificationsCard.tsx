@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OverviewQualification } from '../../product/analysis/overviewViewModel';
-import { formatSeverity } from './overviewFormat';
 import { ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface QualificationsCardProps {
   readonly qualifications: readonly OverviewQualification[];
@@ -12,8 +12,9 @@ export const QualificationsCard: React.FC<QualificationsCardProps> = ({
   qualifications
 }) => {
   const { t } = useTranslation('dashboard');
+  const { t: tEnum } = useTranslation('enums');
   const renderSeverityBadge = (severity: 'LOW' | 'MEDIUM' | 'HIGH') => {
-    const text = formatSeverity(severity);
+    const text = enumLabel(tEnum, 'qualificationSeverity', severity);
     switch (severity) {
       case 'HIGH':
         return (

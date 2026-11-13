@@ -4,8 +4,9 @@ import { VimshottariSection } from '../../types';
 import { DashaMahadashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
-import { formatPlanetName, formatConfidence } from './reportUtils';
+import { formatPlanetName } from './reportUtils';
 import { Calendar, Clock, Anchor } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 interface DashaSectionProps {
   readonly section: VimshottariSection;
@@ -13,6 +14,7 @@ interface DashaSectionProps {
 
 export const DashaSection: React.FC<DashaSectionProps> = ({ section }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   if (section.status === 'UNAVAILABLE' || !section.mahadashas || section.mahadashas.length === 0) {
     return <EmptyState title={t('fullNatal.components.dasha.unavailableTitle')} message={t('fullNatal.components.dasha.unavailableMessage')} />;
   }
@@ -39,7 +41,7 @@ export const DashaSection: React.FC<DashaSectionProps> = ({ section }) => {
               <Clock className="w-3.5 h-3.5 text-purple-400" /> {t('fullNatal.components.dasha.timelineConfidence')}
             </span>
             <p className="text-xs font-mono-code font-bold text-indigo-300">
-              {formatConfidence(section.confidence)}
+              {enumLabel(tEnum, 'productConfidence', section.confidence)}
             </p>
           </div>
         )}

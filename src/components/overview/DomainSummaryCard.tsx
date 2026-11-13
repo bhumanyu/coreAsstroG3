@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OverviewDomain } from '../../product/analysis/overviewViewModel';
 import { Briefcase, Coins, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { enumLabel } from '../../i18n/enumLabels';
+import { enumLabel, enumLabelWithFallback } from '../../i18n/enumLabels';
 
 export interface DomainSummaryCardProps {
   readonly domain: OverviewDomain;
@@ -22,7 +22,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
   const iconColor = isCareer ? 'text-indigo-400' : 'text-amber-400';
   const iconBg = isCareer ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-amber-500/10 border-amber-500/20';
 
-  const strengthText = enumLabel(tEnum, 'promiseStrength', domain.strength);
+  const strengthText = enumLabelWithFallback(tEnum, 'promiseStrength', 'productDirection', domain.strength);
   const confidenceText = enumLabel(tEnum, 'productConfidence', domain.confidence);
 
   return (

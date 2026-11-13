@@ -181,14 +181,15 @@ const WealthRiskSummary: React.FC<{
   confidence: string;
 }> = ({ actualExposure, tradingHistory, suitability, confidence }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   return (
   <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-3" aria-labelledby="wealth-risk-summary-heading">
     <h2 id="wealth-risk-summary-heading" className="text-base font-semibold text-slate-100">{t('risk.title')}</h2>
     <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div><dt className="text-xs text-slate-400">{t('risk.actualExposure')}</dt><dd className="mt-1 text-sm text-slate-200">{actualExposure}</dd></div>
-      <div><dt className="text-xs text-slate-400">{t('risk.tradingHistory')}</dt><dd className="mt-1 text-sm text-slate-200">{tradingHistory}</dd></div>
-      <div><dt className="text-xs text-slate-400">{t('risk.suitability')}</dt><dd className="mt-1 text-sm text-slate-200">{suitability}</dd></div>
-      <div><dt className="text-xs text-slate-400">{t('risk.confidence')}</dt><dd className="mt-1 text-sm text-slate-200">{confidence}</dd></div>
+      <div><dt className="text-xs text-slate-400">{t('risk.actualExposure')}</dt><dd className="mt-1 text-sm text-slate-200">{enumLabel(tEnum, 'productAvailability', actualExposure)}</dd></div>
+      <div><dt className="text-xs text-slate-400">{t('risk.tradingHistory')}</dt><dd className="mt-1 text-sm text-slate-200">{enumLabel(tEnum, 'productAvailability', tradingHistory)}</dd></div>
+      <div><dt className="text-xs text-slate-400">{t('risk.suitability')}</dt><dd className="mt-1 text-sm text-slate-200">{enumLabel(tEnum, 'productAvailability', suitability)}</dd></div>
+      <div><dt className="text-xs text-slate-400">{t('risk.confidence')}</dt><dd className="mt-1 text-sm text-slate-200">{enumLabel(tEnum, 'productConfidence', confidence)}</dd></div>
     </dl>
     <p className="text-xs text-slate-400">{t('disclaimers.riskSummary')}</p>
   </section>

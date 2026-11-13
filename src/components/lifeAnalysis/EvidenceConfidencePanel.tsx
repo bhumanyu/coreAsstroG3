@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, ShieldCheck, ChevronRight, GitFork } from 'lucide-react';
 import type { ProductEvidenceExperienceViewModel } from '../../product/analysis/productAnalysisTypes';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface EvidenceConfidencePanelProps {
   readonly model: ProductEvidenceExperienceViewModel;
@@ -17,7 +18,10 @@ const tone: Record<string, string> = {
 
 export const EvidenceConfidencePanel: React.FC<EvidenceConfidencePanelProps> = ({ model }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const conflictIds = new Set(model.conflicts.map(item => item.id));
+  const confidenceLabel = enumLabel(tEnum, 'productConfidence', model.confidence);
+  const coverageLabel = enumLabel(tEnum, 'confidenceCoverage', model.coverage);
   return (
     <section aria-labelledby={`${model.domain.toLowerCase()}-evidence-confidence-title`}
       className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-5">
@@ -31,14 +35,14 @@ export const EvidenceConfidencePanel: React.FC<EvidenceConfidencePanelProps> = (
           </p>
         </div>
         <span className="text-xs rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-slate-200">
-          {model.coverageLabel}
+          {coverageLabel}
         </span>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/5 p-3" aria-label={t('evidenceConfidence.confidenceAria', { confidence: model.confidenceLabel })}>
+        <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/5 p-3" aria-label={t('evidenceConfidence.confidenceAria', { confidence: confidenceLabel })}>
           <p className="text-[11px] text-slate-400">{t('evidenceConfidence.confidence')}</p>
-          <p className="mt-1 text-sm font-semibold text-indigo-200">{model.confidenceLabel}</p>
+          <p className="mt-1 text-sm font-semibold text-indigo-200">{confidenceLabel}</p>
           <p className="mt-1 text-[11px] text-slate-400">{t('evidenceConfidence.owner', { owner: model.owner })}</p>
         </div>
         <div className="rounded-xl border border-slate-700 bg-slate-950/50 p-3">
@@ -56,7 +60,7 @@ export const EvidenceConfidencePanel: React.FC<EvidenceConfidencePanelProps> = (
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-medium text-slate-200">{layer.label}</span>
                 <span className={`text-[10px] rounded border px-1.5 py-0.5 ${layer.state === 'AVAILABLE' ? 'border-emerald-700/50 text-emerald-300' : layer.state === 'PARTIAL' ? 'border-amber-700/50 text-amber-300' : layer.state === 'BLOCKED' ? 'border-rose-700/50 text-rose-300' : 'border-slate-700 text-slate-400'}`}>
-                  {layer.stateLabel}
+                  {enumLabel(tEnum, 'confidenceLayerState', layer.state)}
                 </span>
               </div>
               {layer.reason && <p className="mt-2 text-[11px] leading-5 text-slate-400">{layer.reason}</p>}
@@ -121,9 +125,9 @@ export const EvidenceConfidencePanel: React.FC<EvidenceConfidencePanelProps> = (
                     <p className="mt-1 text-xs leading-5 text-slate-300">{item.statement}</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <span className="rounded border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">{item.role.toLowerCase()}</span>
-                    <span className={`rounded border px-2 py-0.5 text-[10px] ${item.direction === 'SUPPORT' ? 'border-emerald-700/50 text-emerald-300' : item.direction === 'CHALLENGE' ? 'border-amber-700/50 text-amber-300' : item.direction === 'MIXED' || item.direction === 'UNAVAILABLE' ? 'border-orange-700/50 text-orange-300' : 'border-slate-700 text-slate-300'}`}>{item.direction.toLowerCase()}</span>
-                    {conflictIds.has(item.id) && <span className="rounded border border-orange-700/50 px-2 py-0.5 text-[10px] text-orange-300">Mixed / challenging</span>}
+                    <span className="rounded border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">{enumLabel(tEnum, 'productEvidenceRole', item.role)}</span>
+                    <span className={`rounded border px-2 py-0.5 text-[10px] ${item.direction === 'SUPPORT' ? 'border-emerald-700/50 text-emerald-300' : item.direction === 'CHALLENGE' ? 'border-amber-700/50 text-amber-300' : item.direction === 'MIXED' || item.direction === 'UNAVAILABLE' ? 'border-orange-700/50 text-orange-300' : 'border-slate-700 text-slate-300'}`}>{enumLabel(tEnum, 'productDirection', item.direction)}</span>
+                    {conflictIds.has(item.id) && <span className="rounded border border-orange-700/50 px-2 py-0.5 text-[10px] text-orange-300">{t('evidenceConfidence.mixedChallenging')}</span>}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-400">

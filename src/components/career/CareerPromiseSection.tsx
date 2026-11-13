@@ -1,8 +1,8 @@
 import React from 'react';
 import type { CareerPromiseViewModel } from '../../product/analysis/careerViewModel';
-import { formatStrength, formatConfidence } from './careerFormat';
 import { Briefcase, Award, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel, enumLabelWithFallback } from '../../i18n/enumLabels';
 
 export interface CareerPromiseSectionProps {
   readonly promise: CareerPromiseViewModel;
@@ -10,8 +10,9 @@ export interface CareerPromiseSectionProps {
 
 export const CareerPromiseSection: React.FC<CareerPromiseSectionProps> = ({ promise }) => {
   const { t } = useTranslation('career');
-  const formattedStrength = formatStrength(promise.strength);
-  const formattedConfidence = formatConfidence(promise.confidence);
+  const { t: tEnum } = useTranslation('enums');
+  const formattedStrength = enumLabelWithFallback(tEnum, 'promiseStrength', 'productDirection', promise.strength);
+  const formattedConfidence = enumLabel(tEnum, 'productConfidence', promise.confidence);
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">

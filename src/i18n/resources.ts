@@ -313,6 +313,20 @@ export const resources = {
       activeDrishtiTargets: 'Active Graha Drishti Targets'
     },
     dasha: {
+      hero: {
+        eyebrow: 'Planetary Period Timing',
+        title: 'Dasha & Planetary Timing',
+        description: 'Chronological Vimshottari Dasha activation hierarchy (Mahadasha, Antardasha, Pratyantardasha) synthesized with domain activations and transit triggers.',
+        notices_one: '{{count}} notice',
+        notices_other: '{{count}} notices',
+        disclaimer: 'This is an astrological interpretation, not a guaranteed event. A favorable SPECULATION window is not evidence that risky trading will profit.',
+        activeHierarchyWindow: 'Active Hierarchy Window',
+        currentPeriod: 'Current: {{period}}',
+        mahadasha: 'Mahadasha (MD)',
+        antardasha: 'Antardasha (AD)',
+        pratyantardasha: 'Pratyantardasha (PD)',
+        unavailablePlanet: 'Unavailable'
+      },
       projection: {
         retryingMessage: 'Dasha timing detail is being retried',
         failedMessage: 'Dasha timing detail could not be prepared',
@@ -323,7 +337,29 @@ export const resources = {
       selection: {
         error: 'Selection Error',
         failed: 'Period Selection Failed',
-        status: 'Status'
+        status: 'Status',
+        title: 'Select Dasha Period',
+        empty: 'No selectable Dasha periods are available.',
+        legend: 'Dasha period selection',
+        mahadashaLabel: 'Mahadasha (Major Period)',
+        selectMahadasha: 'Select a Mahadasha',
+        invalid: 'Invalid',
+        antardashaLabel: 'Antardasha (Sub-period)',
+        selectAntardasha: 'Select an Antardasha',
+        selectMahadashaFirst: 'Select Mahadasha first',
+        unavailablePeriods: 'Unavailable Dasha periods',
+        selectedPeriod: 'Selected Period',
+        analyzingSelectedPeriod: 'Analyzing the selected period…',
+        analyzeSelectedPeriod: 'Analyze Selected Period'
+      },
+      selectedPeriodAi: {
+        narrativeUnavailable: 'AI Narrative Unavailable',
+        unavailableDescription: 'The AI narrative for this period could not be generated. The deterministic analysis above remains authoritative.',
+        explanation: 'AI Explanation',
+        partialExplanation: 'Partial Explanation',
+        unresolvedQuestions: 'Unresolved Questions',
+        supportingEvidence: 'Supporting Evidence ({{count}})',
+        challengingEvidence: 'Challenging Evidence ({{count}})'
       },
       status: {
         errorTitle: 'Dasha & Timing Computation Error',
@@ -603,7 +639,7 @@ export const resources = {
           rankingDiagnostics: 'Profession ranking diagnostics',
           rankingDescription: 'Evidence-weighted policy points compare broad profession families. Scores are not probabilities, job-title predictions, salary estimates, or employability forecasts. D1 establishes the promise; D10 only qualifies an existing expression.',
           scorePoints: '{{points}} policy points',
-          confidence: '{{confidence}} confidence',
+          confidence: 'Confidence: {{confidence}}',
           points: '{{points}} points',
           pointsPositive: '+{{points}} points',
           d10: 'D10',
@@ -1372,6 +1408,7 @@ export const resources = {
           themeEvidence: {
             familyStatus: 'Family Status: {{status}}',
             pillarStatus: 'Pillar Status: {{status}}',
+            evidenceConfidence: 'Evidence Confidence: {{value}}',
             effect: 'Effect: {{value}}',
             strength: 'Strength: {{value}}',
             priority: 'Priority: {{value}}',
@@ -1558,7 +1595,8 @@ export const resources = {
         related: 'Related evidence',
         relatedUnavailable: '{{count}} related reference(s) are not available in this evidence list.',
         conflictsTitle: 'Conflicting or challenging evidence remains visible',
-        conflictsMessage: '{{count}} occurrence(s) contain mixed, unavailable, conflicting, or challenging semantics. They have not been suppressed from the evidence list.'
+        conflictsMessage: '{{count}} occurrence(s) contain mixed, unavailable, conflicting, or challenging semantics. They have not been suppressed from the evidence list.',
+        mixedChallenging: 'Mixed / challenging'
       },
       theme: {
         career: {
@@ -1727,7 +1765,311 @@ export const resources = {
       productConfidence: {
         LOW: 'Low Confidence',
         MEDIUM: 'Medium Confidence',
-        HIGH: 'High Confidence'
+        HIGH: 'High Confidence',
+        UNAVAILABLE: 'Unavailable'
+      },
+      functionalNature: {
+        BENEFIC: 'Benefic',
+        MALEFIC: 'Malefic',
+        MIXED: 'Mixed',
+        NEUTRAL: 'Neutral'
+      },
+      themeEvidenceEffect: {
+        SUPPORT: 'Support',
+        CHALLENGE: 'Challenge',
+        NEUTRAL: 'Neutral'
+      },
+      themeEvidenceGroupStatus: {
+        SUPPORT: 'Supportive',
+        CHALLENGE: 'Challenged',
+        MIXED: 'Mixed',
+        NEUTRAL: 'Neutral'
+      },
+      themeEvidencePriority: {
+        PRIMARY: 'Primary',
+        SECONDARY: 'Secondary',
+        CONFIRMATORY: 'Confirmatory',
+        TIMING: 'Timing'
+      },
+      themeEvidenceStrength: {
+        WEAK: 'Weak',
+        MODERATE: 'Moderate',
+        STRONG: 'Strong'
+      },
+      themePromiseStatus: {
+        STRONG: 'Strong',
+        SUPPORTED: 'Supported',
+        MIXED: 'Mixed',
+        ADVERSE: 'Adverse',
+        UNAVAILABLE: 'Unavailable'
+      },
+      yogaFinalStatus: {
+        PRESENT: 'Present',
+        WEAKENED: 'Weakened',
+        STRONG: 'Strong',
+        CANCELLED: 'Cancelled'
+      },
+      yogaStrength: {
+        VERY_WEAK: 'Very Weak',
+        WEAK: 'Weak',
+        MODERATE: 'Moderate',
+        STRONG: 'Strong',
+        VERY_STRONG: 'Very Strong'
+      },
+      dashaAvailability: {
+        AVAILABLE: 'Available',
+        UNAVAILABLE: 'Unavailable',
+        CONDITIONAL: 'Conditional',
+        PARTIAL: 'Partial'
+      },
+      temporalRelation: {
+        PAST: 'Past',
+        CURRENT: 'Current',
+        FUTURE: 'Future',
+        UNKNOWN: 'Unknown'
+      },
+      selectedPeriodDiagnostic: {
+        INVALID_MAHADASHA_INTERVAL: 'Invalid Mahadasha time interval (start must be before end)',
+        INVALID_ANTARDASHA_INTERVAL: 'Invalid Antardasha time interval (start must be before end)',
+        ANTARDASHA_OUTSIDE_MAHADASHA: 'Antardasha falls outside its parent Mahadasha',
+        DUPLICATE_MAHADASHA_ID: 'Duplicate Mahadasha identifier detected',
+        DUPLICATE_ANTARDASHA_ID: 'Duplicate Antardasha identifier detected',
+        NON_CANONICAL_DATE_FORMAT: 'Date does not match canonical ISO format (YYYY-MM-DDTHH:mm:ss.sssZ)'
+      },
+      analysisDomain: {
+        CAREER: 'Career',
+        WEALTH: 'Wealth'
+      },
+      productQualificationStatus: {
+        CANONICAL: 'Canonical',
+        PROVISIONAL: 'Provisional',
+        UNAVAILABLE: 'Unavailable'
+      },
+      synthesisQualificationBasis: {
+        CANONICAL_STATUS: 'Canonical status',
+        PROXY_DIRECTION: 'Proxy direction',
+        UNAVAILABLE: 'Unavailable'
+      },
+      synthesisProvenanceStatus: {
+        PRESENT: 'Present',
+        PARTIAL: 'Partial',
+        MISSING: 'Missing'
+      },
+      wealthActivationDataStatus: {
+        COMPLETE: 'Complete',
+        PARTIAL: 'Partial',
+        INSUFFICIENT_DATA: 'Insufficient data'
+      },
+      selectedPeriodStatus: {
+        OK: 'Available',
+        INVALID_SELECTION: 'Invalid selection',
+        SYNTHESIS_FAILED: 'Synthesis failed',
+        UNAVAILABLE: 'Unavailable'
+      },
+      aiAvailability: {
+        AVAILABLE: 'Available',
+        UNAVAILABLE: 'Unavailable',
+        GENERATING: 'Generating',
+        FAILED: 'Failed'
+      },
+      speculativePropensity: {
+        VERY_STRONG: 'Very strong',
+        STRONG: 'Strong',
+        MODERATE: 'Moderate',
+        MIXED: 'Mixed',
+        CHALLENGED: 'Challenged',
+        INSUFFICIENT_DATA: 'Insufficient data'
+      },
+      speculativePropensitySource: {
+        ASTROLOGICAL_INDICATION: 'Astrological indication'
+      },
+      selectedPeriodAiStatus: {
+        SUCCESS: 'Success',
+        PARTIAL: 'Partial',
+        ERROR: 'Error',
+        UNAVAILABLE: 'Unavailable'
+      },
+      evidenceClassification: {
+        SUPPORTING: 'Supporting',
+        CHALLENGING: 'Challenging',
+        NEUTRAL: 'Neutral',
+        MIXED: 'Mixed',
+        UNRESOLVED: 'Unresolved'
+      },
+      evidenceProvenanceStage: {
+        CAREER_EXPRESSION: 'Career expression',
+        CAREER_QUALIFICATION: 'Career qualification',
+        CAREER_ACTIVATION: 'Career activation',
+        WEALTH_NATAL_PROMISE: 'Wealth natal promise',
+        WEALTH_DASHA_RULE: 'Wealth Dasha rule'
+      },
+      evidenceReferenceKind: {
+        EVIDENCE: 'Evidence',
+        RULE: 'Rule'
+      },
+      wealthDimension: {
+        ACCUMULATION: 'Accumulation',
+        GAINS: 'Gains',
+        FORTUNE: 'Fortune',
+        SPECULATION: 'Speculation'
+      },
+      professionDomain: {
+        TECHNOLOGY: 'Technology',
+        FINANCE: 'Finance',
+        HEALTHCARE: 'Healthcare',
+        EDUCATION: 'Education',
+        LEADERSHIP: 'Leadership',
+        COMMUNICATION: 'Communication',
+        RESEARCH: 'Research',
+        SERVICE: 'Service',
+        INSTITUTIONAL: 'Institutional',
+        FOREIGN: 'International',
+        REMOTE: 'Remote work'
+      },
+      professionFamily: {
+        TECHNICAL_LEADERSHIP: 'Technical leadership',
+        FINANCIAL_SERVICES: 'Financial services',
+        MEDICAL_PRACTICE: 'Medical practice',
+        ACADEMIC_TEACHING: 'Academic teaching',
+        EXECUTIVE_MANAGEMENT: 'Executive management',
+        MEDIA_COMMUNICATION: 'Media and communication',
+        ANALYTICAL_RESEARCH: 'Analytical research',
+        PUBLIC_SERVICE: 'Public service',
+        GOVERNMENT_ADMINISTRATION: 'Government administration',
+        INTERNATIONAL_BUSINESS: 'International business',
+        DISTRIBUTED_TEAMWORK: 'Distributed teamwork'
+      },
+      professionBasis: {
+        EXPRESSION: 'Career expression',
+        MECHANISM: 'Career mechanism',
+        '10H_FOUNDATION': '10th-house foundation',
+        '10L_FOUNDATION': '10th-lord foundation',
+        D10_QUALIFICATION: 'D10 qualification',
+        DOMAIN_EVIDENCE: 'Domain evidence'
+      },
+      professionExpressionType: {
+        AUTHORITY_EXPRESSION: 'Authority expression',
+        LEADERSHIP_EXPRESSION: 'Leadership expression',
+        TEACHING_EXPRESSION: 'Teaching expression',
+        RESEARCH_WORK: 'Research work',
+        COMMUNICATION_WORK: 'Communication work',
+        WRITING_WORK: 'Writing work',
+        INNOVATION_WORK: 'Innovation work',
+        SERVICE_WORK: 'Service work',
+        ANALYTICAL_SPECIALIZED_WORK: 'Analytical specialized work',
+        FINANCIAL_WORK: 'Financial work',
+        INSURANCE_WORK: 'Insurance work',
+        TAXATION_WORK: 'Taxation work',
+        COMPLIANCE_WORK: 'Compliance work',
+        CRISIS_MANAGEMENT_WORK: 'Crisis-management work',
+        INSTITUTIONAL_WORK_EXPRESSION: 'Institutional work',
+        ISOLATED_WORK_EXPRESSION: 'Isolated-environment work',
+        FOREIGN_WORK_EXPRESSION: 'International work',
+        REMOTE_WORK_EXPRESSION: 'Remote work'
+      },
+      professionMechanismType: {
+        AGENCY: 'Agency',
+        SELF_DIRECTION: 'Self-direction',
+        INITIATIVE: 'Initiative',
+        VISIBILITY: 'Visibility',
+        STATUS: 'Status',
+        AUTHORITY: 'Authority',
+        LEADERSHIP: 'Leadership',
+        STRATEGY: 'Strategy',
+        ADVISORY: 'Advisory',
+        TEACHING: 'Teaching',
+        INNOVATION: 'Innovation',
+        DECISION_MAKING: 'Decision-making',
+        COMMUNICATION: 'Communication',
+        WRITING: 'Writing',
+        PUBLIC_INTERFACE: 'Public interface',
+        CLIENT_INTERACTION: 'Client interaction',
+        CONTRACTUAL_INTERACTION: 'Contractual interaction',
+        PARTNERSHIP: 'Partnership',
+        COMMERCIAL_INTERACTION: 'Commercial interaction',
+        ENTREPRENEURIAL_EFFORT: 'Entrepreneurial effort',
+        EXECUTION: 'Execution',
+        HANDS_ON_CAPABILITY: 'Hands-on capability',
+        COURAGE: 'Courage',
+        SELF_EFFORT: 'Self-effort',
+        SKILL_DEVELOPMENT: 'Skill development',
+        SERVICE_EMPLOYMENT: 'Service employment',
+        COMPETITION: 'Competition',
+        PROFESSIONALIZATION: 'Professionalization',
+        PROFESSIONAL_GAINS: 'Professional gains',
+        CREATIVE_INTELLECTUAL: 'Creative and intellectual work',
+        DHARMA_DRIVEN_PROFESSION: 'Purpose-driven profession',
+        AUTHORITY_LEADERSHIP: 'Authority and leadership',
+        STABILITY: 'Stability',
+        WORK_ENVIRONMENT: 'Work environment',
+        ADMINISTRATIVE_FOUNDATION: 'Administrative foundation',
+        EXPENDITURE: 'Expenditure',
+        INTELLIGENCE: 'Intelligence',
+        SPECIALIZED_KNOWLEDGE: 'Specialized knowledge',
+        RESEARCH: 'Research',
+        INVESTIGATION: 'Investigation',
+        TRANSFORMATION: 'Transformation',
+        BUSINESS: 'Business',
+        CONSULTING: 'Consulting',
+        BANKING_FINANCE: 'Banking and finance',
+        INSURANCE: 'Insurance',
+        TAXATION: 'Taxation',
+        COMPLIANCE: 'Compliance',
+        RISK: 'Risk',
+        CRISIS: 'Crisis',
+        CRISIS_MANAGEMENT: 'Crisis management',
+        INSTITUTIONAL_BASE: 'Institutional foundation',
+        INSTITUTIONAL_SERVICE: 'Institutional service',
+        INSTITUTIONAL_WORK: 'Institutional work',
+        ISOLATED_ENVIRONMENT: 'Isolated environment',
+        FOREIGN: 'International',
+        FOREIGN_WORK: 'International work',
+        REMOTE_WORK: 'Remote work'
+      },
+      professionDiagnostic: {
+        D10_QUALIFICATION_PARTIAL: 'D10 qualification is partial',
+        DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID: 'Duplicate domain-evidence occurrence ID',
+        NO_PROFESSION_FAMILY_CANDIDATES_AVAILABLE: 'No profession-family candidates are available',
+        D1_PROMISE_ESTABLISHED_BUT_ONE_OR_MORE_QUALIFICATION_OR_COVERAGE_INPUTS_ARE_PARTIAL: 'D1 promise is established, but one or more qualification or coverage inputs are partial',
+        PROFESSION_ANALYSIS_NOT_PROVIDED: 'Profession analysis was not provided'
+      },
+      careerRequiredCheck: {
+        SKILLS_AND_EXPERIENCE_FIT: 'Skills and experience fit',
+        REAL_WORLD_OPPORTUNITY: 'Real-world opportunity',
+        USER_ACTION_AND_EXECUTION: 'User action and execution',
+        EMPLOYER_MARKET_AND_RESOURCE_CONSTRAINTS: 'Employer, market, and resource constraints'
+      },
+      observedOutcomeSource: {
+        USER_REPORTED: 'User reported'
+      },
+      observedOutcomeType: {
+        PROMOTION: 'Promotion',
+        JOB_CHANGE: 'Job change',
+        ROLE_CHANGE: 'Role change',
+        LEADERSHIP_APPOINTMENT: 'Leadership appointment',
+        COMPENSATION_CHANGE: 'Compensation change',
+        BUSINESS_LAUNCH: 'Business launch',
+        BUSINESS_EXPANSION: 'Business expansion',
+        RECOGNITION: 'Recognition',
+        LAYOFF_OR_JOB_LOSS: 'Layoff or job loss',
+        CAREER_BREAK: 'Career break',
+        OTHER: 'Other'
+      },
+      careerConflictSource: {
+        NATAL: 'Natal chart',
+        EXPRESSION: 'Career expression',
+        D10: 'D10 chart',
+        DASHA: 'Dasha period',
+        TRANSIT: 'Transit'
+      },
+      professionReferenceType: {
+        PROFESSION_RULE: 'Profession rule',
+        DOMAIN_EVIDENCE: 'Domain evidence',
+        D10_QUALIFICATION: 'D10 qualification'
+      },
+      professionEvidenceLinkage: {
+        COMPLETE: 'Complete',
+        PARTIAL: 'Partial'
       },
       promiseStrength: {
         VERY_STRONG: 'Very Strong',
@@ -1870,6 +2212,30 @@ export const resources = {
         PARTIAL: 'Partial',
         UNAVAILABLE: 'Unavailable'
       },
+      careerEventType: {
+        CAREER_ENTRY_START: 'Career entry or start',
+        JOB_CHANGE_TRANSITION: 'Job-change transition',
+        PROMOTION_ROLE_EXPANSION: 'Promotion or role expansion',
+        LEADERSHIP_RESPONSIBILITY: 'Leadership responsibility',
+        ENTREPRENEURSHIP_BUSINESS_INITIATION: 'Entrepreneurship or business initiation',
+        FOREIGN_REMOTE_OPPORTUNITY: 'International or remote opportunity',
+        CHALLENGE_INTERRUPTION: 'Career interruption',
+        RECOVERY_REENTRY: 'Recovery or re-entry',
+        PEAK_CONSOLIDATION: 'Peak or consolidation',
+        RETIREMENT_TRANSITION: 'Retirement transition'
+      },
+      careerGenericWindowType: {
+        CAREER_OPPORTUNITY_WINDOW: 'Career opportunity window',
+        CAREER_CHALLENGE_WINDOW: 'Career challenge window',
+        CAREER_CONDITIONAL_WINDOW: 'Conditional career window'
+      },
+      careerWindowQualificationBasis: {
+        B02_NATAL_PROMISE_AND_LINKED_ACTIVATION: 'Natal promise and linked activation',
+        B01_NATAL_RISK_AND_LINKED_CHALLENGE_ACTIVATION: 'Natal risk and linked challenge activation'
+      },
+      careerEventValidationStatus: {
+        UNVALIDATED: 'Unvalidated'
+      },
       careerPathwayStatus: {
         AVAILABLE: 'Available',
         PARTIAL: 'Partial',
@@ -1923,6 +2289,19 @@ export const resources = {
         CONFLICTED: 'Conflicted',
         UNAVAILABLE: 'Unavailable'
       },
+      wealthLifecycleEventType: {
+        ACCUMULATION: 'Accumulation',
+        GAINS: 'Gains',
+        ASSET_BUILDING_INDICATION: 'Asset-building indication',
+        PRESERVATION: 'Preservation',
+        EROSION_CHALLENGE: 'Erosion challenge',
+        DEBT_EXPOSURE_INDICATION: 'Debt exposure indication',
+        DEBT_REPAYMENT_REDUCTION_INDICATION: 'Debt repayment or reduction indication',
+        LIQUIDITY_PRESSURE: 'Liquidity pressure',
+        LIQUIDITY_RELIEF: 'Liquidity relief',
+        RECOVERY: 'Recovery',
+        INHERITANCE_INDICATION: 'Inheritance indication'
+      },
       careerRiskAssessment: {
         ADVERSE_EVIDENCE_PRESENT: 'Adverse evidence present',
         NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES: 'No adverse evidence in available sources'
@@ -1932,6 +2311,14 @@ export const resources = {
       },
       guarantee: {
         NONE: 'None'
+      },
+      reasoningNodeType: {
+        PROMISE: 'Promise',
+        VARGA: 'Divisional chart',
+        ACTIVATION: 'Activation',
+        TRANSIT: 'Transit',
+        SYNTHESIS: 'Synthesis',
+        EVIDENCE: 'Evidence'
       }
     },
     navigation: {
@@ -2285,6 +2672,20 @@ export const resources = {
       activeDrishtiTargets: 'सक्रिय ग्रह दृष्टि लक्ष्य'
     },
     dasha: {
+      hero: {
+        eyebrow: 'ग्रह अवधि का समय',
+        title: 'दशा और ग्रह समय',
+        description: 'विंशोत्तरी दशा का कालानुक्रमिक सक्रियता क्रम (महादशा, अंतर्दशा, प्रत्यंतरदशा), क्षेत्रीय सक्रियताओं और गोचर संकेतों के साथ।',
+        notices_one: '{{count}} सूचना',
+        notices_other: '{{count}} सूचनाएँ',
+        disclaimer: 'यह ज्योतिषीय व्याख्या है, किसी घटना की गारंटी नहीं। अनुकूल सट्टा अवधि इस बात का प्रमाण नहीं कि जोखिमपूर्ण ट्रेडिंग से लाभ होगा।',
+        activeHierarchyWindow: 'सक्रिय दशा क्रम',
+        currentPeriod: 'वर्तमान: {{period}}',
+        mahadasha: 'महादशा (MD)',
+        antardasha: 'अंतर्दशा (AD)',
+        pratyantardasha: 'प्रत्यंतरदशा (PD)',
+        unavailablePlanet: 'उपलब्ध नहीं'
+      },
       projection: {
         retryingMessage: 'दशा समय विवरण के लिए फिर से प्रयास हो रहा है',
         failedMessage: 'दशा समय विवरण तैयार नहीं हो सका',
@@ -2295,7 +2696,29 @@ export const resources = {
       selection: {
         error: 'चयन त्रुटि',
         failed: 'अवधि चयन विफल',
-        status: 'स्थिति'
+        status: 'स्थिति',
+        title: 'दशा अवधि चुनें',
+        empty: 'चुनने के लिए कोई दशा अवधि उपलब्ध नहीं है।',
+        legend: 'दशा अवधि चयन',
+        mahadashaLabel: 'महादशा (मुख्य अवधि)',
+        selectMahadasha: 'महादशा चुनें',
+        invalid: 'अमान्य',
+        antardashaLabel: 'अंतर्दशा (उप-अवधि)',
+        selectAntardasha: 'अंतर्दशा चुनें',
+        selectMahadashaFirst: 'पहले महादशा चुनें',
+        unavailablePeriods: 'दशा अवधियाँ उपलब्ध नहीं',
+        selectedPeriod: 'चयनित अवधि',
+        analyzingSelectedPeriod: 'चयनित अवधि का विश्लेषण हो रहा है…',
+        analyzeSelectedPeriod: 'चयनित अवधि का विश्लेषण करें'
+      },
+      selectedPeriodAi: {
+        narrativeUnavailable: 'AI विवरण उपलब्ध नहीं',
+        unavailableDescription: 'इस अवधि के लिए AI विवरण तैयार नहीं हो सका। ऊपर दिया गया नियतात्मक विश्लेषण ही प्रामाणिक है।',
+        explanation: 'AI व्याख्या',
+        partialExplanation: 'आंशिक व्याख्या',
+        unresolvedQuestions: 'अनसुलझे प्रश्न',
+        supportingEvidence: 'समर्थक साक्ष्य ({{count}})',
+        challengingEvidence: 'चुनौतीपूर्ण साक्ष्य ({{count}})'
       },
       status: {
         errorTitle: 'दशा और समय गणना में त्रुटि',
@@ -2575,7 +2998,7 @@ export const resources = {
           rankingDiagnostics: 'व्यवसाय क्रम निदान',
           rankingDescription: 'साक्ष्य-भारित नीति अंक व्यापक व्यवसाय समूहों की तुलना करते हैं। अंक संभावनाएँ, नौकरी पद के पूर्वानुमान, वेतन अनुमान या रोजगार-क्षमता पूर्वानुमान नहीं हैं। D1 संकेत स्थापित करता है; D10 केवल मौजूदा अभिव्यक्ति की पुष्टि करता है।',
           scorePoints: '{{points}} नीति अंक',
-          confidence: '{{confidence}} विश्वास स्तर',
+          confidence: 'विश्वास स्तर: {{confidence}}',
           points: '{{points}} अंक',
           pointsPositive: '+{{points}} अंक',
           d10: 'D10',
@@ -3344,6 +3767,7 @@ export const resources = {
           themeEvidence: {
             familyStatus: 'साक्ष्य समूह स्थिति: {{status}}',
             pillarStatus: 'स्तंभ स्थिति: {{status}}',
+            evidenceConfidence: 'साक्ष्य विश्वास स्तर: {{value}}',
             effect: 'प्रभाव: {{value}}',
             strength: 'प्रबलता: {{value}}',
             priority: 'प्राथमिकता: {{value}}',
@@ -3530,7 +3954,8 @@ export const resources = {
         related: 'संबंधित साक्ष्य',
         relatedUnavailable: 'साक्ष्य सूची में {{count}} संबंधित संदर्भ उपलब्ध नहीं हैं।',
         conflictsTitle: 'विरोधी या चुनौतीपूर्ण साक्ष्य दिखाए जाते हैं',
-        conflictsMessage: '{{count}} घटना में मिश्रित, अनुपलब्ध, विरोधी या चुनौतीपूर्ण अर्थ हैं। उन्हें साक्ष्य सूची से हटाया नहीं गया है।'
+        conflictsMessage: '{{count}} घटना में मिश्रित, अनुपलब्ध, विरोधी या चुनौतीपूर्ण अर्थ हैं। उन्हें साक्ष्य सूची से हटाया नहीं गया है।',
+        mixedChallenging: 'मिश्रित / चुनौतीपूर्ण'
       },
       theme: {
         career: {
@@ -3699,7 +4124,311 @@ export const resources = {
       productConfidence: {
         LOW: 'कम विश्वास',
         MEDIUM: 'मध्यम विश्वास',
-        HIGH: 'उच्च विश्वास'
+        HIGH: 'उच्च विश्वास',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      functionalNature: {
+        BENEFIC: 'शुभ',
+        MALEFIC: 'अशुभ',
+        MIXED: 'मिश्रित',
+        NEUTRAL: 'तटस्थ'
+      },
+      themeEvidenceEffect: {
+        SUPPORT: 'समर्थन',
+        CHALLENGE: 'चुनौती',
+        NEUTRAL: 'तटस्थ'
+      },
+      themeEvidenceGroupStatus: {
+        SUPPORT: 'समर्थित',
+        CHALLENGE: 'चुनौतीपूर्ण',
+        MIXED: 'मिश्रित',
+        NEUTRAL: 'तटस्थ'
+      },
+      themeEvidencePriority: {
+        PRIMARY: 'प्रमुख',
+        SECONDARY: 'द्वितीयक',
+        CONFIRMATORY: 'पुष्टिकारी',
+        TIMING: 'समय-संकेत'
+      },
+      themeEvidenceStrength: {
+        WEAK: 'कमज़ोर',
+        MODERATE: 'मध्यम',
+        STRONG: 'प्रबल'
+      },
+      themePromiseStatus: {
+        STRONG: 'प्रबल',
+        SUPPORTED: 'समर्थित',
+        MIXED: 'मिश्रित',
+        ADVERSE: 'प्रतिकूल',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      yogaFinalStatus: {
+        PRESENT: 'उपस्थित',
+        WEAKENED: 'क्षीण',
+        STRONG: 'प्रबल',
+        CANCELLED: 'निरस्त'
+      },
+      yogaStrength: {
+        VERY_WEAK: 'बहुत कमज़ोर',
+        WEAK: 'कमज़ोर',
+        MODERATE: 'मध्यम',
+        STRONG: 'प्रबल',
+        VERY_STRONG: 'बहुत प्रबल'
+      },
+      dashaAvailability: {
+        AVAILABLE: 'उपलब्ध',
+        UNAVAILABLE: 'उपलब्ध नहीं',
+        CONDITIONAL: 'सशर्त',
+        PARTIAL: 'आंशिक'
+      },
+      temporalRelation: {
+        PAST: 'अतीत',
+        CURRENT: 'वर्तमान',
+        FUTURE: 'भविष्य',
+        UNKNOWN: 'अज्ञात'
+      },
+      selectedPeriodDiagnostic: {
+        INVALID_MAHADASHA_INTERVAL: 'महादशा की समय-सीमा अमान्य है (आरंभ, समाप्ति से पहले होना चाहिए)',
+        INVALID_ANTARDASHA_INTERVAL: 'अंतर्दशा की समय-सीमा अमान्य है (आरंभ, समाप्ति से पहले होना चाहिए)',
+        ANTARDASHA_OUTSIDE_MAHADASHA: 'अंतर्दशा अपनी मूल महादशा की सीमा से बाहर है',
+        DUPLICATE_MAHADASHA_ID: 'महादशा पहचानकर्ता दोहराया गया है',
+        DUPLICATE_ANTARDASHA_ID: 'अंतर्दशा पहचानकर्ता दोहराया गया है',
+        NON_CANONICAL_DATE_FORMAT: 'तारीख का प्रारूप मानक ISO प्रारूप से मेल नहीं खाता (YYYY-MM-DDTHH:mm:ss.sssZ)'
+      },
+      analysisDomain: {
+        CAREER: 'करियर',
+        WEALTH: 'धन'
+      },
+      productQualificationStatus: {
+        CANONICAL: 'मानक',
+        PROVISIONAL: 'अस्थायी',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      synthesisQualificationBasis: {
+        CANONICAL_STATUS: 'मानक स्थिति',
+        PROXY_DIRECTION: 'संकेत दिशा',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      synthesisProvenanceStatus: {
+        PRESENT: 'उपलब्ध',
+        PARTIAL: 'आंशिक',
+        MISSING: 'अनुपलब्ध'
+      },
+      wealthActivationDataStatus: {
+        COMPLETE: 'पूर्ण',
+        PARTIAL: 'आंशिक',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा'
+      },
+      selectedPeriodStatus: {
+        OK: 'उपलब्ध',
+        INVALID_SELECTION: 'अमान्य चयन',
+        SYNTHESIS_FAILED: 'संश्लेषण विफल',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      aiAvailability: {
+        AVAILABLE: 'उपलब्ध',
+        UNAVAILABLE: 'उपलब्ध नहीं',
+        GENERATING: 'तैयार हो रहा है',
+        FAILED: 'विफल'
+      },
+      speculativePropensity: {
+        VERY_STRONG: 'बहुत प्रबल',
+        STRONG: 'प्रबल',
+        MODERATE: 'मध्यम',
+        MIXED: 'मिश्रित',
+        CHALLENGED: 'चुनौतीपूर्ण',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा'
+      },
+      speculativePropensitySource: {
+        ASTROLOGICAL_INDICATION: 'ज्योतिषीय संकेत'
+      },
+      selectedPeriodAiStatus: {
+        SUCCESS: 'सफल',
+        PARTIAL: 'आंशिक',
+        ERROR: 'त्रुटि',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      evidenceClassification: {
+        SUPPORTING: 'समर्थक',
+        CHALLENGING: 'चुनौतीपूर्ण',
+        NEUTRAL: 'तटस्थ',
+        MIXED: 'मिश्रित',
+        UNRESOLVED: 'अनिर्णीत'
+      },
+      evidenceProvenanceStage: {
+        CAREER_EXPRESSION: 'करियर अभिव्यक्ति',
+        CAREER_QUALIFICATION: 'करियर पुष्टि',
+        CAREER_ACTIVATION: 'करियर सक्रियता',
+        WEALTH_NATAL_PROMISE: 'धन संबंधी जन्म-कुंडली संकेत',
+        WEALTH_DASHA_RULE: 'धन दशा नियम'
+      },
+      evidenceReferenceKind: {
+        EVIDENCE: 'साक्ष्य',
+        RULE: 'नियम'
+      },
+      wealthDimension: {
+        ACCUMULATION: 'संचय',
+        GAINS: 'लाभ',
+        FORTUNE: 'भाग्य',
+        SPECULATION: 'सट्टा'
+      },
+      professionDomain: {
+        TECHNOLOGY: 'प्रौद्योगिकी',
+        FINANCE: 'वित्त',
+        HEALTHCARE: 'स्वास्थ्य सेवा',
+        EDUCATION: 'शिक्षा',
+        LEADERSHIP: 'नेतृत्व',
+        COMMUNICATION: 'संचार',
+        RESEARCH: 'अनुसंधान',
+        SERVICE: 'सेवा',
+        INSTITUTIONAL: 'संस्थागत',
+        FOREIGN: 'अंतरराष्ट्रीय',
+        REMOTE: 'दूरस्थ कार्य'
+      },
+      professionFamily: {
+        TECHNICAL_LEADERSHIP: 'तकनीकी नेतृत्व',
+        FINANCIAL_SERVICES: 'वित्तीय सेवाएँ',
+        MEDICAL_PRACTICE: 'चिकित्सा अभ्यास',
+        ACADEMIC_TEACHING: 'शैक्षणिक अध्यापन',
+        EXECUTIVE_MANAGEMENT: 'कार्यकारी प्रबंधन',
+        MEDIA_COMMUNICATION: 'मीडिया और संचार',
+        ANALYTICAL_RESEARCH: 'विश्लेषणात्मक अनुसंधान',
+        PUBLIC_SERVICE: 'लोक सेवा',
+        GOVERNMENT_ADMINISTRATION: 'सरकारी प्रशासन',
+        INTERNATIONAL_BUSINESS: 'अंतरराष्ट्रीय व्यवसाय',
+        DISTRIBUTED_TEAMWORK: 'वितरित टीम कार्य'
+      },
+      professionBasis: {
+        EXPRESSION: 'करियर अभिव्यक्ति',
+        MECHANISM: 'करियर तंत्र',
+        '10H_FOUNDATION': 'दशम भाव का आधार',
+        '10L_FOUNDATION': 'दशमेश का आधार',
+        D10_QUALIFICATION: 'D10 पुष्टि',
+        DOMAIN_EVIDENCE: 'क्षेत्रीय साक्ष्य'
+      },
+      professionExpressionType: {
+        AUTHORITY_EXPRESSION: 'अधिकार अभिव्यक्ति',
+        LEADERSHIP_EXPRESSION: 'नेतृत्व अभिव्यक्ति',
+        TEACHING_EXPRESSION: 'अध्यापन कार्य',
+        RESEARCH_WORK: 'अनुसंधान कार्य',
+        COMMUNICATION_WORK: 'संचार कार्य',
+        WRITING_WORK: 'लेखन कार्य',
+        INNOVATION_WORK: 'नवाचार कार्य',
+        SERVICE_WORK: 'सेवा कार्य',
+        ANALYTICAL_SPECIALIZED_WORK: 'विश्लेषणात्मक विशेषज्ञ कार्य',
+        FINANCIAL_WORK: 'वित्तीय कार्य',
+        INSURANCE_WORK: 'बीमा कार्य',
+        TAXATION_WORK: 'कराधान कार्य',
+        COMPLIANCE_WORK: 'अनुपालन कार्य',
+        CRISIS_MANAGEMENT_WORK: 'संकट प्रबंधन कार्य',
+        INSTITUTIONAL_WORK_EXPRESSION: 'संस्थागत कार्य',
+        ISOLATED_WORK_EXPRESSION: 'एकांत परिवेश में कार्य',
+        FOREIGN_WORK_EXPRESSION: 'अंतरराष्ट्रीय कार्य',
+        REMOTE_WORK_EXPRESSION: 'दूरस्थ कार्य'
+      },
+      professionMechanismType: {
+        AGENCY: 'स्वायत्तता',
+        SELF_DIRECTION: 'स्व-निर्देशन',
+        INITIATIVE: 'पहल',
+        VISIBILITY: 'दृश्यता',
+        STATUS: 'प्रतिष्ठा',
+        AUTHORITY: 'अधिकार',
+        LEADERSHIP: 'नेतृत्व',
+        STRATEGY: 'रणनीति',
+        ADVISORY: 'परामर्श',
+        TEACHING: 'अध्यापन',
+        INNOVATION: 'नवाचार',
+        DECISION_MAKING: 'निर्णय-निर्माण',
+        COMMUNICATION: 'संचार',
+        WRITING: 'लेखन',
+        PUBLIC_INTERFACE: 'जन-संपर्क',
+        CLIENT_INTERACTION: 'ग्राहक संवाद',
+        CONTRACTUAL_INTERACTION: 'अनुबंध संबंधी संवाद',
+        PARTNERSHIP: 'साझेदारी',
+        COMMERCIAL_INTERACTION: 'व्यावसायिक संवाद',
+        ENTREPRENEURIAL_EFFORT: 'उद्यमशील प्रयास',
+        EXECUTION: 'कार्यान्वयन',
+        HANDS_ON_CAPABILITY: 'व्यावहारिक क्षमता',
+        COURAGE: 'साहस',
+        SELF_EFFORT: 'स्व-प्रयास',
+        SKILL_DEVELOPMENT: 'कौशल विकास',
+        SERVICE_EMPLOYMENT: 'सेवा-रोज़गार',
+        COMPETITION: 'प्रतिस्पर्धा',
+        PROFESSIONALIZATION: 'व्यावसायिकता',
+        PROFESSIONAL_GAINS: 'व्यावसायिक लाभ',
+        CREATIVE_INTELLECTUAL: 'रचनात्मक और बौद्धिक कार्य',
+        DHARMA_DRIVEN_PROFESSION: 'उद्देश्य-आधारित व्यवसाय',
+        AUTHORITY_LEADERSHIP: 'अधिकार और नेतृत्व',
+        STABILITY: 'स्थिरता',
+        WORK_ENVIRONMENT: 'कार्य परिवेश',
+        ADMINISTRATIVE_FOUNDATION: 'प्रशासनिक आधार',
+        EXPENDITURE: 'व्यय',
+        INTELLIGENCE: 'बुद्धि',
+        SPECIALIZED_KNOWLEDGE: 'विशेषज्ञ ज्ञान',
+        RESEARCH: 'अनुसंधान',
+        INVESTIGATION: 'जाँच-पड़ताल',
+        TRANSFORMATION: 'परिवर्तन',
+        BUSINESS: 'व्यवसाय',
+        CONSULTING: 'परामर्श सेवा',
+        BANKING_FINANCE: 'बैंकिंग और वित्त',
+        INSURANCE: 'बीमा',
+        TAXATION: 'कराधान',
+        COMPLIANCE: 'अनुपालन',
+        RISK: 'जोखिम',
+        CRISIS: 'संकट',
+        CRISIS_MANAGEMENT: 'संकट प्रबंधन',
+        INSTITUTIONAL_BASE: 'संस्थागत आधार',
+        INSTITUTIONAL_SERVICE: 'संस्थागत सेवा',
+        INSTITUTIONAL_WORK: 'संस्थागत कार्य',
+        ISOLATED_ENVIRONMENT: 'एकांत परिवेश',
+        FOREIGN: 'अंतरराष्ट्रीय',
+        FOREIGN_WORK: 'अंतरराष्ट्रीय कार्य',
+        REMOTE_WORK: 'दूरस्थ कार्य'
+      },
+      professionDiagnostic: {
+        D10_QUALIFICATION_PARTIAL: 'D10 पुष्टि आंशिक है',
+        DUPLICATE_DOMAIN_EVIDENCE_OCCURRENCE_ID: 'क्षेत्रीय साक्ष्य occurrence ID दोहराया गया है',
+        NO_PROFESSION_FAMILY_CANDIDATES_AVAILABLE: 'पेशा-परिवार के संभावित विकल्प उपलब्ध नहीं हैं',
+        D1_PROMISE_ESTABLISHED_BUT_ONE_OR_MORE_QUALIFICATION_OR_COVERAGE_INPUTS_ARE_PARTIAL: 'D1 संकेत स्थापित है, लेकिन पुष्टि या कवरेज के कुछ इनपुट आंशिक हैं',
+        PROFESSION_ANALYSIS_NOT_PROVIDED: 'पेशा विश्लेषण उपलब्ध नहीं कराया गया'
+      },
+      careerRequiredCheck: {
+        SKILLS_AND_EXPERIENCE_FIT: 'कौशल और अनुभव का मेल',
+        REAL_WORLD_OPPORTUNITY: 'वास्तविक अवसर',
+        USER_ACTION_AND_EXECUTION: 'उपयोगकर्ता की पहल और कार्यान्वयन',
+        EMPLOYER_MARKET_AND_RESOURCE_CONSTRAINTS: 'नियोक्ता, बाज़ार और संसाधन संबंधी सीमाएँ'
+      },
+      observedOutcomeSource: {
+        USER_REPORTED: 'उपयोगकर्ता द्वारा बताया गया'
+      },
+      observedOutcomeType: {
+        PROMOTION: 'पदोन्नति',
+        JOB_CHANGE: 'नौकरी में बदलाव',
+        ROLE_CHANGE: 'भूमिका में बदलाव',
+        LEADERSHIP_APPOINTMENT: 'नेतृत्व पद पर नियुक्ति',
+        COMPENSATION_CHANGE: 'पारिश्रमिक में बदलाव',
+        BUSINESS_LAUNCH: 'व्यवसाय की शुरुआत',
+        BUSINESS_EXPANSION: 'व्यवसाय का विस्तार',
+        RECOGNITION: 'मान्यता',
+        LAYOFF_OR_JOB_LOSS: 'छँटनी या नौकरी छूटना',
+        CAREER_BREAK: 'करियर में विराम',
+        OTHER: 'अन्य'
+      },
+      careerConflictSource: {
+        NATAL: 'जन्म-कुंडली',
+        EXPRESSION: 'करियर अभिव्यक्ति',
+        D10: 'D10 कुंडली',
+        DASHA: 'दशा अवधि',
+        TRANSIT: 'गोचर'
+      },
+      professionReferenceType: {
+        PROFESSION_RULE: 'पेशा नियम',
+        DOMAIN_EVIDENCE: 'क्षेत्रीय साक्ष्य',
+        D10_QUALIFICATION: 'D10 पुष्टि'
+      },
+      professionEvidenceLinkage: {
+        COMPLETE: 'पूर्ण',
+        PARTIAL: 'आंशिक'
       },
       promiseStrength: {
         VERY_STRONG: 'बहुत प्रबल',
@@ -3842,6 +4571,30 @@ export const resources = {
         PARTIAL: 'आंशिक',
         UNAVAILABLE: 'उपलब्ध नहीं'
       },
+      careerEventType: {
+        CAREER_ENTRY_START: 'करियर में प्रवेश या शुरुआत',
+        JOB_CHANGE_TRANSITION: 'नौकरी परिवर्तन',
+        PROMOTION_ROLE_EXPANSION: 'पदोन्नति या भूमिका विस्तार',
+        LEADERSHIP_RESPONSIBILITY: 'नेतृत्व की जिम्मेदारी',
+        ENTREPRENEURSHIP_BUSINESS_INITIATION: 'उद्यमिता या व्यवसाय की शुरुआत',
+        FOREIGN_REMOTE_OPPORTUNITY: 'अंतरराष्ट्रीय या दूरस्थ अवसर',
+        CHALLENGE_INTERRUPTION: 'करियर में व्यवधान',
+        RECOVERY_REENTRY: 'पुनर्बहाली या वापसी',
+        PEAK_CONSOLIDATION: 'चरम या सुदृढ़ीकरण',
+        RETIREMENT_TRANSITION: 'सेवानिवृत्ति परिवर्तन'
+      },
+      careerGenericWindowType: {
+        CAREER_OPPORTUNITY_WINDOW: 'करियर अवसर अवधि',
+        CAREER_CHALLENGE_WINDOW: 'करियर चुनौती अवधि',
+        CAREER_CONDITIONAL_WINDOW: 'सशर्त करियर अवधि'
+      },
+      careerWindowQualificationBasis: {
+        B02_NATAL_PROMISE_AND_LINKED_ACTIVATION: 'जन्म-कुंडली संकेत और संबद्ध सक्रियता',
+        B01_NATAL_RISK_AND_LINKED_CHALLENGE_ACTIVATION: 'जन्म-कुंडली जोखिम और संबद्ध चुनौती सक्रियता'
+      },
+      careerEventValidationStatus: {
+        UNVALIDATED: 'असत्यापित'
+      },
       careerPathwayStatus: {
         AVAILABLE: 'उपलब्ध',
         PARTIAL: 'आंशिक',
@@ -3895,6 +4648,19 @@ export const resources = {
         CONFLICTED: 'विरोधी',
         UNAVAILABLE: 'उपलब्ध नहीं'
       },
+      wealthLifecycleEventType: {
+        ACCUMULATION: 'संचय',
+        GAINS: 'लाभ',
+        ASSET_BUILDING_INDICATION: 'संपत्ति निर्माण का संकेत',
+        PRESERVATION: 'संरक्षण',
+        EROSION_CHALLENGE: 'क्षरण की चुनौती',
+        DEBT_EXPOSURE_INDICATION: 'ऋण जोखिम का संकेत',
+        DEBT_REPAYMENT_REDUCTION_INDICATION: 'ऋण चुकौती या कमी का संकेत',
+        LIQUIDITY_PRESSURE: 'नकदी उपलब्धता पर दबाव',
+        LIQUIDITY_RELIEF: 'नकदी उपलब्धता में राहत',
+        RECOVERY: 'पुनर्बहाली',
+        INHERITANCE_INDICATION: 'उत्तराधिकार का संकेत'
+      },
       careerRiskAssessment: {
         ADVERSE_EVIDENCE_PRESENT: 'प्रतिकूल साक्ष्य मौजूद हैं',
         NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES: 'उपलब्ध स्रोतों में प्रतिकूल साक्ष्य नहीं'
@@ -3904,6 +4670,14 @@ export const resources = {
       },
       guarantee: {
         NONE: 'कोई नहीं'
+      },
+      reasoningNodeType: {
+        PROMISE: 'संकेत',
+        VARGA: 'वर्ग कुंडली',
+        ACTIVATION: 'सक्रियता',
+        TRANSIT: 'गोचर',
+        SYNTHESIS: 'संश्लेषण',
+        EVIDENCE: 'साक्ष्य'
       }
     },
     navigation: {

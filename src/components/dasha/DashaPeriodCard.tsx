@@ -18,6 +18,10 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({ period }) => {
   const levelLabel = enumLabel(tEnum, 'dashaLevel', period.level);
   const roleLabel = enumLabel(tEnum, 'productEvidenceRole', period.role);
   const directionLabel = enumLabel(tEnum, 'productDirection', period.direction);
+  const activationEffectLabel = enumLabel(tEnum, 'activationEffect', period.effect);
+  const effectLabel = activationEffectLabel === period.effect
+    ? enumLabel(tEnum, 'productDirection', period.effect)
+    : activationEffectLabel;
   const roleClass = getRoleBadgeClass(period.role);
   const directionClass = getDirectionBadgeClass(period.direction);
 
@@ -50,7 +54,7 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({ period }) => {
           </span>
           {period.effect && (
             <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-slate-800/80 text-slate-300 border border-slate-700/80">
-              {enumLabel(tEnum, 'activationEffect', period.effect)}
+              {effectLabel}
             </span>
           )}
         </div>

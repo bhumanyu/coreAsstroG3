@@ -4,6 +4,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registeredNamespaces } from './i18n';
 import { resources } from './resources';
+import { ENUM_LABEL_KEYS, type EnumLabelFamily } from './enumLabels';
 
 function flattenKeys(value: Record<string, unknown>, prefix = ''): string[] {
   return Object.entries(value).flatMap(([key, child]) => {
@@ -96,6 +97,15 @@ describe('English/Hindi localization resource parity', () => {
     }
 
     expect(missing).toEqual([]);
+  });
+
+  it('covers every typed enum-label registry key in both locales', () => {
+    for (const family of Object.keys(ENUM_LABEL_KEYS) as EnumLabelFamily[]) {
+      for (const key of Object.values(ENUM_LABEL_KEYS[family])) {
+        expect(hasTranslationKey('en', 'enums', key), `en:enums:${key}`).toBe(true);
+        expect(hasTranslationKey('hi', 'enums', key), `hi:enums:${key}`).toBe(true);
+      }
+    }
   });
 
   it('provides both locales for computed career and wealth translation key families', () => {

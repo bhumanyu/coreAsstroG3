@@ -1,8 +1,8 @@
 import React from 'react';
 import type { WealthTransitViewModel } from '../../product/analysis/wealthViewModel';
-import { formatTransitEffect } from './wealthFormat';
 import { Orbit, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthTransitSectionProps {
   readonly transit: WealthTransitViewModel;
@@ -10,8 +10,9 @@ export interface WealthTransitSectionProps {
 
 export const WealthTransitSection: React.FC<WealthTransitSectionProps> = ({ transit }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   const isAvailable = transit.status === 'AVAILABLE';
-  const formattedEffect = formatTransitEffect(transit.effect);
+  const formattedEffect = enumLabel(tEnum, 'transitEffect', transit.effect);
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">

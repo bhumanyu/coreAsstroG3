@@ -5,8 +5,9 @@ import {
   EvidenceConfidence
 } from '../../../engine/themeInterpretation/themeInterpretationTypes';
 import { ThemeConfidenceBadge } from './ThemeConfidenceBadge';
-import { formatThemePromiseStatus, getPromiseStatusStyle } from './themeUiUtils';
+import { getPromiseStatusStyle } from './themeUiUtils';
 import { Award, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { enumLabel } from '../../../i18n/enumLabels';
 
 interface ThemePromiseCardProps {
   readonly title: string;
@@ -27,7 +28,8 @@ export const ThemePromiseCard: React.FC<ThemePromiseCardProps> = ({
   id
 }) => {
   const { t } = useTranslation('reports');
-  const statusLabel = formatThemePromiseStatus(status);
+  const { t: tEnum } = useTranslation('enums');
+  const statusLabel = enumLabel(tEnum, 'themePromiseStatus', status);
   const statusStyle = getPromiseStatusStyle(status);
 
   const safeSupport = [...(primarySupport || [])];

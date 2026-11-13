@@ -65,55 +65,63 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
       </p>
       {profession.ranking.diagnostics.length > 0 && (
         <ul aria-label={t('ui.profession.rankingDiagnostics')} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
-          {profession.ranking.diagnostics.map((diagnostic) => <li key={diagnostic}>{diagnostic}</li>)}
+          {profession.ranking.diagnostics.map((diagnostic) => (
+            <li key={diagnostic} title={diagnostic}>
+              {enumLabel(tEnum, 'professionDiagnostic', diagnostic)}
+            </li>
+          ))}
         </ul>
       )}
       {profession.ranking.rankedCandidates.length > 0 ? (
         <ol aria-label={t('ui.profession.rankingAria')} className="space-y-2">
-          {profession.ranking.rankedCandidates.map((candidate) => (
-            <li key={candidate.candidateId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h4 className="text-sm font-medium text-slate-100">
-                  #{candidate.rank} · {candidate.domain} / {candidate.family}
-                </h4>
-                <span className="text-xs text-slate-300">{t('ui.profession.scorePoints', { points: candidate.score })} · {t('ui.profession.confidence', { confidence: candidate.confidence })}</span>
-              </div>
-              <p className="text-xs text-slate-400">{candidate.alternativeExplanation}</p>
-              {candidate.scoreContributions.length > 0 && (
-                <ul aria-label={t('ui.profession.contributionsAria', { domain: candidate.domain, family: candidate.family })} className="space-y-1 text-xs text-slate-400">
-                  {candidate.scoreContributions.map((contribution) => (
-                    <li key={`${contribution.referenceType}:${contribution.referenceId}`}>
-                      <span className="font-medium text-slate-300">{contribution.referenceType}</span>
-                      {' · '}{contribution.referenceId}{' · '}
-                      <span className={contribution.points < 0 ? 'text-amber-300' : 'text-slate-200'}>
-                        {t(contribution.points > 0 ? 'ui.profession.pointsPositive' : 'ui.profession.points', { points: contribution.points })}
-                      </span>
-                      {' — '}{contribution.explanation}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10')}: </dt><dd className="inline">{enumLabel(tEnum, 'professionCandidateStatus', candidate.d10Status)} ({enumLabel(tEnum, 'productDirection', candidate.d10Direction)})</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.evidenceCoverage')}: </dt><dd className="inline">{enumLabel(tEnum, 'careerAxisCoverage', candidate.evidenceCoverage.status)} · {t('ui.profession.occurrences', { count: candidate.evidenceCoverage.occurrenceCount })} · {t('ui.profession.roots', { count: candidate.evidenceCoverage.rootIdentityCount })}</dd></div>
-              </dl>
-              {candidate.reasons.length > 0 && (
-                <ul aria-label={t('ui.profession.reasonsAria', { domain: candidate.domain, family: candidate.family })} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
-                  {candidate.reasons.map((reason) => <li key={reason}>{reason}</li>)}
-                </ul>
-              )}
-              {candidate.counterEvidenceReasons.length > 0 && (
-                <ul aria-label={t('ui.profession.counterEvidenceAria', { domain: candidate.domain, family: candidate.family })} className="list-disc space-y-1 pl-5 text-xs text-amber-300">
-                  {candidate.counterEvidenceReasons.map((reason) => <li key={reason}>{reason}</li>)}
-                </ul>
-              )}
-              <p className="text-[11px] text-slate-500">
-                {t('ui.profession.supportingOccurrences')}: {candidate.supportingEvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
-                {t('ui.profession.d10Occurrences')}: {candidate.d10EvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
-                {t('ui.profession.counterOccurrences')}: {candidate.counterEvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
-              </p>
-            </li>
-          ))}
+          {profession.ranking.rankedCandidates.map((candidate) => {
+            const domain = enumLabel(tEnum, 'professionDomain', candidate.domain);
+            const family = enumLabel(tEnum, 'professionFamily', candidate.family);
+            return (
+                <li key={candidate.candidateId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h4 className="text-sm font-medium text-slate-100">
+                      #{candidate.rank} · {domain} / {family}
+                    </h4>
+                    <span className="text-xs text-slate-300">{t('ui.profession.scorePoints', { points: candidate.score })} · {t('ui.profession.confidence', { confidence: enumLabel(tEnum, 'productConfidence', candidate.confidence) })}</span>
+                  </div>
+                  <p className="text-xs text-slate-400">{candidate.alternativeExplanation}</p>
+                  {candidate.scoreContributions.length > 0 && (
+                    <ul aria-label={t('ui.profession.contributionsAria', { domain, family })} className="space-y-1 text-xs text-slate-400">
+                      {candidate.scoreContributions.map((contribution) => (
+                        <li key={`${contribution.referenceType}:${contribution.referenceId}`}>
+                          <span className="font-medium text-slate-300">{enumLabel(tEnum, 'professionReferenceType', contribution.referenceType)}</span>
+                          {' · '}{contribution.referenceId}{' · '}
+                          <span className={contribution.points < 0 ? 'text-amber-300' : 'text-slate-200'}>
+                            {t(contribution.points > 0 ? 'ui.profession.pointsPositive' : 'ui.profession.points', { points: contribution.points })}
+                          </span>
+                          {' — '}{contribution.explanation}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
+                    <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10')}: </dt><dd className="inline">{enumLabel(tEnum, 'professionCandidateStatus', candidate.d10Status)} ({enumLabel(tEnum, 'productDirection', candidate.d10Direction)})</dd></div>
+                    <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.evidenceCoverage')}: </dt><dd className="inline">{enumLabel(tEnum, 'careerAxisCoverage', candidate.evidenceCoverage.status)} · {t('ui.profession.occurrences', { count: candidate.evidenceCoverage.occurrenceCount })} · {t('ui.profession.roots', { count: candidate.evidenceCoverage.rootIdentityCount })}</dd></div>
+                  </dl>
+                  {candidate.reasons.length > 0 && (
+                    <ul aria-label={t('ui.profession.reasonsAria', { domain, family })} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
+                      {candidate.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+                    </ul>
+                  )}
+                  {candidate.counterEvidenceReasons.length > 0 && (
+                    <ul aria-label={t('ui.profession.counterEvidenceAria', { domain, family })} className="list-disc space-y-1 pl-5 text-xs text-amber-300">
+                      {candidate.counterEvidenceReasons.map((reason) => <li key={reason}>{reason}</li>)}
+                    </ul>
+                  )}
+                  <p className="text-[11px] text-slate-500">
+                    {t('ui.profession.supportingOccurrences')}: {candidate.supportingEvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
+                    {t('ui.profession.d10Occurrences')}: {candidate.d10EvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
+                    {t('ui.profession.counterOccurrences')}: {candidate.counterEvidenceOccurrenceIds.join(', ') || t('ui.axes.none')}.
+                  </p>
+                </li>
+            );
+          })}
         </ol>
       ) : (
         <p className="text-xs leading-relaxed text-slate-400">
@@ -132,23 +140,26 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
         </p>
       ) : (
         <ul aria-label={t('ui.profession.candidatesAria')} className="space-y-3">
-          {profession.candidates.map((candidate) => (
-            <li
+          {profession.candidates.map((candidate) => {
+            const domain = enumLabel(tEnum, 'professionDomain', candidate.domain);
+            const family = enumLabel(tEnum, 'professionFamily', candidate.family);
+            return (
+              <li
               key={candidate.candidateId}
               className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2"
             >
               <h4 className="text-sm font-medium text-slate-100">
-                {candidate.domain} · {candidate.family} ({candidate.candidateId})
+                {domain} · {family} ({candidate.candidateId})
               </h4>
               <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.basis')}: </dt><dd className="inline">{candidate.basis}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.basis')}: </dt><dd className="inline">{enumLabel(tEnum, 'professionBasis', candidate.basis)}</dd></div>
                 <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10Status')}: </dt><dd className="inline">{enumLabel(tEnum, 'professionCandidateStatus', candidate.d10Status)}</dd></div>
                 <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.patternRefs')}: </dt><dd className="inline">{candidate.patternIds.join(', ') || t('ui.axes.none')}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.expressions')}: </dt><dd className="inline">{candidate.expressionTypes.join(', ') || t('ui.axes.none')}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.mechanismTypes')}: </dt><dd className="inline">{candidate.mechanismTypes.join(', ') || t('ui.axes.none')}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.expressions')}: </dt><dd className="inline">{candidate.expressionTypes.map((value) => enumLabel(tEnum, 'professionExpressionType', value)).join(', ') || t('ui.axes.none')}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.mechanismTypes')}: </dt><dd className="inline">{candidate.mechanismTypes.map((value) => enumLabel(tEnum, 'professionMechanismType', value)).join(', ') || t('ui.axes.none')}</dd></div>
               </dl>
               {candidate.evidence.length > 0 && (
-                <ul aria-label={t('ui.profession.evidenceForAria', { domain: candidate.domain, family: candidate.family })} className="space-y-2">
+                <ul aria-label={t('ui.profession.evidenceForAria', { domain, family })} className="space-y-2">
                   {candidate.evidence.map((evidence) => (
                     <li key={evidence.evidenceId} className="border-t border-slate-800 pt-2 text-xs text-slate-400">
                       <p>{evidence.statement}</p>
@@ -157,7 +168,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                         <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.ruleId')}: </dt><dd className="inline">{evidence.ruleId}</dd></div>
                         <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.sourceIds')}: </dt><dd className="inline">{evidence.sourceIds.join(', ') || t('ui.axes.none')}</dd></div>
                         {evidence.linkage && (
-                          <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.linkage')}: </dt><dd className="inline">{evidence.linkage}</dd></div>
+                          <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.linkage')}: </dt><dd className="inline">{enumLabel(tEnum, 'professionEvidenceLinkage', evidence.linkage)}</dd></div>
                         )}
                         {evidence.unresolvedMechanismIds && evidence.unresolvedMechanismIds.length > 0 && (
                           <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.unresolvedMechanisms')}: </dt><dd className="inline">{evidence.unresolvedMechanismIds.join(', ')}</dd></div>
@@ -168,7 +179,8 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                 </ul>
               )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </div>

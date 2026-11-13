@@ -1,29 +1,34 @@
 import React from 'react';
 import { PageHeading } from '../layout/PageHeading';
 import type { DashaHeroViewModel } from '../../product/analysis/dashaViewModel';
-import { formatAvailability, getAvailabilityBadgeClass } from './dashaFormat';
+import { getAvailabilityBadgeClass } from './dashaFormat';
 import { Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface DashaHeroProps {
   readonly hero: DashaHeroViewModel;
 }
 
 export const DashaHero: React.FC<DashaHeroProps> = ({ hero }) => {
+  const { t } = useTranslation('dasha');
+  const { t: tEnum } = useTranslation('enums');
   const warnings = hero.warnings || [];
 
-  const mdPlanet = hero.mdPlanet || 'Unavailable';
-  const adPlanet = hero.adPlanet || 'Unavailable';
-  const pdPlanet = hero.pdPlanet || 'Unavailable';
+  const unavailablePlanet = t('hero.unavailablePlanet');
+  const mdPlanet = hero.mdPlanet || unavailablePlanet;
+  const adPlanet = hero.adPlanet || unavailablePlanet;
+  const pdPlanet = hero.pdPlanet || unavailablePlanet;
 
-  const availabilityLabel = formatAvailability(hero.availability);
+  const availabilityLabel = enumLabel(tEnum, 'dashaAvailability', hero.availability);
   const availabilityClass = getAvailabilityBadgeClass(hero.availability);
 
   return (
     <div className="space-y-4">
       <PageHeading
-        eyebrow="Planetary Period Timing"
-        title="Dasha & Planetary Timing"
-        description="Chronological Vimshottari Dasha activation hierarchy (Mahadasha, Antardasha, Pratyantardasha) synthesized with domain activations and transit triggers."
+        eyebrow={t('hero.eyebrow')}
+        title={t('hero.title')}
+        description={t('hero.description')}
       >
         <div className="flex items-center gap-2">
           <div
@@ -36,17 +41,14 @@ export const DashaHero: React.FC<DashaHeroProps> = ({ hero }) => {
           {warnings.length > 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono-code">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
-              <span>
-                {warnings.length} {warnings.length === 1 ? 'Notice' : 'Notices'}
-              </span>
+              <span>{t('hero.notices', { count: warnings.length })}</span>
             </div>
           )}
         </div>
       </PageHeading>
 
       <p className="text-xs text-slate-400" role="note">
-        This is an astrological interpretation, not a guaranteed event. A favorable SPECULATION
-        window is not evidence that risky trading will profit.
+        {t('hero.disclaimer')}
       </p>
 
       {/* Active Periods Overview Card */}
@@ -55,32 +57,32 @@ export const DashaHero: React.FC<DashaHeroProps> = ({ hero }) => {
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-indigo-400" aria-hidden="true" />
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-300">
-              Active Hierarchy Window
+              {t('hero.activeHierarchyWindow')}
             </span>
           </div>
           <span className="text-xs font-mono-code text-slate-400">
-            Current: {hero.currentPeriodLabel}
+            {t('hero.currentPeriod', { period: hero.currentPeriodLabel })}
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-1">
             <span className="text-[10px] font-mono-code uppercase text-slate-400 tracking-wider">
-              Mahadasha (MD)
+              {t('hero.mahadasha')}
             </span>
             <div className="text-base font-bold text-slate-100">{mdPlanet}</div>
           </div>
 
           <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-1">
             <span className="text-[10px] font-mono-code uppercase text-slate-400 tracking-wider">
-              Antardasha (AD)
+              {t('hero.antardasha')}
             </span>
             <div className="text-base font-bold text-slate-100">{adPlanet}</div>
           </div>
 
           <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 space-y-1">
             <span className="text-[10px] font-mono-code uppercase text-slate-400 tracking-wider">
-              Pratyantardasha (PD)
+              {t('hero.pratyantardasha')}
             </span>
             <div className="text-base font-bold text-slate-100">{pdPlanet}</div>
           </div>

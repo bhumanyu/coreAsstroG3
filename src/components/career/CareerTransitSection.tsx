@@ -1,8 +1,8 @@
 import React from 'react';
 import type { CareerTransitViewModel } from '../../product/analysis/careerViewModel';
-import { formatTransitEffect } from './careerFormat';
 import { Orbit, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerTransitSectionProps {
   readonly transit: CareerTransitViewModel;
@@ -10,8 +10,9 @@ export interface CareerTransitSectionProps {
 
 export const CareerTransitSection: React.FC<CareerTransitSectionProps> = ({ transit }) => {
   const { t } = useTranslation('career');
+  const { t: tEnum } = useTranslation('enums');
   const isAvailable = transit.status === 'AVAILABLE';
-  const formattedEffect = formatTransitEffect(transit.effect);
+  const formattedEffect = enumLabel(tEnum, 'transitEffect', transit.effect);
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">

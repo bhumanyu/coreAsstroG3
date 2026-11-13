@@ -18,6 +18,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Brain, AlertCircle, CheckCircle2, TriangleAlert } from 'lucide-react';
 import type { AiExplanationResult } from '../../ai/browser';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface SelectedPeriodAiExplanationProps {
   readonly synthesis: {
@@ -38,6 +40,8 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
   synthesis,
   submittedPeriod
 }) => {
+  const { t } = useTranslation('dasha');
+  const { t: tEnum } = useTranslation('enums');
   const requestIdRef = useRef(0);
 
   // Stale-async guard: only render if IDs match
@@ -77,11 +81,11 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
         <div className="flex items-center gap-2">
           <TriangleAlert className="w-4 h-4 text-slate-400" aria-hidden="true" />
           <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-300">
-            AI Narrative Unavailable
+            {t('selectedPeriodAi.narrativeUnavailable')}
           </span>
         </div>
         <div className="text-xs text-slate-400">
-          The AI narrative for this period could not be generated. The deterministic analysis above remains authoritative.
+          {t('selectedPeriodAi.unavailableDescription')}
         </div>
         {explanation.warnings.length > 0 && (
           <div className="space-y-1">
@@ -101,7 +105,7 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
     const isSuccess = explanation.status === 'SUCCESS';
     const statusColor = isSuccess ? 'text-emerald-300' : 'text-amber-300';
     const StatusIcon = isSuccess ? CheckCircle2 : TriangleAlert;
-    const statusLabel = isSuccess ? 'AI Explanation' : 'Partial Explanation';
+    const statusLabel = isSuccess ? t('selectedPeriodAi.explanation') : t('selectedPeriodAi.partialExplanation');
 
     return (
       <div className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 space-y-4">
@@ -112,7 +116,7 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
           </span>
           <div className={`flex items-center gap-1.5 ml-auto ${statusColor}`}>
             <StatusIcon className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="text-[10px] font-mono-code uppercase">{explanation.status}</span>
+            <span className="text-[10px] font-mono-code uppercase">{enumLabel(tEnum, 'selectedPeriodAiStatus', explanation.status)}</span>
           </div>
         </div>
 
@@ -122,7 +126,7 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
 
         {explanation.unresolvedQuestions.length > 0 && (
           <div className="bg-amber-950/40 border border-amber-800/60 rounded-lg p-3 space-y-2">
-            <div className="text-xs font-mono-code text-amber-300">Unresolved Questions</div>
+            <div className="text-xs font-mono-code text-amber-300">{t('selectedPeriodAi.unresolvedQuestions')}</div>
             <div className="space-y-1">
               {explanation.unresolvedQuestions.map((q, idx) => (
                 <div key={idx} className="text-xs text-slate-300 flex items-start gap-2">
@@ -138,7 +142,7 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
           <div className="space-y-3">
             {explanation.supportingEvidence.length > 0 && (
               <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-lg p-3 space-y-2">
-                <div className="text-xs font-mono-code text-emerald-300">Supporting Evidence ({explanation.supportingEvidence.length})</div>
+                <div className="text-xs font-mono-code text-emerald-300">{t('selectedPeriodAi.supportingEvidence', { count: explanation.supportingEvidence.length })}</div>
                 <div className="space-y-1">
                   {explanation.supportingEvidence.map((item, idx) => (
                     <div key={idx} className="text-xs text-slate-300">
@@ -150,7 +154,7 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
             )}
             {explanation.challengingEvidence.length > 0 && (
               <div className="bg-rose-950/40 border border-rose-800/60 rounded-lg p-3 space-y-2">
-                <div className="text-xs font-mono-code text-rose-300">Challenging Evidence ({explanation.challengingEvidence.length})</div>
+                <div className="text-xs font-mono-code text-rose-300">{t('selectedPeriodAi.challengingEvidence', { count: explanation.challengingEvidence.length })}</div>
                 <div className="space-y-1">
                   {explanation.challengingEvidence.map((item, idx) => (
                     <div key={idx} className="text-xs text-slate-300">

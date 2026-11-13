@@ -1,16 +1,19 @@
 import React from 'react';
 import type { DashaDomainActivationViewModel } from '../../product/analysis/dashaViewModel';
-import { formatAvailability, getAvailabilityBadgeClass } from './dashaFormat';
+import { getAvailabilityBadgeClass } from './dashaFormat';
 import { DashaPeriodCard } from './DashaPeriodCard';
 import { Coins } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthActivationSectionProps {
   readonly activation: DashaDomainActivationViewModel;
 }
 
 export const WealthActivationSection: React.FC<WealthActivationSectionProps> = ({ activation }) => {
+  const { t: tEnum } = useTranslation('enums');
   const isAvailable = activation.status !== 'UNAVAILABLE';
-  const availabilityLabel = formatAvailability(activation.status);
+  const availabilityLabel = enumLabel(tEnum, 'dashaAvailability', activation.status);
   const availabilityClass = getAvailabilityBadgeClass(activation.status);
 
   return (

@@ -161,17 +161,50 @@ describe('CareerProfessionStatusSection', () => {
     render(<CareerProfessionStatusSection profession={profession} />);
 
     const candidates = screen.getByRole('list', { name: 'Profession candidates' });
-    expect(candidates).toHaveTextContent('TECHNOLOGY · TECHNICAL_LEADERSHIP (PROFESSION_TECH_PATTERN_1)');
-    expect(candidates).toHaveTextContent('Basis: EXPRESSION');
+    expect(candidates).toHaveTextContent('Technology · Technical leadership (PROFESSION_TECH_PATTERN_1)');
+    expect(candidates).toHaveTextContent('Basis: Career expression');
     expect(candidates).toHaveTextContent('D10 status: Not provided');
     expect(candidates).toHaveTextContent('Pattern refs: PATTERN_1');
-    expect(candidates).toHaveTextContent('Expressions: LEADERSHIP_EXPRESSION');
-    expect(candidates).toHaveTextContent('Mechanism types: LEADERSHIP');
+    expect(candidates).toHaveTextContent('Expressions: Leadership expression');
+    expect(candidates).toHaveTextContent('Mechanism types: Leadership');
     expect(candidates).toHaveTextContent('Evidence ID: PROFESSION_EVIDENCE_1');
     expect(candidates).toHaveTextContent('Rule ID: CAREER_PROFESSION_RULE_TECH_LEADERSHIP');
     expect(candidates).toHaveTextContent('Source IDs: EXPRESSION_CANDIDATE_1, MECHANISM_CANDIDATE_1');
-    expect(candidates).toHaveTextContent('Linkage: PARTIAL');
+    expect(candidates).toHaveTextContent('Linkage: Partial');
     expect(candidates).toHaveTextContent('Unresolved mechanism IDs: MECHANISM_UNRESOLVED_1');
+  });
+
+  it('renders profession display enums in Hindi while preserving canonical candidate IDs', async () => {
+    await i18n.changeLanguage('hi');
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      candidates: [{
+        candidateId: 'PROFESSION_TECH_PATTERN_1',
+        domain: 'TECHNOLOGY',
+        family: 'TECHNICAL_LEADERSHIP',
+        basis: 'EXPRESSION',
+        expressionTypes: ['LEADERSHIP_EXPRESSION'],
+        mechanismTypes: ['LEADERSHIP'],
+        patternIds: ['PATTERN_1'],
+        d10Status: 'NOT_PROVIDED',
+        evidenceOccurrenceIds: [],
+        semanticIdentityKeys: [],
+        rootIdentityKeys: [],
+        evidence: [],
+        domainEvidenceIds: [],
+        relatedEvidenceIds: [],
+        ruleId: 'CAREER_PROFESSION_RULE_TECH_LEADERSHIP'
+      }]
+    };
+
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const rendered = screen.getByRole('list', { name: 'व्यवसाय उम्मीदवार' });
+    expect(rendered).toHaveTextContent('प्रौद्योगिकी · तकनीकी नेतृत्व (PROFESSION_TECH_PATTERN_1)');
+    expect(rendered).toHaveTextContent('करियर अभिव्यक्ति');
+    expect(rendered).toHaveTextContent('नेतृत्व अभिव्यक्ति');
+    expect(rendered).toHaveTextContent('नेतृत्व');
+    expect(rendered).not.toHaveTextContent('TECHNOLOGY|TECHNICAL_LEADERSHIP|EXPRESSION|LEADERSHIP_EXPRESSION');
   });
 
   it('renders a non-conclusory empty state when no profession candidates exist', () => {
@@ -250,14 +283,15 @@ describe('CareerProfessionStatusSection', () => {
     render(<CareerProfessionStatusSection profession={profession} />);
 
     const ranking = screen.getByRole('list', { name: 'Ranked profession families' });
-    expect(ranking).toHaveTextContent('#1 · TECHNOLOGY / TECHNICAL_LEADERSHIP');
-    expect(ranking).toHaveTextContent('14 policy points · MEDIUM confidence');
-    expect(screen.getByRole('list', { name: 'Score contributions for TECHNOLOGY TECHNICAL_LEADERSHIP' }))
+    expect(ranking).toHaveTextContent('#1 · Technology / Technical leadership');
+    expect(ranking).toHaveTextContent('14 policy points · Confidence: Medium Confidence');
+    expect(screen.getByRole('list', { name: 'Score contributions for Technology Technical leadership' }))
       .toHaveTextContent('Strong evidence × priority 2 contributes +6 points.');
     expect(ranking).toHaveTextContent('D10: Partial (Mixed)');
     expect(ranking).toHaveTextContent('D1-derived expression establishes this broad family.');
     expect(ranking).toHaveTextContent('D10 mixed evidence constrains expression.');
     expect(ranking).toHaveTextContent('occ-d10-1');
-    expect(screen.getByRole('list', { name: 'Profession ranking diagnostics' }))
-      .toHaveTextContent('D10_QUALIFICATION_PARTIAL');
+    const diagnostics = screen.getByRole('list', { name: 'Profession ranking diagnostics' });
+    expect(diagnostics).toHaveTextContent('D10 qualification is partial');
+    expect(diagnostics.querySelector('li')).toHaveAttribute('title', 'D10_QUALIFICATION_PARTIAL');
   });

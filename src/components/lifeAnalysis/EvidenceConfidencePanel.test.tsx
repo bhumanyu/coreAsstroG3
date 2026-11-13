@@ -44,7 +44,7 @@ function model(overrides: Partial<ProductEvidenceExperienceViewModel> = {}): Pro
 describe('EvidenceConfidencePanel (D03)', () => {
   it('distinguishes low confidence from promise strength and shows missing-layer reasons', () => {
     render(<EvidenceConfidencePanel model={model()} />);
-    expect(screen.getByText('Low confidence')).toBeInTheDocument();
+    expect(screen.getByText('Low Confidence')).toBeInTheDocument();
     expect(screen.getByText('Strong')).toBeInTheDocument();
     expect(screen.getByText(/Strength describes the indication/)).toBeInTheDocument();
     expect(screen.getByText('D10 divisional confirmation unavailable')).toBeInTheDocument();

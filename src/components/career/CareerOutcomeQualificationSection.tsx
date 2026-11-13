@@ -58,13 +58,15 @@ export const CareerOutcomeQualificationSection: React.FC<CareerOutcomeQualificat
                 <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.counterSeverity')}: </dt><dd className="inline">{enumLabel(tEnum, 'careerCounterIndicationSeverity', candidate.counterIndications.severity)}</dd></div>
               </dl>
               <p className="text-xs text-slate-400">
-                {t('ui.outcomes.practicalChecks')}: {candidate.executionConditions.requiredChecks.join(', ')}
+                {t('ui.outcomes.practicalChecks')}: {candidate.executionConditions.requiredChecks.map((check) =>
+                  enumLabel(tEnum, 'careerRequiredCheck', check)
+                ).join(', ')}
               </p>
               {candidate.counterIndications.conflicts.length > 0 && (
                 <ul aria-label={t('ui.outcomes.counterIndications', { id: candidate.candidateId })} className="space-y-1 text-xs text-amber-300">
                   {candidate.counterIndications.conflicts.map((conflict, index) => (
                     <li key={`${conflict.source}-${conflict.evidenceIdentityIds.join('|')}-${index}`}>
-                      {conflict.source}: {enumLabel(tEnum, 'productDirection', conflict.direction)} ({enumLabel(tEnum, 'careerCounterIndicationSeverity', conflict.severity)})
+                      {enumLabel(tEnum, 'careerConflictSource', conflict.source)}: {enumLabel(tEnum, 'productDirection', conflict.direction)} ({enumLabel(tEnum, 'careerCounterIndicationSeverity', conflict.severity)})
                     </li>
                   ))}
                 </ul>
@@ -88,10 +90,10 @@ export const CareerOutcomeQualificationSection: React.FC<CareerOutcomeQualificat
         <ul aria-label={t('ui.outcomes.observedAria')} className="space-y-2">
           {outcomeQualification.observedOutcomes.map(outcome => (
             <li key={outcome.reportId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-              <p className="text-sm font-medium text-slate-100">{enumLabel(tEnum, 'careerOutcomeType', outcome.outcomeType)}</p>
+              <p className="text-sm font-medium text-slate-100">{enumLabel(tEnum, 'observedOutcomeType', outcome.outcomeType)}</p>
               <p className="text-xs text-slate-300">{outcome.statement}</p>
               <p className="text-xs text-slate-500">
-                USER_REPORTED{outcome.occurredAt ? ` · ${outcome.occurredAt}` : ''} · {outcome.reportId}
+                {enumLabel(tEnum, 'observedOutcomeSource', outcome.source)}{outcome.occurredAt ? ` · ${outcome.occurredAt}` : ''} · {outcome.reportId}
               </p>
             </li>
           ))}

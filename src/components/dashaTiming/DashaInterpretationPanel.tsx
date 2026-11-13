@@ -2,9 +2,9 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, ShieldCheck, HelpCircle } from 'lucide-react';
 import type { DashaInterpretationProduct } from '../../product/dasha-timing/dashaTimingTypes';
-import { formatConfidence } from '../fullNatalReport/reportUtils';
 import { getEffectBadgeClass } from '../lifeAnalysis/lifeAnalysisUx';
 import { EmptyState } from '../fullNatalReport/EmptyState';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface DashaInterpretationPanelProps {
   readonly interpretation?: DashaInterpretationProduct;
@@ -16,6 +16,7 @@ export const DashaInterpretationPanel: React.FC<DashaInterpretationPanelProps> =
   onOpenEvidence
 }) => {
   const { t } = useTranslation('dasha');
+  const { t: tEnum } = useTranslation('enums');
   if (!interpretation || interpretation.status === 'UNAVAILABLE') {
     return (
       <EmptyState
@@ -51,7 +52,7 @@ export const DashaInterpretationPanel: React.FC<DashaInterpretationPanelProps> =
               <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
               <span className="text-slate-400">{t('timing.confidence')}:</span>
               <span className="font-semibold text-indigo-300">
-                {formatConfidence(confidence)}
+                {enumLabel(tEnum, 'productConfidence', confidence)}
               </span>
             </div>
           )}

@@ -46,7 +46,8 @@ describe('acceptance adapters for rendered report consumers', () => {
 
     render(<SelectedPeriodReport synthesis={selectedPeriod.synthesis} />);
 
-    expect(screen.getByText(projection.temporalRelation)).toBeInTheDocument();
+    expect(projection.temporalRelation).toBe('PAST');
+    expect(screen.getByText('Past')).toBeInTheDocument();
     expect(projection.interval).toEqual(selectedPeriod.synthesis.period.interval);
     expect(projection.evidenceIds).toEqual(selectedPeriod.synthesis.evidence.flatMap(reference =>
       reference.referenceKind === 'RULE' || reference.evidenceId === undefined

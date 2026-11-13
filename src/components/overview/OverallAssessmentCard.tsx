@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OverviewOverall } from '../../product/analysis/overviewViewModel';
-import { formatConfidence } from './overviewFormat';
 import { Sparkles, ShieldCheck, AlertCircle, Clock } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface OverallAssessmentCardProps {
   readonly overall: OverviewOverall;
@@ -10,6 +10,7 @@ export interface OverallAssessmentCardProps {
 
 export const OverallAssessmentCard: React.FC<OverallAssessmentCardProps> = ({ overall }) => {
   const { t } = useTranslation('dashboard');
+  const { t: tEnum } = useTranslation('enums');
   const statusBadge = () => {
     switch (overall.status) {
       case 'READY':
@@ -43,7 +44,7 @@ export const OverallAssessmentCard: React.FC<OverallAssessmentCardProps> = ({ ov
   };
 
   const confidenceBadge = () => {
-    const text = formatConfidence(overall.confidence);
+    const text = enumLabel(tEnum, 'productConfidence', overall.confidence);
     const colorClass =
       overall.confidence === 'HIGH'
         ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300'

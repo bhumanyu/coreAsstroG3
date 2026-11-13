@@ -62,7 +62,7 @@ describe('ProductAnalysisReportView', () => {
     };
 
     render(<ProductAnalysisReportView analysis={analysis} />);
-    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toHaveTextContent('UNAVAILABLE');
-    expect(screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toHaveTextContent('PARTIAL');
+    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toHaveTextContent('Unavailable');
+    expect(screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toHaveTextContent('Partial');
   });
 });

@@ -1,8 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReasoningVargaViewModel } from '../../product/analysis/reasoningViewModel';
-import { formatVargaRelationship, getVargaRelationshipBadgeClass } from './reasoningFormat';
+import { getVargaRelationshipBadgeClass } from './reasoningFormat';
 import { Layers, CheckCircle2, AlertCircle, Briefcase, Coins } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface ReasoningDivisionalComparisonProps {
   readonly d10?: ReasoningVargaViewModel;
@@ -14,6 +15,7 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
   d2
 }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   void d2; // Incoming D2 declarations are ignored while the validation gate is closed.
   const d10Rel = d10?.relationship ?? 'UNAVAILABLE';
   const isD10Available = d10Rel !== 'UNAVAILABLE';
@@ -71,7 +73,7 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
               <span
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${d10BadgeClass}`}
               >
-                {formatVargaRelationship(d10Rel)}
+                {enumLabel(tEnum, 'divisionalRelationship', d10Rel)}
               </span>
             </div>
 
@@ -126,7 +128,7 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
               <span
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${d2BadgeClass}`}
               >
-                {formatVargaRelationship(d2Rel)}
+                {enumLabel(tEnum, 'divisionalRelationship', d2Rel)}
               </span>
             </div>
 

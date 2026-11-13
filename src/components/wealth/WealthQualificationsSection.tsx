@@ -1,8 +1,9 @@
 import React from 'react';
 import type { WealthQualificationViewModel } from '../../product/analysis/wealthViewModel';
-import { formatSeverity, getSeverityBadgeClass } from './wealthFormat';
+import { getSeverityBadgeClass } from './wealthFormat';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthQualificationsSectionProps {
   readonly qualifications: readonly WealthQualificationViewModel[];
@@ -12,6 +13,7 @@ export const WealthQualificationsSection: React.FC<WealthQualificationsSectionPr
   qualifications
 }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   const hasQualifications = qualifications.length > 0;
 
   return (
@@ -35,7 +37,7 @@ export const WealthQualificationsSection: React.FC<WealthQualificationsSectionPr
       {hasQualifications ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {qualifications.map((q, idx) => {
-            const severityLabel = formatSeverity(q.severity);
+            const severityLabel = enumLabel(tEnum, 'qualificationSeverity', q.severity);
             const severityClass = getSeverityBadgeClass(q.severity);
 
             return (

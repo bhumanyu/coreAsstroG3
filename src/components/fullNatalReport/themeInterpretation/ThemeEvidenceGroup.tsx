@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ThemeInterpretationEvidence } from '../../../engine/themeInterpretation/themeInterpretationTypes';
+import type {
+  CareerEvidenceFamilySummary,
+  ThemeInterpretationEvidence
+} from '../../../engine/themeInterpretation/themeInterpretationTypes';
 import { ThemeEvidenceItem } from './ThemeEvidenceItem';
 import { formatEvidenceFamily } from './themeUiUtils';
 import { ChevronDown, ChevronRight, Award, AlertTriangle, HelpCircle } from 'lucide-react';
+import { enumLabel } from '../../../i18n/enumLabels';
 
 interface ThemeEvidenceGroupProps {
   readonly title?: string;
   readonly family?: string;
   readonly evidence: readonly ThemeInterpretationEvidence<any>[];
-  readonly status?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
+  readonly status?: CareerEvidenceFamilySummary['status'];
   readonly id?: string;
   readonly defaultExpanded?: boolean;
 }
@@ -23,6 +27,7 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
   defaultExpanded = true
 }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   // Safe copy without mutating frozen engine structures
@@ -37,42 +42,43 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
 
   const getStatusBadge = () => {
     if (!status) return null;
+    const statusLabel = enumLabel(tEnum, 'themeEvidenceGroupStatus', status);
     switch (status) {
       case 'SUPPORT':
         return (
           <span
-            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: 'Supportive' })}
+            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: statusLabel })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
           >
-            Supportive
+            {statusLabel}
           </span>
         );
       case 'CHALLENGE':
         return (
           <span
-            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: 'Challenged' })}
+            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: statusLabel })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-rose-500/10 text-rose-300 border border-rose-500/30"
           >
-            Challenged
+            {statusLabel}
           </span>
         );
       case 'MIXED':
         return (
           <span
-            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: 'Mixed Support & Challenge' })}
+            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: statusLabel })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-amber-500/10 text-amber-300 border border-amber-500/30"
           >
-            Mixed
+            {statusLabel}
           </span>
         );
       case 'NEUTRAL':
       default:
         return (
           <span
-            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: 'Neutral' })}
+            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: statusLabel })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-slate-800 text-slate-300 border border-slate-700 uppercase"
           >
-            Neutral
+            {statusLabel}
           </span>
         );
     }

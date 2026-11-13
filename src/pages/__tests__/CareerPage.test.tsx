@@ -204,8 +204,8 @@ describe('CareerPage (P-UI-04)', () => {
     render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
 
     expect(screen.getByRole('heading', { name: 'Career Event Timeline' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Qualified generic career windows' })).toHaveTextContent('CAREER OPPORTUNITY WINDOW');
-    expect(screen.getByRole('list', { name: 'Event-specific taxonomy validation status' })).toHaveTextContent('PROMOTION ROLE EXPANSION');
+    expect(screen.getByRole('list', { name: 'Qualified generic career windows' })).toHaveTextContent('Career opportunity window');
+    expect(screen.getByRole('list', { name: 'Event-specific taxonomy validation status' })).toHaveTextContent('Promotion or role expansion');
     expect(screen.getByText(/No explicit B02 user-reported outcome references/)).toBeInTheDocument();
   });
 

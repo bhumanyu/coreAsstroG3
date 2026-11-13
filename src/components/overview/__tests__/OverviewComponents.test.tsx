@@ -53,7 +53,7 @@ describe('Overview Component Library (P-UI-03)', () => {
 
       expect(screen.getByText('Overall Synthesis & Assessment')).toBeInTheDocument();
       expect(screen.getByText('Complete Assessment')).toBeInTheDocument();
-      expect(screen.getByText('High evidence confidence')).toBeInTheDocument();
+      expect(screen.getByText('High Confidence')).toBeInTheDocument();
       expect(screen.getByText(vm.overall.summary)).toBeInTheDocument();
     });
   });
@@ -151,7 +151,7 @@ describe('Overview Component Library (P-UI-03)', () => {
 
       expect(screen.getByText('Qualifications & Modifiers')).toBeInTheDocument();
       expect(screen.getByText('COMBUSTION')).toBeInTheDocument();
-      expect(screen.getByText('Low impact')).toBeInTheDocument();
+      expect(screen.getByText('Low Impact')).toBeInTheDocument();
       expect(screen.getByText('Moderate')).toBeInTheDocument();
     });
 

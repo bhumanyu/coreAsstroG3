@@ -3,12 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { PageHeading } from '../layout/PageHeading';
 import type { ReasoningHeroViewModel } from '../../product/analysis/reasoningViewModel';
 import {
-  formatConfidence,
-  formatConclusionStatus,
-  formatPromiseStrength,
   getConclusionStatusBadgeClass,
   getPromiseStrengthBadgeClass
 } from './reasoningFormat';
+import { enumLabel } from '../../i18n/enumLabels';
 import {
   AlertTriangle,
   ShieldCheck,
@@ -24,6 +22,7 @@ export interface ReasoningHeroProps {
 
 export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const warnings = hero.warnings || [];
 
   const statusBadgeClass = getConclusionStatusBadgeClass(hero.status);
@@ -39,16 +38,16 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
         <div className="flex flex-wrap items-center gap-2">
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${statusBadgeClass}`}>
             <BrainCircuit className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{formatConclusionStatus(hero.status)}</span>
+            <span>{enumLabel(tEnum, 'conclusionStatus', hero.status)}</span>
           </div>
 
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${strengthBadgeClass}`}>
-            <span className="font-mono-code">{formatPromiseStrength(hero.strength)}</span>
+            <span className="font-mono-code">{enumLabel(tEnum, 'promiseStrength', hero.strength)}</span>
           </div>
 
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-mono-code">
             <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-            <span>{formatConfidence(hero.confidence)}</span>
+            <span>{enumLabel(tEnum, 'productConfidence', hero.confidence)}</span>
           </div>
 
           {warnings.length > 0 && (

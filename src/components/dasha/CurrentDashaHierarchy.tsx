@@ -2,8 +2,10 @@ import React from 'react';
 import type { DashaPeriodViewModel } from '../../product/analysis/dashaViewModel';
 import type { ProductAvailability } from '../../product/analysis/productAnalysisTypes';
 import { DashaPeriodCard } from './DashaPeriodCard';
-import { formatAvailability, getAvailabilityBadgeClass } from './dashaFormat';
+import { getAvailabilityBadgeClass } from './dashaFormat';
 import { Clock, Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CurrentDashaHierarchyProps {
   readonly hierarchy: readonly DashaPeriodViewModel[];
@@ -14,8 +16,9 @@ export const CurrentDashaHierarchy: React.FC<CurrentDashaHierarchyProps> = ({
   hierarchy,
   availability = 'AVAILABLE'
 }) => {
+  const { t: tEnum } = useTranslation('enums');
   const isAvailable = availability !== 'UNAVAILABLE';
-  const availabilityLabel = formatAvailability(availability);
+  const availabilityLabel = enumLabel(tEnum, 'dashaAvailability', availability);
   const availabilityClass = getAvailabilityBadgeClass(availability);
 
   return (

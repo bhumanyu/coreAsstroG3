@@ -1,8 +1,9 @@
 import React from 'react';
 import type { CareerD10ViewModel } from '../../product/analysis/careerViewModel';
-import { formatD10Relationship, getD10RelationshipBadgeClass } from './careerFormat';
+import { getD10RelationshipBadgeClass } from './careerFormat';
 import { Layers, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerD10SectionProps {
   readonly d10: CareerD10ViewModel;
@@ -10,7 +11,8 @@ export interface CareerD10SectionProps {
 
 export const CareerD10Section: React.FC<CareerD10SectionProps> = ({ d10 }) => {
   const { t } = useTranslation('career');
-  const formattedRelationship = formatD10Relationship(d10.relationship);
+  const { t: tEnum } = useTranslation('enums');
+  const formattedRelationship = enumLabel(tEnum, 'divisionalRelationship', d10.relationship);
   const badgeClass = getD10RelationshipBadgeClass(d10.relationship);
   const isAvailable = d10.relationship !== 'UNAVAILABLE';
 

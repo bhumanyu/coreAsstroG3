@@ -21,26 +21,29 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
     expect(screen.getByText(expected!.analysisId)).toBeInTheDocument();
     expect(screen.getAllByText(expected!.asOf).length).toBeGreaterThan(0);
     expect(screen.getByText(expected!.engineVersion + ' / ' + expected!.rulesVersion)).toBeInTheDocument();
-    expect(career).toHaveTextContent(expected!.career.status);
-    expect(career).toHaveTextContent(expected!.career.confidence);
-    expect(career).toHaveTextContent(expected!.career.promiseStrength);
-    expect(career).toHaveTextContent(expected!.career.professionStatus);
-    expect(career).toHaveTextContent(expected!.career.d10Relationship);
+    expect(career).toHaveTextContent('Supported');
+    expect(career).toHaveTextContent('High Confidence');
+    expect(career).toHaveTextContent('Strong');
+    expect(career).toHaveTextContent('Insufficient data');
+    expect(career).toHaveTextContent('Confirms');
     expect(career).toHaveTextContent(expected!.career.conclusion);
-    expect(wealth).toHaveTextContent(expected!.wealth.status);
-    expect(wealth).toHaveTextContent(expected!.wealth.confidence);
-    expect(wealth).toHaveTextContent(expected!.wealth.promise);
-    expect(wealth).toHaveTextContent(expected!.wealth.d2Relationship);
-    expect(wealth).toHaveTextContent(expected!.wealth.lifecycleStatus);
+    expect(wealth).toHaveTextContent('Supported');
+    expect(wealth).toHaveTextContent('High Confidence');
+    expect(wealth).toHaveTextContent('Moderate');
+    expect(wealth).toHaveTextContent('Unavailable');
+    expect(wealth).toHaveTextContent('Blocked');
     for (const dimension of expected!.wealth.dimensions) {
       expect(wealth).toHaveTextContent(dimension.id);
-      expect(wealth).toHaveTextContent(dimension.status);
       if (dimension.statement) expect(wealth).toHaveTextContent(dimension.statement);
     }
-    expect(dasha).toHaveTextContent(expected!.dasha.status);
+    expect(dasha).toHaveTextContent('Ready');
     expect(dasha).toHaveTextContent(expected!.dasha.currentPeriodLabel);
-    expect(evidence).toHaveTextContent(expected!.aiStatus);
+    expect(evidence).toHaveTextContent('Available');
     expect(evidence).toHaveTextContent(expected!.warningsCount.toString());
+    expect(expected!.career.status).toBe(analysis.career.status);
+    expect(expected!.wealth.status).toBe(analysis.wealth.overall.status);
+    expect(expected!.dasha.status).toBe('READY');
+    expect(expected!.aiStatus).toBe('AVAILABLE');
   });
 
   it('preserves Career available while Wealth is unavailable', () => {
@@ -54,8 +57,8 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
     const { view, expected } = createProductAnalysisReportAcceptanceAdapter(analysis);
     render(view);
 
-    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toHaveTextContent(expected!.career.status);
-    expect(screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toHaveTextContent('UNAVAILABLE');
+    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toHaveTextContent('Ready');
+    expect(screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toHaveTextContent('Unavailable');
   });
 
   it('preserves Wealth available while Career is unavailable', () => {
@@ -69,8 +72,8 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
     const { view, expected } = createProductAnalysisReportAcceptanceAdapter(analysis);
     render(view);
 
-    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toHaveTextContent('UNAVAILABLE');
-    expect(screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toHaveTextContent(expected!.wealth.status);
+    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toHaveTextContent('Unavailable');
+    expect(screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toHaveTextContent('Supported');
   });
 
   it('preserves partial domains and unavailable D2 rather than upgrading them', () => {
@@ -88,10 +91,10 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
     const { view, expected } = createProductAnalysisReportAcceptanceAdapter(analysis);
     render(view);
 
-    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toHaveTextContent('UNAVAILABLE');
+    expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toHaveTextContent('Unavailable');
     const wealth = screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' });
-    expect(wealth).toHaveTextContent('PARTIAL');
-    expect(wealth).toHaveTextContent('UNAVAILABLE');
+    expect(wealth).toHaveTextContent('Partial');
+    expect(wealth).toHaveTextContent('Unavailable');
     expect(wealth).toHaveTextContent('D2 remains unavailable pending independent validation.');
     expect(expected!.wealth.d2Relationship).toBe('UNAVAILABLE');
   });
@@ -140,7 +143,7 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
     const dasha = screen.getByRole('region', { name: 'Vimshottari Dasha and selected period' });
     expect(dasha).toHaveTextContent('md_jupiter / ad_saturn');
     expect(dasha).toHaveTextContent('2026-01-01T00:00:00Z — 2027-01-01T00:00:00Z');
-    expect(dasha).toHaveTextContent('CURRENT');
+    expect(dasha).toHaveTextContent('Current');
     expect(expected!.dasha.selectedPeriodStatus).toBe('OK');
   });
 
@@ -155,7 +158,8 @@ describe('ProductAnalysisReportAcceptanceAdapter', () => {
 
     expect(screen.getByRole('region', { name: 'Career — C11 conclusion' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Wealth — CW-05 conclusion' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Evidence, warnings and reproducibility' })).toHaveTextContent(expected!.aiStatus);
+    expect(screen.getByRole('region', { name: 'Evidence, warnings and reproducibility' })).toHaveTextContent('Unavailable');
+    expect(expected!.aiStatus).toBe('UNAVAILABLE');
   });
 
   it('does not reconstruct a report when canonical ProductAnalysis is missing', () => {

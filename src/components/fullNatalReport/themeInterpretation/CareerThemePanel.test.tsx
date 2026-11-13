@@ -32,9 +32,9 @@ describe('CareerThemePanel Component', () => {
     // Conclusion status badge (e.g. Supported)
     expect(screen.getAllByLabelText(/Conclusion Status:/i).length).toBeGreaterThan(0);
 
-    // Evidence Confidence badge (e.g. Evidence Confidence: High)
+    // Evidence Confidence badge (e.g. Evidence Confidence: High Confidence)
     expect(screen.getAllByLabelText(/Evidence Confidence:/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Evidence Confidence:/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Evidence Confidence: High Confidence/i).length).toBeGreaterThan(0);
   });
 
   it('renders Natal Career Promise card with support and challenge factors', () => {

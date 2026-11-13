@@ -2,13 +2,11 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReasoningConclusionViewModel } from '../../product/analysis/reasoningViewModel';
 import {
-  formatConfidence,
-  formatConclusionStatus,
-  formatPromiseStrength,
   getConclusionStatusBadgeClass,
   getPromiseStrengthBadgeClass
 } from './reasoningFormat';
 import { Sparkles, ShieldCheck, CheckCircle2, XCircle, FileText } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface ReasoningConclusionProps {
   readonly conclusion: ReasoningConclusionViewModel;
@@ -16,6 +14,7 @@ export interface ReasoningConclusionProps {
 
 export const ReasoningConclusion: React.FC<ReasoningConclusionProps> = ({ conclusion }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   const statusBadgeClass = getConclusionStatusBadgeClass(conclusion.status);
   const strengthBadgeClass = getPromiseStrengthBadgeClass(conclusion.strength);
 
@@ -36,13 +35,13 @@ export const ReasoningConclusion: React.FC<ReasoningConclusionProps> = ({ conclu
 
         <div className="flex flex-wrap items-center gap-2">
           <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${statusBadgeClass}`}>
-            {formatConclusionStatus(conclusion.status)}
+            {enumLabel(tEnum, 'conclusionStatus', conclusion.status)}
           </span>
           <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${strengthBadgeClass}`}>
-            {formatPromiseStrength(conclusion.strength)}
+            {enumLabel(tEnum, 'promiseStrength', conclusion.strength)}
           </span>
           <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-            {formatConfidence(conclusion.confidence)}
+            {enumLabel(tEnum, 'productConfidence', conclusion.confidence)}
           </span>
         </div>
       </div>

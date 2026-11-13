@@ -1,9 +1,9 @@
 import React from 'react';
 import { PageHeading } from '../layout/PageHeading';
 import type { WealthHeroViewModel } from '../../product/analysis/wealthViewModel';
-import { formatConfidence } from './wealthFormat';
 import { Compass, Moon, Sun, Star, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthHeroProps {
   readonly hero: WealthHeroViewModel;
@@ -11,6 +11,7 @@ export interface WealthHeroProps {
 
 export const WealthHero: React.FC<WealthHeroProps> = ({ hero }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   const ascendant = hero.ascendantSign || t('ui.hero.unavailable');
   const moon = hero.moonSign || t('ui.hero.unavailable');
   const sun = hero.sunSign || t('ui.hero.unavailable');
@@ -27,7 +28,7 @@ export const WealthHero: React.FC<WealthHeroProps> = ({ hero }) => {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-mono-code">
             <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-            <span>{formatConfidence(hero.confidence)}</span>
+            <span>{enumLabel(tEnum, 'productConfidence', hero.confidence)}</span>
           </div>
           {warnings.length > 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-mono-code">
