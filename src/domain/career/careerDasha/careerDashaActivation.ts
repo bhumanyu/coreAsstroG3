@@ -153,8 +153,8 @@ function resolveLevel(
   const conditionAssessment = actualPlanetContext.conditionAssessment
     ?? (actualPlanetContext.condition === 'UNAVAILABLE'
       ? 'UNAVAILABLE'
-      : actualPlanetContext.afflictionAssessed === false ? 'PARTIAL' : 'FULL');
-  const afflictionAssessed = actualPlanetContext.afflictionAssessed ?? (conditionAssessment === 'FULL');
+      : actualPlanetContext.afflictionAssessed === true ? 'FULL' : 'PARTIAL');
+  const afflictionAssessed = actualPlanetContext.afflictionAssessed ?? false;
   const expressionEvidenceCount = new Set(
     actualPlanetContext.expressions.flatMap(expression => expression.evidence.map(item => item.id))
   ).size;

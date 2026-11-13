@@ -66,6 +66,7 @@ export interface CareerSustainabilityAxisResult {
 export interface CareerRiskAxisResult {
   readonly assessment: 'ADVERSE_EVIDENCE_PRESENT' | 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES';
   readonly conflictCount: number;
+  readonly nonActivationOccurrences: readonly string[];
 }
 
 export interface CareerTimingCandidateWindow {
@@ -314,15 +315,20 @@ function makeRiskAxis(
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED')
     .flatMap(item => item.sourceIds);
   const dashaRisk = dasha.evidence
-    .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES' || item.effect === 'DOES_NOT_ACTIVATE')
+    .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES')
     .map(item => item.id);
+  const nonActivationOccurrences = sortedUnique(
+    dasha.evidence
+      .filter(item => item.effect === 'DOES_NOT_ACTIVATE')
+      .map(item => item.id)
+  );
   const d10Risk = d10.evidence
     .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS' || item.d10Effect === 'WEAKENS')
     .map(item => item.id);
   const adverseOccurrences = sortedUnique([...natalRisk, ...dashaRisk, ...d10Risk]);
   const hasAdverseRecords =
     natal.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED') ||
-    dasha.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES' || item.effect === 'DOES_NOT_ACTIVATE') ||
+    dasha.evidence.some(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES') ||
     d10.evidence.some(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS' || item.d10Effect === 'WEAKENS');
 
   const natalIdentityToOccurrences = new Map<string, string[]>();
@@ -407,13 +413,14 @@ function makeRiskAxis(
         finalSynthesis.conflicts.some(conflict => conflict.direction === 'CHALLENGE' || conflict.direction === 'MIXED')
         ? 'ADVERSE_EVIDENCE_PRESENT'
         : 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES',
-      conflictCount: finalSynthesis.conflicts.length
+      conflictCount: finalSynthesis.conflicts.length,
+      nonActivationOccurrences
     }),
     supportingEvidenceOccurrenceIds: riskSupportingOccurrences,
     conflictingEvidenceOccurrenceIds: riskConflictingOccurrences,
     ruleIds: ruleIds([
       ...natal.evidence.filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED').map(item => item.ruleId ?? ''),
-      ...dasha.evidence.filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES' || item.effect === 'DOES_NOT_ACTIVATE').flatMap(item => item.provenance.ruleIds ?? []),
+      ...dasha.evidence.filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES').flatMap(item => item.provenance.ruleIds ?? []),
       ...d10.evidence.filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS' || item.d10Effect === 'WEAKENS').flatMap(item => item.provenance.ruleIds)
     ]),
     coverage: coverage(

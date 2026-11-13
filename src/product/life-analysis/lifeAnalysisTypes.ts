@@ -27,7 +27,8 @@ import type { CareerWealthFinalSynthesis } from '../../domain/careerWealth/final
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
-import type { CareerInternalArtifacts } from '../../domain/career/careerTypes';
+import type { CareerC8ExpressionCoverage, CareerInternalArtifacts } from '../../domain/career/careerTypes';
+import type { CareerPlanetaryConditionAssessment } from '../../domain/career/careerPlanetaryCondition';
 import type { AiExplanationResult } from '../../ai/browser';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
@@ -118,6 +119,8 @@ export interface CareerPeriodTimingProduct {
   readonly effect: TimingActivationEffect;
   readonly evidenceIds: readonly string[];
   readonly traceability?: TraceabilityStatus;
+  readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+  readonly afflictionAssessed?: boolean;
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;
@@ -185,6 +188,7 @@ export interface LifeAnalysisDomainSummaryViewModel {
 export interface LifeAnalysisCareerDetailViewModel {
   readonly canonicalFinalSynthesis?: import('../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes').CareerFinalSynthesisResult;
   readonly canonicalExpressionAnalysis?: import('../../domain/career/careerExpression/careerExpressionTypes').CareerExpressionCanonicalResult;
+  readonly c8ExpressionCoverage?: CareerC8ExpressionCoverage;
   readonly analyticalAxes?: import('../../domain/career/careerFinalSynthesis/careerAnalyticalAxes').CareerAnalyticalAxes;
   readonly careerOutcomeAnalysis?: import('../../domain/career/careerOutcomeQualification/careerOutcomeTypes').CareerOutcomeAnalysis;
   readonly careerEventTimeline?: import('../../domain/career/careerEventTimeline/careerEventTimelineTypes').CareerEventTimelineAnalysis;

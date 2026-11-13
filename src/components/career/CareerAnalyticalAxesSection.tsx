@@ -30,7 +30,16 @@ export const CareerAnalyticalAxesSection: React.FC<CareerAnalyticalAxesSectionPr
           axes.sustainability.result ? <p className="text-xs text-slate-300">{t('ui.axes.assessment')}: {enumLabel(tEnum, 'careerSustainabilityAssessment', axes.sustainability.result.assessment)}. {t('ui.axes.requiredEvidenceFamily')}: {axes.sustainability.result.requiredEvidenceFamily}.</p> : null
         )} />
         <AxisCard label={t('ui.axes.risk')} axis={axes.risk} renderResult={() => (
-          axes.risk.result ? <p className="text-xs text-slate-300">{enumLabel(tEnum, 'careerRiskAssessment', axes.risk.result.assessment)} · {t('ui.axes.conflictCount', { count: axes.risk.result.conflictCount })}</p> : null
+          axes.risk.result ? (
+            <div className="space-y-1">
+              <p className="text-xs text-slate-300">{enumLabel(tEnum, 'careerRiskAssessment', axes.risk.result.assessment)} · {t('ui.axes.conflictCount', { count: axes.risk.result.conflictCount })}</p>
+              {axes.risk.result.nonActivationOccurrences.length > 0 && (
+                <p className="text-xs text-slate-400">
+                  {t('ui.axes.nonActivationOccurrences')}: {axes.risk.result.nonActivationOccurrences.join(', ')}
+                </p>
+              )}
+            </div>
+          ) : null
         )} />
         <AxisCard label={t('ui.axes.timing')} axis={axes.timing} renderResult={() => (
           axes.timing.result ? (
@@ -69,7 +78,8 @@ const AxisCard: React.FC<{ label: string; axis: Axis; renderResult: () => React.
   };
   const statusDescription = axis.unavailableReason || t(statusKey[axis.status]);
   const diagnosticMessages: Record<string, string> = {
-    C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT: t('ui.axes.partialConditionAssessment')
+    C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT: t('ui.axes.partialConditionAssessment'),
+    C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE: t('ui.axes.provenanceIncomplete')
   };
   return (
   <article className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 space-y-2">

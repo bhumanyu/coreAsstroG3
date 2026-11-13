@@ -5,10 +5,13 @@ import i18n from '../../i18n/i18n';
 import { CareerPage } from '../CareerPage';
 import { CareerJourney } from '../../components/career/CareerJourney';
 import { CareerExpressionSection } from '../../components/career/CareerExpressionSection';
+import { CareerDashaSection } from '../../components/career/CareerDashaSection';
+import { CareerAnalyticalAxesSection } from '../../components/career/CareerAnalyticalAxesSection';
 import { OverviewPage } from '../OverviewPage';
 import { ReasoningPage } from '../ReasoningPage';
 import { WealthPage } from '../WealthPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
+import type { ProductCareerAnalyticalAxes } from '../../product/analysis/productAnalysisTypes';
 
 const baseAnalysis = createProductAnalysis();
 const assessmentAnalysis = createProductAnalysis({
@@ -53,13 +56,107 @@ describe('user-facing assessment localization at page boundaries', () => {
       <CareerExpressionSection expression={{
         available: false,
         status: 'EXECUTED_NO_CANDIDATES',
+        coverageSummary: {
+          mechanismCandidateCount: 0,
+          expressionCount: 0,
+          expressionsWithEvidenceCount: 0,
+          evidenceCount: 0,
+          evidenceWithPlanetAttributionCount: 0
+        },
         candidates: []
       }} />
     );
 
     expect(screen.getByText('अभिव्यक्ति विश्लेषण पूरा हुआ, लेकिन कोई उम्मीदवार नहीं मिला।')).toBeInTheDocument();
     expect(screen.getByText('इस प्रोफ़ाइल के लिए कोई प्रामाणिक करियर अभिव्यक्ति उम्मीदवार उपलब्ध नहीं हैं।')).toBeInTheDocument();
+    expect(screen.getByText('अभिव्यक्ति विश्लेषक को कोई तंत्र उम्मीदवार नहीं दिया गया।')).toBeInTheDocument();
     expect(screen.queryByText('ui.expression.executedNoCandidatesTitle')).not.toBeInTheDocument();
+  });
+
+  it('renders the partially assessed Dasha badge in Hindi', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    render(<CareerDashaSection dasha={{
+      status: 'AVAILABLE',
+      periods: [{
+        level: 'MD',
+        planet: 'Jupiter',
+        role: 'PRIMARY',
+        direction: 'CHALLENGE',
+        effect: 'CHALLENGES',
+        evidenceIds: [],
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false
+      }]
+    }} />);
+
+    expect(screen.getByText('आंशिक रूप से आकलित')).toBeInTheDocument();
+    expect(screen.queryByText('ui.dasha.partialAssessment')).not.toBeInTheDocument();
+  });
+
+  it('localizes the provenance diagnostic and keeps non-activation occurrences visible', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    const coverage = {
+      status: 'COMPLETE' as const,
+      availableSources: [],
+      missingSources: [],
+      evidenceOccurrenceCount: 0
+    };
+    const confidence = { status: 'NOT_ASSESSED' as const, reason: 'Test fixture.' };
+    const common = {
+      supportingEvidenceOccurrenceIds: [],
+      conflictingEvidenceOccurrenceIds: [],
+      ruleIds: [],
+      coverage,
+      confidence,
+      methodVersion: 'B01-test'
+    };
+    const axes: ProductCareerAnalyticalAxes = {
+      version: 'B01-test',
+      promise: {
+        ...common,
+        axis: 'PROMISE',
+        status: 'AVAILABLE',
+        result: { direction: 'SUPPORT', strength: 'STRONG' }
+      },
+      activation: {
+        ...common,
+        axis: 'ACTIVATION',
+        status: 'AVAILABLE',
+        result: { direction: 'SUPPORT', effect: 'ACTIVATES', strength: 'STRONG', dominantLevel: 'MD' }
+      },
+      sustainability: {
+        ...common,
+        axis: 'SUSTAINABILITY',
+        status: 'UNAVAILABLE',
+        result: { assessment: 'NOT_ASSESSED', requiredEvidenceFamily: 'CAREER_SUSTAINABILITY' }
+      },
+      risk: {
+        ...common,
+        axis: 'RISK',
+        status: 'AVAILABLE',
+        result: {
+          assessment: 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES',
+          conflictCount: 0,
+          nonActivationOccurrences: ['dasha-non-activation']
+        },
+        diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE']
+      },
+      timing: {
+        ...common,
+        axis: 'TIMING',
+        status: 'AVAILABLE',
+        result: { candidateWindows: [], untimedLevels: [], guarantee: 'NONE' }
+      }
+    };
+    render(<CareerAnalyticalAxesSection axes={axes} />);
+
+    const diagnostic = screen.getByText('सक्रियता साक्ष्य को अभी व्यक्तिगत जन्म-कुंडली अभिलेखों तक नहीं खोजा जा सकता।');
+    expect(diagnostic).toHaveAttribute('title', 'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE');
+    expect(screen.getByText('सक्रिय न करने वाली अवधियाँ: dasha-non-activation')).toBeInTheDocument();
   });
 
   it('renders all expanded Career journey states with Hindi labels', async () => {

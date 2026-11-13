@@ -24,6 +24,9 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
           </div>
         </div>
         <p className="text-xs text-slate-400 italic">{t('ui.expression.executedNoCandidatesMessage')}</p>
+        {expression.coverageSummary?.mechanismCandidateCount === 0 && (
+          <p className="text-xs text-slate-400">{t('ui.expression.noMechanismCandidates')}</p>
+        )}
       </div>
     );
   }

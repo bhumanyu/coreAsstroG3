@@ -1250,6 +1250,39 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     });
   });
 
+  it('projects canonical C8 coverage through the production Career view-model path', () => {
+    const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G01')!;
+    const result = runGoldenScenario(scenario);
+    const coverage = result.interpretation.conclusionData?.internalArtifacts
+      ?.careerAvailabilityDiagnosticTrace?.c8ExpressionCoverage;
+
+    expect(coverage).toMatchObject({
+      mechanismCandidateCount: 0,
+      expressionCount: 0
+    });
+
+    const wealth = interpretWealthV2(result.horoscope, result.domainOptions);
+    const lifeAnalysis = buildLifeAnalysis([result.interpretation, wealth]);
+    const lifeAnalysisViewModel = buildLifeAnalysisViewModel(
+      lifeAnalysis,
+      result.interpretation,
+      wealth,
+      []
+    );
+    const product = mapProductAnalysis({
+      birthDetails: result.birthDetails,
+      horoscope: result.horoscope,
+      lifeAnalysisViewModel,
+      context: result.domainOptions.context,
+      temporalState: result.domainOptions.temporalState
+    });
+    const careerViewModel = selectCareerViewModel(product);
+
+    expect(product.career.expression?.coverageSummary).toEqual(coverage);
+    expect(careerViewModel.expression.status).toBe('EXECUTED_NO_CANDIDATES');
+    expect(careerViewModel.expression.coverageSummary?.mechanismCandidateCount).toBe(0);
+  });
+
   /**
    * G13: D10 unavailable stays not-provided
    */

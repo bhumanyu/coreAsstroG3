@@ -4,6 +4,7 @@ import type { WealthPeriodTimingActivation, WealthConclusionData } from '../weal
 import type { TimingActivationEffect } from './DomainInterpretationTypes';
 import type {
   CareerTimingProduct,
+  CareerPeriodTimingProduct,
   WealthTimingProduct,
   WealthPeriodTimingProduct,
   TimingAvailabilityStatus,
@@ -127,6 +128,18 @@ export function getCareerTimingActivations(
   return undefined;
 }
 
+function getCareerConditionMetadata(
+  career: DomainInterpretation,
+  level: 'MD' | 'AD' | 'PD'
+): Pick<CareerPeriodTimingProduct, 'conditionAssessment' | 'afflictionAssessed'> {
+  const analysis = career.conclusionData?.internalArtifacts?.canonicalDashaAnalysis;
+  const period = level === 'MD' ? analysis?.md : level === 'AD' ? analysis?.ad : analysis?.pd;
+  return {
+    ...(period?.conditionAssessment ? { conditionAssessment: period.conditionAssessment } : {}),
+    ...(period?.afflictionAssessed !== undefined ? { afflictionAssessed: period.afflictionAssessed } : {})
+  };
+}
+
 /**
  * Safely extract WealthPeriodTimingActivation array from domain interpretation.
  */
@@ -186,6 +199,7 @@ export function buildNormalizedCareerTiming(
         effect: careerDasha.md.effect,
         evidenceIds: mdResult.evidenceIds,
         traceability: mdResult.traceability,
+        ...getCareerConditionMetadata(career, 'MD'),
         statement: careerDasha.md.summary,
         ...(careerDasha.md.start ? { start: careerDasha.md.start } : {}),
         ...(careerDasha.md.end ? { end: careerDasha.md.end } : {})
@@ -196,6 +210,7 @@ export function buildNormalizedCareerTiming(
         effect: careerDasha.ad.effect,
         evidenceIds: adResult.evidenceIds,
         traceability: adResult.traceability,
+        ...getCareerConditionMetadata(career, 'AD'),
         statement: careerDasha.ad.summary,
         ...(careerDasha.ad.start ? { start: careerDasha.ad.start } : {}),
         ...(careerDasha.ad.end ? { end: careerDasha.ad.end } : {})
@@ -206,6 +221,7 @@ export function buildNormalizedCareerTiming(
         effect: careerDasha.pd.effect,
         evidenceIds: pdResult.evidenceIds,
         traceability: pdResult.traceability,
+        ...getCareerConditionMetadata(career, 'PD'),
         statement: careerDasha.pd.summary,
         ...(careerDasha.pd.start ? { start: careerDasha.pd.start } : {}),
         ...(careerDasha.pd.end ? { end: careerDasha.pd.end } : {})
@@ -241,6 +257,7 @@ export function buildNormalizedCareerTiming(
           effect: md.effect,
           evidenceIds: mdResult.evidenceIds,
           traceability: mdResult.traceability,
+          ...getCareerConditionMetadata(career, 'MD'),
           statement: md.statement
         }
       }
@@ -253,6 +270,7 @@ export function buildNormalizedCareerTiming(
           effect: ad.effect,
           evidenceIds: adResult.evidenceIds,
           traceability: adResult.traceability,
+          ...getCareerConditionMetadata(career, 'AD'),
           statement: ad.statement
         }
       }
@@ -265,6 +283,7 @@ export function buildNormalizedCareerTiming(
           effect: pd.effect,
           evidenceIds: pdResult.evidenceIds,
           traceability: pdResult.traceability,
+          ...getCareerConditionMetadata(career, 'PD'),
           statement: pd.statement
         }
       }

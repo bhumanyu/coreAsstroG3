@@ -440,6 +440,20 @@ describe('Career Dasha Activation', () => {
     });
   });
 
+  it('defaults missing condition assessment metadata to partial and affliction-not-assessed', () => {
+    const result = resolveCareerDashaActivation(makeContext({
+      planetContexts: Object.freeze([
+        makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'STRONG')
+      ])
+    }));
+
+    expect(result.md.conditionAssessment).toBe('PARTIAL');
+    expect(result.md.afflictionAssessed).toBe(false);
+    expect(result.md.statement).toContain('Affliction was not assessed');
+    expect(result.md.evidence.find(item => item.role === 'PLANETARY_CONDITION')?.statement)
+      .toContain('(partially assessed; affliction not evaluated)');
+  });
+
   it('preserves partial versus full condition assessment for the same weak-condition challenge', () => {
     const partialPlanet = Object.freeze({
       ...makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'WEAK'),

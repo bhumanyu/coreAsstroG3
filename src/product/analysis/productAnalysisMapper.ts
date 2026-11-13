@@ -543,7 +543,13 @@ function mapDashaPeriods(
       evidenceIds: Array.isArray(md.evidenceIds) ? [...md.evidenceIds] : [],
       statement: md.statement,
       start: 'start' in md ? md.start : undefined,
-      end: 'end' in md ? md.end : undefined
+      end: 'end' in md ? md.end : undefined,
+      ...('conditionAssessment' in md && md.conditionAssessment !== undefined
+        ? { conditionAssessment: md.conditionAssessment }
+        : {}),
+      ...('afflictionAssessed' in md && md.afflictionAssessed !== undefined
+        ? { afflictionAssessed: md.afflictionAssessed }
+        : {})
     });
   }
 
@@ -558,7 +564,13 @@ function mapDashaPeriods(
       evidenceIds: Array.isArray(ad.evidenceIds) ? [...ad.evidenceIds] : [],
       statement: ad.statement,
       start: 'start' in ad ? ad.start : undefined,
-      end: 'end' in ad ? ad.end : undefined
+      end: 'end' in ad ? ad.end : undefined,
+      ...('conditionAssessment' in ad && ad.conditionAssessment !== undefined
+        ? { conditionAssessment: ad.conditionAssessment }
+        : {}),
+      ...('afflictionAssessed' in ad && ad.afflictionAssessed !== undefined
+        ? { afflictionAssessed: ad.afflictionAssessed }
+        : {})
     });
   }
 
@@ -573,7 +585,13 @@ function mapDashaPeriods(
       evidenceIds: Array.isArray(pd.evidenceIds) ? [...pd.evidenceIds] : [],
       statement: pd.statement,
       start: 'start' in pd ? pd.start : undefined,
-      end: 'end' in pd ? pd.end : undefined
+      end: 'end' in pd ? pd.end : undefined,
+      ...('conditionAssessment' in pd && pd.conditionAssessment !== undefined
+        ? { conditionAssessment: pd.conditionAssessment }
+        : {}),
+      ...('afflictionAssessed' in pd && pd.afflictionAssessed !== undefined
+        ? { afflictionAssessed: pd.afflictionAssessed }
+        : {})
     });
   }
 
@@ -995,6 +1013,7 @@ function mapCareer(
         primaryStyle: detail.capacityLevel ? String(detail.capacityLevel) : undefined,
         leadershipPotential: detail.actionableTakeaways?.[0],
         secondaryTraits: detail.actionableTakeaways?.slice(1),
+        ...(detail.c8ExpressionCoverage ? { coverageSummary: detail.c8ExpressionCoverage } : {}),
         candidates: detail.canonicalExpressionAnalysis?.expressions.map(candidate => ({
           expressionId: candidate.expressionId,
           expressionType: candidate.expressionType,

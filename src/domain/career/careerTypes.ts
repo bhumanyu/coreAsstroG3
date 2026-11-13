@@ -30,6 +30,22 @@ import type {
 import type {
   CareerMechanismCandidate
 } from './careerMechanism/careerMechanismTypes';
+import type {
+  CareerDashaCanonicalAnalysis
+} from './careerDasha/careerDashaCanonicalTypes';
+
+export interface CareerC8ExpressionCoverage {
+  readonly mechanismCandidateCount: number;
+  readonly expressionCount: number;
+  readonly expressionsWithEvidenceCount: number;
+  readonly evidenceCount: number;
+  readonly evidenceWithPlanetAttributionCount: number;
+}
+
+export interface CareerAvailabilityDiagnosticTrace {
+  readonly c8ExpressionCoverage?: CareerC8ExpressionCoverage;
+  readonly [key: string]: unknown;
+}
 
 export type CareerManifestationMode =
   | 'LEADERSHIP'
@@ -134,7 +150,9 @@ export interface CareerInternalArtifacts {
   readonly canonicalExpression?: CareerExpressionCanonicalResult;
   readonly canonicalExpressionAnalysis?: CareerExpressionCanonicalResult;
   readonly mechanismCandidates?: readonly CareerMechanismCandidate[];
+  readonly canonicalDashaAnalysis?: CareerDashaCanonicalAnalysis;
   readonly careerDashaEvidence: readonly DomainEvidence[];
+  readonly careerAvailabilityDiagnosticTrace?: CareerAvailabilityDiagnosticTrace;
 }
 
 export interface CareerConclusionData {

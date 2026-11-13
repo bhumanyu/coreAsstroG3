@@ -64,7 +64,7 @@ function makeAxes(overrides: {
       confidence: { status: 'NOT_ASSESSED', reason: 'test' }, methodVersion: 'B01-AXIS-PROJECTION-v1'
     },
     risk: {
-      axis: 'RISK', status: 'AVAILABLE', result: { assessment: 'ADVERSE_EVIDENCE_PRESENT', conflictCount: 1 },
+      axis: 'RISK', status: 'AVAILABLE', result: { assessment: 'ADVERSE_EVIDENCE_PRESENT', conflictCount: 1, nonActivationOccurrences: [] },
       supportingEvidenceOccurrenceIds: overrides.riskSupport ?? [], conflictingEvidenceOccurrenceIds: overrides.riskConflicts ?? [],
       ruleIds: [], coverage: { status: 'COMPLETE', availableSources: ['C4_C7_NATAL', 'C9_DASHA'], missingSources: [], evidenceOccurrenceCount: 1 },
       confidence: { status: 'NOT_ASSESSED', reason: 'test' }, methodVersion: 'B01-AXIS-PROJECTION-v1'

@@ -15,6 +15,7 @@ import type {
   ProductAvailability,
   ProductWarning,
   ProductCareerAnalyticalAxes,
+  ProductCareerExpressionCoverageSummary,
   ProductCareerOutcomeAnalysis,
   ProductCareerPathwayAnalysis,
   ProductCareerEventTimeline,
@@ -60,6 +61,7 @@ export interface CareerPromiseViewModel {
 export interface CareerExpressionViewModel {
   readonly available: boolean;
   readonly status: 'AVAILABLE' | 'ABSENT' | 'EXECUTED_NO_CANDIDATES';
+  readonly coverageSummary?: ProductCareerExpressionCoverageSummary;
   readonly primaryStyle?: string;
   readonly leadershipPotential?: string;
   readonly secondaryTraits?: readonly string[];
@@ -85,6 +87,8 @@ export interface CareerDashaPeriodViewModel {
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;
+  readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly afflictionAssessed?: boolean;
 }
 
 export interface CareerDashaViewModel {
@@ -267,6 +271,7 @@ export function selectCareerViewModel(
   const expression: CareerExpressionViewModel = {
     available: expressionStatus === 'AVAILABLE',
     status: expressionStatus,
+    ...(career.expression?.coverageSummary ? { coverageSummary: career.expression.coverageSummary } : {}),
     primaryStyle: career.expression?.primaryStyle,
     leadershipPotential: career.expression?.leadershipPotential,
     secondaryTraits: career.expression?.secondaryTraits ?? [],
@@ -296,7 +301,9 @@ export function selectCareerViewModel(
     evidenceIds: p.evidenceIds ?? [],
     statement: p.statement,
     start: p.start,
-    end: p.end
+    end: p.end,
+    ...(p.conditionAssessment ? { conditionAssessment: p.conditionAssessment } : {}),
+    ...(p.afflictionAssessed !== undefined ? { afflictionAssessed: p.afflictionAssessed } : {})
   }));
 
   const dasha: CareerDashaViewModel = {

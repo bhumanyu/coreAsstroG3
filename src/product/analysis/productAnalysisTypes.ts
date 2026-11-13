@@ -144,11 +144,20 @@ export interface CareerExpressionProduct {
   readonly primaryStyle?: string;
   readonly leadershipPotential?: string;
   readonly secondaryTraits?: readonly string[];
+  readonly coverageSummary?: ProductCareerExpressionCoverageSummary;
   readonly candidates?: readonly {
     readonly expressionId: string;
     readonly expressionType: string;
     readonly qualificationStatus: 'QUALIFIED' | 'CANDIDATE' | 'UNRESOLVED' | 'NOT_APPLICABLE';
   }[];
+}
+
+export interface ProductCareerExpressionCoverageSummary {
+  readonly mechanismCandidateCount: number;
+  readonly expressionCount: number;
+  readonly expressionsWithEvidenceCount: number;
+  readonly evidenceCount: number;
+  readonly evidenceWithPlanetAttributionCount: number;
 }
 
 export interface D10ProductResult {
@@ -170,6 +179,8 @@ export interface ProductDashaPeriod {
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;
+  readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly afflictionAssessed?: boolean;
 }
 
 /**
@@ -295,6 +306,7 @@ export interface ProductCareerAnalyticalAxes {
   readonly risk: ProductCareerAnalyticalAxis<{
     readonly assessment: 'ADVERSE_EVIDENCE_PRESENT' | 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES';
     readonly conflictCount: number;
+    readonly nonActivationOccurrences: readonly string[];
   }>;
   readonly timing: ProductCareerAnalyticalAxis<{
     readonly candidateWindows: readonly ProductCareerTimingCandidateWindow[];

@@ -212,6 +212,38 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       expect(screen.getByText('Refinement')).toBeInTheDocument();
     });
 
+    it('shows a partial-assessment badge only for activating or challenging periods', () => {
+      const dasha: CareerDashaViewModel = {
+        status: 'AVAILABLE',
+        periods: [
+          {
+            level: 'MD',
+            planet: 'Jupiter',
+            role: 'PRIMARY',
+            direction: 'CHALLENGE',
+            effect: 'CHALLENGES',
+            evidenceIds: [],
+            conditionAssessment: 'PARTIAL',
+            afflictionAssessed: false
+          },
+          {
+            level: 'AD',
+            planet: 'Mercury',
+            role: 'MODIFIER',
+            direction: 'NEUTRAL',
+            effect: 'DOES_NOT_ACTIVATE',
+            evidenceIds: [],
+            conditionAssessment: 'PARTIAL',
+            afflictionAssessed: false
+          }
+        ]
+      };
+
+      render(<CareerDashaSection dasha={dasha} />);
+
+      expect(screen.getAllByText('Partially assessed')).toHaveLength(1);
+    });
+
     it('renders clean unavailable state when dasha timing is unavailable', () => {
       const dasha: CareerDashaViewModel = {
         status: 'UNAVAILABLE',

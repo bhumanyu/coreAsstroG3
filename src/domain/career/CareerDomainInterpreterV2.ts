@@ -1206,6 +1206,7 @@ export function interpretCareerV2(
     canonicalExpression: careerMechanismCandidates !== undefined ? canonicalMechanismExpressionResult : undefined,
     canonicalExpressionAnalysis: careerMechanismCandidates !== undefined ? canonicalMechanismExpressionResult : undefined,
     mechanismCandidates: careerMechanismCandidates, // Pass through explicitly (may be empty array)
+    canonicalDashaAnalysis,
     careerDashaEvidence: canonicalDashaAnalysis.evidence,
     careerAvailabilityDiagnosticTrace: Object.freeze({
       c8ExpressionCoverage: Object.freeze({

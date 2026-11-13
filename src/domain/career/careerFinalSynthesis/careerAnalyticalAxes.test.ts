@@ -291,7 +291,32 @@ describe('B01 independent Career analytical axes', () => {
     expect(axes.risk.result?.assessment).toBe('ADVERSE_EVIDENCE_PRESENT');
     expect(axes.risk.supportingEvidenceOccurrenceIds).toContain('d10-risk-occurrence');
     expect(axes.risk.supportingEvidenceOccurrenceIds).toContain('d10-weakening-occurrence');
-    expect(axes.risk.supportingEvidenceOccurrenceIds).toContain('dasha-limiting-occurrence');
+    expect(axes.risk.supportingEvidenceOccurrenceIds).not.toContain('dasha-limiting-occurrence');
+    expect(axes.risk.result?.nonActivationOccurrences).toContain('dasha-limiting-occurrence');
+  });
+
+  it('keeps non-activating Dasha occurrences visible without classifying them as adverse', () => {
+    const nonActivatingEvidence = {
+      identityKey: 'dasha-non-activation-semantic',
+      id: 'dasha-non-activation-occurrence',
+      level: 'MD',
+      planet: Planet.SATURN,
+      role: 'PRIMARY_DRIVER',
+      effect: 'DOES_NOT_ACTIVATE',
+      direction: 'NEUTRAL',
+      strength: 'WEAK',
+      statement: 'This period does not activate the promise.',
+      sourceIds: ['raw-dasha-non-activation'],
+      provenance: { source: 'C9_DASHA', activationLevel: 'MD', ruleIds: ['RULE_DASHA_NON_ACTIVATION'], natalRootIds: [] }
+    };
+    const axes = build({
+      dasha: dasha('NEUTRAL', hierarchy(), [nonActivatingEvidence])
+    });
+
+    expect(axes.risk.result?.assessment).toBe('NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES');
+    expect(axes.risk.result?.nonActivationOccurrences).toEqual(['dasha-non-activation-occurrence']);
+    expect(axes.risk.supportingEvidenceOccurrenceIds).not.toContain('dasha-non-activation-occurrence');
+    expect(axes.risk.ruleIds).not.toContain('RULE_DASHA_NON_ACTIVATION');
   });
 
   it('marks sustainability unavailable instead of inferring it from promise or D10', () => {

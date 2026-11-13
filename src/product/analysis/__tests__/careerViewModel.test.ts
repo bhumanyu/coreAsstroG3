@@ -80,6 +80,56 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     expect(expression.candidates).toEqual([]);
   });
 
+  it('preserves C8 coverage summary for an executed-empty expression analysis', () => {
+    const base = createProductAnalysis();
+    const coverageSummary = {
+      mechanismCandidateCount: 0,
+      expressionCount: 0,
+      expressionsWithEvidenceCount: 0,
+      evidenceCount: 0,
+      evidenceWithPlanetAttributionCount: 0
+    };
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        expression: { analysisStatus: 'EXECUTED', candidates: [], coverageSummary }
+      }
+    });
+
+    expect(selectCareerViewModel(analysis).expression.coverageSummary).toEqual(coverageSummary);
+  });
+
+  it('preserves condition assessment metadata on Dasha period view models', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        activation: {
+          ...base.career.activation,
+          dasha: {
+            ...base.career.activation.dasha,
+            periods: [{
+              level: 'MD',
+              planet: 'Jupiter',
+              role: 'PRIMARY',
+              direction: 'CHALLENGE',
+              effect: 'CHALLENGES',
+              evidenceIds: [],
+              conditionAssessment: 'PARTIAL',
+              afflictionAssessed: false
+            }]
+          }
+        }
+      }
+    });
+
+    expect(selectCareerViewModel(analysis).dasha.periods[0]).toMatchObject({
+      level: 'MD',
+      conditionAssessment: 'PARTIAL',
+      afflictionAssessed: false
+    });
+  });
+
   it('surfaces B06 diagnostics through the career view model', () => {
     const base = createProductAnalysis();
     const analysis = createProductAnalysis({

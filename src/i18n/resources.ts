@@ -544,6 +544,8 @@ export const resources = {
           title: 'Career Sustainability, Risk & Timing Context',
           description: 'B01 independent analytical axes. These are evidence dimensions, not a second Career score.',
           partialConditionAssessment: 'Some activation effects rely on partially assessed planetary conditions.',
+          provenanceIncomplete: 'Activation evidence cannot yet be traced to individual natal records.',
+          nonActivationOccurrences: 'Non-activating periods',
           unavailable: 'Canonical analytical-axis projection is unavailable for this analysis.',
           promise: 'Natal promise',
           activation: 'Activation',
@@ -593,6 +595,7 @@ export const resources = {
           activeWindow: 'Active Window',
           unavailable: 'Unavailable',
           unknownPlanet: 'Unknown Planet',
+          partialAssessment: 'Partially assessed',
           unavailableMessage: 'Vimshottari dasha timing calculations are currently unavailable for this career analysis.'
         },
         evidence: {
@@ -616,6 +619,7 @@ export const resources = {
           executedNoCandidatesTitle: 'Career expressions',
           executedNoCandidatesDescription: 'The expression analysis completed without producing candidates.',
           executedNoCandidatesMessage: 'No canonical career expression candidates are available for this profile.',
+          noMechanismCandidates: 'No mechanism candidates were supplied to the expression resolver.',
           title: 'Vocational Expression & Working Style',
           description: 'Operational temperament, executive capacity, and functional orientation',
           operatingStyle: 'Primary Operating Style',
@@ -2944,6 +2948,8 @@ export const resources = {
           title: 'करियर स्थिरता, जोखिम और समय संदर्भ',
           description: 'B01 के स्वतंत्र विश्लेषणात्मक आयाम। ये साक्ष्य के आयाम हैं, दूसरा करियर स्कोर नहीं।',
           partialConditionAssessment: 'कुछ सक्रियता प्रभाव आंशिक रूप से आकलित ग्रह स्थितियों पर आधारित हैं।',
+          provenanceIncomplete: 'सक्रियता साक्ष्य को अभी व्यक्तिगत जन्म-कुंडली अभिलेखों तक नहीं खोजा जा सकता।',
+          nonActivationOccurrences: 'सक्रिय न करने वाली अवधियाँ',
           unavailable: 'इस विश्लेषण के लिए प्रामाणिक विश्लेषणात्मक आयाम उपलब्ध नहीं हैं।',
           promise: 'जन्म-कुंडली के संकेत',
           activation: 'सक्रियता',
@@ -2993,6 +2999,7 @@ export const resources = {
           activeWindow: 'सक्रिय अवधि',
           unavailable: 'उपलब्ध नहीं',
           unknownPlanet: 'अज्ञात ग्रह',
+          partialAssessment: 'आंशिक रूप से आकलित',
           unavailableMessage: 'इस करियर विश्लेषण के लिए विंशोत्तरी दशा समय की गणना अभी उपलब्ध नहीं है।'
         },
         evidence: {
@@ -3016,6 +3023,7 @@ export const resources = {
           executedNoCandidatesTitle: 'करियर अभिव्यक्तियाँ',
           executedNoCandidatesDescription: 'अभिव्यक्ति विश्लेषण पूरा हुआ, लेकिन कोई उम्मीदवार नहीं मिला।',
           executedNoCandidatesMessage: 'इस प्रोफ़ाइल के लिए कोई प्रामाणिक करियर अभिव्यक्ति उम्मीदवार उपलब्ध नहीं हैं।',
+          noMechanismCandidates: 'अभिव्यक्ति विश्लेषक को कोई तंत्र उम्मीदवार नहीं दिया गया।',
           title: 'व्यावसायिक अभिव्यक्ति और कार्यशैली',
           description: 'कार्यगत स्वभाव, कार्यकारी क्षमता और कार्यात्मक दिशा',
           operatingStyle: 'प्रमुख कार्यशैली',

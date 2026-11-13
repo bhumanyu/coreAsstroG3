@@ -115,6 +115,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
           planet: Planet.JUPITER,
           effect: 'ACTIVATES',
           evidenceIds: ['ev_md_1'],
+          conditionAssessment: 'PARTIAL',
+          afflictionAssessed: false,
           statement: 'Jupiter Mahadasha establishes primary career elevation.'
         },
         antardasha: {
@@ -122,6 +124,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
           planet: Planet.SATURN,
           effect: 'CHALLENGES',
           evidenceIds: ['ev_ad_1'],
+          conditionAssessment: 'FULL',
+          afflictionAssessed: true,
           statement: 'Saturn Antardasha introduces structural discipline.'
         },
         pratyantardasha: {
@@ -378,7 +382,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       risk: {
         axis: 'RISK',
         status: 'AVAILABLE',
-        result: { assessment: 'ADVERSE_EVIDENCE_PRESENT', conflictCount: 1 },
+        result: { assessment: 'ADVERSE_EVIDENCE_PRESENT', conflictCount: 1, nonActivationOccurrences: [] },
         supportingEvidenceOccurrenceIds: ['risk-occurrence'],
         conflictingEvidenceOccurrenceIds: [],
         ruleIds: ['RULE_RISK'],
@@ -622,10 +626,14 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(md.role).toBe('PRIMARY');
     expect(md.direction).toBe('SUPPORT');
     expect(md.evidenceIds).toEqual(['ev_md_1']);
+    expect(md.conditionAssessment).toBe('PARTIAL');
+    expect(md.afflictionAssessed).toBe(false);
 
     expect(ad.role).toBe('MODIFIER');
     expect(ad.direction).toBe('CHALLENGE');
     expect(ad.evidenceIds).toEqual(['ev_ad_1']);
+    expect(ad.conditionAssessment).toBe('FULL');
+    expect(ad.afflictionAssessed).toBe(true);
 
     expect(pd.role).toBe('REFINEMENT');
     expect(pd.direction).toBe('SUPPORT');

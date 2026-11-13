@@ -50,7 +50,7 @@ function careerAxes(riskStatus: ProductCareerAxisStatus): ProductCareerAnalytica
       ...axisBase,
       axis: 'RISK',
       status: riskStatus,
-      result: { assessment: 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES', conflictCount: 0 },
+      result: { assessment: 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES', conflictCount: 0, nonActivationOccurrences: [] },
       coverage: coverage(riskStatus === 'AVAILABLE' ? 'COMPLETE' : 'INSUFFICIENT')
     },
     timing: {

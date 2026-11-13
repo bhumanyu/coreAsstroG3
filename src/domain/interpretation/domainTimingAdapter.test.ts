@@ -255,7 +255,14 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
             combinedEffect: 'SUPPORTS'
           },
           asOf: '2024-01-01T00:00:00.000Z'
-        }
+        },
+        internalArtifacts: {
+          canonicalDashaAnalysis: {
+            md: { conditionAssessment: 'PARTIAL', afflictionAssessed: false },
+            ad: { conditionAssessment: 'FULL', afflictionAssessed: true },
+            pd: { conditionAssessment: 'UNAVAILABLE', afflictionAssessed: false }
+          }
+        } as any
       }
     });
 
@@ -266,6 +273,9 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     expect(timing?.mahadasha?.traceability).toBe('RESOLVED');
     expect(timing?.antardasha?.traceability).toBe('RESOLVED');
     expect(timing?.pratyantardasha?.traceability).toBe('DEGRADED'); // No PD evidence
+    expect(timing?.mahadasha).toMatchObject({ conditionAssessment: 'PARTIAL', afflictionAssessed: false });
+    expect(timing?.antardasha).toMatchObject({ conditionAssessment: 'FULL', afflictionAssessed: true });
+    expect(timing?.pratyantardasha).toMatchObject({ conditionAssessment: 'UNAVAILABLE', afflictionAssessed: false });
   });
 
   it('buildNormalizedWealthTiming includes traceability status on each period', () => {

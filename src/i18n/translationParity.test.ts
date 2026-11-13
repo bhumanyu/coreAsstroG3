@@ -148,9 +148,13 @@ describe('English/Hindi localization resource parity', () => {
       'ui.hero.notices',
       'ui.hero.noticePlural',
       'ui.axes.partialConditionAssessment',
+      'ui.axes.provenanceIncomplete',
+      'ui.axes.nonActivationOccurrences',
       'ui.expression.executedNoCandidatesTitle',
       'ui.expression.executedNoCandidatesDescription',
       'ui.expression.executedNoCandidatesMessage',
+      'ui.expression.noMechanismCandidates',
+      'ui.dasha.partialAssessment',
       ...careerJourneyStateKeys,
       ...dashaLevelKeys
     ];
