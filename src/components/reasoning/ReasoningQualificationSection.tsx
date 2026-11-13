@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningQualificationViewModel } from '../../product/analysis/reasoningViewModel';
 import { formatSeverity, getSeverityBadgeClass } from './reasoningFormat';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
@@ -10,6 +11,7 @@ export interface ReasoningQualificationSectionProps {
 export const ReasoningQualificationSection: React.FC<ReasoningQualificationSectionProps> = ({
   qualifications
 }) => {
+  const { t } = useTranslation('reports');
   const hasQualifications = qualifications && qualifications.length > 0;
 
   return (
@@ -20,13 +22,13 @@ export const ReasoningQualificationSection: React.FC<ReasoningQualificationSecti
             <AlertTriangle className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Reasoning Qualifications & Caveats</h2>
-            <p className="text-xs text-slate-400">Countervailing planetary afflictions, combustion, or structural constraints</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('reasoning.detail.qualificationsTitle')}</h2>
+            <p className="text-xs text-slate-400">{t('reasoning.detail.qualificationsDescription')}</p>
           </div>
         </div>
 
         <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-          {qualifications.length} {qualifications.length === 1 ? 'Condition' : 'Conditions'}
+          {t(qualifications.length === 1 ? 'reasoning.detail.conditionCount' : 'reasoning.detail.conditionsCount', { count: qualifications.length })}
         </span>
       </div>
 
@@ -59,7 +61,7 @@ export const ReasoningQualificationSection: React.FC<ReasoningQualificationSecti
       ) : (
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
-          <span>No qualifying conditions, severe afflictions, or adverse factors detected.</span>
+          <span>{t('reasoning.detail.noQualifications')}</span>
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ThemeInterpretationEvidence } from '../../../engine/themeInterpretation/themeInterpretationTypes';
 import { Clock, Info } from 'lucide-react';
 
@@ -9,10 +10,11 @@ interface ThemeTimingCardProps {
 }
 
 export const ThemeTimingCard: React.FC<ThemeTimingCardProps> = ({
-  title = 'Timing / Dasha Activation',
+  title,
   timingEvidence,
   id
 }) => {
+  const { t } = useTranslation('reports');
   const safeItems = [...(timingEvidence || [])];
 
   return (
@@ -24,11 +26,11 @@ export const ThemeTimingCard: React.FC<ThemeTimingCardProps> = ({
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-indigo-400" />
           <h4 className="text-sm font-bold font-serif-astro text-slate-100">
-            {title}
+            {title ?? t('fullNatal.components.themeEvidence.timingTitle')}
           </h4>
         </div>
         <span className="text-xs font-mono-code text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
-          Vimshottari Windows
+          {t('fullNatal.components.themeEvidence.vimshottariWindows')}
         </span>
       </div>
 
@@ -72,7 +74,7 @@ export const ThemeTimingCard: React.FC<ThemeTimingCardProps> = ({
 
                 {timing?.houses && timing.houses.length > 0 && (
                   <div className="text-[10px] font-mono-code text-slate-400">
-                    Thematic Houses Activated: <span className="text-slate-200">{timing.houses.map((h) => `${h}H`).join(', ')}</span>
+                    {t('fullNatal.components.themeEvidence.activatedHouses')} <span className="text-slate-200">{timing.houses.map((h) => `${h}H`).join(', ')}</span>
                   </div>
                 )}
               </div>
@@ -81,7 +83,7 @@ export const ThemeTimingCard: React.FC<ThemeTimingCardProps> = ({
         </div>
       ) : (
         <p className="text-xs text-slate-400 italic">
-          No current dasha period rulers have direct primary linkages to key thematic houses. The theme manifests through secondary transits and background natal dispositions.
+          {t('fullNatal.components.themeEvidence.timingUnavailable')}
         </p>
       )}
 
@@ -89,7 +91,7 @@ export const ThemeTimingCard: React.FC<ThemeTimingCardProps> = ({
       <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800/80 text-[11px] text-slate-400 flex items-center gap-1.5">
         <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
         <span>
-          Timing activation highlights when thematic events are triggered in time; it does not alter the fundamental natal promise.
+          {t('fullNatal.components.themeEvidence.timingBoundary')}
         </span>
       </div>
     </div>

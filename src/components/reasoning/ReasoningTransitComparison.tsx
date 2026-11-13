@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningTransitViewModel } from '../../product/analysis/reasoningViewModel';
 import {
   formatAvailability,
@@ -16,6 +17,7 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
   careerTransit,
   wealthTransit
 }) => {
+  const { t } = useTranslation('reports');
   const isCareerAvailable =
     careerTransit?.status === 'AVAILABLE' || careerTransit?.status === 'PARTIAL';
   const careerBadgeClass = getAvailabilityBadgeClass(careerTransit?.status ?? 'UNAVAILABLE');
@@ -29,7 +31,7 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
   return (
     <section
       id="section-transit-timing"
-      aria-label="Transit Timing"
+      aria-label={t('reasoning.detail.transitAria')}
       className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -38,15 +40,15 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
             <Compass className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Transit Timing</h2>
+            <h2 className="text-base font-semibold text-slate-100">{t('reasoning.detail.transitTitle')}</h2>
             <p className="text-xs text-slate-400">
-              Independent real-time Gochara planetary catalysts for Career and Wealth
+              {t('reasoning.detail.transitDescription')}
             </p>
           </div>
         </div>
 
         <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-          Gochara Catalysts
+          {t('reasoning.detail.gocharaCatalysts')}
         </span>
       </div>
 
@@ -61,9 +63,9 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
               <div className="flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-indigo-400" aria-hidden="true" />
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-100">Career Transit Timing</h3>
+                  <h3 className="text-sm font-semibold text-slate-100">{t('reasoning.detail.careerTransitTitle')}</h3>
                   <span className="text-[11px] font-mono-code text-slate-400 block">
-                    Vocational Triggers & Pressure
+                    {t('reasoning.detail.careerTriggers')}
                   </span>
                 </div>
               </div>
@@ -88,7 +90,7 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
                   </p>
                 ) : (
                   <p className="text-xs text-slate-400 italic">
-                    Career transit timing is active; no detailed transit statement provided.
+                    {t('reasoning.detail.careerTransitActive')}
                   </p>
                 )}
               </div>
@@ -96,7 +98,7 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
               <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/60 p-3 rounded-lg border border-slate-800/60">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
                 <span>
-                  {careerTransit?.statement || 'Unavailable: Career planetary transit data is unavailable.'}
+                  {careerTransit?.statement || t('reasoning.detail.careerTransitUnavailable')}
                 </span>
               </div>
             )}
@@ -113,9 +115,9 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-amber-400" aria-hidden="true" />
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-100">Wealth Transit Timing</h3>
+                  <h3 className="text-sm font-semibold text-slate-100">{t('reasoning.detail.wealthTransitTitle')}</h3>
                   <span className="text-[11px] font-mono-code text-slate-400 block">
-                    Financial Catalysts & Modifiers
+                    {t('reasoning.detail.financialCatalysts')}
                   </span>
                 </div>
               </div>
@@ -140,7 +142,7 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
                   </p>
                 ) : (
                   <p className="text-xs text-slate-400 italic">
-                    Wealth transit timing is active; no detailed transit statement provided.
+                    {t('reasoning.detail.wealthTransitActive')}
                   </p>
                 )}
               </div>
@@ -148,7 +150,7 @@ export const ReasoningTransitComparison: React.FC<ReasoningTransitComparisonProp
               <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/60 p-3 rounded-lg border border-slate-800/60">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
                 <span>
-                  {wealthTransit?.statement || 'Unavailable: Wealth planetary transit data is unavailable.'}
+                  {wealthTransit?.statement || t('reasoning.detail.wealthTransitUnavailable')}
                 </span>
               </div>
             )}

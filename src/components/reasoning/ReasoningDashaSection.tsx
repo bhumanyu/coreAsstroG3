@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   ReasoningDashaViewModel,
   ReasoningDashaPeriodViewModel
@@ -25,6 +26,7 @@ const LEVEL_LABELS: Record<'MD' | 'AD' | 'PD', string> = {
 };
 
 const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ period }) => {
+  const { t } = useTranslation('reports');
   const roleLabel = formatEvidenceRole(period.role);
   const directionLabel = formatDirection(period.direction);
   const effectLabel = formatActivationEffect(period.effect);
@@ -44,7 +46,7 @@ const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ perio
 
       <div className="flex items-baseline justify-between">
         <span className="text-base font-bold text-slate-100 font-sans">
-          {period.planet ?? 'Unavailable'}
+          {period.planet ?? t('reasoning.detail.unavailable')}
         </span>
         <div className="flex items-center gap-1.5">
           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${directionClass}`}>
@@ -74,6 +76,7 @@ const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ perio
 };
 
 export const ReasoningDashaSection: React.FC<ReasoningDashaSectionProps> = ({ dasha }) => {
+  const { t } = useTranslation('reports');
   // CRITICAL: Render available cards for both AVAILABLE and PARTIAL. Only treat UNAVAILABLE as empty.
   const isAvailableOrPartial = dasha.status === 'AVAILABLE' || dasha.status === 'PARTIAL';
   const hasPeriods = dasha.periods && dasha.periods.length > 0;
@@ -87,8 +90,8 @@ export const ReasoningDashaSection: React.FC<ReasoningDashaSectionProps> = ({ da
             <Clock className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Chronological Vimshottari Dasha Activation</h2>
-            <p className="text-xs text-slate-400">Temporal activation hierarchy via Mahadasha, Antardasha, and Pratyantardasha</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('reasoning.detail.dashaTitle')}</h2>
+            <p className="text-xs text-slate-400">{t('reasoning.detail.dashaDescription')}</p>
           </div>
         </div>
 
@@ -117,7 +120,7 @@ export const ReasoningDashaSection: React.FC<ReasoningDashaSectionProps> = ({ da
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            Dasha timing periods are unavailable for this calculation.
+            {t('reasoning.detail.dashaUnavailable')}
           </span>
         </div>
       )}

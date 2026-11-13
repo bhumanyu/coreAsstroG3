@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ThemeInterpretationEvidence,
   EvidenceFamilySummary
@@ -28,6 +29,7 @@ export const ThemeEvidenceSection: React.FC<ThemeEvidenceSectionProps> = ({
   customDomainGroups,
   id
 }) => {
+  const { t } = useTranslation('reports');
   const [selectedTab, setSelectedTab] = useState<'DIMENSION' | 'FAMILY'>('DIMENSION');
 
   // Copy without mutating frozen objects
@@ -52,7 +54,7 @@ export const ThemeEvidenceSection: React.FC<ThemeEvidenceSectionProps> = ({
     <div id={id} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-800">
         <h4 className="text-xs font-mono-code font-bold uppercase text-slate-300 flex items-center gap-1.5">
-          <Layers className="w-4 h-4 text-indigo-400" /> Evidence Hierarchy & Detailed Factors ({allEvidence.length})
+          <Layers className="w-4 h-4 text-indigo-400" /> {t('fullNatal.components.themeEvidence.hierarchy', { count: allEvidence.length })}
         </h4>
 
         <div className="flex items-center gap-1 bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 text-[11px] font-mono-code">
@@ -65,7 +67,7 @@ export const ThemeEvidenceSection: React.FC<ThemeEvidenceSectionProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            By Dimension
+            {t('fullNatal.components.themeEvidence.byDimension')}
           </button>
           <button
             type="button"
@@ -76,7 +78,7 @@ export const ThemeEvidenceSection: React.FC<ThemeEvidenceSectionProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            By Factor Family
+            {t('fullNatal.components.themeEvidence.byFactorFamily')}
           </button>
         </div>
       </div>
@@ -90,10 +92,10 @@ export const ThemeEvidenceSection: React.FC<ThemeEvidenceSectionProps> = ({
                 <Shield className="w-3.5 h-3.5" /> {formatEvidenceDimension('NATAL_STRUCTURE')} ({structural.length})
               </div>
               <p className="text-[11px] text-slate-400">
-                Core foundation: houses, lords, and direct architectural connections forming the fundamental promise.
+                {t('fullNatal.components.themeEvidence.structuralDescription')}
               </p>
               <ThemeEvidenceGroup
-                title="Natal Structural Evidence"
+                title={t('fullNatal.components.themeEvidence.structuralEvidence')}
                 evidence={structural}
                 id={`${id || 'ev'}-dim-structural`}
               />
@@ -107,10 +109,10 @@ export const ThemeEvidenceSection: React.FC<ThemeEvidenceSectionProps> = ({
                 <Sparkles className="w-3.5 h-3.5" /> {formatEvidenceDimension('MODIFIER')} ({modifiers.length})
               </div>
               <p className="text-[11px] text-slate-400">
-                Natural significators, functional nature, planetary strength (Shadbala), and special aspect modifiers.
+                {t('fullNatal.components.themeEvidence.modifierDescription')}
               </p>
               <ThemeEvidenceGroup
-                title="Modifiers & Natural Significators"
+                title={t('fullNatal.components.themeEvidence.modifiers')}
                 evidence={modifiers}
                 id={`${id || 'ev'}-dim-modifiers`}
               />
@@ -124,10 +126,10 @@ export const ThemeEvidenceSection: React.FC<ThemeEvidenceSectionProps> = ({
                 <Sparkles className="w-3.5 h-3.5" /> {formatEvidenceDimension('CONFIRMATION')} ({confirmation.length})
               </div>
               <p className="text-[11px] text-slate-400">
-                Special classical yogas and divisional chart confirmations supporting or refining the promise.
+                {t('fullNatal.components.themeEvidence.confirmationDescription')}
               </p>
               <ThemeEvidenceGroup
-                title="Confirmation & Yogas"
+                title={t('fullNatal.components.themeEvidence.confirmation')}
                 evidence={confirmation}
                 id={`${id || 'ev'}-dim-confirmation`}
               />
@@ -141,10 +143,10 @@ export const ThemeEvidenceSection: React.FC<ThemeEvidenceSectionProps> = ({
                 <Clock className="w-3.5 h-3.5" /> {formatEvidenceDimension('TIMING')} ({timing.length})
               </div>
               <p className="text-[11px] text-slate-400">
-                Vimshottari Dasha periods linking active period lords to thematic houses and promise activation.
+                {t('fullNatal.components.themeEvidence.timingDescription')}
               </p>
               <ThemeEvidenceGroup
-                title="Timing & Dasha Activation"
+                title={t('fullNatal.components.themeEvidence.timing')}
                 evidence={timing}
                 id={`${id || 'ev'}-dim-timing`}
               />

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ThemeSynthesis } from '../../types';
 import { formatLifeThemeLabel, formatConfidence } from './reportUtils';
 import { Award, AlertTriangle, Clock } from 'lucide-react';
@@ -8,6 +9,7 @@ interface LifeThemeCardProps {
 }
 
 export const LifeThemeCard: React.FC<LifeThemeCardProps> = ({ theme }) => {
+  const { t } = useTranslation('reports');
   const state = theme.state || 'SUPPORTED';
 
   return (
@@ -19,14 +21,14 @@ export const LifeThemeCard: React.FC<LifeThemeCardProps> = ({ theme }) => {
           </h4>
           {theme.timingDependent && (
             <span className="text-[10px] font-mono-code text-amber-400 flex items-center gap-1 mt-0.5">
-              <Clock className="w-3 h-3" /> Timing / Dasha Dependent
+              <Clock className="w-3 h-3" /> {t('fullNatal.components.lifeThemeCard.timingDependent')}
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-2">
           <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-            Confidence: {formatConfidence(theme.confidence)}
+            {t('fullNatal.components.lifeThemeCard.confidence', { value: formatConfidence(theme.confidence) })}
           </span>
           <span
             className={`px-2.5 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase border ${
@@ -55,7 +57,7 @@ export const LifeThemeCard: React.FC<LifeThemeCardProps> = ({ theme }) => {
         {theme.supportingFactors && theme.supportingFactors.length > 0 && (
           <div className="bg-emerald-950/20 p-2.5 rounded-lg border border-emerald-500/20 text-[11px] space-y-1">
             <span className="font-mono-code font-bold text-emerald-400 flex items-center gap-1">
-              <Award className="w-3 h-3" /> Supporting Factors ({theme.supportingFactors.length})
+              <Award className="w-3 h-3" /> {t('fullNatal.components.lifeThemeCard.supportingFactors', { count: theme.supportingFactors.length })}
             </span>
             <ul className="list-disc list-inside space-y-0.5 text-slate-300">
               {theme.supportingFactors.map((f, idx) => (
@@ -68,7 +70,7 @@ export const LifeThemeCard: React.FC<LifeThemeCardProps> = ({ theme }) => {
         {theme.weakeningFactors && theme.weakeningFactors.length > 0 && (
           <div className="bg-amber-950/20 p-2.5 rounded-lg border border-amber-500/20 text-[11px] space-y-1">
             <span className="font-mono-code font-bold text-amber-400 flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> Weakening Factors ({theme.weakeningFactors.length})
+              <AlertTriangle className="w-3 h-3" /> {t('fullNatal.components.lifeThemeCard.weakeningFactors', { count: theme.weakeningFactors.length })}
             </span>
             <ul className="list-disc list-inside space-y-0.5 text-slate-300">
               {theme.weakeningFactors.map((f, idx) => (

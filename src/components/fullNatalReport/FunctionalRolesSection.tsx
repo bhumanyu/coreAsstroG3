@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FunctionalRolesSection as FunctionalRolesSectionType, FunctionalRoleReportItem } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
@@ -11,17 +12,18 @@ interface FunctionalRolesSectionProps {
 }
 
 export const FunctionalRolesSection: React.FC<FunctionalRolesSectionProps> = ({ section }) => {
+  const { t } = useTranslation('reports');
   if (section.status === 'UNAVAILABLE' || !section.items || section.items.length === 0) {
-    return <EmptyState title="Functional Roles Analysis Unavailable" message="Functional role classifications were not provided in the report." />;
+    return <EmptyState title={t('fullNatal.components.functionalRoles.unavailableTitle')} message={t('fullNatal.components.functionalRoles.unavailableMessage')} />;
   }
 
   return (
     <div className="space-y-4">
       {section.status === 'PARTIAL' && (
-        <PartialStateNotice message="Functional role analysis is incomplete or partial." />
+        <PartialStateNotice message={t('fullNatal.components.partial.functionalRoles')} />
       )}
 
-      <SectionAccordion title="Functional Roles" count={section.items.length}>
+      <SectionAccordion title={t('fullNatal.components.functionalRoles.sectionTitle')} count={section.items.length}>
         {section.items.map((item: FunctionalRoleReportItem) => {
           const nature = item.functionalNature || 'NEUTRAL';
           const isBenefic = nature.toUpperCase().includes('BENEFIC');
@@ -49,7 +51,7 @@ export const FunctionalRolesSection: React.FC<FunctionalRolesSectionProps> = ({ 
             >
               <div className="space-y-3">
                 <div>
-                  <span className="text-[10px] font-mono-code font-bold uppercase text-indigo-400">Owned Houses</span>
+                  <span className="text-[10px] font-mono-code font-bold uppercase text-indigo-400">{t('fullNatal.components.functionalRoles.ownedHouses')}</span>
                   <p className="mt-1 text-slate-300">
                     {item.ownedHouses && item.ownedHouses.length > 0
                       ? item.ownedHouses.map((house: number) => `H${house}`).join(', ')
@@ -57,7 +59,7 @@ export const FunctionalRolesSection: React.FC<FunctionalRolesSectionProps> = ({ 
                   </p>
                 </div>
                 <div>
-                  <span className="text-[10px] font-mono-code font-bold uppercase text-indigo-400">Special Classifications</span>
+                  <span className="text-[10px] font-mono-code font-bold uppercase text-indigo-400">{t('fullNatal.components.functionalRoles.specialClassifications')}</span>
                   <div className="mt-1">
                     {isYogakaraka ? (
                       <span className="px-2 py-0.5 bg-amber-500/10 text-amber-300 border border-amber-500/20 rounded font-mono-code font-bold text-[10px]">
@@ -67,9 +69,9 @@ export const FunctionalRolesSection: React.FC<FunctionalRolesSectionProps> = ({ 
                   </div>
                 </div>
                 {item.evidence && item.evidence.length > 0 ? (
-                  <EvidenceList evidence={item.evidence} title="Role Evidence" />
+                  <EvidenceList evidence={item.evidence} title={t('fullNatal.components.functionalRoles.evidenceTitle')} />
                 ) : (
-                  <span className="text-slate-500">No role evidence provided.</span>
+                  <span className="text-slate-500">{t('fullNatal.components.functionalRoles.noEvidence')}</span>
                 )}
               </div>
             </CollapsibleItem>

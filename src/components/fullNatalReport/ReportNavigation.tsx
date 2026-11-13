@@ -1,18 +1,40 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { REPORT_NAVIGATION, ReportSectionId } from './reportUtils';
+
+const navigationLabelKeys: Record<ReportSectionId, string> = {
+  'birth-information': 'fullNatal.navigation.birthInformation',
+  methodology: 'fullNatal.navigation.methodology',
+  'executive-summary': 'fullNatal.navigation.executiveSummary',
+  ascendant: 'fullNatal.navigation.ascendant',
+  planets: 'fullNatal.navigation.planets',
+  houses: 'fullNatal.navigation.houses',
+  'functional-roles': 'fullNatal.navigation.functionalRoles',
+  yogas: 'fullNatal.navigation.yogas',
+  'planetary-strength': 'fullNatal.navigation.planetaryStrength',
+  d9: 'fullNatal.navigation.d9',
+  d10: 'fullNatal.navigation.d10',
+  vimshottari: 'fullNatal.navigation.vimshottari',
+  'current-dasha': 'fullNatal.navigation.currentDasha',
+  'current-transit': 'fullNatal.navigation.currentTransit',
+  'life-themes': 'fullNatal.navigation.lifeThemes',
+  'major-life-periods': 'fullNatal.navigation.majorLifePeriods',
+  'overall-synthesis': 'fullNatal.navigation.overallSynthesis'
+};
 
 interface ReportNavigationProps {
   readonly activeSectionId: string;
 }
 
 export const ReportNavigation: React.FC<ReportNavigationProps> = ({ activeSectionId }) => {
+  const { t } = useTranslation('reports');
   return (
     <nav
-      aria-label="Natal Analysis Report Sections"
+      aria-label={t('fullNatal.navigationAria')}
       className="print-hidden lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto space-y-1 bg-slate-900/90 border border-slate-800 rounded-2xl p-3 shadow-xl backdrop-blur-md"
     >
       <div className="hidden lg:block px-3 py-2 text-xs font-mono-code font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-800 mb-2">
-        Report Sections (17)
+        {t('fullNatal.navigationCount', { count: REPORT_NAVIGATION.length })}
       </div>
 
       {/* Desktop List */}
@@ -36,7 +58,7 @@ export const ReportNavigation: React.FC<ReportNavigationProps> = ({ activeSectio
               >
                 {item.number}
               </span>
-              <span className="truncate">{item.label}</span>
+              <span className="truncate">{t(navigationLabelKeys[item.id])}</span>
             </a>
           );
         })}
@@ -57,7 +79,7 @@ export const ReportNavigation: React.FC<ReportNavigationProps> = ({ activeSectio
               }`}
             >
               <span className="font-mono-code text-[10px] opacity-80">{item.number}.</span>
-              <span>{item.label}</span>
+              <span>{t(navigationLabelKeys[item.id])}</span>
             </a>
           );
         })}

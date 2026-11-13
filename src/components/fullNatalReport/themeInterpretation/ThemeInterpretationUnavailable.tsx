@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 
 interface ThemeInterpretationUnavailableProps {
@@ -12,6 +13,7 @@ export const ThemeInterpretationUnavailable: React.FC<ThemeInterpretationUnavail
   reason,
   id
 }) => {
+  const { t } = useTranslation('reports');
   return (
     <div
       id={id}
@@ -19,11 +21,11 @@ export const ThemeInterpretationUnavailable: React.FC<ThemeInterpretationUnavail
     >
       <div className="flex items-center justify-center gap-2 text-slate-400 font-serif-astro text-sm font-bold">
         <AlertCircle className="w-4 h-4 text-amber-400" />
-        {themeName} Interpretation Unavailable
+        {t('fullNatal.components.themeEvidence.unavailableTitle', { themeName })}
       </div>
       <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
         {reason ||
-          `Detailed deterministic interpretation for ${themeName} could not be calculated due to missing planetary positions or configuration data.`}
+          t('fullNatal.components.themeEvidence.unavailableDescription', { themeName })}
       </p>
     </div>
   );

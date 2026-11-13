@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { PlanetAnalysisSection as PlanetAnalysisSectionType } from '../../types';
 import { PlanetAnalysisCard } from './PlanetAnalysisCard';
 import { EmptyState } from './EmptyState';
@@ -11,15 +12,16 @@ interface PlanetAnalysisSectionProps {
 }
 
 export const PlanetAnalysisSection: React.FC<PlanetAnalysisSectionProps> = ({ section }) => {
+  const { t } = useTranslation('reports');
   if (section.status === 'UNAVAILABLE' || !section.planets || section.planets.length === 0) {
-    return <EmptyState title="Planetary Analysis Unavailable" message="Planetary analysis details were not provided in the report." />;
+    return <EmptyState title={t('fullNatal.components.planets.unavailableTitle')} message={t('fullNatal.components.planets.unavailableMessage')} />;
   }
 
   return (
     <div className="space-y-4">
-      {section.status === 'PARTIAL' && <PartialStateNotice message="Planetary analysis contains partial data." />}
+      {section.status === 'PARTIAL' && <PartialStateNotice message={t('fullNatal.components.partial.planets')} />}
 
-      <SectionAccordion title="Planetary Analysis" count={section.planets.length}>
+      <SectionAccordion title={t('fullNatal.components.planets.sectionTitle')} count={section.planets.length}>
         {section.planets.map((item) => (
           <CollapsibleItem key={item.planet} itemId={item.planet} title={formatPlanetName(item.planet)}>
             <PlanetAnalysisCard item={item} />

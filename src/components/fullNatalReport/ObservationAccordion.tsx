@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import { SynthesisObservation } from '../../types';
 import { formatLifeThemeLabel } from './reportUtils';
@@ -142,6 +143,7 @@ export const ObservationAccordion: React.FC<ObservationAccordionProps> = ({
   observation,
   observationKey
 }) => {
+  const { t } = useTranslation('reports');
   const context = useContext(ObservationAccordionContext);
   if (!context) {
     throw new Error('ObservationAccordion must be rendered inside SectionAccordion.');
@@ -162,14 +164,14 @@ export const ObservationAccordion: React.FC<ObservationAccordionProps> = ({
       <p className="leading-relaxed">{observation.summary}</p>
       <div>
         <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
-          Type
+          {t('fullNatal.components.observations.type')}
         </span>
         <p className="mt-1 font-mono-code text-[10px] text-indigo-300">{observation.type}</p>
       </div>
       {observation.relatedThemes.length > 0 && (
         <div>
           <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
-            Related Themes
+            {t('fullNatal.components.observations.relatedThemes')}
           </span>
           <ul className="mt-1 flex flex-wrap gap-1.5">
             {observation.relatedThemes.map((theme) => (
@@ -186,7 +188,7 @@ export const ObservationAccordion: React.FC<ObservationAccordionProps> = ({
       {observation.evidenceReferences.length > 0 && (
         <div>
           <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
-            Supporting Factors
+            {t('fullNatal.components.observations.supportingFactors')}
           </span>
           <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-400">
             {observation.evidenceReferences.map((reference, index) => (

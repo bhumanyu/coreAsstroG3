@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   formatVargaRelationship,
   formatYogaConfirmation,
@@ -28,6 +29,7 @@ export const ThemeConfirmationCard: React.FC<ThemeConfirmationCardProps> = ({
   evidence,
   id
 }) => {
+  const { t } = useTranslation('reports');
   const isActuallyAvailable =
     isAvailable && relationship !== 'UNAVAILABLE' && relationship !== 'ABSENT';
 
@@ -55,7 +57,7 @@ export const ThemeConfirmationCard: React.FC<ThemeConfirmationCardProps> = ({
         </div>
 
         <span
-          aria-label={`Confirmation Status: ${relLabel}`}
+          aria-label={t('fullNatal.components.themeEvidence.confirmationStatus', { status: relLabel })}
           className={`px-2.5 py-0.5 rounded text-xs font-mono-code font-bold uppercase border ${style.bg} ${style.text} ${style.border}`}
         >
           {relLabel}
@@ -85,8 +87,8 @@ export const ThemeConfirmationCard: React.FC<ThemeConfirmationCardProps> = ({
           {unavailableReason ||
             statement ||
             (type === 'VARGA'
-              ? 'Divisional chart confirmation is unavailable or not configured.'
-              : 'No special confirmatory yogas identified.')}
+              ? t('fullNatal.components.themeEvidence.divisionalUnavailable')
+              : t('fullNatal.components.themeEvidence.noConfirmatoryYogas'))}
         </p>
       )}
 
@@ -94,7 +96,7 @@ export const ThemeConfirmationCard: React.FC<ThemeConfirmationCardProps> = ({
       <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800/80 text-[11px] text-slate-400 flex items-center gap-1.5">
         <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
         <span>
-          Confirmation checks refine synthesis confidence and manifestation quality, but do not override root natal promise.
+          {t('fullNatal.components.themeEvidence.confirmationBoundary')}
         </span>
       </div>
     </div>

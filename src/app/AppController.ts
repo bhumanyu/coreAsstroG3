@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { AppState, DashaTimingProjectionState } from './AppState';
 import type { BirthDetails } from '../types';
 import type { AppPage } from './navigation/navigationTypes';
+import i18n from '../i18n/i18n';
 import { ProductAnalysisService, type ProductAnalysisRunSnapshot } from '../product/analysis';
 import {
   buildDashaTimingViewModel,
@@ -91,13 +92,13 @@ export function createAppController(
           } catch (error) {
             dashaTimingProjectionError = error instanceof Error
               ? error.message
-              : 'Dasha timing projection failed for an unknown reason.';
+              : i18n.t('errors:dashaProjectionFailed');
             projectionState = { status: 'ERROR', requestId, analysisId: analysis.analysisId, error: dashaTimingProjectionError };
           }
         }
 
         const errorMessage = analysis.status === 'ERROR'
-          ? analysis.warnings.find(warning => warning.severity === 'ERROR')?.message ?? 'Analysis calculation failed.'
+          ? analysis.warnings.find(warning => warning.severity === 'ERROR')?.message ?? i18n.t('errors:analysisCalculationFailed')
           : undefined;
 
         setState(prev => ({
@@ -121,7 +122,7 @@ export function createAppController(
         if (requestId !== analysisRequestId) return;
         currentRunSnapshot = undefined;
         currentAnalysisId = undefined;
-        const errorMessage = error instanceof Error ? error.message : 'Analysis calculation failed.';
+        const errorMessage = error instanceof Error ? error.message : i18n.t('errors:analysisCalculationFailed');
         setState(prev => ({
           ...prev,
           productAnalysis: { status: 'ERROR', error: errorMessage, requestId },
@@ -143,7 +144,7 @@ export function createAppController(
           ...prev,
           selectionState: {
             status: 'ERROR',
-            error: 'No active analysis run. Analyze birth details before selecting a period.',
+            error: i18n.t('errors:noActiveAnalysisForPeriod'),
             requestId
           }
         }));
@@ -172,7 +173,7 @@ export function createAppController(
         }));
       } catch (error) {
         if (requestId !== selectionRequestId || analysisId !== currentAnalysisId) return;
-        const errorMessage = error instanceof Error ? error.message : 'Period selection failed.';
+        const errorMessage = error instanceof Error ? error.message : i18n.t('errors:periodSelectionFailed');
         setState(prev => ({
           ...prev,
           selectionState: { status: 'ERROR', error: errorMessage, requestId, analysisId, mahadashaId, antardashaId }
@@ -189,7 +190,7 @@ export function createAppController(
           dashaTimingProjectionState: {
             status: 'IDLE'
           },
-          dashaTimingProjectionError: 'No active canonical analysis is available for Dasha timing retry.'
+          dashaTimingProjectionError: i18n.t('errors:noActiveCanonicalForRetry')
         }));
         return;
       }
@@ -205,7 +206,7 @@ export function createAppController(
       try {
         const viewModel = buildProjection(snapshot);
         if (requestId !== projectionRequestId || analysisId !== currentAnalysisId) return;
-        if (!viewModel) throw new Error('Dasha timing data is unavailable for the active analysis.');
+        if (!viewModel) throw new Error(i18n.t('errors:dashaDataUnavailable'));
         setState(prev => ({
           ...prev,
           dashaTimingViewModel: viewModel,
@@ -214,7 +215,7 @@ export function createAppController(
         }));
       } catch (error) {
         if (requestId !== projectionRequestId || analysisId !== currentAnalysisId) return;
-        const errorMessage = error instanceof Error ? error.message : 'Dasha timing projection failed for an unknown reason.';
+        const errorMessage = error instanceof Error ? error.message : i18n.t('errors:dashaProjectionFailed');
         setState(prev => ({
           ...prev,
           dashaTimingViewModel: undefined,

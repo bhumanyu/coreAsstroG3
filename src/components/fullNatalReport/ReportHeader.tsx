@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FullNatalAnalysisReport } from '../../types';
 import { Printer, ShieldCheck, Sparkles, ScrollText } from 'lucide-react';
 
@@ -7,13 +8,14 @@ interface ReportHeaderProps {
 }
 
 export const ReportHeader: React.FC<ReportHeaderProps> = ({ report }) => {
+  const { t } = useTranslation('reports');
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
       window.print();
     }
   };
 
-  const birthName = (report.birthInformation?.details as any)?.name || 'Subject Chart';
+  const birthName = (report.birthInformation?.details as any)?.name || t('fullNatal.subjectChart');
   const version = report.version || 'P-21-v1';
 
   return (
@@ -26,15 +28,15 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({ report }) => {
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-code font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
               <ShieldCheck className="w-3 h-3" />
-              Contract Grounded Engine
+              {t('fullNatal.engineBadge')}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold font-serif-astro text-slate-100 flex items-center gap-2">
             <ScrollText className="w-7 h-7 text-indigo-400 shrink-0" />
-            Full Natal Analysis Report
+            {t('fullNatal.headerTitle')}
           </h1>
           <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-            Presentation of the deterministic P-21 natal analysis report.
+            {t('fullNatal.headerDescription')}
           </p>
         </div>
 
@@ -42,29 +44,29 @@ export const ReportHeader: React.FC<ReportHeaderProps> = ({ report }) => {
           <button
             onClick={handlePrint}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl shadow-lg shadow-indigo-600/20 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            title="Print Report"
+            title={t('fullNatal.printReport')}
           >
             <Printer className="w-4 h-4" />
-            <span>Print Report</span>
+            <span>{t('fullNatal.printReport')}</span>
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-800/80 text-xs font-mono-code">
         <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
-          <span className="text-[10px] text-slate-400 uppercase block">Ayanamsa</span>
+          <span className="text-[10px] text-slate-400 uppercase block">{t('fullNatal.methodology.ayanamsa')}</span>
           <span className="text-slate-200 font-bold">{report.methodology?.ayanamsa}</span>
         </div>
         <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
-          <span className="text-[10px] text-slate-400 uppercase block">Zodiac</span>
+          <span className="text-[10px] text-slate-400 uppercase block">{t('fullNatal.methodology.zodiac')}</span>
           <span className="text-slate-200 font-bold">{report.methodology?.zodiac}</span>
         </div>
         <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
-          <span className="text-[10px] text-slate-400 uppercase block">House System</span>
+          <span className="text-[10px] text-slate-400 uppercase block">{t('fullNatal.methodology.houseSystem')}</span>
           <span className="text-slate-200 font-bold">{report.methodology?.houseSystem}</span>
         </div>
         <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
-          <span className="text-[10px] text-slate-400 uppercase block">Dasha System</span>
+          <span className="text-[10px] text-slate-400 uppercase block">{t('fullNatal.methodology.dashaSystem')}</span>
           <span className="text-slate-200 font-bold">{report.methodology?.dashaSystem}</span>
         </div>
       </div>

@@ -20,6 +20,7 @@ interface AppShellContentProps {
 export const AppShellContent: React.FC<AppShellContentProps> = ({
   controllerFactory = createAppController
 }) => {
+  const { t } = useTranslation('errors');
   const [state, setState] = useState<AppState>(INITIAL_APP_STATE);
 
   const controller = useMemo(() => controllerFactory(setState), [controllerFactory]);
@@ -28,7 +29,7 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
     try {
       await controller.analyze(birthDetails);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Analysis calculation failed.';
+      const message = error instanceof Error ? error.message : t('analysisCalculationFailed');
       setState((prev) => ({
         ...prev,
         productAnalysis: { status: 'ERROR', error: message },
@@ -40,7 +41,7 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
         dashaTimingProjectionState: { status: 'IDLE' }
       }));
     }
-  }, [controller]);
+  }, [controller, t]);
 
   useEffect(() => {
     void runAnalysisSafely(state.birthDetails);

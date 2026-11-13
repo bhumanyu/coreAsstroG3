@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningVargaViewModel } from '../../product/analysis/reasoningViewModel';
 import { formatVargaRelationship, getVargaRelationshipBadgeClass } from './reasoningFormat';
 import { Layers, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -8,11 +9,10 @@ export interface ReasoningVargaSectionProps {
 }
 
 export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ varga }) => {
-  const chartName = varga.chart === 'D2' ? 'Hora (D2)' : 'Dasamsa (D10)';
-  const domainTarget = varga.chart === 'D2' ? 'liquid asset accumulation' : 'vocational capacity';
+  const { t } = useTranslation('reports');
   const relationship = varga.chart === 'D2' ? 'UNAVAILABLE' : varga.relationship;
   const statement = varga.chart === 'D2'
-    ? 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.'
+    ? t('reasoning.detail.d2Unavailable')
     : varga.statement;
   const formattedRelationship = formatVargaRelationship(relationship);
   const badgeClass = getVargaRelationshipBadgeClass(relationship);
@@ -26,8 +26,10 @@ export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ va
             <Layers className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{chartName} {varga.chart === 'D2' ? 'Availability' : 'Divisional Confirmation'}</h2>
-            <p className="text-xs text-slate-400">Harmonic verification of {domainTarget} against natal indicators</p>
+            <h2 className="text-base font-semibold text-slate-100">{t(varga.chart === 'D2' ? 'reasoning.detail.d2Title' : 'reasoning.detail.d10Title')}</h2>
+            <p className="text-xs text-slate-400">
+              {t('reasoning.detail.vargaDescription', { domain: t(varga.chart === 'D2' ? 'reasoning.detail.vargaD2Domain' : 'reasoning.detail.vargaD10Domain') })}
+            </p>
           </div>
         </div>
 
@@ -50,7 +52,7 @@ export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ va
           <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
             <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" aria-hidden="true" />
             <span>
-              {chartName} harmonic verification evaluates qualitative concordance with the natal chart without overriding foundational promise.
+              {t(varga.chart === 'D2' ? 'reasoning.detail.d2Evaluated' : 'reasoning.detail.d10Evaluated')}
             </span>
           </div>
         </div>
@@ -58,7 +60,7 @@ export const ReasoningVargaSection: React.FC<ReasoningVargaSectionProps> = ({ va
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            {statement || `${chartName} divisional relationship data is unavailable for this calculation.`}
+            {statement || t('reasoning.detail.vargaD10Unavailable')}
           </span>
         </div>
       )}

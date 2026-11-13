@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningTransitViewModel } from '../../product/analysis/reasoningViewModel';
 import {
   formatAvailability,
@@ -12,6 +13,7 @@ export interface ReasoningTransitSectionProps {
 }
 
 export const ReasoningTransitSection: React.FC<ReasoningTransitSectionProps> = ({ transit }) => {
+  const { t } = useTranslation('reports');
   const isAvailableOrPartial = transit.status === 'AVAILABLE' || transit.status === 'PARTIAL';
   const badgeClass = getAvailabilityBadgeClass(transit.status);
   const formattedEffect = formatTransitEffect(transit.effect);
@@ -24,8 +26,8 @@ export const ReasoningTransitSection: React.FC<ReasoningTransitSectionProps> = (
             <Compass className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Gochara (Transit) Triggers</h2>
-            <p className="text-xs text-slate-400">Secondary real-time planetary catalysts relative to natal baseline</p>
+            <h2 className="text-base font-semibold text-slate-100">{t('reasoning.detail.transitTriggers')}</h2>
+            <p className="text-xs text-slate-400">{t('reasoning.detail.transitSecondary')}</p>
           </div>
         </div>
 
@@ -49,7 +51,7 @@ export const ReasoningTransitSection: React.FC<ReasoningTransitSectionProps> = (
             </p>
           ) : (
             <p className="text-xs text-slate-400 italic">
-              Transit timing is available; no detailed statement is provided.
+              {t('reasoning.detail.transitActive')}
             </p>
           )}
         </div>
@@ -57,7 +59,7 @@ export const ReasoningTransitSection: React.FC<ReasoningTransitSectionProps> = (
         <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            {transit.statement || 'Planetary transit data is unavailable for this calculation.'}
+            {transit.statement || t('reasoning.detail.transitUnavailable')}
           </span>
         </div>
       )}

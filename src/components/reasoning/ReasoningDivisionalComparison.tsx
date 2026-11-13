@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningVargaViewModel } from '../../product/analysis/reasoningViewModel';
 import { formatVargaRelationship, getVargaRelationshipBadgeClass } from './reasoningFormat';
 import { Layers, CheckCircle2, AlertCircle, Briefcase, Coins } from 'lucide-react';
@@ -12,6 +13,7 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
   d10,
   d2
 }) => {
+  const { t } = useTranslation('reports');
   void d2; // Incoming D2 declarations are ignored while the validation gate is closed.
   const d10Rel = d10?.relationship ?? 'UNAVAILABLE';
   const isD10Available = d10Rel !== 'UNAVAILABLE';
@@ -19,13 +21,13 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
 
   const d2Rel = 'UNAVAILABLE';
   const isD2Available = false;
-  const d2Statement = 'D2 calculation and interpretation have not passed independent validation; D2 remains unavailable.';
+  const d2Statement = t('reasoning.detail.d2Unavailable');
   const d2BadgeClass = getVargaRelationshipBadgeClass(d2Rel);
 
   return (
     <section
       id="section-divisional-confirmation"
-      aria-label="Divisional Confirmation"
+      aria-label={t('reasoning.detail.divisionalAria')}
       className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -34,15 +36,15 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
             <Layers className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Divisional Confirmation</h2>
+            <h2 className="text-base font-semibold text-slate-100">{t('reasoning.detail.divisionalTitle')}</h2>
             <p className="text-xs text-slate-400">
-              Cross-domain harmonic verification of vocational (D10) and financial (D2) capacity
+              {t('reasoning.detail.divisionalDescription')}
             </p>
           </div>
         </div>
 
         <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-          Harmonic Alignment
+          {t('reasoning.detail.harmonicAlignment')}
         </span>
       </div>
 
@@ -58,10 +60,10 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
                 <Briefcase className="w-4 h-4 text-indigo-400" aria-hidden="true" />
                 <div>
                   <h3 className="text-sm font-semibold text-slate-100">
-                    Dasamsa (D10) Divisional Confirmation
+                    {t('reasoning.detail.d10Title')}
                   </h3>
                   <span className="text-[11px] font-mono-code text-slate-400 block">
-                    Career & Vocational Concordance
+                    {t('reasoning.detail.careerConcordance')}
                   </span>
                 </div>
               </div>
@@ -81,13 +83,13 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
                   </p>
                 ) : (
                   <p className="text-xs text-slate-400 italic">
-                    Dasamsa (D10) harmonic relationship is confirmed; no specific statement provided.
+                    {t('reasoning.detail.d10NoStatement')}
                   </p>
                 )}
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
                   <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 shrink-0" aria-hidden="true" />
                   <span>
-                    Dasamsa evaluates qualitative vocational concordance without overriding foundational promise.
+                    {t('reasoning.detail.d10Evaluated')}
                   </span>
                 </div>
               </div>
@@ -95,7 +97,7 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
               <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/60 p-3 rounded-lg border border-slate-800/60">
                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
                 <span>
-                  {d10?.statement || 'Unavailable: Dasamsa (D10) harmonic data is unavailable for this calculation.'}
+                  {d10?.statement || t('reasoning.detail.d10Unavailable')}
                 </span>
               </div>
             )}
@@ -113,10 +115,10 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
                 <Coins className="w-4 h-4 text-amber-400" aria-hidden="true" />
                 <div>
                   <h3 className="text-sm font-semibold text-slate-100">
-                    Hora (D2) Availability
+                    {t('reasoning.detail.d2Title')}
                   </h3>
                   <span className="text-[11px] font-mono-code text-slate-400 block">
-                    Wealth & Liquid Asset Concordance
+                    {t('reasoning.detail.wealthConcordance')}
                   </span>
                 </div>
               </div>
@@ -136,13 +138,13 @@ export const ReasoningDivisionalComparison: React.FC<ReasoningDivisionalComparis
                   </p>
                 ) : (
                   <p className="text-xs text-slate-400 italic">
-                    Hora (D2) harmonic relationship is confirmed; no specific statement provided.
+                    {t('reasoning.detail.d2NoStatement')}
                   </p>
                 )}
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
                   <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 shrink-0" aria-hidden="true" />
                   <span>
-                    Hora evaluates qualitative liquid asset accumulation without overriding foundational promise.
+                    {t('reasoning.detail.d2Evaluated')}
                   </span>
                 </div>
               </div>

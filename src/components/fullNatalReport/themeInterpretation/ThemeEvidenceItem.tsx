@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ThemeInterpretationEvidence
 } from '../../../engine/themeInterpretation/themeInterpretationTypes';
@@ -18,6 +19,7 @@ export const ThemeEvidenceItem: React.FC<ThemeEvidenceItemProps> = ({
   evidence,
   id
 }) => {
+  const { t } = useTranslation('reports');
   const effectStyle = getEffectStyle(evidence.effect);
   const effectLabel = formatEvidenceEffect(evidence.effect);
   const priorityLabel = formatEvidencePriority(evidence.priority);
@@ -48,7 +50,7 @@ export const ThemeEvidenceItem: React.FC<ThemeEvidenceItemProps> = ({
             </p>
             {evidence.conditional && (
               <span className="inline-block text-[10px] font-mono-code text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                Conditional Activation
+                {t('fullNatal.components.themeEvidence.conditionalActivation')}
               </span>
             )}
           </div>
@@ -56,19 +58,19 @@ export const ThemeEvidenceItem: React.FC<ThemeEvidenceItemProps> = ({
 
         <div className="flex items-center gap-1.5 shrink-0">
           <span
-            aria-label={`Effect: ${effectLabel}`}
+            aria-label={t('fullNatal.components.themeEvidence.effect', { value: effectLabel })}
             className={`px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase border ${effectStyle.bg} ${effectStyle.text} ${effectStyle.border}`}
           >
             {effectLabel}
           </span>
           <span
-            aria-label={`Strength: ${evidence.strength}`}
+            aria-label={t('fullNatal.components.themeEvidence.strength', { value: evidence.strength })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-slate-800 text-slate-300 border border-slate-700 uppercase"
           >
             {evidence.strength}
           </span>
           <span
-            aria-label={`Priority: ${priorityLabel}`}
+            aria-label={t('fullNatal.components.themeEvidence.priority', { value: priorityLabel })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-indigo-950/40 text-indigo-300 border border-indigo-500/20 uppercase"
           >
             {priorityLabel}
@@ -82,12 +84,12 @@ export const ThemeEvidenceItem: React.FC<ThemeEvidenceItemProps> = ({
         <div className="flex flex-wrap gap-2 text-[11px] pt-1 text-slate-400 font-mono-code">
           {evidence.planets && evidence.planets.length > 0 && (
             <span>
-              Planets: <span className="text-slate-200 font-semibold">{evidence.planets.join(', ')}</span>
+              {t('fullNatal.components.themeEvidence.planets')} <span className="text-slate-200 font-semibold">{evidence.planets.join(', ')}</span>
             </span>
           )}
           {evidence.houses && evidence.houses.length > 0 && (
             <span>
-              Houses: <span className="text-slate-200 font-semibold">{evidence.houses.map((h) => `${h}H`).join(', ')}</span>
+              {t('fullNatal.components.themeEvidence.houses')} <span className="text-slate-200 font-semibold">{evidence.houses.map((h) => `${h}H`).join(', ')}</span>
             </span>
           )}
         </div>
@@ -97,7 +99,7 @@ export const ThemeEvidenceItem: React.FC<ThemeEvidenceItemProps> = ({
       {evidence.factors && evidence.factors.length > 0 && (
         <div className="space-y-1 pt-1 border-t border-slate-800/80">
           <div className="text-[10px] font-mono-code text-slate-400 uppercase tracking-wider font-semibold">
-            Contributing Factors
+            {t('fullNatal.components.themeEvidence.contributingFactors')}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {evidence.factors.map((factor, idx) => (
@@ -135,13 +137,13 @@ export const ThemeEvidenceItem: React.FC<ThemeEvidenceItemProps> = ({
       >
         <summary className="cursor-pointer font-mono-code text-[10px] text-slate-500 hover:text-slate-300 flex items-center gap-1 select-none">
           <ChevronRight className="w-3 h-3 group-open:rotate-90 transition-transform" />
-          Technical Rule Details ({evidence.ruleId})
+          {t('fullNatal.components.themeEvidence.technicalRuleDetails', { ruleId: evidence.ruleId })}
         </summary>
         <div className="mt-1.5 p-2 bg-slate-950/80 rounded border border-slate-800 font-mono-code text-[10px] space-y-1 text-slate-400">
-          <div>Rule ID: <span className="text-slate-200">{evidence.ruleId}</span></div>
-          <div>Evidence ID: <span className="text-slate-200">{evidence.id}</span></div>
-          <div>Family: <span className="text-slate-200">{evidence.evidenceFamily}</span></div>
-          {evidence.dimension && <div>Dimension: <span className="text-slate-200">{evidence.dimension}</span></div>}
+          <div>{t('fullNatal.components.themeEvidence.ruleId')} <span className="text-slate-200">{evidence.ruleId}</span></div>
+          <div>{t('fullNatal.components.themeEvidence.evidenceId')} <span className="text-slate-200">{evidence.id}</span></div>
+          <div>{t('fullNatal.components.themeEvidence.family')} <span className="text-slate-200">{evidence.evidenceFamily}</span></div>
+          {evidence.dimension && <div>{t('fullNatal.components.themeEvidence.dimension')} <span className="text-slate-200">{evidence.dimension}</span></div>}
         </div>
       </details>
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { HouseReportItem } from '../../types';
 import { formatPlanetName, formatSignName } from './reportUtils';
 import { EvidenceList } from './EvidenceList';
@@ -9,6 +10,7 @@ interface HouseAnalysisCardProps {
 }
 
 export const HouseAnalysisCard: React.FC<HouseAnalysisCardProps> = ({ item }) => {
+  const { t } = useTranslation('reports');
   return (
     <div className="bg-slate-950/70 border border-slate-800/90 rounded-xl p-4.5 space-y-3 hover:border-slate-700 transition-colors">
       {/* House Title Row */}
@@ -18,21 +20,21 @@ export const HouseAnalysisCard: React.FC<HouseAnalysisCardProps> = ({ item }) =>
             H{item.house}
           </span>
           <span className="text-sm font-bold text-slate-100 font-serif-astro">
-            House {item.house} • {formatSignName(item.sign)}
+            {t('fullNatal.components.houses.houseSign', { number: item.house, sign: formatSignName(item.sign) })}
           </span>
         </div>
 
         <div className="flex items-center gap-2 text-xs font-mono-code">
-          <span className="text-slate-400">Lord:</span>
+          <span className="text-slate-400">{t('fullNatal.components.houses.lord')}</span>
           <span className="text-indigo-300 font-bold">{formatPlanetName(item.lord)}</span>
           {item.lordHouse !== undefined && (
             <span className="text-purple-300 font-semibold bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">
-              In H{item.lordHouse}
+              {t('fullNatal.components.houses.inHouse', { number: item.lordHouse })}
             </span>
           )}
           {item.lordSign !== undefined && (
             <span className="text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
-              In {formatSignName(item.lordSign)}
+              {t('fullNatal.components.houses.inSign', { sign: formatSignName(item.lordSign) })}
             </span>
           )}
         </div>
@@ -42,7 +44,7 @@ export const HouseAnalysisCard: React.FC<HouseAnalysisCardProps> = ({ item }) =>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
         <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800/80 space-y-1">
           <span className="text-[10px] font-mono-code uppercase text-slate-400 flex items-center gap-1">
-            <User className="w-3 h-3 text-indigo-400" /> Occupants ({item.occupants?.length || 0})
+            <User className="w-3 h-3 text-indigo-400" /> {t('fullNatal.components.houses.occupants', { count: item.occupants?.length || 0 })}
           </span>
           {item.occupants && item.occupants.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -53,13 +55,13 @@ export const HouseAnalysisCard: React.FC<HouseAnalysisCardProps> = ({ item }) =>
               ))}
             </div>
           ) : (
-            <span className="text-slate-500 italic block pt-0.5">Unoccupied</span>
+            <span className="text-slate-500 italic block pt-0.5">{t('fullNatal.components.houses.unoccupied')}</span>
           )}
         </div>
 
         <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-800/80 space-y-1">
           <span className="text-[10px] font-mono-code uppercase text-slate-400 flex items-center gap-1">
-            <Eye className="w-3 h-3 text-purple-400" /> Received Aspects ({item.receivedAspects?.length || 0})
+            <Eye className="w-3 h-3 text-purple-400" /> {t('fullNatal.components.houses.receivedAspects', { count: item.receivedAspects?.length || 0 })}
           </span>
           {item.receivedAspects && item.receivedAspects.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -73,14 +75,14 @@ export const HouseAnalysisCard: React.FC<HouseAnalysisCardProps> = ({ item }) =>
               })}
             </div>
           ) : (
-            <span className="text-slate-500 italic block pt-0.5">No Aspects Received</span>
+            <span className="text-slate-500 italic block pt-0.5">{t('fullNatal.components.houses.noAspects')}</span>
           )}
         </div>
       </div>
 
       {/* Evidence */}
       {item.evidence && item.evidence.length > 0 && (
-        <EvidenceList evidence={item.evidence} title={`Evidence for House ${item.house}`} />
+        <EvidenceList evidence={item.evidence} title={t('fullNatal.components.houses.evidenceTitle', { number: item.house })} />
       )}
     </div>
   );

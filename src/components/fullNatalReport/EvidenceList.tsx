@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, FileText } from 'lucide-react';
 
 interface EvidenceListProps {
@@ -9,9 +10,10 @@ interface EvidenceListProps {
 
 export const EvidenceList: React.FC<EvidenceListProps> = ({
   evidence,
-  title = 'Technical Evidence & Rules',
+  title,
   className = ''
 }) => {
+  const { t } = useTranslation('reports');
   if (!evidence || evidence.length === 0) {
     return null;
   }
@@ -107,7 +109,7 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
       <summary className="px-3 py-2 flex items-center justify-between text-xs font-mono-code font-medium text-slate-400 hover:text-indigo-300 cursor-pointer select-none bg-slate-900/50 hover:bg-slate-900/80 transition-colors">
         <span className="flex items-center gap-1.5">
           <FileText className="w-3.5 h-3.5 text-indigo-400" />
-          {title} ({evidence.length})
+          {title ?? t('fullNatal.components.evidenceDefaultTitle')} ({evidence.length})
         </span>
         <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform" />
       </summary>

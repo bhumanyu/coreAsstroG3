@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningEvidenceGroupViewModel } from '../../product/analysis/reasoningViewModel';
 import { ReasoningEvidenceCard } from './ReasoningEvidenceCard';
 
@@ -7,8 +8,12 @@ export interface ReasoningEvidenceGroupProps {
 }
 
 export const ReasoningEvidenceGroup: React.FC<ReasoningEvidenceGroupProps> = ({ group }) => {
+  const { t } = useTranslation('reports');
   const count = group.items.length;
-  const countLabel = `${count} ${count === 1 ? 'Rule' : 'Rules'}`;
+  const countLabel = t(
+    count === 1 ? 'reasoning.detail.ruleCountSingular' : 'reasoning.detail.ruleCountPlural',
+    { count }
+  );
 
   return (
     <div className="space-y-3">

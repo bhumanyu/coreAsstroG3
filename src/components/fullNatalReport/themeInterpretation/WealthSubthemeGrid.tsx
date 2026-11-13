@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   WealthSubthemeKey,
   WealthSubthemeSummary
@@ -14,6 +15,7 @@ export const WealthSubthemeGrid: React.FC<WealthSubthemeGridProps> = ({
   subthemes,
   id = 'wealth-subtheme-grid'
 }) => {
+  const { t } = useTranslation('reports');
   if (!subthemes) return null;
 
   const getSubthemeIcon = (key: WealthSubthemeKey) => {
@@ -34,7 +36,7 @@ export const WealthSubthemeGrid: React.FC<WealthSubthemeGridProps> = ({
       case 'SUPPORT':
         return (
           <span
-            aria-label="Pillar Status: Supportive"
+            aria-label={t('fullNatal.components.themeEvidence.pillarStatus', { status: 'Supportive' })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
           >
             Supportive
@@ -43,7 +45,7 @@ export const WealthSubthemeGrid: React.FC<WealthSubthemeGridProps> = ({
       case 'CHALLENGE':
         return (
           <span
-            aria-label="Pillar Status: Challenged"
+            aria-label={t('fullNatal.components.themeEvidence.pillarStatus', { status: 'Challenged' })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-rose-500/10 text-rose-300 border border-rose-500/30"
           >
             Challenged
@@ -52,7 +54,7 @@ export const WealthSubthemeGrid: React.FC<WealthSubthemeGridProps> = ({
       case 'MIXED':
         return (
           <span
-            aria-label="Pillar Status: Mixed Support & Challenge"
+            aria-label={t('fullNatal.components.themeEvidence.pillarStatus', { status: 'Mixed Support & Challenge' })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-amber-500/10 text-amber-300 border border-amber-500/30"
           >
             Mixed
@@ -62,7 +64,7 @@ export const WealthSubthemeGrid: React.FC<WealthSubthemeGridProps> = ({
       default:
         return (
           <span
-            aria-label="Pillar Status: Neutral"
+            aria-label={t('fullNatal.components.themeEvidence.pillarStatus', { status: 'Neutral' })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-slate-800 text-slate-300 border border-slate-700 uppercase"
           >
             Neutral
@@ -82,10 +84,10 @@ export const WealthSubthemeGrid: React.FC<WealthSubthemeGridProps> = ({
     <div id={id} className="space-y-3">
       <div className="flex items-center justify-between pb-1 border-b border-slate-800">
         <h4 className="text-xs font-mono-code font-bold uppercase text-slate-300 flex items-center gap-1.5">
-          <Coins className="w-4 h-4 text-amber-400" /> Four Pillars of Wealth & Prosperity
+          <Coins className="w-4 h-4 text-amber-400" /> {t('fullNatal.components.wealthSubthemes.title')}
         </h4>
         <span className="text-[11px] font-mono-code text-slate-400">
-          Core Thematic Houses (2H, 11H, 9H, 5H)
+          {t('fullNatal.components.wealthSubthemes.description')}
         </span>
       </div>
 
@@ -107,7 +109,7 @@ export const WealthSubthemeGrid: React.FC<WealthSubthemeGridProps> = ({
                       {st.title}
                     </h5>
                     <span className="text-[10px] font-mono-code text-slate-400">
-                      House {st.houseNumber} Focus
+                      {t('fullNatal.components.wealthSubthemes.houseFocus', { number: st.houseNumber })}
                     </span>
                   </div>
                 </div>

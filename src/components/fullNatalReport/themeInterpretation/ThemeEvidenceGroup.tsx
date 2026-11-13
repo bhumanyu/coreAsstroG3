@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ThemeInterpretationEvidence } from '../../../engine/themeInterpretation/themeInterpretationTypes';
 import { ThemeEvidenceItem } from './ThemeEvidenceItem';
 import { formatEvidenceFamily } from './themeUiUtils';
@@ -21,13 +22,14 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
   id,
   defaultExpanded = true
 }) => {
+  const { t } = useTranslation('reports');
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   // Safe copy without mutating frozen engine structures
   const items = [...(evidence || [])];
   if (items.length === 0) return null;
 
-  const displayTitle = title || (family ? formatEvidenceFamily(family) : 'Evidence Group');
+  const displayTitle = title || (family ? formatEvidenceFamily(family) : t('fullNatal.components.themeEvidence.evidenceGroup'));
 
   const supporting = items.filter((e) => e.effect === 'SUPPORT');
   const challenging = items.filter((e) => e.effect === 'CHALLENGE');
@@ -39,7 +41,7 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
       case 'SUPPORT':
         return (
           <span
-            aria-label="Family Status: Supportive"
+            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: 'Supportive' })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
           >
             Supportive
@@ -48,7 +50,7 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
       case 'CHALLENGE':
         return (
           <span
-            aria-label="Family Status: Challenged"
+            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: 'Challenged' })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-rose-500/10 text-rose-300 border border-rose-500/30"
           >
             Challenged
@@ -57,7 +59,7 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
       case 'MIXED':
         return (
           <span
-            aria-label="Family Status: Mixed Support & Challenge"
+            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: 'Mixed Support & Challenge' })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-amber-500/10 text-amber-300 border border-amber-500/30"
           >
             Mixed
@@ -67,7 +69,7 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
       default:
         return (
           <span
-            aria-label="Family Status: Neutral"
+            aria-label={t('fullNatal.components.themeEvidence.familyStatus', { status: 'Neutral' })}
             className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-slate-800 text-slate-300 border border-slate-700 uppercase"
           >
             Neutral
@@ -136,7 +138,7 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
           {supporting.length > 0 && (
             <div className="space-y-2">
               <div className="text-[11px] font-mono-code font-bold uppercase text-emerald-400 flex items-center gap-1">
-                <Award className="w-3.5 h-3.5" /> Supporting Factors ({supporting.length})
+                <Award className="w-3.5 h-3.5" /> {t('fullNatal.components.themeEvidence.supportingFactors', { count: supporting.length })}
               </div>
               <div className="space-y-2">
                 {supporting.map((ev, idx) => (
@@ -153,7 +155,7 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
           {challenging.length > 0 && (
             <div className="space-y-2">
               <div className="text-[11px] font-mono-code font-bold uppercase text-rose-400 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" /> Challenging Factors ({challenging.length})
+                <AlertTriangle className="w-3.5 h-3.5" /> {t('fullNatal.components.themeEvidence.challengingFactors', { count: challenging.length })}
               </div>
               <div className="space-y-2">
                 {challenging.map((ev, idx) => (
@@ -170,7 +172,7 @@ export const ThemeEvidenceGroup: React.FC<ThemeEvidenceGroupProps> = ({
           {neutral.length > 0 && (
             <div className="space-y-2">
               <div className="text-[11px] font-mono-code font-bold uppercase text-slate-400 flex items-center gap-1">
-                <HelpCircle className="w-3.5 h-3.5" /> Neutral / Informational Evidence ({neutral.length})
+                <HelpCircle className="w-3.5 h-3.5" /> {t('fullNatal.components.themeEvidence.neutralEvidence', { count: neutral.length })}
               </div>
               <div className="space-y-2">
                 {neutral.map((ev, idx) => (

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { VimshottariSection } from '../../types';
 import { DashaMahadashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import { EmptyState } from './EmptyState';
@@ -11,30 +12,31 @@ interface DashaSectionProps {
 }
 
 export const DashaSection: React.FC<DashaSectionProps> = ({ section }) => {
+  const { t } = useTranslation('reports');
   if (section.status === 'UNAVAILABLE' || !section.mahadashas || section.mahadashas.length === 0) {
-    return <EmptyState title="Vimshottari Dasha Unavailable" message="Vimshottari timeline calculations were not provided in the report." />;
+    return <EmptyState title={t('fullNatal.components.dasha.unavailableTitle')} message={t('fullNatal.components.dasha.unavailableMessage')} />;
   }
 
   return (
     <div className="space-y-4">
-      {section.status === 'PARTIAL' && <PartialStateNotice message="Vimshottari dasha calculations are partial." />}
+      {section.status === 'PARTIAL' && <PartialStateNotice message={t('fullNatal.components.partial.dasha')} />}
 
       {/* Anchor & Meta */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {section.birthAnchor && (
           <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
             <span className="text-[10px] font-mono-code uppercase text-slate-400 flex items-center gap-1">
-              <Anchor className="w-3.5 h-3.5 text-indigo-400" /> Birth Dasha Anchor
+              <Anchor className="w-3.5 h-3.5 text-indigo-400" /> {t('fullNatal.components.dasha.birthAnchor')}
             </span>
             <p className="text-xs font-mono-code text-slate-200">
-              Nakshatra: <span className="font-bold text-indigo-300">{section.birthAnchor.nakshatra}</span> | Lord: <span className="font-bold text-purple-300">{formatPlanetName(section.birthAnchor.nakshatraLord)}</span>
+              {t('fullNatal.components.dasha.nakshatra')} <span className="font-bold text-indigo-300">{section.birthAnchor.nakshatra}</span> | {t('fullNatal.components.dasha.lord')} <span className="font-bold text-purple-300">{formatPlanetName(section.birthAnchor.nakshatraLord)}</span>
             </p>
           </div>
         )}
         {section.confidence && (
           <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
             <span className="text-[10px] font-mono-code uppercase text-slate-400 flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-purple-400" /> Timeline Confidence
+              <Clock className="w-3.5 h-3.5 text-purple-400" /> {t('fullNatal.components.dasha.timelineConfidence')}
             </span>
             <p className="text-xs font-mono-code font-bold text-indigo-300">
               {formatConfidence(section.confidence)}
@@ -46,7 +48,7 @@ export const DashaSection: React.FC<DashaSectionProps> = ({ section }) => {
       {/* Responsive Mahadasha Timeline */}
       <div className="space-y-3">
         <h4 className="text-xs font-mono-code font-bold uppercase text-slate-300 flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5 text-indigo-400" /> Vimshottari Mahadasha Sequence ({section.mahadashas.length})
+          <Calendar className="w-3.5 h-3.5 text-indigo-400" /> {t('fullNatal.components.dasha.sequence', { count: section.mahadashas.length })}
         </h4>
 
         {/* Desktop Timeline */}
@@ -61,11 +63,11 @@ export const DashaSection: React.FC<DashaSectionProps> = ({ section }) => {
               </div>
               <div className="space-y-0.5 text-[11px] text-slate-300">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Start:</span>
+                  <span className="text-slate-500">{t('fullNatal.components.dasha.start')}</span>
                   <span>{m.start}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">End:</span>
+                  <span className="text-slate-500">{t('fullNatal.components.dasha.end')}</span>
                   <span>{m.end}</span>
                 </div>
               </div>

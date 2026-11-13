@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { LifeThemesSection as LifeThemesSectionType, ThemeSynthesis, LifeTheme } from '../../types';
 import { LifeThemeCard } from './LifeThemeCard';
 import { EmptyState } from './EmptyState';
@@ -16,11 +17,12 @@ interface LifeThemesSectionProps {
 }
 
 export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section }) => {
+  const { t } = useTranslation('reports');
   if (section.status === 'UNAVAILABLE') {
     return (
       <EmptyState
-        title="Life Themes Synthesis Unavailable"
-        message="Life theme synthesis was excluded from the natal analysis report."
+        title={t('fullNatal.components.lifeThemes.unavailableTitle')}
+        message={t('fullNatal.components.lifeThemes.unavailableMessage')}
       />
     );
   }
@@ -36,11 +38,11 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
     return (
       <div className="space-y-4">
         {section.status === 'PARTIAL' && (
-          <PartialStateNotice message="Life theme synthesis is partial." />
+          <PartialStateNotice message={t('fullNatal.components.partial.lifeThemes')} />
         )}
         <EmptyState
-          title="No Life Themes Available"
-          message="No synthesized life theme entries were provided."
+          title={t('fullNatal.components.lifeThemes.noThemesTitle')}
+          message={t('fullNatal.components.lifeThemes.noThemesMessage')}
         />
       </div>
     );
@@ -49,7 +51,7 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
   return (
     <div className="space-y-6">
       {section.status === 'PARTIAL' && (
-        <PartialStateNotice message="Life theme synthesis is partial." />
+        <PartialStateNotice message={t('fullNatal.components.partial.lifeThemes')} />
       )}
 
       {/* Life Themes Overview Header when Career or Wealth interpretations are available */}
@@ -59,11 +61,11 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
             <div className="flex items-center gap-2">
               <Compass className="w-4 h-4 text-indigo-400" />
               <h4 className="text-sm font-bold font-serif-astro text-slate-100">
-                Life Themes Overview
+                {t('fullNatal.components.lifeThemes.overview')}
               </h4>
             </div>
             <span className="text-[11px] font-mono-code text-slate-400">
-              Deterministic Multi-Tier Interpretations
+              {t('fullNatal.components.lifeThemes.deterministicInterpretations')}
             </span>
           </div>
 
@@ -73,7 +75,7 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-xs font-bold font-serif-astro text-slate-200">
                     <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
-                    Career & Professional Life
+                    {t('fullNatal.components.lifeThemes.careerProfessionalLife')}
                   </div>
                   <ThemeStatusBadge status={career.conclusion.status} />
                 </div>
@@ -83,7 +85,7 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
                 <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800/80">
                   <ThemeConfidenceBadge confidence={career.conclusion.confidence} />
                   <span className="font-mono-code text-slate-400">
-                    Promise: {career.careerNatalPromise.status}
+                    {t('fullNatal.components.lifeThemes.promise')} {career.careerNatalPromise.status}
                   </span>
                 </div>
               </div>
@@ -94,7 +96,7 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-xs font-bold font-serif-astro text-slate-200">
                     <Coins className="w-3.5 h-3.5 text-amber-400" />
-                    Wealth & Prosperity
+                    {t('fullNatal.components.lifeThemes.wealthProsperity')}
                   </div>
                   <ThemeStatusBadge status={wealth.conclusion.status} />
                 </div>
@@ -104,7 +106,7 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
                 <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800/80">
                   <ThemeConfidenceBadge confidence={wealth.conclusion.confidence} />
                   <span className="font-mono-code text-slate-400">
-                    Promise: {wealth.wealthNatalPromise.status}
+                    {t('fullNatal.components.lifeThemes.promise')} {wealth.wealthNatalPromise.status}
                   </span>
                 </div>
               </div>
@@ -137,7 +139,7 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
               }
               return (
                 <div key={`${theme.theme}-${idx}`} className="space-y-3">
-                  <ThemeInterpretationUnavailable themeName="Career & Status" />
+                  <ThemeInterpretationUnavailable themeName={t('fullNatal.components.lifeThemes.careerStatus')} />
                   <LifeThemeCard theme={theme} />
                 </div>
               );
@@ -155,7 +157,7 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
               }
               return (
                 <div key={`${theme.theme}-${idx}`} className="space-y-3">
-                  <ThemeInterpretationUnavailable themeName="Wealth & Prosperity" />
+                  <ThemeInterpretationUnavailable themeName={t('fullNatal.components.lifeThemes.wealthProsperity')} />
                   <LifeThemeCard theme={theme} />
                 </div>
               );
@@ -179,7 +181,7 @@ export const LifeThemesSection: React.FC<LifeThemesSectionProps> = ({ section })
 
       {/* Synthesis Observations */}
       {synthesis.length > 0 && (
-        <SectionAccordion title="Synthesized Observations" count={synthesis.length}>
+        <SectionAccordion title={t('fullNatal.components.lifeThemes.observations')} count={synthesis.length}>
           {synthesis.map((observation, index) => {
             const observationKey = observation.id || String(index);
             return (

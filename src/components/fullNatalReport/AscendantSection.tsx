@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AscendantSection as AscendantSectionType } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
@@ -10,47 +11,48 @@ interface AscendantSectionProps {
 }
 
 export const AscendantSection: React.FC<AscendantSectionProps> = ({ section }) => {
+  const { t } = useTranslation('reports');
   if (section.status === 'UNAVAILABLE') {
-    return <EmptyState title="Ascendant Analysis Unavailable" message="Ascendant details were not provided in the report." />;
+    return <EmptyState title={t('fullNatal.components.ascendant.unavailableTitle')} message={t('fullNatal.components.ascendant.unavailableMessage')} />;
   }
 
   return (
     <div className="space-y-4">
-      {section.status === 'PARTIAL' && <PartialStateNotice message="Ascendant data is partial." />}
+      {section.status === 'PARTIAL' && <PartialStateNotice message={t('fullNatal.components.partial.ascendant')} />}
 
       {/* Main Attributes */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {section.sign !== undefined && (
           <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Lagna Sign</span>
+            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.ascendant.lagnaSign')}</span>
             <span className="text-sm font-bold font-serif-astro text-slate-100">{formatSignName(section.sign)}</span>
           </div>
         )}
 
         {section.longitude !== undefined && (
           <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Lagna Longitude</span>
+            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.ascendant.lagnaLongitude')}</span>
             <span className="text-sm font-mono-code text-slate-200">{formatLongitude(section.longitude)}</span>
           </div>
         )}
 
         {section.lord !== undefined && (
           <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Lagna Lord</span>
+            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.ascendant.lagnaLord')}</span>
             <span className="text-sm font-bold text-indigo-300">{formatPlanetName(section.lord)}</span>
           </div>
         )}
 
         {section.lordHouse !== undefined && (
           <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Lord In House</span>
-            <span className="text-sm font-mono-code font-bold text-purple-300">House {section.lordHouse}</span>
+            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.ascendant.lordInHouse')}</span>
+            <span className="text-sm font-mono-code font-bold text-purple-300">{t('fullNatal.components.ascendant.house', { number: section.lordHouse })}</span>
           </div>
         )}
 
         {section.lordSign !== undefined && (
           <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Lord In Sign</span>
+            <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.ascendant.lordInSign')}</span>
             <span className="text-sm font-serif-astro text-slate-200">{formatSignName(section.lordSign)}</span>
           </div>
         )}
@@ -61,7 +63,7 @@ export const AscendantSection: React.FC<AscendantSectionProps> = ({ section }) =
         {/* Occupants */}
         <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-2">
           <span className="text-[11px] font-mono-code font-bold uppercase text-slate-400 flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-indigo-400" /> Occupant Planets ({section.occupants.length})
+            <User className="w-3.5 h-3.5 text-indigo-400" /> {t('fullNatal.components.ascendant.occupantPlanets', { count: section.occupants.length })}
           </span>
           {section.occupants.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -72,14 +74,14 @@ export const AscendantSection: React.FC<AscendantSectionProps> = ({ section }) =
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 italic">No occupant planets in 1st House</p>
+            <p className="text-xs text-slate-500 italic">{t('fullNatal.components.ascendant.noOccupants')}</p>
           )}
         </div>
 
         {/* Received Aspects */}
         <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-2">
           <span className="text-[11px] font-mono-code font-bold uppercase text-slate-400 flex items-center gap-1.5">
-            <Eye className="w-3.5 h-3.5 text-purple-400" /> Received Graha Drishti ({section.receivedAspects.length})
+            <Eye className="w-3.5 h-3.5 text-purple-400" /> {t('fullNatal.components.ascendant.receivedAspects', { count: section.receivedAspects.length })}
           </span>
           {section.receivedAspects.length > 0 ? (
             <div className="space-y-1.5">
@@ -91,7 +93,7 @@ export const AscendantSection: React.FC<AscendantSectionProps> = ({ section }) =
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 italic">No received aspects on Lagna</p>
+            <p className="text-xs text-slate-500 italic">{t('fullNatal.components.ascendant.noAspects')}</p>
           )}
         </div>
       </div>

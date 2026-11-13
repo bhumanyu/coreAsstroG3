@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { PlanetReportItem } from '../../types';
 import { formatLongitude, formatPlanetName, formatSignName } from './reportUtils';
 import { EvidenceList } from './EvidenceList';
@@ -9,6 +10,7 @@ interface PlanetAnalysisCardProps {
 }
 
 export const PlanetAnalysisCard: React.FC<PlanetAnalysisCardProps> = ({ item }) => {
+  const { t } = useTranslation('reports');
   const nakshatraName = item.nakshatraMetadata?.englishName || item.nakshatraResult?.nakshatra || 'N/A';
   const pada = item.nakshatraResult?.padaNumber || 'N/A';
   const dignityStatus = typeof item.dignity === 'string' ? item.dignity : (item.dignity as { status?: string } | undefined)?.status || 'NEUTRAL';
@@ -24,7 +26,7 @@ export const PlanetAnalysisCard: React.FC<PlanetAnalysisCardProps> = ({ item }) 
             {formatPlanetName(item.planet)}
           </span>
           <span className="px-2 py-0.5 rounded text-[11px] font-mono-code bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-semibold">
-            {formatSignName(item.sign)} • House {item.house}
+            {formatSignName(item.sign)} • {t('fullNatal.components.planets.house', { number: item.house })}
           </span>
           <span className="text-xs font-mono-code text-slate-400">
             {formatLongitude(item.longitude)}
@@ -35,7 +37,7 @@ export const PlanetAnalysisCard: React.FC<PlanetAnalysisCardProps> = ({ item }) 
         <div className="flex items-center gap-1.5 flex-wrap">
           {isRetrograde && (
             <span className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/30">
-              [R] Retrograde
+              [R] {t('fullNatal.components.planets.retrograde')}
             </span>
           )}
           {stateCondition !== 'NORMAL' && (
@@ -64,7 +66,7 @@ export const PlanetAnalysisCard: React.FC<PlanetAnalysisCardProps> = ({ item }) 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
         {/* Nakshatra */}
         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 space-y-0.5">
-          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Nakshatra & Pada</span>
+          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.planets.nakshatraPada')}</span>
           <p className="font-semibold text-slate-200 font-mono-code">
             {nakshatraName} <span className="text-indigo-400">(Pada {pada})</span>
           </p>
@@ -72,26 +74,26 @@ export const PlanetAnalysisCard: React.FC<PlanetAnalysisCardProps> = ({ item }) 
 
         {/* Functional Roles */}
         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 space-y-0.5">
-          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Functional Roles</span>
+          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.planets.functionalRoles')}</span>
           <p className="font-semibold text-purple-300">
             {item.functionalRoles && item.functionalRoles.length > 0
               ? item.functionalRoles.join(', ')
-              : 'None'}
+              : t('fullNatal.components.planets.none')}
           </p>
         </div>
 
         {/* Aspects Cast / Received Summary */}
         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 space-y-0.5 sm:col-span-2 lg:col-span-1">
-          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Aspect Interaction</span>
+          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.planets.aspectInteraction')}</span>
           <p className="text-slate-300 font-mono-code text-[11px]">
-            Cast: <span className="text-indigo-300 font-bold">{item.castAspects?.length || 0}</span> | Received: <span className="text-purple-300 font-bold">{item.receivedAspects?.length || 0}</span>
+            {t('fullNatal.components.planets.cast')} <span className="text-indigo-300 font-bold">{item.castAspects?.length || 0}</span> | {t('fullNatal.components.planets.received')} <span className="text-purple-300 font-bold">{item.receivedAspects?.length || 0}</span>
           </p>
         </div>
       </div>
 
       {/* Evidence */}
       {item.evidence && item.evidence.length > 0 && (
-        <EvidenceList evidence={item.evidence} title={`Evidence for ${formatPlanetName(item.planet)}`} />
+        <EvidenceList evidence={item.evidence} title={t('fullNatal.components.planets.evidenceTitle', { planet: formatPlanetName(item.planet) })} />
       )}
     </div>
   );

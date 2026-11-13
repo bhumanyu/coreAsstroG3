@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ThemeInterpretationEvidence,
   EvidenceConfidence
@@ -25,6 +26,7 @@ export const ThemePromiseCard: React.FC<ThemePromiseCardProps> = ({
   primaryChallenges,
   id
 }) => {
+  const { t } = useTranslation('reports');
   const statusLabel = formatThemePromiseStatus(status);
   const statusStyle = getPromiseStatusStyle(status);
 
@@ -47,7 +49,7 @@ export const ThemePromiseCard: React.FC<ThemePromiseCardProps> = ({
         <div className="flex items-center gap-2">
           <ThemeConfidenceBadge confidence={confidence} />
           <span
-            aria-label={`Natal Promise Status: ${statusLabel}`}
+            aria-label={t('fullNatal.components.themeEvidence.natalPromiseStatus', { status: statusLabel })}
             className={`px-2.5 py-0.5 rounded text-xs font-mono-code font-bold uppercase border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
           >
             {statusLabel}
@@ -56,7 +58,7 @@ export const ThemePromiseCard: React.FC<ThemePromiseCardProps> = ({
       </div>
 
       <p className="text-xs text-slate-300 font-sans leading-relaxed">
-        Natal Promise represents the structural support identified in the birth chart before modifiers, divisional confirmation, and timing are considered.
+        {t('fullNatal.components.themeEvidence.natalPromiseDescription')}
       </p>
 
       {/* Support and Challenge breakdown */}
@@ -65,7 +67,7 @@ export const ThemePromiseCard: React.FC<ThemePromiseCardProps> = ({
         <div className="bg-emerald-950/20 p-3 rounded-lg border border-emerald-500/20 space-y-2">
           <div className="flex items-center justify-between text-xs font-mono-code font-bold uppercase text-emerald-400">
             <span className="flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5" /> Primary Structural Support
+              <Award className="w-3.5 h-3.5" /> {t('fullNatal.components.themeEvidence.primarySupport')}
             </span>
             <span>({safeSupport.length})</span>
           </div>
@@ -83,7 +85,7 @@ export const ThemePromiseCard: React.FC<ThemePromiseCardProps> = ({
             </ul>
           ) : (
             <p className="text-xs text-slate-400 italic">
-              No strong primary structural support configurations identified.
+              {t('fullNatal.components.themeEvidence.noPrimarySupport')}
             </p>
           )}
         </div>
@@ -92,7 +94,7 @@ export const ThemePromiseCard: React.FC<ThemePromiseCardProps> = ({
         <div className="bg-rose-950/20 p-3 rounded-lg border border-rose-500/20 space-y-2">
           <div className="flex items-center justify-between text-xs font-mono-code font-bold uppercase text-rose-400">
             <span className="flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" /> Primary Structural Challenges
+              <AlertTriangle className="w-3.5 h-3.5" /> {t('fullNatal.components.themeEvidence.primaryChallenges')}
             </span>
             <span>({safeChallenges.length})</span>
           </div>
@@ -110,7 +112,7 @@ export const ThemePromiseCard: React.FC<ThemePromiseCardProps> = ({
             </ul>
           ) : (
             <p className="text-xs text-slate-400 italic">
-              No acute primary structural afflictions identified on key factors.
+              {t('fullNatal.components.themeEvidence.noPrimaryChallenges')}
             </p>
           )}
         </div>

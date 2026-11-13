@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { CurrentDashaSection as CurrentDashaSectionType } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
@@ -15,8 +16,9 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
   section,
   onNavigateToDashaTiming
 }) => {
+  const { t } = useTranslation('reports');
   if (section.status === 'UNAVAILABLE' || !section.current) {
-    return <EmptyState title="Active Dasha Period Unavailable" message="Active dasha calculations were not provided in the report." />;
+    return <EmptyState title={t('fullNatal.components.currentDasha.unavailableTitle')} message={t('fullNatal.components.currentDasha.unavailableMessage')} />;
   }
 
   const { current } = section;
@@ -25,7 +27,7 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         {section.status === 'PARTIAL' ? (
-          <PartialStateNotice message="Active dasha period details are partial." />
+          <PartialStateNotice message={t('fullNatal.components.partial.currentDasha')} />
         ) : <div />}
         {onNavigateToDashaTiming && (
           <button
@@ -33,7 +35,7 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
             onClick={onNavigateToDashaTiming}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors cursor-pointer"
           >
-            <span>Open Dedicated Dasha & Timing View</span>
+            <span>{t('fullNatal.components.currentDasha.openDashaView')}</span>
           </button>
         )}
       </div>
@@ -44,7 +46,7 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
         {current.mahadasha && (
           <div className="bg-gradient-to-b from-indigo-950/40 to-slate-950 border border-indigo-500/30 rounded-xl p-4 space-y-2">
             <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400 block">
-              Major Period (Mahadasha)
+              {t('fullNatal.components.currentDasha.majorPeriod')}
             </span>
             <p className="text-xl font-bold font-serif-astro text-slate-100">
               {formatPlanetName(current.mahadasha.planet)}
@@ -59,7 +61,7 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
         {current.antardasha && (
           <div className="bg-gradient-to-b from-purple-950/40 to-slate-950 border border-purple-500/30 rounded-xl p-4 space-y-2">
             <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-purple-400 block">
-              Sub-Period (Antardasha)
+              {t('fullNatal.components.currentDasha.subPeriod')}
             </span>
             <p className="text-xl font-bold font-serif-astro text-slate-100">
               {formatPlanetName(current.antardasha.planet)}
@@ -74,7 +76,7 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
         {current.pratyantardasha && (
           <div className="bg-gradient-to-b from-amber-950/40 to-slate-950 border border-amber-500/30 rounded-xl p-4 space-y-2">
             <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-amber-400 block">
-              Sub-Sub-Period (Pratyantardasha)
+              {t('fullNatal.components.currentDasha.subSubPeriod')}
             </span>
             <p className="text-xl font-bold font-serif-astro text-slate-100">
               {formatPlanetName(current.pratyantardasha.planet)}
@@ -89,14 +91,14 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
       {/* Confidence */}
       {current.confidence && (
         <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs font-mono-code flex items-center justify-between">
-          <span className="text-slate-400">Interpretation Confidence:</span>
+          <span className="text-slate-400">{t('fullNatal.components.currentDasha.interpretationConfidence')}</span>
           <span className="font-bold text-indigo-300">{formatConfidence(current.confidence)}</span>
         </div>
       )}
 
       {/* Evidence */}
       {current.evidence && current.evidence.length > 0 && (
-        <EvidenceList evidence={current.evidence} title="Active Dasha Interpretation Evidence" />
+        <EvidenceList evidence={current.evidence} title={t('fullNatal.components.currentDasha.evidenceTitle')} />
       )}
     </div>
   );

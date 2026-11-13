@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { HouseAnalysisSection as HouseAnalysisSectionType, HouseReportItem } from '../../types';
 import { HouseAnalysisCard } from './HouseAnalysisCard';
 import { EmptyState } from './EmptyState';
@@ -10,19 +11,20 @@ interface HouseAnalysisSectionProps {
 }
 
 export const HouseAnalysisSection: React.FC<HouseAnalysisSectionProps> = ({ section }) => {
+  const { t } = useTranslation('reports');
   if (section.status === 'UNAVAILABLE' || !section.houses || section.houses.length === 0) {
-    return <EmptyState title="House Analysis Unavailable" message="House analysis details were not provided in the report." />;
+    return <EmptyState title={t('fullNatal.components.houses.unavailableTitle')} message={t('fullNatal.components.houses.unavailableMessage')} />;
   }
 
   return (
     <div className="space-y-4">
       {section.status === 'PARTIAL' && (
-        <PartialStateNotice message="House analysis is incomplete or partial." />
+        <PartialStateNotice message={t('fullNatal.components.partial.houses')} />
       )}
 
-      <SectionAccordion title="House Analysis" count={section.houses.length}>
+      <SectionAccordion title={t('fullNatal.components.houses.sectionTitle')} count={section.houses.length}>
         {section.houses.map((item: HouseReportItem) => (
-          <CollapsibleItem key={item.house} itemId={String(item.house)} title={`House ${item.house}`}>
+          <CollapsibleItem key={item.house} itemId={String(item.house)} title={t('fullNatal.components.houses.houseTitle', { number: item.house })}>
             <HouseAnalysisCard item={item} />
           </CollapsibleItem>
         ))}

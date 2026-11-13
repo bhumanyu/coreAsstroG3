@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningProvenanceViewModel } from '../../product/analysis/reasoningViewModel';
 import { Database, GitFork, BookOpen } from 'lucide-react';
 
@@ -7,6 +8,7 @@ export interface ReasoningProvenanceProps {
 }
 
 export const ReasoningProvenance: React.FC<ReasoningProvenanceProps> = ({ provenance }) => {
+  const { t } = useTranslation('reports');
   const hasRuleId = Boolean(provenance?.ruleId);
   const hasDerivedFrom = Boolean(provenance?.derivedFromIds && provenance.derivedFromIds.length > 0);
   const source = provenance?.source;
@@ -16,31 +18,31 @@ export const ReasoningProvenance: React.FC<ReasoningProvenanceProps> = ({ proven
       {hasRuleId ? (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900 border border-slate-700/80 text-indigo-300">
           <BookOpen className="w-3 h-3 text-indigo-400 shrink-0" aria-hidden="true" />
-          <span>Rule: {provenance!.ruleId}</span>
+          <span>{t('reasoning.detail.ruleWithId', { id: provenance!.ruleId })}</span>
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">
           <BookOpen className="w-3 h-3 text-slate-500 shrink-0" aria-hidden="true" />
-          <span>Rule: Not specified</span>
+          <span>{t('reasoning.detail.ruleNotSpecified')}</span>
         </span>
       )}
 
       {hasDerivedFrom ? (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900 border border-slate-700/80 text-teal-300">
           <GitFork className="w-3 h-3 text-teal-400 shrink-0" aria-hidden="true" />
-          <span>Derived from: {provenance!.derivedFromIds.join(', ')}</span>
+          <span>{t('reasoning.detail.derivedFrom')}: {provenance!.derivedFromIds.join(', ')}</span>
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">
           <GitFork className="w-3 h-3 text-slate-500 shrink-0" aria-hidden="true" />
-          <span>Derived from: Not specified</span>
+          <span>{t('reasoning.detail.derivedFrom')}: {t('reasoning.detail.notSpecified')}</span>
         </span>
       )}
 
       {source && (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">
           <Database className="w-3 h-3 text-slate-400 shrink-0" aria-hidden="true" />
-          <span>Source: {source}</span>
+          <span>{t('reasoning.detail.source')}: {source}</span>
         </span>
       )}
     </div>

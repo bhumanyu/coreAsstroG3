@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { YogaReportItem } from '../../types';
 import { YogaModifier } from '../../engine/yoga/yogaTypes';
 import { formatPlanetName, formatYogaCategory } from './reportUtils';
@@ -10,6 +11,7 @@ interface YogaCardProps {
 }
 
 export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
+  const { t } = useTranslation('reports');
   const status = yoga.finalStatus || 'PRESENT';
 
   return (
@@ -24,14 +26,14 @@ export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
             </h4>
           </div>
           <span className="text-[10px] font-mono-code text-slate-400 uppercase tracking-wider block mt-0.5">
-            Category: {formatYogaCategory(yoga.category)}
+            {t('fullNatal.components.yogas.category')} {formatYogaCategory(yoga.category)}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {yoga.strength && (
             <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-              Strength: {yoga.strength}
+              {t('fullNatal.components.yogas.strength')} {yoga.strength}
             </span>
           )}
           <span
@@ -53,19 +55,19 @@ export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
       {/* Involved Planets and Houses */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
-          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Involved Planets</span>
+          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.yogas.involvedPlanets')}</span>
           <span className="font-semibold text-indigo-300 font-mono-code">
             {yoga.planets && yoga.planets.length > 0
               ? yoga.planets.map(formatPlanetName).join(', ')
-              : 'N/A'}
+              : t('fullNatal.components.yogas.notAvailable')}
           </span>
         </div>
         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
-          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Involved Houses</span>
+          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">{t('fullNatal.components.yogas.involvedHouses')}</span>
           <span className="font-semibold text-purple-300 font-mono-code">
             {yoga.houses && yoga.houses.length > 0
               ? yoga.houses.map((h: number) => `H${h}`).join(', ')
-              : 'N/A'}
+              : t('fullNatal.components.yogas.notAvailable')}
           </span>
         </div>
       </div>
@@ -75,7 +77,7 @@ export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
         <div className="space-y-1.5 text-xs pt-1">
           {yoga.supportingFactors && yoga.supportingFactors.length > 0 && (
             <div className="text-emerald-400 bg-emerald-950/30 p-2 rounded border border-emerald-500/20 text-[11px]">
-              <span className="font-mono-code font-bold uppercase block text-[10px]">Supporting Factors:</span>
+              <span className="font-mono-code font-bold uppercase block text-[10px]">{t('fullNatal.components.yogas.supportingFactors')}</span>
               <ul className="list-disc list-inside space-y-0.5 text-slate-300 mt-0.5">
                 {yoga.supportingFactors.map((f: YogaModifier | string | any, idx: number) => (
                   <li key={idx}>{typeof f === 'string' ? f : f.reason || f.type || JSON.stringify(f)}</li>
@@ -86,7 +88,7 @@ export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
 
           {yoga.weakeningFactors && yoga.weakeningFactors.length > 0 && (
             <div className="text-amber-400 bg-amber-950/30 p-2 rounded border border-amber-500/20 text-[11px]">
-              <span className="font-mono-code font-bold uppercase block text-[10px]">Weakening Factors:</span>
+              <span className="font-mono-code font-bold uppercase block text-[10px]">{t('fullNatal.components.yogas.weakeningFactors')}</span>
               <ul className="list-disc list-inside space-y-0.5 text-slate-300 mt-0.5">
                 {yoga.weakeningFactors.map((f: YogaModifier | string | any, idx: number) => (
                   <li key={idx}>{typeof f === 'string' ? f : f.reason || f.type || JSON.stringify(f)}</li>
@@ -97,7 +99,7 @@ export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
 
           {yoga.cancellationFactors && yoga.cancellationFactors.length > 0 && (
             <div className="text-rose-400 bg-rose-950/30 p-2 rounded border border-rose-500/20 text-[11px]">
-              <span className="font-mono-code font-bold uppercase block text-[10px]">Cancellation Factors:</span>
+              <span className="font-mono-code font-bold uppercase block text-[10px]">{t('fullNatal.components.yogas.cancellationFactors')}</span>
               <ul className="list-disc list-inside space-y-0.5 text-slate-300 mt-0.5">
                 {yoga.cancellationFactors.map((f: YogaModifier | string | any, idx: number) => (
                   <li key={idx}>{typeof f === 'string' ? f : f.reason || f.type || JSON.stringify(f)}</li>
@@ -110,7 +112,7 @@ export const YogaCard: React.FC<YogaCardProps> = ({ yoga }) => {
 
       {/* Evidence */}
       {yoga.evidence && yoga.evidence.length > 0 && (
-        <EvidenceList evidence={yoga.evidence} title={`Evidence for ${yoga.type}`} />
+        <EvidenceList evidence={yoga.evidence} title={t('fullNatal.components.yogas.evidenceTitle', { yoga: yoga.type })} />
       )}
     </div>
   );

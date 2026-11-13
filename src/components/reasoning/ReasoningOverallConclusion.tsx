@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   ReasoningOverviewViewModel,
   ReasoningDomainOverviewItem,
@@ -50,6 +51,7 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
   isSelected,
   onSelect
 }) => {
+  const { t } = useTranslation('reports');
   const isCareer = item.domain === 'CAREER';
   const Icon = isCareer ? Briefcase : Coins;
   const isUnavailable = item.availability === 'UNAVAILABLE' || item.status === 'UNAVAILABLE';
@@ -82,10 +84,10 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-semibold text-slate-100">
-                {isCareer ? 'Career Domain' : 'Wealth Domain'}
+                {t(isCareer ? 'reasoning.detail.careerDomain' : 'reasoning.detail.wealthDomain')}
               </h3>
               <span className="text-[11px] font-mono-code text-slate-400">
-                {item.title || (isCareer ? 'Vocational Architecture' : 'Financial Synthesis')}
+                {item.title || t(isCareer ? 'reasoning.detail.vocationalArchitecture' : 'reasoning.detail.financialSynthesis')}
               </span>
             </div>
           </div>
@@ -93,13 +95,13 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
           <div className="flex items-center gap-1.5">
             <span
               className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono-code font-medium border ${availabilityBadgeClass}`}
-              title="Availability Status"
+              title={t('reasoning.detail.availabilityStatus')}
             >
               {formatAvailability(item.availability)}
             </span>
             {isSelected && (
               <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                Viewing
+                {t('reasoning.detail.viewing')}
               </span>
             )}
           </div>
@@ -108,7 +110,7 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
         {/* Four Distinct Fields (§26) */}
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="bg-slate-950/40 rounded-lg p-2.5 border border-slate-800/60">
-            <span className="text-[10px] text-slate-400 font-mono-code block mb-1">Conclusion Status</span>
+            <span className="text-[10px] text-slate-400 font-mono-code block mb-1">{t('reasoning.detail.conclusionStatus')}</span>
             <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${statusBadgeClass}`}>
               <BrainCircuit className="w-3 h-3" aria-hidden="true" />
               <span>{formatConclusionStatus(item.status)}</span>
@@ -116,14 +118,14 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
           </div>
 
           <div className="bg-slate-950/40 rounded-lg p-2.5 border border-slate-800/60">
-            <span className="text-[10px] text-slate-400 font-mono-code block mb-1">Promise Strength</span>
+            <span className="text-[10px] text-slate-400 font-mono-code block mb-1">{t('reasoning.detail.promiseStrength')}</span>
             <div className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono-code font-medium border ${strengthBadgeClass}`}>
               <span>{formatPromiseStrength(item.strength)}</span>
             </div>
           </div>
 
           <div className="bg-slate-950/40 rounded-lg p-2.5 border border-slate-800/60">
-            <span className="text-[10px] text-slate-400 font-mono-code block mb-1">Product Confidence</span>
+            <span className="text-[10px] text-slate-400 font-mono-code block mb-1">{t('reasoning.detail.productConfidence')}</span>
             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono-code bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
               <ShieldCheck className="w-3 h-3 text-indigo-400" aria-hidden="true" />
               <span>{formatConfidence(item.confidence)}</span>
@@ -131,7 +133,7 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
           </div>
 
           <div className="bg-slate-950/40 rounded-lg p-2.5 border border-slate-800/60">
-            <span className="text-[10px] text-slate-400 font-mono-code block mb-1">Data Availability</span>
+            <span className="text-[10px] text-slate-400 font-mono-code block mb-1">{t('reasoning.detail.dataAvailability')}</span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono-code border ${availabilityBadgeClass}`}>
               {formatAvailability(item.availability)}
             </span>
@@ -145,7 +147,7 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <AlertCircle className="w-4 h-4 text-slate-500 shrink-0" aria-hidden="true" />
                 <span className="font-semibold">
-                  {item.headline ?? (isCareer ? 'Career Analysis Unavailable' : 'Wealth Analysis Unavailable')}
+                  {item.headline ?? t(isCareer ? 'reasoning.detail.careerUnavailable' : 'reasoning.detail.wealthUnavailable')}
                 </span>
               </div>
               {item.statement && (
@@ -175,7 +177,7 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
       {onSelect && (
         <div className="pt-4 mt-3 border-t border-slate-800/60 flex items-center justify-between">
           <span className="text-[11px] text-slate-400 font-mono-code">
-            {isSelected ? 'Currently Selected' : 'Switch to this domain'}
+            {t(isSelected ? 'reasoning.detail.currentlySelected' : 'reasoning.detail.switchDomain')}
           </span>
           <button
             type="button"
@@ -187,7 +189,7 @@ const DomainConclusionCard: React.FC<DomainConclusionCardProps> = ({
                 : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
             }`}
           >
-            <span>{isSelected ? 'Active Details' : 'View Reasoning'}</span>
+            <span>{t(isSelected ? 'reasoning.detail.activeDetails' : 'reasoning.detail.viewReasoning')}</span>
             <ArrowRight className="w-3 h-3" aria-hidden="true" />
           </button>
         </div>
@@ -201,6 +203,7 @@ export const ReasoningOverallConclusion: React.FC<ReasoningOverallConclusionProp
   selectedDomain,
   onSelectDomain
 }) => {
+  const { t } = useTranslation('reports');
   return (
     <div
       id="reasoning-overall-conclusion-panel"
@@ -212,15 +215,15 @@ export const ReasoningOverallConclusion: React.FC<ReasoningOverallConclusionProp
             <Compass className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Overall Conclusion</h2>
+            <h2 className="text-base font-semibold text-slate-100">{t('reasoning.detail.overallTitle')}</h2>
             <p className="text-xs text-slate-400">
-              Side-by-side summary of existing Career and Wealth domain conclusions
+              {t('reasoning.detail.overallDescription')}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs font-mono-code text-slate-400">
-          <span>Unified Summary</span>
+          <span>{t('reasoning.detail.unifiedSummary')}</span>
         </div>
       </div>
 
