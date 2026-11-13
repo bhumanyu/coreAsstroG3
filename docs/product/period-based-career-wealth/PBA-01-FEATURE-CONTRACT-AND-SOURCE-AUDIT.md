@@ -550,6 +550,8 @@ Compared outcomes with `enableDispositorContexts: false` and `true`. These are b
 - INSUFFICIENT_DATA: 1
 - UNQUALIFIED: 0
 
+Qualification only uses a fully assessed C6 condition as a definitive positive or negative. A PARTIAL condition (including a WEAK value resolved while affliction remains unassessed) maps to unavailable for this gate, so missing assessment data cannot turn into an UNQUALIFIED result.
+
 **Conclusion**: The pattern passed the gating policy in the orchestrator (UNQUALIFIED patterns are skipped, INSUFFICIENT_DATA patterns proceed to mechanism resolution).
 
 **3. Mechanism Resolution**

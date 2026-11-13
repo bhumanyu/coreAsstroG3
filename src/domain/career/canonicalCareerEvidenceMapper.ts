@@ -789,8 +789,8 @@ function mapDashaEvidence(
       // Non-MIXED directions: map directly
       const polarity = mapDirectionToPolarity(evidence.direction);
 
-      // Dasha provenance does not expose a ruleId (CareerDashaCanonicalProvenance only has source, activationLevel, natalRootIds)
-      // Omit provenance entirely since ruleId is required by EvidenceProvenance
+      // Canonical Dasha evidence aggregates multiple activation references and has no single ruleId.
+      // Keep those references on the evidence record instead of choosing one arbitrarily.
       const domainEvidence = createDomainEvidence({
         id: evidence.id,
         sourceType: 'PLANET',

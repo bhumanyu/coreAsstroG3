@@ -132,6 +132,8 @@ function makeCondition(
     negativeFactors: [],
     relatedPlanets: [],
     conditional: condition === 'UNAVAILABLE',
+    assessment: 'FULL',
+    afflictionAssessed: true,
     statement: `Planet ${planet} has ${condition.toLowerCase()} condition.`,
     ...overrides
   });
@@ -554,6 +556,22 @@ describe('Career Pattern Qualification', () => {
       expect(result).toBe('WEAK');
     });
 
+    it('maps an unavailable assessment to UNAVAILABLE even when the condition is weak', () => {
+      const condition = {
+        ...makeCondition(Planet.SATURN, 'WEAK'),
+        assessment: 'UNAVAILABLE' as const
+      };
+      expect(mapPlanetaryCondition(condition)).toBe('UNAVAILABLE');
+    });
+
+    it('does not use a partial condition as a definitive qualification disqualifier', () => {
+      const condition = makeCondition(Planet.SATURN, 'WEAK', {
+        assessment: 'PARTIAL',
+        afflictionAssessed: false
+      });
+      expect(mapPlanetaryCondition(condition)).toBe('UNAVAILABLE');
+    });
+
     it('maps AFFLICTED condition to WEAK', () => {
       const condition = makeCondition(Planet.SATURN, 'AFFLICTED');
       const result = mapPlanetaryCondition(condition);
@@ -885,8 +903,8 @@ describe('Career Pattern Qualification', () => {
         ],
         condition: [
           makeCondition(Planet.SATURN, 'STRONG'),
-          makeCondition(Planet.MERCURY, 'STRONG'),
-          makeCondition(Planet.JUPITER, 'UNAVAILABLE') // One unavailable
+          makeCondition(Planet.MERCURY, 'WEAK', { assessment: 'PARTIAL', afflictionAssessed: false }),
+          makeCondition(Planet.JUPITER, 'WEAK') // An unavailable assessment must outrank later negative evidence.
         ]
       };
 

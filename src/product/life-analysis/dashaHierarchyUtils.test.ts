@@ -679,11 +679,11 @@ describe('D07-C: Task 3 AI Hierarchy-Projection Preservation Test', () => {
     // Explicitly remove Dasha evidence to force DEGRADED path
     const careerWithoutDasha: DomainInterpretation = {
       ...career,
-      evidence: career.evidence.filter(e => e.sourceType !== 'DASHA')
+      evidence: career.evidence.filter(e => e.source !== 'DASHA')
     };
     const wealthWithoutDasha: DomainInterpretation = {
       ...wealth,
-      evidence: wealth.evidence.filter(e => e.sourceType !== 'DASHA')
+      evidence: wealth.evidence.filter(e => e.source !== 'DASHA')
     };
 
     const context = buildAiContext(horoscope, {

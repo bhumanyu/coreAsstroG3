@@ -476,7 +476,7 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     expect(identity).toBe('OCCURRENCE_ID_789');
   });
 
-  it('mapPeriodToCanonicalEvidenceIds uses semantic identity (identityKey) when present', () => {
+  it('mapPeriodToCanonicalEvidenceIds returns the emitted occurrence ID when identityKey is present', () => {
     const interpretation = createDomainInterpretation({
       domain: 'CAREER',
       natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
@@ -505,7 +505,7 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
 
     const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
 
-    expect(result.evidenceIds).toEqual(['SEMANTIC_KEY_ABC']);
+    expect(result.evidenceIds).toEqual(['OCCURRENCE_ID_123']);
     expect(result.traceability).toBe('RESOLVED');
   });
 
@@ -586,7 +586,7 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
 
     // Sorted deterministically by semantic identity
-    expect(result.evidenceIds).toEqual(['OCC_2', 'SEM_1']);
+    expect(result.evidenceIds).toEqual(['OCC_1', 'OCC_2']);
     expect(result.traceability).toBe('RESOLVED');
   });
 
@@ -714,7 +714,7 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     }).toThrow('createDomainEvidence: id must be non-empty');
   });
 
-  it('mapPeriodToCanonicalEvidenceIds produces deterministic output (sorted by semantic identity)', () => {
+  it('mapPeriodToCanonicalEvidenceIds produces deterministic output (sorted by occurrence ID)', () => {
     const interpretation = createDomainInterpretation({
       domain: 'CAREER',
       natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
@@ -775,14 +775,13 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
 
     const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
 
-    // Sorted deterministically by semantic identity
-    expect(result.evidenceIds).toEqual(['SEM_A', 'SEM_B', 'SEM_C']);
+    // Sorted deterministically by emitted occurrence ID
+    expect(result.evidenceIds).toEqual(['OCC_A', 'OCC_M', 'OCC_Z']);
     expect(result.traceability).toBe('RESOLVED');
   });
 
-  it('downstream resolution: id !== identityKey resolves correctly through actual consumer path', () => {
-    // Test that semantic identity resolution works end-to-end through the adapter
-    // Evidence has id !== identityKey, and the adapter correctly uses identityKey for resolution
+  it('downstream resolution: references the emitted DomainEvidence ID when id !== identityKey', () => {
+    // Hierarchy references must resolve directly to an emitted DomainEvidence record.
     const interpretation = createDomainInterpretation({
       domain: 'CAREER',
       natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
@@ -811,15 +810,13 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
 
     const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
 
-    // The adapter should return the semantic identity (identityKey), not the occurrence ID
-    expect(result.evidenceIds).toEqual(['SEMANTIC_FACT_JUPITER_MD']);
+    expect(result.evidenceIds).toEqual(['OCCURRENCE_UNIQUE_ID_ABC']);
     expect(result.traceability).toBe('RESOLVED');
 
-    // Verify that the semantic identity is NOT the occurrence ID
-    expect(result.evidenceIds[0]).not.toBe('OCCURRENCE_UNIQUE_ID_ABC');
+    expect(result.evidenceIds[0]).not.toBe('SEMANTIC_FACT_JUPITER_MD');
   });
 
-  it('valid + invalid matching evidence yields ONLY valid semantic IDs with RESOLVED traceability (Finding 2a)', () => {
+  it('valid + invalid matching evidence yields only emitted occurrence IDs with RESOLVED traceability (Finding 2a)', () => {
     // Regression test: when matching evidence includes both valid and invalid (sentinel-resolving) items,
     // only the valid semantic IDs should be returned with RESOLVED traceability
     const interpretation = createDomainInterpretation({
@@ -870,8 +867,8 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
 
     const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
 
-    // Should only include the valid semantic ID, not the sentinel
-    expect(result.evidenceIds).toEqual(['SEMANTIC_JUPITER_MD']);
+    // Should only include the valid emitted occurrence ID, not an invalid reference.
+    expect(result.evidenceIds).toEqual(['VALID_EVIDENCE_1']);
     expect(result.traceability).toBe('RESOLVED');
   });
 

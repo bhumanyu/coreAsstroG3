@@ -12,7 +12,7 @@ import type {
 } from '../../product/life-analysis/lifeAnalysisTypes';
 import { indexDashaPeriodActivations } from '../../product/life-analysis/dashaHierarchyUtils';
 import type { DomainEvidence } from './DomainEvidence';
-import { resolveSemanticIdentity, tryResolveSemanticIdentity } from './DomainEvidence';
+import { UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
 
 export interface PeriodCanonicalEvidenceResult {
   readonly evidenceIds: readonly string[];
@@ -22,9 +22,9 @@ export interface PeriodCanonicalEvidenceResult {
 /**
  * Maps CW-02 factor IDs to canonical CAREER_DASHA:* evidence IDs for a given period.
  *
- * Per-period timing evidenceIds should reference canonical C9 evidence (CAREER_DASHA:* namespace)
- * that exists in context.evidence, not the CW-02 factor IDs (CW09_* namespace).
- * Canonical C9 evidence is available in interpretation.evidence filtered by source 'DASHA'.
+ * Per-period timing evidenceIds reference emitted DomainEvidence occurrence IDs, not semantic
+ * identity keys or legacy CW-02 factor IDs. Canonical C9 evidence is available in
+ * interpretation.evidence filtered by source 'DASHA'.
  *
  * Returns both the canonical evidence IDs and a traceability status:
  * - RESOLVED: Canonical evidence was found and IDs are valid
@@ -65,15 +65,14 @@ export function mapPeriodToCanonicalEvidenceIds(
     return e.timing.level === period && e.timing.planet === planet;
   });
 
-  // If canonical evidence exists, use its semantic identity IDs and mark as RESOLVED
-  // Semantic identity (identityKey) is used for cross-layer matching, falling back to occurrence ID
+  // Keep references aligned with DomainEvidence.id; identityKey is a grouping key, not an emitted ID.
   if (canonicalEvidence.length > 0) {
     const evidenceIds = canonicalEvidence
-      .map((e: DomainEvidence) => tryResolveSemanticIdentity(e))
-      .filter((id): id is string => id !== null) // Filter out unresolved markers (null)
-      .sort((a, b) => a.localeCompare(b)); // Ensure deterministic output
+      .map((e: DomainEvidence) => e.id.trim())
+      .filter(id => id.length > 0 && id !== UNRESOLVED_IDENTITY_SENTINEL)
+      .sort((a, b) => a.localeCompare(b));
 
-    // If all evidence resolved to null (unresolvable), treat as DEGRADED
+    // If every matching record has an invalid occurrence ID, treat as DEGRADED.
     if (evidenceIds.length === 0) {
       return { evidenceIds: [], traceability: 'DEGRADED' };
     }

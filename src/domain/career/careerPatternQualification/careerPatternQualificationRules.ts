@@ -40,12 +40,12 @@ import type {
  * - NEUTRAL → MODERATE (conservative: neutral dignity does not imply weak condition)
  * - WEAK → WEAK
  * - AFFLICTED → WEAK
- * - UNAVAILABLE or missing → UNAVAILABLE
+ * - PARTIAL/UNAVAILABLE assessment, missing assessment metadata, or missing result → UNAVAILABLE
  */
 export function mapPlanetaryCondition(
   result: CareerPlanetaryConditionResult | undefined
 ): CareerPatternPlanetaryCondition {
-  if (!result) {
+  if (!result || result.assessment !== 'FULL') {
     return 'UNAVAILABLE';
   }
 
@@ -263,8 +263,8 @@ export function computeQualificationDimensions(
   // UNAVAILABLE or WEAK in any participant yields that result
   const planetaryCondition = participantConditions.length > 0
     ? participantConditions.reduce((weakest, condition) => {
-      if (condition === 'WEAK' || condition === 'UNAVAILABLE') return condition;
-      if (weakest === 'WEAK' || weakest === 'UNAVAILABLE') return weakest;
+      if (condition === 'UNAVAILABLE' || weakest === 'UNAVAILABLE') return 'UNAVAILABLE';
+      if (condition === 'WEAK' || weakest === 'WEAK') return 'WEAK';
       if (condition === 'MODERATE' && weakest === 'STRONG') return condition;
       return weakest;
     }, participantConditions[0])

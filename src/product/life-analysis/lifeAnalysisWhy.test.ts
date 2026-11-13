@@ -461,10 +461,19 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
       domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
     });
 
+    const domainEvidenceById = new Map(
+      [...STAGE1_GOLDEN_CAREER.evidence, ...STAGE1_GOLDEN_WEALTH.evidence].map(evidence => [evidence.id, evidence])
+    );
+    const dashaEvidenceWithoutSingleRule = domainEvidenceById.get('CAREER_DASHA:AD:SATURN:MODIFIER:DOES_NOT_ACTIVATE');
+    // This aggregate C9 occurrence has multiple activation references, not one DomainEvidence.ruleId.
+    expect(dashaEvidenceWithoutSingleRule?.source).toBe('DASHA');
+    expect(dashaEvidenceWithoutSingleRule?.ruleId).toBeUndefined();
+
     for (const item of why.evidence) {
       expect(item.source.calculationId).toBeUndefined();
       expect(item.traceability.calculationId).toBeUndefined();
-      expect(item.traceability.ruleId).toBeDefined(); // ruleId is populated
+      expect(domainEvidenceById.has(item.id)).toBe(true);
+      expect(item.traceability.ruleId).toBe(domainEvidenceById.get(item.id)?.ruleId);
     }
   });
 
