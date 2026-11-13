@@ -13,8 +13,20 @@ import {
 import { selectAllEvidence } from '../productAnalysisSelectors';
 import type { ProductEvidence, ProductAnalysis } from '../productAnalysisTypes';
 import { createProductAnalysis } from './testHelpers';
+import { ENGLISH_USER_FACING_COPY } from '../../life-analysis/userFacingInterpretation';
 
 describe('OverviewViewModel & Selectors (P-UI-03)', () => {
+  it('passes a non-default copy provider through the overview selector', () => {
+    const copy = {
+      ...ENGLISH_USER_FACING_COPY,
+      combinedSummary: () => 'Custom combined conclusion.'
+    };
+
+    const vm = selectOverviewViewModel(createProductAnalysis(), copy);
+
+    expect(vm.overall.summary).toBe('Custom combined conclusion.');
+  });
+
   it('(1) maps career strength from promise.strength and wealth from overall.promise / status', () => {
     const analysis = createProductAnalysis({
       career: {

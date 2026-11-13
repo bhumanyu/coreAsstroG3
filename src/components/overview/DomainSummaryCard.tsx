@@ -21,6 +21,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
   const Icon = isCareer ? Briefcase : Coins;
   const iconColor = isCareer ? 'text-indigo-400' : 'text-amber-400';
   const iconBg = isCareer ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-amber-500/10 border-amber-500/20';
+  const domainName = t(isCareer ? 'domain.careerName' : 'domain.wealthName');
 
   const strengthText = enumLabelWithFallback(tEnum, 'promiseStrength', 'productDirection', domain.strength);
   const confidenceText = enumLabel(tEnum, 'productConfidence', domain.confidence);
@@ -33,7 +34,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
 
   return (
     <div
-      aria-label={t('domain.summaryAria', { domain: domain.name })}
+      aria-label={t('domain.summaryAria', { domain: domainName })}
       className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col justify-between shadow-sm"
     >
       <div>
@@ -47,7 +48,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
             </div>
             <div>
               <h3 className="text-base font-semibold text-slate-100">
-                {domain.name}
+                {domainName}
               </h3>
               <span className="text-xs text-slate-400">
                 {t(isCareer ? 'domain.careerSubtitle' : 'domain.wealthSubtitle')}

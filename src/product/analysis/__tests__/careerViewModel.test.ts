@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { selectCareerViewModel } from '../careerViewModel';
 import { createProductAnalysis } from './testHelpers';
 import type { ProductDashaPeriod } from '../productAnalysisTypes';
+import { ENGLISH_USER_FACING_COPY } from '../../life-analysis/userFacingInterpretation';
 
 describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
   it('1. natal promise passthrough: passes strength, confidence, headline, and statement', () => {
@@ -261,5 +262,18 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     expect(vm.conclusion.statement).not.toContain('NOT_ACTIVE');
     expect(JSON.stringify(vm.conclusion)).not.toContain('NOT_ACTIVE');
     expect(vm.conclusion.integratedSynthesisAvailable).toBe(true);
+  });
+
+  it('passes a non-default copy provider to the career assessment', () => {
+    const copy = {
+      ...ENGLISH_USER_FACING_COPY,
+      outcomes: {
+        ...ENGLISH_USER_FACING_COPY.outcomes,
+        SUPPORTED: 'Custom supportive outlook'
+      }
+    };
+    const vm = selectCareerViewModel(createProductAnalysis(), copy);
+
+    expect(vm.conclusion.statement).toContain('Custom supportive outlook');
   });
 });

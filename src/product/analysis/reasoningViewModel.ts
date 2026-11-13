@@ -25,7 +25,9 @@ import type {
 } from './productAnalysisTypes';
 import { selectAllEvidence, selectDashaHierarchy } from './productAnalysisSelectors';
 import {
-  buildUserFacingAssessment
+  buildUserFacingAssessment,
+  ENGLISH_USER_FACING_COPY,
+  type UserFacingCopyProvider
 } from '../life-analysis/userFacingInterpretation';
 
 export type ReasoningDomain = 'CAREER' | 'WEALTH';
@@ -350,7 +352,10 @@ export function buildEvidenceGroups(
 /**
  * Builds Career-domain ReasoningViewModel
  */
-export function buildCareerReasoningViewModel(analysis: ProductAnalysis): ReasoningViewModel {
+export function buildCareerReasoningViewModel(
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): ReasoningViewModel {
   const career = analysis.career;
   const rawStatus = career.status ?? career.promise.status;
   const status: ConclusionStatus = toCanonicalConclusionStatus(
@@ -446,7 +451,8 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     natalStrength: career.synthesis?.natalStrength,
     dashaDirection: career.synthesis?.dashaDirection,
     timingStatus: career.synthesis?.timingStatus,
-    confidence: career.synthesis?.confidence
+    confidence: career.synthesis?.confidence,
+    copy
   });
   const conclusion: ReasoningConclusionViewModel = {
     headline: career.synthesis?.headline ?? career.promise.headline,
@@ -534,7 +540,10 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
 /**
  * Builds Wealth-domain ReasoningViewModel
  */
-export function buildWealthReasoningViewModel(analysis: ProductAnalysis): ReasoningViewModel {
+export function buildWealthReasoningViewModel(
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): ReasoningViewModel {
   const wealth = analysis.wealth;
   const rawStatus = wealth.overall.status;
   const status: ConclusionStatus = toCanonicalConclusionStatus(
@@ -627,7 +636,8 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     confidence: wealth.synthesis?.confidence,
     details: Object.entries(wealth.synthesis?.dimensionStatuses ?? {}).map(
       ([label, status]) => ({ label, status })
-    )
+    ),
+    copy
   });
   const conclusion: ReasoningConclusionViewModel = {
     headline: wealth.synthesis?.headline ?? wealth.overall.headline,
@@ -713,12 +723,13 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
  */
 export function selectReasoningViewModel(
   analysis: ProductAnalysis,
-  domain: ReasoningDomain = 'CAREER'
+  domain: ReasoningDomain = 'CAREER',
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
 ): ReasoningViewModel {
   if (domain === 'WEALTH') {
-    return buildWealthReasoningViewModel(analysis);
+    return buildWealthReasoningViewModel(analysis, copy);
   }
-  return buildCareerReasoningViewModel(analysis);
+  return buildCareerReasoningViewModel(analysis, copy);
 }
 
 /**
@@ -727,9 +738,12 @@ export function selectReasoningViewModel(
  * Keeps PromiseStrength, ConclusionStatus, ProductConfidence, and Availability as four separate fields.
  * If a domain is UNAVAILABLE, renders "Unavailable" — never fabricates.
  */
-export function selectReasoningOverview(analysis: ProductAnalysis): ReasoningOverviewViewModel {
-  const careerVm = selectReasoningViewModel(analysis, 'CAREER');
-  const wealthVm = selectReasoningViewModel(analysis, 'WEALTH');
+export function selectReasoningOverview(
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): ReasoningOverviewViewModel {
+  const careerVm = selectReasoningViewModel(analysis, 'CAREER', copy);
+  const wealthVm = selectReasoningViewModel(analysis, 'WEALTH', copy);
 
   const careerRawStatus = analysis.career?.status ?? analysis.career?.promise?.status;
   const careerStrength = (analysis.career?.promise?.strength as PromiseStrength) ?? 'UNAVAILABLE';
@@ -811,11 +825,12 @@ export function selectDedupedEvidence(
  * Pure composition of existing builders without re-deriving any semantics.
  */
 export function selectUnifiedReasoningViewModel(
-  analysis: ProductAnalysis
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
 ): UnifiedReasoningViewModel {
-  const career = buildCareerReasoningViewModel(analysis);
-  const wealth = buildWealthReasoningViewModel(analysis);
-  const overview = selectReasoningOverview(analysis);
+  const career = buildCareerReasoningViewModel(analysis, copy);
+  const wealth = buildWealthReasoningViewModel(analysis, copy);
+  const overview = selectReasoningOverview(analysis, copy);
   const dedupedEvidence = selectDedupedEvidence(analysis);
   const dedupedEvidenceGroups = buildEvidenceGroups(dedupedEvidence);
   const ai = mapAi(analysis.ai);

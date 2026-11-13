@@ -30,7 +30,9 @@ import {
 } from './careerQualificationPresentation';
 import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 import {
-  buildUserFacingAssessment
+  buildUserFacingAssessment,
+  ENGLISH_USER_FACING_COPY,
+  type UserFacingCopyProvider
 } from '../life-analysis/userFacingInterpretation';
 
 export interface CareerHeroViewModel {
@@ -216,7 +218,10 @@ const DASHA_LEVEL_ORDER: Record<string, number> = {
  * Invariant: Performs no domain calculations, no strength derivation from D10/transit,
  * and maintains role vs direction independence.
  */
-export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewModel {
+export function selectCareerViewModel(
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): CareerViewModel {
   const career = analysis.career;
 
   const hero: CareerHeroViewModel = {
@@ -319,7 +324,8 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
       { label: 'Final outcome', status: career.synthesis?.finalStatus },
       { label: 'Integrated direction', status: career.synthesis?.finalDirection },
       { label: 'Integrated strength', status: career.synthesis?.finalStrength }
-    ]
+    ],
+    copy
   });
   const conclusion: CareerConclusionViewModel = {
     headline: career.synthesis?.headline ?? career.promise.headline,

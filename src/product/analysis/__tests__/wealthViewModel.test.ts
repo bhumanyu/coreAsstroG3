@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { selectWealthViewModel } from '../wealthViewModel';
 import { createProductAnalysis } from './testHelpers';
 import { createUserReportedFinancialDatum, createUnavailableWealthFinancialDataSet } from '../../../domain/wealth/wealthFinancialData';
+import { ENGLISH_USER_FACING_COPY } from '../../life-analysis/userFacingInterpretation';
 function createUserReportedFinancialDataFixture() {
   const data = [...createUnavailableWealthFinancialDataSet().data];
   const provenance = { reportedBy: 'USER' as const, reportId: 'trade-report', reportedAt: '2026-11-04T05:30:00Z' };
@@ -13,6 +14,19 @@ function createUserReportedFinancialDataFixture() {
 import type { ProductDashaPeriod } from '../productAnalysisTypes';
 
 describe('WealthViewModel pure projection selectors (P-UI-05)', () => {
+  it('passes a non-default copy provider to the wealth assessment', () => {
+    const copy = {
+      ...ENGLISH_USER_FACING_COPY,
+      outcomes: {
+        ...ENGLISH_USER_FACING_COPY.outcomes,
+        STRONG: 'Custom wealth outlook'
+      }
+    };
+    const vm = selectWealthViewModel(createProductAnalysis(), copy);
+
+    expect(vm.conclusion.statement).toContain('Custom wealth outlook');
+  });
+
   it('projects the C04 release gate as BLOCKED instead of missing input', () => {
     const vm = selectWealthViewModel(createProductAnalysis());
     expect(vm.lifecycle.status).toBe('BLOCKED');

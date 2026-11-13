@@ -21,6 +21,8 @@ import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProje
 import {
   buildUserFacingAssessment,
   combineUserFacingAssessments,
+  ENGLISH_USER_FACING_COPY,
+  type UserFacingCopyProvider,
   type UserFacingAssessment
 } from '../life-analysis/userFacingInterpretation';
 
@@ -39,7 +41,6 @@ export interface OverviewChart {
 }
 
 export interface OverviewDomain {
-  readonly name: string;
   readonly strength: string;
   readonly status?: string;
   readonly confidence: ProductConfidence;
@@ -193,7 +194,10 @@ export function selectOverviewQualifications(
 /**
  * Builds the canonical OverviewViewModel projection over ProductAnalysis.
  */
-export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewViewModel {
+export function selectOverviewViewModel(
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): OverviewViewModel {
   const careerAssessment = buildUserFacingAssessment({
     outcome: analysis.career.synthesis?.finalStatus,
     natalDirection: analysis.career.synthesis?.natalDirection,
@@ -205,7 +209,8 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
       { label: 'Final outcome', status: analysis.career.synthesis?.finalStatus },
       { label: 'Integrated direction', status: analysis.career.synthesis?.finalDirection },
       { label: 'Integrated strength', status: analysis.career.synthesis?.finalStrength }
-    ]
+    ],
+    copy
   });
   const wealthAssessment = buildUserFacingAssessment({
     overallStatus: analysis.wealth.synthesis?.overallStatus,
@@ -216,9 +221,10 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
     confidence: analysis.wealth.synthesis?.confidence,
     details: Object.entries(analysis.wealth.synthesis?.dimensionStatuses ?? {}).map(
       ([label, status]) => ({ label, status })
-    )
+    ),
+    copy
   });
-  const overallAssessment = combineUserFacingAssessments(careerAssessment, wealthAssessment);
+  const overallAssessment = combineUserFacingAssessments(careerAssessment, wealthAssessment, copy);
 
   const overall: OverviewOverall = {
     status: analysis.status,
@@ -235,7 +241,6 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
   };
 
   const careerDomain: OverviewDomain = {
-    name: 'Career & Professional Life',
     strength: analysis.career.promise.strength,
     status: analysis.career.status ?? analysis.career.promise.status,
     confidence: analysis.career.promise.confidence,
@@ -245,7 +250,6 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
   };
 
   const wealthDomain: OverviewDomain = {
-    name: 'Wealth & Financial Assets',
     strength: analysis.wealth.overall.promise,
     status: analysis.wealth.overall.status,
     confidence: analysis.wealth.overall.confidence,

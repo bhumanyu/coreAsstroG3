@@ -9,6 +9,7 @@ import {
   normalizeActivationEffect
 } from '../reasoningViewModel';
 import { createProductAnalysis } from './testHelpers';
+import { ENGLISH_USER_FACING_COPY } from '../../life-analysis/userFacingInterpretation';
 import type {
   ProductDashaPeriod,
   ProductEvidence,
@@ -17,6 +18,19 @@ import type {
 } from '../productAnalysisTypes';
 
 describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
+  it('passes a non-default copy provider through the reasoning selector', () => {
+    const copy = {
+      ...ENGLISH_USER_FACING_COPY,
+      outcomes: {
+        ...ENGLISH_USER_FACING_COPY.outcomes,
+        SUPPORTED: 'Custom supportive outlook'
+      }
+    };
+    const vm = selectReasoningViewModel(createProductAnalysis(), 'CAREER', copy);
+
+    expect(vm.conclusion.statement).toContain('Custom supportive outlook');
+  });
+
   it('1. selector maps all Career fields correctly', () => {
     const analysis = createProductAnalysis();
     const vm = selectReasoningViewModel(analysis, 'CAREER');

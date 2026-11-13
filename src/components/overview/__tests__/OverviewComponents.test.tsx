@@ -15,6 +15,7 @@ import {
   OverviewErrorState
 } from '../index';
 import { selectOverviewViewModel } from '../../../product/analysis/overviewViewModel';
+import { buildUserFacingAssessment } from '../../../product/life-analysis/userFacingInterpretation';
 import { createProductAnalysis } from '../../../product/analysis/__tests__/testHelpers';
 
 describe('Overview Component Library (P-UI-03)', () => {
@@ -208,6 +209,23 @@ describe('Overview Component Library (P-UI-03)', () => {
 
       expect(screen.getAllByText('Not assessed').length).toBeGreaterThanOrEqual(4);
       expect(document.body.textContent).not.toMatch(/MIXED\s*\(|NOT_ACTIVE|ACCUMULATION/);
+    });
+
+    it('renders distinct safe labels for multiple unknown assessment details', () => {
+      const domain = selectOverviewViewModel(createProductAnalysis()).career;
+      const assessment = buildUserFacingAssessment({
+        details: [
+          { label: 'FUTURE_DIMENSION_A', status: 'UNKNOWN_STATUS' },
+          { label: 'FUTURE_DIMENSION_B', status: 'UNKNOWN_STATUS' }
+        ]
+      });
+
+      render(<DomainSummaryCard domain={{ ...domain, assessment }} domainKey="career" />);
+      fireEvent.click(screen.getByText('More assessment detail'));
+
+      expect(screen.getByText('Additional assessment (1)')).toBeInTheDocument();
+      expect(screen.getByText('Additional assessment (2)')).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/FUTURE_DIMENSION|UNKNOWN_STATUS/);
     });
   });
 

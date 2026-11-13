@@ -169,6 +169,8 @@ export const resources = {
       },
       domain: {
         summaryAria: '{{domain}} Summary',
+        careerName: 'Career & Professional Life',
+        wealthName: 'Wealth & Financial Assets',
         careerSubtitle: 'Vocation & Status Potential',
         wealthSubtitle: 'Financial Capacity & Prosperity',
         summaryUnavailable: 'Summary unavailable for this domain.',
@@ -2528,6 +2530,8 @@ export const resources = {
       },
       domain: {
         summaryAria: '{{domain}} का सारांश',
+        careerName: 'करियर और पेशेवर जीवन',
+        wealthName: 'धन और वित्तीय संपत्ति',
         careerSubtitle: 'व्यवसाय और प्रतिष्ठा की संभावना',
         wealthSubtitle: 'वित्तीय क्षमता और समृद्धि',
         summaryUnavailable: 'इस क्षेत्र का सारांश उपलब्ध नहीं है।',

@@ -1,3 +1,27 @@
+import type {
+  CareerFinalConfidence,
+  CareerFinalDirection,
+  CareerFinalStatus,
+  CareerFinalStrength,
+  CareerFinalTimingStatus
+} from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
+import type {
+  FinalDomainConfidence,
+  FinalDomainStatus,
+  SynthesisAxisStatus
+} from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
+import type { WealthDimension } from '../../domain/wealth/wealthTypes';
+import type {
+  ActivationEffect,
+  ConclusionStatus,
+  ProductAvailability,
+  ProductDirection,
+  ProductEvidenceRole,
+  ProductTemporalRelation,
+  PromiseStrength,
+  TransitEffect
+} from '../analysis/productAnalysisTypes';
+
 /**
  * Shared user-facing interpretation for product-layer classifications.
  *
@@ -5,7 +29,54 @@
  * astrological conclusions. Copy is isolated behind a provider so presentation
  * wording can be localized without changing canonical classification values.
  */
-const LABELS: Readonly<Record<string, string>> = Object.freeze({
+type ClassificationLabelKey =
+  | CareerFinalConfidence
+  | CareerFinalDirection
+  | CareerFinalStatus
+  | CareerFinalStrength
+  | CareerFinalTimingStatus
+  | FinalDomainConfidence
+  | FinalDomainStatus
+  | SynthesisAxisStatus
+  | ProductAvailability
+  | ProductDirection
+  | ProductEvidenceRole
+  | ProductTemporalRelation
+  | PromiseStrength
+  | ConclusionStatus
+  | ActivationEffect
+  | TransitEffect
+  | 'INSUFFICIENT'
+  | 'BLOCKED'
+  | 'NOT_APPLICABLE'
+  | 'NOT_ASSESSED'
+  | 'NOT_PROVIDED'
+  | 'COMPLETE'
+  | 'READY'
+  | 'ERROR'
+  | 'IDLE'
+  | 'LOADING'
+  | 'ACTIVATES'
+  | 'PARTIALLY_ACTIVATES'
+  | 'DOES_NOT_ACTIVATE'
+  | 'CHALLENGES'
+  | 'STRONGLY_SUPPORTS'
+  | 'SUPPORTS'
+  | 'CONTRADICTS'
+  | 'UNKNOWN'
+  | 'TRIGGER'
+  | 'MODIFIER'
+  | 'NO_MATERIAL_TRIGGER'
+  | 'NONE'
+  | 'MINIMAL'
+  | 'MILD'
+  | 'CRITICAL'
+  | 'CONFIRMS'
+  | 'PARTIALLY_CONFIRMS'
+  | 'MODIFIES'
+  | 'CONFLICTS';
+
+const LABELS: Readonly<Record<ClassificationLabelKey, string>> = Object.freeze({
   STRONGLY_SUPPORTED: 'Strongly supportive indications',
   SUPPORTED: 'Supportive indications',
   CONDITIONALLY_SUPPORTED: 'Conditionally supportive indications',
@@ -71,7 +142,16 @@ const LABELS: Readonly<Record<string, string>> = Object.freeze({
   CRITICAL: 'Critical'
 });
 
-const EXPLANATIONS: Readonly<Record<string, string>> = Object.freeze({
+type ExplanationKey =
+  | SynthesisAxisStatus
+  | FinalDomainConfidence
+  | CareerFinalTimingStatus
+  | 'UNAVAILABLE'
+  | 'BLOCKED'
+  | 'PARTIAL'
+  | 'STRONG';
+
+const EXPLANATIONS: Readonly<Record<ExplanationKey, string>> = Object.freeze({
   MIXED: 'The available indications point in more than one direction. Some factors support the outcome while others create challenges; this is not a wholly favourable or wholly unfavourable result.',
   NEUTRAL: 'The available evidence does not show a clear supportive or challenging influence. Neutral does not mean that progress is impossible.',
   NOT_ACTIVE: 'The selected period does not show a clear activation of the relevant indications. This is a timing observation, not a negative judgement about the underlying birth-chart potential.',
@@ -82,7 +162,13 @@ const EXPLANATIONS: Readonly<Record<string, string>> = Object.freeze({
   HIGH: 'The available evidence is relatively complete for this assessment. Confidence describes evidence coverage, not the strength of the astrological indication.',
   MEDIUM: 'The available evidence supports a moderate level of confidence. Confidence is distinct from the strength of the astrological indication.',
   LOW: 'Important evidence is missing or incomplete, so this interpretation should be treated cautiously. Low confidence does not mean a weak astrological indication.',
-  STRONG: 'The underlying natal indicators are pronounced. This describes chart foundation, not current timing or certainty of a particular event.'
+  STRONG: 'The underlying natal indicators are pronounced. This describes chart foundation, not current timing or certainty of a particular event.',
+  SUPPORT: 'Supportive indications are present in this assessment.',
+  CHALLENGE: 'Challenging indications are present in this assessment.',
+  ACTIVE: 'The selected period is active in the timing assessment.',
+  PARTIALLY_ACTIVE: 'The selected period is partially active in the timing assessment.',
+  CHALLENGED: 'The selected period includes challenging timing indications.',
+  UNKNOWN: 'The timing effect could not be determined from available information.'
 });
 
 export interface UserFacingCopyProvider {
@@ -119,11 +205,52 @@ export interface UserFacingCopyProvider {
   readonly domainOutcome: (outcome: string, domain: 'career' | 'wealth') => string;
   readonly combinedSummary: (careerOutcome: string, wealthOutcome: string) => string;
   readonly wealthFoundationExplanation: (status: string) => string;
+  readonly additionalDetailLabel: (index: number) => string;
 }
+
+type UserFacingCopyFunctionKey = {
+  [Key in keyof UserFacingCopyProvider]: UserFacingCopyProvider[Key] extends (...args: never[]) => string
+    ? Key
+    : never
+}[keyof UserFacingCopyProvider];
+type UserFacingCopyMapKey = {
+  [Key in keyof UserFacingCopyProvider]: UserFacingCopyProvider[Key] extends Readonly<Record<string, string>>
+    ? Key
+    : never
+}[keyof UserFacingCopyProvider];
+type UserFacingCopyStringKey = {
+  [Key in keyof UserFacingCopyProvider]: UserFacingCopyProvider[Key] extends string
+    ? Key
+    : never
+}[keyof UserFacingCopyProvider];
+
+type AssessmentOutcomeKey =
+  | FinalDomainStatus
+  | CareerFinalStatus
+  | ConclusionStatus
+  | SynthesisAxisStatus
+  | ProductAvailability
+  | 'UNDETERMINED';
+type FoundationDirectionKey = SynthesisAxisStatus | 'CONDITIONAL' | 'UNAVAILABLE';
+type FoundationStrengthKey = CareerFinalStrength;
+type WealthFoundationKey = FinalDomainStatus;
+type ConfidenceKey = CareerFinalConfidence | FinalDomainConfidence;
+type DetailLabelKey =
+  | WealthDimension
+  | 'FINAL OUTCOME'
+  | 'INTEGRATED DIRECTION'
+  | 'INTEGRATED STRENGTH';
+type TitleKey =
+  | 'FOUNDATION'
+  | 'DASHA SUPPORT'
+  | 'TIMING'
+  | 'EVIDENCE CONFIDENCE'
+  | 'MORE ASSESSMENT DETAIL'
+  | 'ADDITIONAL ASSESSMENT';
 
 const englishUserFacingCopy: UserFacingCopyProvider = {
   labels: LABELS,
-  assessmentLabels: Object.freeze({ MIXED: 'Mixed indications' }),
+  assessmentLabels: Object.freeze({ MIXED: 'Mixed indications' } satisfies Record<'MIXED', string>),
   explanations: EXPLANATIONS,
   outcomes: Object.freeze({
     STRONGLY_SUPPORTED: 'Strongly supportive outlook',
@@ -144,19 +271,21 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
     PARTIAL: 'Partially assessed',
     AVAILABLE: 'Available',
     UNDETERMINED: 'Not yet determined'
-  }),
+  } satisfies Record<AssessmentOutcomeKey, string>),
   directionLabels: Object.freeze({
     SUPPORT: 'supportive indications',
     CHALLENGE: 'challenging indications',
     MIXED: 'mixed indications',
     NEUTRAL: 'neutral indications',
-    CONDITIONAL: 'conditional indications'
-  }),
+    INSUFFICIENT_DATA: 'not enough information',
+    CONDITIONAL: 'conditional indications',
+    UNAVAILABLE: 'unavailable indications'
+  } satisfies Record<FoundationDirectionKey, string>),
   confidenceLabels: Object.freeze({
     HIGH: 'High confidence',
     MEDIUM: 'Medium confidence',
     LOW: 'Low confidence'
-  }),
+  } satisfies Record<ConfidenceKey, string>),
   confidenceUnavailable: 'Confidence unavailable',
   strengthLabels: Object.freeze({
     VERY_STRONG: 'Very strong foundation',
@@ -164,16 +293,18 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
     MODERATE: 'Moderate foundation',
     WEAK: 'Limited foundation',
     VERY_WEAK: 'Very limited foundation',
-    MIXED: 'Mixed foundation'
-  }),
+    MIXED: 'Mixed foundation',
+    UNDETERMINED: 'Not assessed'
+  } satisfies Record<FoundationStrengthKey, string>),
   foundationUnavailable: 'Foundation not assessed',
   wealthFoundationLabels: Object.freeze({
     VERY_STRONG: 'Very strong foundation',
     STRONG: 'Strong foundation',
     MODERATE: 'Moderate foundation',
     MIXED: 'Mixed foundation',
-    CHALLENGED: 'Challenged foundation'
-  }),
+    CHALLENGED: 'Challenged foundation',
+    INSUFFICIENT_DATA: 'Foundation not assessed'
+  } satisfies Record<WealthFoundationKey, string>),
   detailLabels: Object.freeze({
     'FINAL OUTCOME': 'Final outcome',
     'INTEGRATED DIRECTION': 'Integrated direction',
@@ -182,7 +313,7 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
     GAINS: 'Gains',
     FORTUNE: 'Fortune',
     SPECULATION: 'Speculation'
-  }),
+  } satisfies Record<DetailLabelKey, string>),
   titles: Object.freeze({
     FOUNDATION: 'Foundation',
     'DASHA SUPPORT': 'Dasha support',
@@ -190,7 +321,7 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
     'EVIDENCE CONFIDENCE': 'Evidence confidence',
     'MORE ASSESSMENT DETAIL': 'More assessment detail',
     'ADDITIONAL ASSESSMENT': 'Additional assessment'
-  }),
+  } satisfies Record<TitleKey, string>),
   notAssessed: 'Not assessed',
   notAvailable: 'Not available',
   notAssessedExplanation: 'This dimension was not assessed from the available structured information.',
@@ -271,10 +402,58 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
       return 'There is not enough validated information to assess the wealth foundation.';
     }
     return 'This describes the natal wealth foundation, not a guaranteed financial outcome.';
-  }
+  },
+  additionalDetailLabel: (index) => `Additional assessment (${index})`
 };
 
 export const ENGLISH_USER_FACING_COPY: UserFacingCopyProvider = Object.freeze(englishUserFacingCopy);
+
+export const USER_FACING_COPY_PROVIDERS: readonly UserFacingCopyProvider[] = Object.freeze([
+  ENGLISH_USER_FACING_COPY
+]);
+
+export const USER_FACING_COPY_CONTRACT = Object.freeze({
+  keys: Object.freeze({
+    labels: Object.keys(LABELS),
+    assessmentLabels: ['MIXED'],
+    outcomes: Object.keys(englishUserFacingCopy.outcomes),
+    directionLabels: Object.keys(englishUserFacingCopy.directionLabels),
+    confidenceLabels: Object.keys(englishUserFacingCopy.confidenceLabels),
+    strengthLabels: Object.keys(englishUserFacingCopy.strengthLabels),
+    wealthFoundationLabels: Object.keys(englishUserFacingCopy.wealthFoundationLabels),
+    detailLabels: Object.keys(englishUserFacingCopy.detailLabels),
+    titles: Object.keys(englishUserFacingCopy.titles),
+    explanations: Object.keys(EXPLANATIONS)
+  } satisfies Record<UserFacingCopyMapKey, readonly string[]>),
+  strings: Object.freeze([
+    'confidenceUnavailable',
+    'foundationUnavailable',
+    'notAssessed',
+    'notAvailable',
+    'notAssessedExplanation',
+    'genericExplanation',
+    'conditionalSupportLabel',
+    'conditionalSupportExplanation',
+    'timingExplanation',
+    'confidenceExplanation',
+    'periodSupportExplanation'
+  ] satisfies readonly UserFacingCopyStringKey[]),
+  functions: Object.freeze({
+    mixedFoundationLabel: (copy: UserFacingCopyProvider) => copy.mixedFoundationLabel('Strong foundation'),
+    mixedFoundationExplanation: (copy: UserFacingCopyProvider) => copy.mixedFoundationExplanation('Strong foundation'),
+    combinedFoundationLabel: (copy: UserFacingCopyProvider) => copy.combinedFoundationLabel('Strong foundation', 'mixed indications'),
+    combinedFoundationExplanation: (copy: UserFacingCopyProvider) => copy.combinedFoundationExplanation('Strong foundation', 'MIXED'),
+    foundationDirectionExplanation: (copy: UserFacingCopyProvider) => copy.foundationDirectionExplanation('SUPPORT'),
+    foundationStrengthExplanation: (copy: UserFacingCopyProvider) => copy.foundationStrengthExplanation('STRONG'),
+    combinedDimensionLabel: (copy: UserFacingCopyProvider) => copy.combinedDimensionLabel('Career', 'Wealth'),
+    combinedDimensionExplanation: (copy: UserFacingCopyProvider) => copy.combinedDimensionExplanation('Career is assessed.', 'Wealth is assessed.'),
+    domainDetailLabel: (copy: UserFacingCopyProvider) => copy.domainDetailLabel('career', 'Foundation'),
+    domainOutcome: (copy: UserFacingCopyProvider) => copy.domainOutcome('Supportive outlook', 'career'),
+    combinedSummary: (copy: UserFacingCopyProvider) => copy.combinedSummary('Career outlook', 'Wealth outlook'),
+    wealthFoundationExplanation: (copy: UserFacingCopyProvider) => copy.wealthFoundationExplanation('STRONG'),
+    additionalDetailLabel: (copy: UserFacingCopyProvider) => copy.additionalDetailLabel(1)
+  } satisfies Record<UserFacingCopyFunctionKey, (copy: UserFacingCopyProvider) => string>)
+});
 
 function normalize(value?: string | null): string {
   return typeof value === 'string' ? value.trim().toUpperCase() : '';
@@ -425,12 +604,10 @@ function foundationAssessment(
   const promiseKey = normalize(promiseStatus);
   const title = copy.titles.FOUNDATION;
 
-  if (promiseKey) {
-    const label = copy.wealthFoundationLabels[promiseKey];
-    if (!label) return assessmentDimension(title, undefined, undefined, copy);
+  if (promiseKey && copy.wealthFoundationLabels[promiseKey]) {
     return {
       title,
-      label,
+      label: copy.wealthFoundationLabels[promiseKey],
       explanation: copy.wealthFoundationExplanation(promiseKey)
     };
   }
@@ -572,8 +749,9 @@ export function buildUserFacingAssessment(input: {
     timing,
     confidence,
     detailsLabel: copy.titles['MORE ASSESSMENT DETAIL'],
-    details: (input.details ?? []).map(({ label, status }) => ({
-      label: copy.detailLabels[normalize(label)] ?? copy.titles['ADDITIONAL ASSESSMENT'],
+    details: (input.details ?? []).map(({ label, status }, index) => ({
+      // Unknown classifications stay hidden but indexed so multiple details remain distinguishable.
+      label: copy.detailLabels[normalize(label)] ?? copy.additionalDetailLabel(index + 1),
       explanation: safeAssessmentOutcome(status, copy)
     }))
   };

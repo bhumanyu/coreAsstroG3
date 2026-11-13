@@ -7,10 +7,34 @@ import {
   formatIndicationStrength,
   formatOutcome,
   formatUserFacingClassification,
-  ENGLISH_USER_FACING_COPY
+  ENGLISH_USER_FACING_COPY,
+  USER_FACING_COPY_CONTRACT,
+  USER_FACING_COPY_PROVIDERS
 } from './userFacingInterpretation';
 
 describe('user-facing interpretation', () => {
+  it('satisfies the copy contract for every registered provider', () => {
+    for (const copy of USER_FACING_COPY_PROVIDERS) {
+      for (const [mapName, requiredKeys] of Object.entries(USER_FACING_COPY_CONTRACT.keys)) {
+        const map = copy[mapName as keyof typeof copy] as Readonly<Record<string, string>>;
+        for (const key of requiredKeys) {
+          expect(map[key], `${mapName}.${key}`).toEqual(expect.any(String));
+          expect(map[key].trim(), `${mapName}.${key}`).not.toBe('');
+        }
+      }
+
+      for (const [functionName, invoke] of Object.entries(USER_FACING_COPY_CONTRACT.functions)) {
+        const result = invoke(copy);
+        expect(result, functionName).toEqual(expect.any(String));
+        expect(result.trim(), functionName).not.toBe('');
+      }
+
+      for (const key of USER_FACING_COPY_CONTRACT.strings) {
+        expect(copy[key].trim(), key).not.toBe('');
+      }
+    }
+  });
+
   it.each([
     ['STRONGLY_SUPPORTED', 'Strongly supportive outlook'],
     ['SUPPORTED', 'Supportive outlook'],
@@ -134,6 +158,29 @@ describe('user-facing interpretation', () => {
     expect(assessment.foundation.label).toBe(expected);
   });
 
+  it.each([undefined, 'FUTURE_PROMISE_STATUS'])(
+    'falls back to structured natal direction and strength for promise status %s',
+    (natalPromiseStatus) => {
+      const assessment = buildUserFacingAssessment({
+        natalDirection: 'MIXED',
+        natalStrength: 'STRONG',
+        natalPromiseStatus
+      });
+
+      expect(assessment.foundation.label).toBe('Strong foundation with mixed indications');
+    }
+  );
+
+  it('keeps recognized wealth promise status authoritative over other foundation fields', () => {
+    const assessment = buildUserFacingAssessment({
+      natalDirection: 'CHALLENGE',
+      natalStrength: 'WEAK',
+      natalPromiseStatus: 'VERY_STRONG'
+    });
+
+    expect(assessment.foundation.label).toBe('Very strong foundation');
+  });
+
   it('combines other known direction and strength values rather than dropping either axis', () => {
     const assessment = buildUserFacingAssessment({
       natalDirection: 'SUPPORT',
@@ -146,14 +193,16 @@ describe('user-facing interpretation', () => {
     const assessment = buildUserFacingAssessment({
       details: [
         { label: 'ACCUMULATION', status: 'STRONG' },
-        { label: 'FUTURE_DIMENSION', status: 'FUTURE_STATUS' }
+        { label: 'FUTURE_DIMENSION', status: 'FUTURE_STATUS' },
+        { label: 'ANOTHER_UNKNOWN_DIMENSION', status: 'FUTURE_STATUS' }
       ]
     });
     expect(assessment.details).toEqual([
       { label: 'Accumulation', explanation: 'Strong indications' },
-      { label: 'Additional assessment', explanation: 'Not assessed' }
+      { label: 'Additional assessment (2)', explanation: 'Not assessed' },
+      { label: 'Additional assessment (3)', explanation: 'Not assessed' }
     ]);
-    expect(JSON.stringify(assessment)).not.toMatch(/ACCUMULATION|FUTURE_DIMENSION|FUTURE_STATUS/);
+    expect(JSON.stringify(assessment)).not.toMatch(/ACCUMULATION|FUTURE_DIMENSION|ANOTHER_UNKNOWN_DIMENSION|FUTURE_STATUS/);
   });
 
   it('uses not-assessed fallbacks for unknown values in every assessment dimension', () => {

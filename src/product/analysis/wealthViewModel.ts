@@ -24,7 +24,9 @@ import { createUnavailableWealthFinancialDataSet, validateWealthFinancialDataSet
 import { WEALTH_LIFECYCLE_RULE_CATALOGUE, type WealthLifecycleAnalysis } from '../../domain/wealth/wealthLifecycleTypes';
 import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 import {
-  buildUserFacingAssessment
+  buildUserFacingAssessment,
+  ENGLISH_USER_FACING_COPY,
+  type UserFacingCopyProvider
 } from '../life-analysis/userFacingInterpretation';
 
 export interface WealthHeroViewModel {
@@ -325,7 +327,10 @@ function projectWealthLifecycle(source?: WealthLifecycleAnalysis): WealthLifecyc
       : 'C04 lifecycle analysis is unavailable. No financial event is inferred; CW-05 remains the final Wealth authority.')
   };
 }
-export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewModel {
+export function selectWealthViewModel(
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): WealthViewModel {
   const wealth = analysis.wealth;
 
   const hero: WealthHeroViewModel = {
@@ -508,7 +513,8 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     confidence: wealth.synthesis?.confidence,
     details: Object.entries(wealth.synthesis?.dimensionStatuses ?? {}).map(
       ([label, status]) => ({ label, status })
-    )
+    ),
+    copy
   });
   const conclusion: WealthConclusionViewModel = {
     headline: wealth.synthesis?.headline ?? wealth.overall.headline,
