@@ -8,11 +8,20 @@ import {
   formatOutcome,
   formatUserFacingClassification,
   ENGLISH_USER_FACING_COPY,
+  HINDI_USER_FACING_COPY,
+  resolveUserFacingCopy,
   USER_FACING_COPY_CONTRACT,
   USER_FACING_COPY_PROVIDERS
 } from './userFacingInterpretation';
 
 describe('user-facing interpretation', () => {
+  it('resolves Hindi language variants and defaults unknown languages to English', () => {
+    expect(resolveUserFacingCopy('hi')).toBe(HINDI_USER_FACING_COPY);
+    expect(resolveUserFacingCopy('hi-IN')).toBe(HINDI_USER_FACING_COPY);
+    expect(resolveUserFacingCopy('HI_in')).toBe(HINDI_USER_FACING_COPY);
+    expect(resolveUserFacingCopy('fr-CA')).toBe(ENGLISH_USER_FACING_COPY);
+  });
+
   it('satisfies the copy contract for every registered provider', () => {
     for (const copy of USER_FACING_COPY_PROVIDERS) {
       for (const [mapName, requiredKeys] of Object.entries(USER_FACING_COPY_CONTRACT.keys)) {

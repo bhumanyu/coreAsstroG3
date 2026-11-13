@@ -11,6 +11,7 @@ import { selectEvidenceExperience } from '../product/analysis/evidenceExperience
 import type { ProductAnalysisState } from '../app/AppState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectCareerViewModel } from '../product/analysis/careerViewModel';
+import { resolveUserFacingCopy } from '../product/life-analysis/userFacingInterpretation';
 import {
   CareerHero,
   CareerPromiseSection,
@@ -43,14 +44,16 @@ export const CareerPage: React.FC<CareerPageProps> = ({
   onRetry,
   onNavigate
 }) => {
-  const { t } = useTranslation('career');
+  const { t, i18n } = useTranslation('career');
   const status = productAnalysisState?.status;
   const analysis = productAnalysisState?.analysis;
   const errorMessage = productAnalysisState?.error;
 
   const viewModel = useMemo(
-    () => (analysis ? selectCareerViewModel(analysis) : undefined),
-    [analysis]
+    () => (analysis
+      ? selectCareerViewModel(analysis, resolveUserFacingCopy(i18n.language))
+      : undefined),
+    [analysis, i18n.language]
   );
   const evidenceExperience = useMemo(
     () => (analysis && viewModel

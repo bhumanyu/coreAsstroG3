@@ -13,6 +13,7 @@ import { selectEvidenceExperience } from '../product/analysis/evidenceExperience
 import type { ProductAnalysisState } from '../app/AppState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectWealthViewModel } from '../product/analysis/wealthViewModel';
+import { resolveUserFacingCopy } from '../product/life-analysis/userFacingInterpretation';
 import {
   WealthHero,
   WealthOverallSection,
@@ -44,14 +45,16 @@ export const WealthPage: React.FC<WealthPageProps> = ({
   onRetry,
   onNavigate
 }) => {
-  const { t } = useTranslation('wealth');
+  const { t, i18n } = useTranslation('wealth');
   const status = productAnalysisState?.status;
   const analysis = productAnalysisState?.analysis;
   const errorMessage = productAnalysisState?.error;
 
   const viewModel = useMemo(
-    () => (analysis ? selectWealthViewModel(analysis) : undefined),
-    [analysis]
+    () => (analysis
+      ? selectWealthViewModel(analysis, resolveUserFacingCopy(i18n.language))
+      : undefined),
+    [analysis, i18n.language]
   );
   const evidenceExperience = useMemo(
     () => (analysis && viewModel

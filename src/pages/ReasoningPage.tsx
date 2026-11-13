@@ -13,6 +13,7 @@ import {
   selectUnifiedReasoningViewModel,
   type ReasoningDomain
 } from '../product/analysis/reasoningViewModel';
+import { resolveUserFacingCopy } from '../product/life-analysis/userFacingInterpretation';
 import {
   ReasoningHero,
   ReasoningOverallConclusion,
@@ -41,7 +42,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
   onRetry,
   onNavigate
 }) => {
-  const { t } = useTranslation('reports');
+  const { t, i18n } = useTranslation('reports');
   const [focusedDomain, setFocusedDomain] = useState<ReasoningDomain | 'ALL'>('ALL');
 
   const status = productAnalysisState?.status;
@@ -49,8 +50,10 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
   const errorMessage = productAnalysisState?.error;
 
   const unified = useMemo(
-    () => (analysis ? selectUnifiedReasoningViewModel(analysis) : undefined),
-    [analysis]
+    () => (analysis
+      ? selectUnifiedReasoningViewModel(analysis, resolveUserFacingCopy(i18n.language))
+      : undefined),
+    [analysis, i18n.language]
   );
 
   // 1. Error state when no analysis is available

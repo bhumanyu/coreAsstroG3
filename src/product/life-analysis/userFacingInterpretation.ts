@@ -21,6 +21,9 @@ import type {
   PromiseStrength,
   TransitEffect
 } from '../analysis/productAnalysisTypes';
+import { HINDI_USER_FACING_COPY } from './userFacingInterpretation.hi';
+
+export { HINDI_USER_FACING_COPY };
 
 /**
  * Shared user-facing interpretation for product-layer classifications.
@@ -172,18 +175,18 @@ const EXPLANATIONS: Readonly<Record<ExplanationKey, string>> = Object.freeze({
 });
 
 export interface UserFacingCopyProvider {
-  readonly labels: Readonly<Record<string, string>>;
-  readonly assessmentLabels: Readonly<Record<string, string>>;
-  readonly explanations: Readonly<Record<string, string>>;
-  readonly outcomes: Readonly<Record<string, string>>;
-  readonly directionLabels: Readonly<Record<string, string>>;
-  readonly confidenceLabels: Readonly<Record<string, string>>;
+  readonly labels: Readonly<Record<ClassificationLabelKey, string>>;
+  readonly assessmentLabels: Readonly<Record<'MIXED', string>>;
+  readonly explanations: Readonly<Record<ExplanationKey, string>>;
+  readonly outcomes: Readonly<Record<AssessmentOutcomeKey, string>>;
+  readonly directionLabels: Readonly<Record<FoundationDirectionKey, string>>;
+  readonly confidenceLabels: Readonly<Record<ConfidenceKey, string>>;
   readonly confidenceUnavailable: string;
-  readonly strengthLabels: Readonly<Record<string, string>>;
+  readonly strengthLabels: Readonly<Record<FoundationStrengthKey, string>>;
   readonly foundationUnavailable: string;
-  readonly wealthFoundationLabels: Readonly<Record<string, string>>;
-  readonly detailLabels: Readonly<Record<string, string>>;
-  readonly titles: Readonly<Record<string, string>>;
+  readonly wealthFoundationLabels: Readonly<Record<WealthFoundationKey, string>>;
+  readonly detailLabels: Readonly<Record<DetailLabelKey, string>>;
+  readonly titles: Readonly<Record<TitleKey, string>>;
   readonly notAssessed: string;
   readonly notAvailable: string;
   readonly notAssessedExplanation: string;
@@ -208,22 +211,6 @@ export interface UserFacingCopyProvider {
   readonly additionalDetailLabel: (index: number) => string;
 }
 
-type UserFacingCopyFunctionKey = {
-  [Key in keyof UserFacingCopyProvider]: UserFacingCopyProvider[Key] extends (...args: never[]) => string
-    ? Key
-    : never
-}[keyof UserFacingCopyProvider];
-type UserFacingCopyMapKey = {
-  [Key in keyof UserFacingCopyProvider]: UserFacingCopyProvider[Key] extends Readonly<Record<string, string>>
-    ? Key
-    : never
-}[keyof UserFacingCopyProvider];
-type UserFacingCopyStringKey = {
-  [Key in keyof UserFacingCopyProvider]: UserFacingCopyProvider[Key] extends string
-    ? Key
-    : never
-}[keyof UserFacingCopyProvider];
-
 type AssessmentOutcomeKey =
   | FinalDomainStatus
   | CareerFinalStatus
@@ -247,6 +234,43 @@ type TitleKey =
   | 'EVIDENCE CONFIDENCE'
   | 'MORE ASSESSMENT DETAIL'
   | 'ADDITIONAL ASSESSMENT';
+type UserFacingCopyMapKey =
+  | 'labels'
+  | 'assessmentLabels'
+  | 'explanations'
+  | 'outcomes'
+  | 'directionLabels'
+  | 'confidenceLabels'
+  | 'strengthLabels'
+  | 'wealthFoundationLabels'
+  | 'detailLabels'
+  | 'titles';
+type UserFacingCopyStringKey =
+  | 'confidenceUnavailable'
+  | 'foundationUnavailable'
+  | 'notAssessed'
+  | 'notAvailable'
+  | 'notAssessedExplanation'
+  | 'genericExplanation'
+  | 'conditionalSupportLabel'
+  | 'conditionalSupportExplanation'
+  | 'timingExplanation'
+  | 'confidenceExplanation'
+  | 'periodSupportExplanation';
+type UserFacingCopyFunctionKey =
+  | 'mixedFoundationLabel'
+  | 'mixedFoundationExplanation'
+  | 'combinedFoundationLabel'
+  | 'combinedFoundationExplanation'
+  | 'foundationDirectionExplanation'
+  | 'foundationStrengthExplanation'
+  | 'combinedDimensionLabel'
+  | 'combinedDimensionExplanation'
+  | 'domainDetailLabel'
+  | 'domainOutcome'
+  | 'combinedSummary'
+  | 'wealthFoundationExplanation'
+  | 'additionalDetailLabel';
 
 const englishUserFacingCopy: UserFacingCopyProvider = {
   labels: LABELS,
@@ -409,8 +433,15 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
 export const ENGLISH_USER_FACING_COPY: UserFacingCopyProvider = Object.freeze(englishUserFacingCopy);
 
 export const USER_FACING_COPY_PROVIDERS: readonly UserFacingCopyProvider[] = Object.freeze([
-  ENGLISH_USER_FACING_COPY
+  ENGLISH_USER_FACING_COPY,
+  HINDI_USER_FACING_COPY
 ]);
+
+export function resolveUserFacingCopy(language: string): UserFacingCopyProvider {
+  return language.trim().toLowerCase().split(/[-_]/, 1)[0] === 'hi'
+    ? HINDI_USER_FACING_COPY
+    : ENGLISH_USER_FACING_COPY;
+}
 
 export const USER_FACING_COPY_CONTRACT = Object.freeze({
   keys: Object.freeze({
@@ -459,6 +490,15 @@ function normalize(value?: string | null): string {
   return typeof value === 'string' ? value.trim().toUpperCase() : '';
 }
 
+function lookupCopyValue<Key extends string>(
+  map: Readonly<Record<Key, string>>,
+  key: string
+): string | undefined {
+  return Object.prototype.hasOwnProperty.call(map, key)
+    ? map[key as Key]
+    : undefined;
+}
+
 /** Returns a label for known values and a conservative fallback otherwise. */
 export function formatUserFacingClassification(
   value?: string | null,
@@ -466,7 +506,7 @@ export function formatUserFacingClassification(
 ): string {
   const key = normalize(value);
   if (!key) return copy.notAvailable;
-  return copy.labels[key] ?? copy.notAssessed;
+  return lookupCopyValue(copy.labels, key) ?? copy.notAssessed;
 }
 
 /** Explanation for classifications whose meaning is easy to misinterpret. */
@@ -474,7 +514,7 @@ export function explainUserFacingClassification(
   value?: string | null,
   copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
 ): string | undefined {
-  return copy.explanations[normalize(value)];
+  return lookupCopyValue(copy.explanations, normalize(value));
 }
 
 /** Domain outcome, separate from strength and evidence confidence. */
@@ -482,7 +522,7 @@ export function formatOutcome(
   value?: string | null,
   copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
 ): string {
-  return copy.outcomes[normalize(value)] ?? copy.notAssessed;
+  return lookupCopyValue(copy.outcomes, normalize(value)) ?? copy.notAssessed;
 }
 
 /** Confidence describes evidence completeness, not astrological strength. */
@@ -493,7 +533,7 @@ export function formatEvidenceConfidence(
   const key = normalize(value);
   if (!key || key === 'UNAVAILABLE') return copy.confidenceUnavailable;
   return ['HIGH', 'MEDIUM', 'LOW'].includes(key)
-    ? copy.labels[key]
+    ? lookupCopyValue(copy.labels, key) ?? copy.notAssessed
     : copy.notAssessed;
 }
 
@@ -505,7 +545,9 @@ export function formatIndicationStrength(
   const key = normalize(value);
   if (!key) return copy.notAvailable;
   if (key === 'UNAVAILABLE') return copy.foundationUnavailable;
-  return copy.strengthLabels[key] ?? copy.labels[key] ?? copy.notAssessed;
+  return lookupCopyValue(copy.strengthLabels, key)
+    ?? lookupCopyValue(copy.labels, key)
+    ?? copy.notAssessed;
 }
 
 /** Build a concise narrative from distinct canonical dimensions. */
@@ -583,13 +625,14 @@ function assessmentDimension(
   copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
 ): UserFacingAssessmentDimension {
   const key = normalize(value);
-  if (!key || !copy.labels[key]) {
+  const label = lookupCopyValue(copy.labels, key);
+  if (!key || !label) {
     return { title, label: copy.notAssessed, explanation: copy.notAssessedExplanation };
   }
   return {
     title,
-    label: copy.assessmentLabels[key] ?? copy.labels[key],
-    explanation: explanation ?? copy.explanations[key] ?? copy.genericExplanation
+    label: lookupCopyValue(copy.assessmentLabels, key) ?? label,
+    explanation: explanation ?? lookupCopyValue(copy.explanations, key) ?? copy.genericExplanation
   };
 }
 
@@ -604,16 +647,17 @@ function foundationAssessment(
   const promiseKey = normalize(promiseStatus);
   const title = copy.titles.FOUNDATION;
 
-  if (promiseKey && copy.wealthFoundationLabels[promiseKey]) {
+  const promiseLabel = lookupCopyValue(copy.wealthFoundationLabels, promiseKey);
+  if (promiseKey && promiseLabel) {
     return {
       title,
-      label: copy.wealthFoundationLabels[promiseKey],
+      label: promiseLabel,
       explanation: copy.wealthFoundationExplanation(promiseKey)
     };
   }
 
-  const strengthLabel = copy.strengthLabels[strengthKey];
-  const directionLabel = copy.directionLabels[directionKey];
+  const strengthLabel = lookupCopyValue(copy.strengthLabels, strengthKey);
+  const directionLabel = lookupCopyValue(copy.directionLabels, directionKey);
 
   if (directionKey === 'MIXED' && strengthLabel) {
     return {
@@ -645,7 +689,7 @@ function foundationAssessment(
       return {
         title,
         label: strengthLabel,
-        explanation: copy.explanations[strengthKey]
+        explanation: lookupCopyValue(copy.explanations, strengthKey)
           ?? copy.foundationStrengthExplanation(strengthKey)
       };
     }
@@ -675,7 +719,7 @@ function dashaAssessment(
     return assessmentDimension(
       title,
       key,
-      copy.explanations[key] ?? copy.periodSupportExplanation,
+      lookupCopyValue(copy.explanations, key) ?? copy.periodSupportExplanation,
       copy
     );
   }
@@ -691,7 +735,7 @@ function timingAssessment(
     return assessmentDimension(
       copy.titles.TIMING,
       key,
-      copy.explanations[key] ?? copy.timingExplanation,
+      lookupCopyValue(copy.explanations, key) ?? copy.timingExplanation,
       copy
     );
   }
@@ -706,8 +750,8 @@ function confidenceAssessment(
   if (['HIGH', 'MEDIUM', 'LOW'].includes(key)) {
     return {
       title: copy.titles['EVIDENCE CONFIDENCE'],
-      label: copy.confidenceLabels[key],
-      explanation: copy.explanations[key]
+      label: lookupCopyValue(copy.confidenceLabels, key) ?? copy.notAssessed,
+      explanation: lookupCopyValue(copy.explanations, key)
         ?? copy.confidenceExplanation
     };
   }
@@ -751,7 +795,7 @@ export function buildUserFacingAssessment(input: {
     detailsLabel: copy.titles['MORE ASSESSMENT DETAIL'],
     details: (input.details ?? []).map(({ label, status }, index) => ({
       // Unknown classifications stay hidden but indexed so multiple details remain distinguishable.
-      label: copy.detailLabels[normalize(label)] ?? copy.additionalDetailLabel(index + 1),
+      label: lookupCopyValue(copy.detailLabels, normalize(label)) ?? copy.additionalDetailLabel(index + 1),
       explanation: safeAssessmentOutcome(status, copy)
     }))
   };

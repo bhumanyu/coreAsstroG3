@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ProductAnalysis } from '../product/analysis';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectOverviewViewModel } from '../product/analysis/overviewViewModel';
+import { resolveUserFacingCopy } from '../product/life-analysis/userFacingInterpretation';
 import {
   OverviewHeader,
   OverallAssessmentCard,
@@ -30,6 +32,14 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   onNavigate,
   onRetry
 }) => {
+  const { i18n } = useTranslation('dashboard');
+  const viewModel = useMemo(
+    () => (analysis
+      ? selectOverviewViewModel(analysis, resolveUserFacingCopy(i18n.language))
+      : undefined),
+    [analysis, i18n.language]
+  );
+
   if (status === 'LOADING') {
     return <OverviewLoadingState />;
   }
@@ -47,7 +57,9 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     return <OverviewEmptyState onRetry={onRetry} />;
   }
 
-  const viewModel = selectOverviewViewModel(analysis);
+  if (!viewModel) {
+    return <OverviewEmptyState onRetry={onRetry} />;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
