@@ -12,6 +12,7 @@ describe('language preference manager', () => {
   it('starts in English unless a valid explicit preference is saved', () => {
     expect(i18n.resolvedLanguage).toBe('en');
     expect(getCurrentLanguage()).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
   });
 
   it('changes language immediately and persists explicit selection', async () => {

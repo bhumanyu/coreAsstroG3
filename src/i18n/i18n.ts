@@ -14,6 +14,10 @@ function readInitialLanguage(): 'en' | 'hi' {
 
 export const initialLanguage = readInitialLanguage();
 
+if (typeof document !== 'undefined') {
+  document.documentElement.lang = initialLanguage;
+}
+
 void i18n.use(initReactI18next).init({
   resources,
   lng: initialLanguage,
