@@ -12,11 +12,9 @@ import type {
   ProductDirection,
   ProductEvidenceRole,
   ProductEvidence,
-  ProductDashaPeriod,
-  ProductWarning,
-  ProductAvailability
+  ProductWarning
 } from './productAnalysisTypes';
-import { selectDashaHierarchy, selectAllEvidence } from './productAnalysisSelectors';
+import { selectAllEvidence } from './productAnalysisSelectors';
 import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 import {
   buildUserFacingAssessment,
@@ -49,17 +47,6 @@ export interface OverviewDomain {
   readonly topEvidence: readonly ProductEvidence[];
 }
 
-export interface OverviewDasha {
-  readonly md?: ProductDashaPeriod;
-  readonly ad?: ProductDashaPeriod;
-  readonly pd?: ProductDashaPeriod;
-  readonly periods: readonly ProductDashaPeriod[];
-  readonly summary?: string;
-  readonly status: ProductAvailability;
-  readonly availability: boolean;
-  readonly currentPeriodLabel: string;
-}
-
 export interface OverviewFinding {
   readonly id: string;
   readonly title: string;
@@ -82,7 +69,6 @@ export interface OverviewViewModel {
   readonly chart: OverviewChart;
   readonly career: OverviewDomain;
   readonly wealth: OverviewDomain;
-  readonly dasha: OverviewDasha;
   readonly findings: readonly OverviewFinding[];
   readonly qualifications: readonly OverviewQualification[];
   readonly totalEvidenceCount: number;
@@ -258,44 +244,12 @@ export function selectOverviewViewModel(
     topEvidence: selectTopEvidence(analysis.wealth.evidence, 3)
   };
 
-  const md = analysis.dasha.current.mahadasha;
-  const ad = analysis.dasha.current.antardasha;
-  const pd = analysis.dasha.current.pratyantardasha;
-  const periods = selectDashaHierarchy(analysis);
-
-  const presentCount = [md, ad, pd].filter(Boolean).length;
-  const status: ProductAvailability =
-    presentCount === 3
-      ? 'AVAILABLE'
-      : presentCount === 0
-      ? 'UNAVAILABLE'
-      : 'PARTIAL';
-  const availability = status !== 'UNAVAILABLE';
-
-  const planetParts = [md?.planet, ad?.planet, pd?.planet].filter(
-    (p): p is string => typeof p === 'string' && p.trim().length > 0
-  );
-  const currentPeriodLabel =
-    planetParts.length > 0 ? planetParts.join(' → ') : 'Timing Unavailable';
-
-  const dasha: OverviewDasha = {
-    md,
-    ad,
-    pd,
-    periods,
-    summary: analysis.dasha.summary,
-    status,
-    availability,
-    currentPeriodLabel
-  };
-
   return {
     confidenceCompleteness: selectUnifiedConfidenceProjection(analysis),
     overall,
     chart,
     career: careerDomain,
     wealth: wealthDomain,
-    dasha,
     findings: selectOverviewFindings(analysis, 5),
     qualifications: selectOverviewQualifications(analysis),
     totalEvidenceCount: selectAllEvidence(analysis).length,

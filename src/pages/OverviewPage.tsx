@@ -8,7 +8,6 @@ import {
   OverviewHeader,
   OverallAssessmentCard,
   DomainSummaryCard,
-  CurrentDashaCard,
   KeyFindingsCard,
   QualificationsCard,
   EvidencePreview,
@@ -85,12 +84,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           onOpen={() => onNavigate?.('wealth')}
         />
       </div>
-
-      {/* Planetary Timing (Vimshottari Dasha Hierarchy) */}
-      <CurrentDashaCard
-        dasha={viewModel.dasha}
-        onOpenDasha={() => onNavigate?.('dasha')}
-      />
 
       {/* Key Cross-Domain Findings & Qualifications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

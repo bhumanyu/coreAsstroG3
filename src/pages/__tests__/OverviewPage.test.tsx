@@ -80,32 +80,6 @@ describe('OverviewPage (P-UI-03)', () => {
     expect(screen.getByText('3 evidence items indexed')).toBeInTheDocument();
   });
 
-  it('renders MD/AD/PD hierarchy and role labels as text', () => {
-    const analysis = createProductAnalysis();
-    render(<OverviewPage analysis={analysis} status="READY" />);
-
-    // Dasha hierarchy section title & current period label
-    expect(
-      screen.getByText('Current Planetary Timing (Vimshottari Dasha)')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Jupiter → Saturn → Mercury')).toBeInTheDocument();
-
-    // Check MD, AD, PD hierarchy headers
-    expect(screen.getByText('Mahadasha (MD)')).toBeInTheDocument();
-    expect(screen.getByText('Antardasha (AD)')).toBeInTheDocument();
-    expect(screen.getByText('Pratyantardasha (PD)')).toBeInTheDocument();
-
-    // Check planets in dasha
-    expect(screen.getByText('Jupiter')).toBeInTheDocument();
-    expect(screen.getByText('Saturn')).toBeInTheDocument();
-    expect(screen.getByText('Mercury')).toBeInTheDocument();
-
-    // Check role labels rendered as text
-    expect(screen.getAllByText('Primary Driver').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Modifier').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Refinement').length).toBeGreaterThan(0);
-  });
-
   it('invokes onNavigate callback when clicking domain action links', () => {
     const onNavigate = vi.fn();
     const analysis = createProductAnalysis();
@@ -120,11 +94,6 @@ describe('OverviewPage (P-UI-03)', () => {
     const wealthBtn = screen.getByRole('button', { name: /explore wealth details/i });
     fireEvent.click(wealthBtn);
     expect(onNavigate).toHaveBeenCalledWith('wealth');
-
-    // Click View Complete Dasha Timeline
-    const dashaBtn = screen.getByRole('button', { name: /view complete dasha timeline/i });
-    fireEvent.click(dashaBtn);
-    expect(onNavigate).toHaveBeenCalledWith('dasha');
 
     // Click Explore Reasoning Graph
     const reasoningBtn = screen.getByRole('button', { name: /explore reasoning graph/i });

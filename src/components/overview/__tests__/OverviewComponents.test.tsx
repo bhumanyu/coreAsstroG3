@@ -6,7 +6,6 @@ import {
   OverviewHeader,
   OverallAssessmentCard,
   DomainSummaryCard,
-  CurrentDashaCard,
   KeyFindingsCard,
   QualificationsCard,
   EvidencePreview,
@@ -226,56 +225,6 @@ describe('Overview Component Library (P-UI-03)', () => {
       expect(screen.getByText('Additional assessment (1)')).toBeInTheDocument();
       expect(screen.getByText('Additional assessment (2)')).toBeInTheDocument();
       expect(document.body.textContent).not.toMatch(/FUTURE_DIMENSION|UNKNOWN_STATUS/);
-    });
-  });
-
-  describe('CurrentDashaCard', () => {
-    it('renders MD/AD/PD hierarchy and handles missing periods gracefully', () => {
-      const onOpenDasha = vi.fn();
-      render(<CurrentDashaCard dasha={vm.dasha} onOpenDasha={onOpenDasha} />);
-
-      expect(screen.getByText('Current Planetary Timing (Vimshottari Dasha)')).toBeInTheDocument();
-      expect(screen.getByText('Jupiter → Saturn → Mercury')).toBeInTheDocument();
-      expect(screen.getByText('Mahadasha (MD)')).toBeInTheDocument();
-      expect(screen.getByText('Antardasha (AD)')).toBeInTheDocument();
-      expect(screen.getByText('Pratyantardasha (PD)')).toBeInTheDocument();
-
-      const viewBtn = screen.getByRole('button', { name: /view complete dasha timeline/i });
-      fireEvent.click(viewBtn);
-      expect(onOpenDasha).toHaveBeenCalledTimes(1);
-    });
-
-    it('renders Timing Unavailable when periods are missing', () => {
-      render(
-        <CurrentDashaCard
-          dasha={{
-            periods: [],
-            status: 'UNAVAILABLE',
-            availability: false,
-            currentPeriodLabel: 'Timing Unavailable'
-          }}
-        />
-      );
-
-      expect(screen.getAllByText('Timing Unavailable').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Unavailable').length).toBe(3);
-    });
-
-    it('renders Partial badge when dasha status is PARTIAL', () => {
-      render(
-        <CurrentDashaCard
-          dasha={{
-            periods: [vm.dasha.periods[0]],
-            md: vm.dasha.md,
-            status: 'PARTIAL',
-            availability: true,
-            currentPeriodLabel: 'Jupiter'
-          }}
-        />
-      );
-
-      expect(screen.getByText('Partial')).toBeInTheDocument();
-      expect(screen.getAllByText('Jupiter').length).toBeGreaterThan(0);
     });
   });
 

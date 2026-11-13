@@ -2,7 +2,6 @@ export * from './overviewFormat';
 export * from './OverviewHeader';
 export * from './OverallAssessmentCard';
 export * from './DomainSummaryCard';
-export * from './CurrentDashaCard';
 export * from './KeyFindingsCard';
 export * from './QualificationsCard';
 export * from './EvidencePreview';
