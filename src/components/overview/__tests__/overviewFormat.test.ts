@@ -19,7 +19,7 @@ describe('Overview Presentation Formatters (P-UI-03)', () => {
       expect(formatDirection('UNAVAILABLE')).toBe('Not available for this analysis');
       expect(formatDirection(undefined)).toBe('Not available');
       expect(formatDirection('')).toBe('Not available');
-      expect(formatDirection('UNKNOWN_DIRECTION')).toBe('Unknown Direction');
+      expect(formatDirection('UNKNOWN_DIRECTION')).toBe('Not assessed');
       expect(formatDirection('  sUpPoRt  ')).toBe('Supportive');
     });
   });

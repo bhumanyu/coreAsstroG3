@@ -208,6 +208,7 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
           SPECULATION: 'STRONG'
         },
         confidence: 'HIGH',
+        promiseStatus: 'STRONG',
         natalStrength: 'MODERATE',
         dashaDirection: 'SUPPORT',
         timingStatus: 'SUPPORT'

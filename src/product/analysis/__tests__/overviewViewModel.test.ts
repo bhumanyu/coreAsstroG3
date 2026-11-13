@@ -78,6 +78,7 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
         ...base.wealth,
         synthesis: {
           overallStatus: 'MIXED',
+          promiseStatus: 'MIXED',
           dimensionStatuses: {
             ACCUMULATION: 'STRONG',
             GAINS: 'CHALLENGED',
@@ -109,6 +110,51 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     expect(vm.overall.summary).not.toContain('NOT_ACTIVE');
     expect(JSON.stringify(vm.overall.assessment)).not.toContain('NOT_ACTIVE');
     expect(vm.wealth.assessment.details).toHaveLength(4);
+    expect(vm.wealth.assessment.details.map((detail) => detail.label)).toEqual([
+      'Accumulation',
+      'Gains',
+      'Fortune',
+      'Speculation'
+    ]);
+    expect(vm.overall.summary).toContain('Mixed career outlook');
+    expect(vm.overall.summary).not.toContain('Foundation');
+    expect(vm.overall.summary).not.toContain('confidence');
+  });
+
+  it('keeps domain-specific summaries detailed while the overall conclusion stays concise', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        synthesis: {
+          ...base.career.synthesis,
+          finalStatus: 'MIXED',
+          natalDirection: 'MIXED',
+          natalStrength: 'STRONG',
+          dashaDirection: 'NEUTRAL',
+          timingStatus: 'NOT_ACTIVE',
+          confidence: 'MEDIUM'
+        }
+      },
+      wealth: {
+        ...base.wealth,
+        synthesis: {
+          ...base.wealth.synthesis,
+          overallStatus: 'STRONG',
+          promiseStatus: 'STRONG'
+        }
+      }
+    });
+
+    const vm = selectOverviewViewModel(analysis);
+    expect(vm.overall.summary).toBe('Mixed career outlook; Strong wealth outlook.');
+    expect(vm.career.summary).toContain('Mixed outlook');
+    expect(vm.career.summary).toContain('Strong foundation with mixed indications');
+    expect(vm.career.assessment.foundation.label).toBe('Strong foundation with mixed indications');
+    expect(vm.career.assessment.dashaSupport.label).toBe('Neutral');
+    expect(vm.career.assessment.timing.label).toBe('No clear activation identified');
+    expect(vm.career.assessment.confidence.label).toBe('Medium confidence');
+    expect(JSON.stringify(vm.career.assessment)).not.toMatch(/MIXED\s*\(|NOT_ACTIVE/);
   });
 
   it('does not use diagnostic synthesis statements in product view models', () => {

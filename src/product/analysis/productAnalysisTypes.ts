@@ -693,6 +693,7 @@ export interface WealthProductAnalysis {
     readonly statement?: string;
     readonly overallStatus?: FinalDomainStatus;
     readonly dimensionStatuses?: Readonly<Partial<Record<WealthDimension, FinalDomainStatus>>>;
+    readonly promiseStatus?: CareerWealthFinalSynthesis['promiseStatus'];
     readonly confidence?: CareerWealthFinalSynthesis['confidence'];
     readonly natalStrength?: NonNullable<CareerWealthFinalSynthesis['primaryStrength']>;
     readonly dashaDirection?: SynthesisAxisStatus;

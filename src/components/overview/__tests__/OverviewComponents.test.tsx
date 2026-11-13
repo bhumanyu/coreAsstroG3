@@ -56,6 +56,74 @@ describe('Overview Component Library (P-UI-03)', () => {
       expect(screen.getByText('High Confidence')).toBeInTheDocument();
       expect(screen.getByText(vm.overall.summary)).toBeInTheDocument();
     });
+
+    it('renders all assessment dimensions and a concise mixed-domain conclusion without enum tokens', () => {
+      const base = createProductAnalysis();
+      const analysis = createProductAnalysis({
+        career: {
+          ...base.career,
+          synthesis: {
+            ...base.career.synthesis,
+            finalStatus: 'MIXED',
+            natalDirection: 'MIXED',
+            natalStrength: 'STRONG',
+            dashaDirection: 'NEUTRAL',
+            timingStatus: 'NOT_ACTIVE',
+            confidence: 'MEDIUM'
+          }
+        },
+        wealth: {
+          ...base.wealth,
+          synthesis: {
+            ...base.wealth.synthesis,
+            overallStatus: 'STRONG',
+            promiseStatus: 'STRONG'
+          }
+        }
+      });
+      const overall = selectOverviewViewModel(analysis).overall;
+
+      render(<OverallAssessmentCard overall={overall} />);
+
+      expect(screen.getByText('Mixed career outlook; Strong wealth outlook.')).toBeInTheDocument();
+      expect(screen.getByText('Foundation')).toBeInTheDocument();
+      expect(screen.getByText('Dasha support')).toBeInTheDocument();
+      expect(screen.getByText('Timing')).toBeInTheDocument();
+      expect(screen.getByText('Evidence confidence')).toBeInTheDocument();
+      expect(screen.getByText(/Strong foundation with mixed indications/)).toBeInTheDocument();
+      expect(screen.getByText(/No clear activation identified/)).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/MIXED\s*\(|NOT_ACTIVE|ACCUMULATION/);
+    });
+
+    it('renders not-assessed dimension fallbacks when structured synthesis is absent', () => {
+      const base = createProductAnalysis();
+      const analysis = createProductAnalysis({
+        career: { ...base.career, synthesis: undefined },
+        wealth: { ...base.wealth, synthesis: undefined }
+      });
+      const overall = selectOverviewViewModel(analysis).overall;
+
+      render(<OverallAssessmentCard overall={overall} />);
+
+      expect(screen.getAllByText('Not assessed').length).toBeGreaterThanOrEqual(4);
+      expect(document.body.textContent).not.toMatch(/MIXED\s*\(|NOT_ACTIVE|ACCUMULATION/);
+    });
+
+    it('allows long explanations to wrap', () => {
+      const longExplanation = `${'A detailed explanation of structured classifications. '.repeat(12)}`;
+      const overall = {
+        ...vm.overall,
+        assessment: {
+          ...vm.overall.assessment,
+          foundation: { ...vm.overall.assessment.foundation, explanation: longExplanation }
+        }
+      };
+
+      render(<OverallAssessmentCard overall={overall} />);
+
+      const explanation = screen.getByText(/A detailed explanation of structured classifications/);
+      expect(explanation).toHaveClass('break-words');
+    });
   });
 
   describe('DomainSummaryCard', () => {
@@ -77,6 +145,69 @@ describe('Overview Component Library (P-UI-03)', () => {
       const btn = screen.getByRole('button', { name: /explore career details/i });
       fireEvent.click(btn);
       expect(onOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders all four assessment dimensions, mixed foundation wording, and safe detail labels', () => {
+      const base = createProductAnalysis();
+      const analysis = createProductAnalysis({
+        career: {
+          ...base.career,
+          synthesis: {
+            ...base.career.synthesis,
+            finalStatus: 'MIXED',
+            natalDirection: 'MIXED',
+            natalStrength: 'STRONG',
+            dashaDirection: 'NEUTRAL',
+            timingStatus: 'NOT_ACTIVE',
+            confidence: 'MEDIUM'
+          }
+        },
+        wealth: {
+          ...base.wealth,
+          synthesis: {
+            ...base.wealth.synthesis,
+            promiseStatus: 'MIXED',
+            dimensionStatuses: { ACCUMULATION: 'STRONG' }
+          }
+        }
+      });
+      const domain = selectOverviewViewModel(analysis).career;
+      const withLongExplanation = {
+        ...domain,
+        assessment: {
+          ...domain.assessment,
+          foundation: {
+            ...domain.assessment.foundation,
+            explanation: `${'Strong supportive factors coexist with challenges. '.repeat(12)}`
+          }
+        }
+      };
+
+      render(<DomainSummaryCard domain={withLongExplanation} domainKey="career" />);
+
+      expect(screen.getByText('Foundation')).toBeInTheDocument();
+      expect(screen.getByText('Dasha support')).toBeInTheDocument();
+      expect(screen.getByText('Timing')).toBeInTheDocument();
+      expect(screen.getByText('Evidence confidence')).toBeInTheDocument();
+      expect(screen.getByText('Strong foundation with mixed indications')).toBeInTheDocument();
+      expect(screen.getByText('Neutral')).toBeInTheDocument();
+      expect(screen.getByText('No clear activation identified')).toBeInTheDocument();
+      expect(screen.getByText('Medium confidence')).toBeInTheDocument();
+      expect(screen.getByText(/Strong supportive factors coexist with challenges/)).toHaveClass('break-words');
+      expect(document.body.textContent).not.toMatch(/MIXED\s*\(|NOT_ACTIVE|ACCUMULATION/);
+    });
+
+    it('shows not-assessed labels if synthesis fields are unavailable', () => {
+      const base = createProductAnalysis();
+      const analysis = createProductAnalysis({
+        career: { ...base.career, synthesis: undefined }
+      });
+      const domain = selectOverviewViewModel(analysis).career;
+
+      render(<DomainSummaryCard domain={domain} domainKey="career" />);
+
+      expect(screen.getAllByText('Not assessed').length).toBeGreaterThanOrEqual(4);
+      expect(document.body.textContent).not.toMatch(/MIXED\s*\(|NOT_ACTIVE|ACCUMULATION/);
     });
   });
 

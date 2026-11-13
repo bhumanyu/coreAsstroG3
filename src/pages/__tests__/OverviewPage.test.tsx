@@ -62,13 +62,13 @@ describe('OverviewPage (P-UI-03)', () => {
     // Career Domain
     expect(screen.getByText('Career & Professional Life')).toBeInTheDocument();
     expect(
-      screen.getByText('Supportive outlook. Supportive. Supportive. Currently active. High evidence confidence.')
+      screen.getByText('Supportive outlook. Strong foundation with supportive indications. Supportive. Currently active. High confidence.')
     ).toBeInTheDocument();
 
     // Wealth Domain
     expect(screen.getByText('Wealth & Financial Assets')).toBeInTheDocument();
     expect(
-      screen.getByText('Strong indications. Moderate foundation. Supportive. Supportive. High evidence confidence.')
+      screen.getByText('Strong indications. Strong foundation. Supportive. Supportive. High confidence.')
     ).toBeInTheDocument();
 
     // Key Findings & Qualifications

@@ -210,6 +210,7 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
   const wealthAssessment = buildUserFacingAssessment({
     overallStatus: analysis.wealth.synthesis?.overallStatus,
     natalStrength: analysis.wealth.synthesis?.natalStrength,
+    natalPromiseStatus: analysis.wealth.synthesis?.promiseStatus,
     dashaDirection: analysis.wealth.synthesis?.dashaDirection,
     timingStatus: analysis.wealth.synthesis?.timingStatus,
     confidence: analysis.wealth.synthesis?.confidence,

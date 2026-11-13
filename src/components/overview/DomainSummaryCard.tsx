@@ -77,7 +77,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
             <div key={dimension.title} className="rounded-xl bg-slate-950/50 border border-slate-800/80 p-3">
               <h4 className="text-xs font-semibold text-slate-300">{dimension.title}</h4>
               <p className="mt-1 text-sm text-indigo-300">{dimension.label}</p>
-              <p className="mt-1 text-xs text-slate-400 leading-relaxed">{dimension.explanation}</p>
+              <p className="mt-1 text-xs text-slate-400 leading-relaxed break-words">{dimension.explanation}</p>
             </div>
           ))}
         </div>
@@ -90,7 +90,7 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
             {domain.assessment.details.map((detail) => (
               <div key={detail.label} className="text-xs">
                 <p className="font-medium text-slate-300">{detail.label}</p>
-                <p className="mt-0.5 text-slate-400 leading-relaxed">{detail.explanation}</p>
+                <p className="mt-0.5 text-slate-400 leading-relaxed break-words">{detail.explanation}</p>
               </div>
             ))}
           </div>

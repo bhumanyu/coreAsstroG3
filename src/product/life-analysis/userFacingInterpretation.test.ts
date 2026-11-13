@@ -6,7 +6,8 @@ import {
   formatEvidenceConfidence,
   formatIndicationStrength,
   formatOutcome,
-  formatUserFacingClassification
+  formatUserFacingClassification,
+  ENGLISH_USER_FACING_COPY
 } from './userFacingInterpretation';
 
 describe('user-facing interpretation', () => {
@@ -94,8 +95,11 @@ describe('user-facing interpretation', () => {
     expect(narrative).not.toContain('Medium Confidence. Strong');
   });
 
-  it('safely title-cases a future unknown code rather than displaying the enum', () => {
-    expect(formatUserFacingClassification('FUTURE_NEW_STATE')).toBe('Future New State');
+  it('returns a conservative fallback for future unknown codes rather than exposing them', () => {
+    expect(formatUserFacingClassification('FUTURE_NEW_STATE')).toBe('Not assessed');
+    expect(formatOutcome('FUTURE_NEW_STATE')).toBe('Not assessed');
+    expect(formatIndicationStrength('FUTURE_NEW_STATE')).toBe('Not assessed');
+    expect(formatEvidenceConfidence('FUTURE_NEW_STATE')).toBe('Not assessed');
   });
 
   it('builds all assessment dimensions without treating MIXED or NOT_ACTIVE as predictions', () => {
@@ -108,13 +112,75 @@ describe('user-facing interpretation', () => {
       confidence: 'HIGH'
     });
 
-    expect(assessment.foundation.label).toContain('combination');
-    expect(assessment.dashaSupport.label).toContain('combination');
-    expect(assessment.timing.label).toContain('No clear activation');
+    expect(assessment.foundation.label).toBe('Strong foundation with mixed indications');
+    expect(assessment.foundation.explanation).toContain('supporting factors that coexist with challenging factors');
+    expect(assessment.foundation.explanation).toContain('does not guarantee a favourable result');
+    expect(assessment.dashaSupport.label).toBe('Mixed indications');
+    expect(assessment.timing.label).toBe('No clear activation identified');
     expect(assessment.timing.explanation).toContain('timing observation');
-    expect(assessment.confidence.label).toBe('High evidence confidence');
+    expect(assessment.confidence.label).toBe('High confidence');
     expect(assessment.confidence.explanation).toContain('evidence is relatively complete');
     expect(JSON.stringify(assessment)).not.toMatch(/\bMIXED\s*\(|\bNOT_ACTIVE\b/);
+  });
+
+  it.each([
+    ['VERY_STRONG', 'Very strong foundation'],
+    ['STRONG', 'Strong foundation'],
+    ['MODERATE', 'Moderate foundation'],
+    ['MIXED', 'Mixed foundation'],
+    ['CHALLENGED', 'Challenged foundation']
+  ])('formats wealth promise status %s as the natal foundation', (promiseStatus, expected) => {
+    const assessment = buildUserFacingAssessment({ natalPromiseStatus: promiseStatus });
+    expect(assessment.foundation.label).toBe(expected);
+  });
+
+  it('combines other known direction and strength values rather than dropping either axis', () => {
+    const assessment = buildUserFacingAssessment({
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG'
+    });
+    expect(assessment.foundation.label).toBe('Strong foundation with supportive indications');
+  });
+
+  it('uses safe detail labels and statuses for unknown values', () => {
+    const assessment = buildUserFacingAssessment({
+      details: [
+        { label: 'ACCUMULATION', status: 'STRONG' },
+        { label: 'FUTURE_DIMENSION', status: 'FUTURE_STATUS' }
+      ]
+    });
+    expect(assessment.details).toEqual([
+      { label: 'Accumulation', explanation: 'Strong indications' },
+      { label: 'Additional assessment', explanation: 'Not assessed' }
+    ]);
+    expect(JSON.stringify(assessment)).not.toMatch(/ACCUMULATION|FUTURE_DIMENSION|FUTURE_STATUS/);
+  });
+
+  it('uses not-assessed fallbacks for unknown values in every assessment dimension', () => {
+    const assessment = buildUserFacingAssessment({
+      natalDirection: 'FUTURE_DIRECTION',
+      dashaDirection: 'FUTURE_DASHA',
+      timingStatus: 'FUTURE_TIMING',
+      confidence: 'FUTURE_CONFIDENCE',
+      natalPromiseStatus: 'FUTURE_PROMISE'
+    });
+
+    expect(assessment.foundation.label).toBe('Not assessed');
+    expect(assessment.dashaSupport.label).toBe('Not assessed');
+    expect(assessment.timing.label).toBe('Not assessed');
+    expect(assessment.confidence.label).toBe('Not assessed');
+    expect(JSON.stringify(assessment)).not.toMatch(/FUTURE_/);
+  });
+
+  it('allows presentation wording to be supplied through the copy-provider seam', () => {
+    const copy = {
+      ...ENGLISH_USER_FACING_COPY,
+      notAssessed: 'Assessment pending',
+      notAssessedExplanation: 'The assessment is pending.'
+    };
+    const assessment = buildUserFacingAssessment({ confidence: 'UNKNOWN', copy });
+    expect(assessment.confidence.label).toBe('Assessment pending');
+    expect(assessment.confidence.explanation).toBe('The assessment is pending.');
   });
 
   it('returns a safe not-assessed fallback when structured synthesis is missing', () => {

@@ -502,6 +502,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
   const assessment = buildUserFacingAssessment({
     overallStatus: wealth.synthesis?.overallStatus,
     natalStrength: wealth.synthesis?.natalStrength,
+    natalPromiseStatus: wealth.synthesis?.promiseStatus,
     dashaDirection: wealth.synthesis?.dashaDirection,
     timingStatus: wealth.synthesis?.timingStatus,
     confidence: wealth.synthesis?.confidence,
@@ -516,6 +517,7 @@ export function selectWealthViewModel(analysis: ProductAnalysis): WealthViewMode
     integratedSynthesisAvailable: Boolean(
       wealth.synthesis?.overallStatus ||
       wealth.synthesis?.dimensionStatuses ||
+      wealth.synthesis?.promiseStatus ||
       wealth.synthesis?.confidence
     ),
     primaryEvidenceCount: primaryCount,

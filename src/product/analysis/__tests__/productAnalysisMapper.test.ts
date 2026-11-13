@@ -288,6 +288,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
         ...sampleViewModel.wealthDetail!,
         finalSynthesis: {
           finalStatus: 'MIXED',
+          promiseStatus: 'MIXED',
           confidence: 'MEDIUM',
           primaryStrength: 'STRONG',
           activationStatus: 'SUPPORT',
@@ -321,6 +322,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     });
     expect(analysis.wealth.synthesis).toMatchObject({
       overallStatus: 'MIXED',
+      promiseStatus: 'MIXED',
       dimensionStatuses: {
         ACCUMULATION: 'STRONG',
         GAINS: 'CHALLENGED',

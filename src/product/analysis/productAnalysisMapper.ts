@@ -1189,6 +1189,7 @@ function mapWealth(
           FORTUNE: detail.finalSynthesis.dimensions.FORTUNE.finalStatus,
           SPECULATION: detail.finalSynthesis.dimensions.SPECULATION.finalStatus
         } : undefined,
+        promiseStatus: detail.finalSynthesis.promiseStatus,
         confidence: detail.finalSynthesis.confidence,
         natalStrength: detail.finalSynthesis.primaryStrength,
         dashaDirection: detail.finalSynthesis.activationStatus,
