@@ -286,7 +286,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:pt-[env(safe-area-inset-top)] sm:pb-[env(safe-area-inset-bottom)] overflow-y-auto"
+          className="fixed inset-0 z-50 flex justify-center p-4 sm:p-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-labelledby="birth-modal-title"
@@ -309,7 +309,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 16 }}
             transition={{ type: 'spring', damping: 26, stiffness: 360 }}
-            className="relative w-full max-w-xl z-10 my-8 overflow-hidden rounded-2xl glass-surface border border-indigo-500/30 dark:border-indigo-500/30 light:border-slate-200/90 shadow-2xl shadow-indigo-950/60 light:shadow-slate-300/60 bg-slate-900/95 dark:bg-slate-900/95 light:bg-white text-slate-100 dark:text-slate-100 light:text-slate-900"
+            className="relative w-full max-w-xl z-10 my-auto max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden rounded-2xl glass-surface border border-indigo-500/30 dark:border-indigo-500/30 light:border-slate-200/90 shadow-2xl shadow-indigo-950/60 light:shadow-slate-300/60 bg-slate-900/95 dark:bg-slate-900/95 light:bg-white text-slate-100 dark:text-slate-100 light:text-slate-900"
             onClick={(e) => e.stopPropagation()}
             tabIndex={-1}
           >
@@ -340,7 +340,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
             </div>
 
             {/* Content Body */}
-            <div className="p-5 sm:p-6 space-y-5 max-h-[calc(85vh-7rem)] overflow-y-auto scrollbar-none">
+            <div className="p-5 sm:p-6 space-y-5 flex-1 min-h-0 overflow-y-auto scrollbar-none">
               {/* Saved Chart Profiles */}
               <div>
                 <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-400 light:text-slate-500 uppercase tracking-wider mb-2 font-mono-code">
