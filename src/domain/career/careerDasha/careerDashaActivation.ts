@@ -9,8 +9,11 @@ import type {
   CareerDashaActivationEffect,
   CareerDashaActivationEvidence,
   CareerDashaPlanetContext,
-  CareerDashaTiming
+  CareerDashaTiming,
+  CareerDashaEvidenceBasis,
+  CareerDashaActivationDiagnosticCode
 } from './careerDashaActivationTypes';
+import type { CareerPlanetaryConditionAssessment } from '../careerPlanetaryCondition';
 
 import {
   isCareerDashaRelevant,
@@ -59,6 +62,9 @@ interface CareerDashaLevelDiagnosticCapture {
   conditionAssessment?: CareerDashaPlanetContext['conditionAssessment'];
   afflictionAssessed?: boolean;
   expressionCount?: number;
+  expressionEvidenceCount?: number;
+  evidenceBasis?: CareerDashaEvidenceBasis;
+  diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   hasCareerPromise?: boolean;
   planetActivates?: boolean;
   planetChallenges?: boolean;
@@ -124,6 +130,11 @@ function resolveLevel(
       effect: 'INSUFFICIENT_DATA',
       direction: 'UNAVAILABLE',
       strength: 'UNDETERMINED',
+      conditionAssessment: 'UNAVAILABLE',
+      afflictionAssessed: false,
+      expressionEvidenceCount: 0,
+      evidenceBasis: 'UNAVAILABLE',
+      diagnostics: Object.freeze([]),
       evidence: Object.freeze([]),
       statement: timing.planet ? `Planet ${timing.planet} has insufficient context for ${level} activation.` : `No planet specified for ${level} activation.`,
       start: timing.start,
@@ -139,22 +150,17 @@ function resolveLevel(
   const planetActivates = doesPlanetActivateCareerPromise(actualPlanetContext, structuralDirection);
   const planetChallenges = doesPlanetChallengeCareerPromise(actualPlanetContext);
   const isRelevant = isCareerDashaRelevant(actualPlanetContext.relevance);
-  if (diagnostic) {
-    const afflictionAssessed = actualPlanetContext.afflictionAssessed ?? true;
-    diagnostic.relevance = actualPlanetContext.relevance;
-    diagnostic.condition = actualPlanetContext.condition;
-    diagnostic.conditionAssessment = actualPlanetContext.conditionAssessment
-      ?? (actualPlanetContext.condition === 'UNAVAILABLE'
-        ? 'UNAVAILABLE'
-        : afflictionAssessed ? 'FULL' : 'PARTIAL');
-    diagnostic.afflictionAssessed = afflictionAssessed;
-    diagnostic.expressionCount = actualPlanetContext.expressions.length;
-    diagnostic.hasCareerPromise = hasCareerPromise;
-    diagnostic.planetActivates = planetActivates;
-    diagnostic.planetChallenges = planetChallenges;
-    diagnostic.isRelevant = isRelevant;
-  }
-
+  const conditionAssessment = actualPlanetContext.conditionAssessment
+    ?? (actualPlanetContext.condition === 'UNAVAILABLE'
+      ? 'UNAVAILABLE'
+      : actualPlanetContext.afflictionAssessed === false ? 'PARTIAL' : 'FULL');
+  const afflictionAssessed = actualPlanetContext.afflictionAssessed ?? (conditionAssessment === 'FULL');
+  const expressionEvidenceCount = new Set(
+    actualPlanetContext.expressions.flatMap(expression => expression.evidence.map(item => item.id))
+  ).size;
+  const evidenceBasis: CareerDashaEvidenceBasis = expressionEvidenceCount > 0
+    ? 'CONDITION_RELEVANCE_AND_C8_EXPRESSION'
+    : 'CONDITION_AND_RELEVANCE';
   const effect = resolveCareerDashaEffect(
     hasCareerPromise,
     planetActivates,
@@ -162,6 +168,27 @@ function resolveLevel(
     actualPlanetContext.expressions,
     isRelevant
   );
+
+  const diagnostics: readonly CareerDashaActivationDiagnosticCode[] = Object.freeze([
+    ...(conditionAssessment === 'PARTIAL' && (effect === 'ACTIVATES' || effect === 'CHALLENGES')
+      ? ['C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT' as const]
+      : []),
+    'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
+  ]);
+  if (diagnostic) {
+    diagnostic.relevance = actualPlanetContext.relevance;
+    diagnostic.condition = actualPlanetContext.condition;
+    diagnostic.conditionAssessment = conditionAssessment;
+    diagnostic.afflictionAssessed = afflictionAssessed;
+    diagnostic.expressionCount = actualPlanetContext.expressions.length;
+    diagnostic.expressionEvidenceCount = expressionEvidenceCount;
+    diagnostic.evidenceBasis = evidenceBasis;
+    diagnostic.diagnostics = diagnostics;
+    diagnostic.hasCareerPromise = hasCareerPromise;
+    diagnostic.planetActivates = planetActivates;
+    diagnostic.planetChallenges = planetChallenges;
+    diagnostic.isRelevant = isRelevant;
+  }
 
   const direction = resolveCareerDashaPlanetDirection(actualPlanetContext);
 
@@ -177,7 +204,9 @@ function resolveLevel(
     role,
     effect,
     direction,
-    strength
+    strength,
+    conditionAssessment,
+    afflictionAssessed
   );
 
   const statement = buildActivationStatement(
@@ -188,7 +217,7 @@ function resolveLevel(
     direction,
     strength,
     evidence,
-    actualPlanetContext.afflictionAssessed === false
+    !afflictionAssessed
   );
 
   // Determine active status and collect evidence IDs from consumed sources
@@ -209,6 +238,11 @@ function resolveLevel(
     effect,
     direction,
     strength,
+    conditionAssessment,
+    afflictionAssessed,
+    expressionEvidenceCount,
+    evidenceBasis,
+    diagnostics,
     evidence,
     statement,
     start: timing.start,
@@ -274,7 +308,9 @@ function buildActivationEvidence(
   role: CareerDashaActivationRole,
   effect: CareerDashaActivationEffect,
   direction: CareerDashaActivationDirection,
-  strength: CareerDashaActivationStrength
+  strength: CareerDashaActivationStrength,
+  conditionAssessment: CareerPlanetaryConditionAssessment,
+  afflictionAssessed: boolean
 ): readonly CareerDashaActivationEvidence[] {
   const evidence: CareerDashaActivationEvidence[] = [];
   const seenKeys = new Set<string>();
@@ -373,11 +409,10 @@ function buildActivationEvidence(
     evidence.push(Object.freeze({
       id: conditionKey,
       role: 'PLANETARY_CONDITION',
-      statement: `Planet ${planetContext.planet} has ${planetContext.condition.toLowerCase()} condition.${
-        planetContext.afflictionAssessed === false
-          ? ' Affliction was not assessed; no affliction-based challenge is inferred.'
-          : ''
-      }`,
+      statement: `Planet ${planetContext.planet} has ${planetContext.condition.toLowerCase()} condition (${
+        conditionAssessment === 'FULL' ? 'fully assessed' :
+          conditionAssessment === 'PARTIAL' ? 'partially assessed' : 'not assessed'
+      }${afflictionAssessed ? '' : '; affliction not evaluated'}).`,
       planet: planetContext.planet,
       direction: conditionDirection,
       level,
@@ -523,6 +558,13 @@ function resolveCareerDashaHierarchy(
   const overallStrength = deriveOverallStrength(hierarchyResult.dominantLevel, md, ad, pd);
 
   const statement = buildHierarchyStatement(md, ad, pd, hierarchyResult.finalEffect, overallDirection, overallStrength, hierarchyResult.dominantLevel);
+  const activations = [md, ad, pd];
+  const conditionAssessment: CareerPlanetaryConditionAssessment = activations.some(item => item.conditionAssessment === 'PARTIAL')
+    ? 'PARTIAL'
+    : activations.some(item => item.conditionAssessment === 'FULL')
+      ? 'FULL'
+      : 'UNAVAILABLE';
+  const diagnostics = Object.freeze(Array.from(new Set(activations.flatMap(item => item.diagnostics ?? []))));
 
   return Object.freeze({
     md,
@@ -531,6 +573,8 @@ function resolveCareerDashaHierarchy(
     overallEffect: toCareerDashaActivationEffect(hierarchyResult.finalEffect),
     overallDirection,
     overallStrength,
+    conditionAssessment,
+    diagnostics,
     dominantLevel: hierarchyResult.dominantLevel,
     statement,
     diagnosticTrace

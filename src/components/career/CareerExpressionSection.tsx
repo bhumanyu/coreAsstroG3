@@ -11,6 +11,22 @@ export interface CareerExpressionSectionProps {
 export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = ({ expression }) => {
   const { t } = useTranslation('career');
   const { t: tEnum } = useTranslation('enums');
+  if (expression.status === 'EXECUTED_NO_CANDIDATES') {
+    return (
+      <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 space-y-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-400">
+            <Compass className="w-5 h-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-slate-200">{t('ui.expression.executedNoCandidatesTitle')}</h2>
+            <p className="text-xs text-slate-500">{t('ui.expression.executedNoCandidatesDescription')}</p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 italic">{t('ui.expression.executedNoCandidatesMessage')}</p>
+      </div>
+    );
+  }
   if (!expression.available) {
     return (
       <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 space-y-3">

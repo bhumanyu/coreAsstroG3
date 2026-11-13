@@ -591,7 +591,12 @@ function buildCanonicalPeriod(
     strength: mapActivationStrength(activation.strength),
     start: activation.start,
     end: activation.end,
-    statement: activation.statement
+    statement: activation.statement,
+    conditionAssessment: activation.conditionAssessment,
+    afflictionAssessed: activation.afflictionAssessed,
+    expressionEvidenceCount: activation.expressionEvidenceCount,
+    evidenceBasis: activation.evidenceBasis,
+    diagnostics: activation.diagnostics
   });
 }
 
@@ -708,7 +713,12 @@ function buildCanonicalEvidence(
       strength: mapActivationStrength(activation.strength),
       statement: activation.statement,
       sourceIds,
-      provenance
+      provenance,
+      conditionAssessment: activation.conditionAssessment,
+      afflictionAssessed: activation.afflictionAssessed,
+      expressionEvidenceCount: activation.expressionEvidenceCount,
+      evidenceBasis: activation.evidenceBasis,
+      diagnostics: activation.diagnostics
     });
 
     // Deduplicate by identityKey (merge sourceIds, ruleIds, and rootEvidenceIds)
@@ -773,7 +783,12 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
       strength: 'UNDETERMINED',
       start: undefined,
       end: undefined,
-      statement: 'No current Dasha period available.'
+      statement: 'No current Dasha period available.',
+      conditionAssessment: 'UNAVAILABLE',
+      afflictionAssessed: false,
+      expressionEvidenceCount: 0,
+      evidenceBasis: 'UNAVAILABLE',
+      diagnostics: Object.freeze([])
     }),
     ad: Object.freeze({
       level: 'AD',
@@ -784,7 +799,12 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
       strength: 'UNDETERMINED',
       start: undefined,
       end: undefined,
-      statement: 'No current Dasha period available.'
+      statement: 'No current Dasha period available.',
+      conditionAssessment: 'UNAVAILABLE',
+      afflictionAssessed: false,
+      expressionEvidenceCount: 0,
+      evidenceBasis: 'UNAVAILABLE',
+      diagnostics: Object.freeze([])
     }),
     pd: Object.freeze({
       level: 'PD',
@@ -795,7 +815,12 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
       strength: 'UNDETERMINED',
       start: undefined,
       end: undefined,
-      statement: 'No current Dasha period available.'
+      statement: 'No current Dasha period available.',
+      conditionAssessment: 'UNAVAILABLE',
+      afflictionAssessed: false,
+      expressionEvidenceCount: 0,
+      evidenceBasis: 'UNAVAILABLE',
+      diagnostics: Object.freeze([])
     }),
     evidence: Object.freeze([]),
     rootEvidenceIds: Object.freeze([]),

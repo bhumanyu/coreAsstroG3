@@ -892,6 +892,11 @@ export function interpretCareerV2(
     evidence: new Set(evidence)
   });
 
+  const c8ExpressionsWithEvidence = mechanismExpressionResult.expressions.filter(
+    expression => expression.evidence.length > 0
+  ).length;
+  const c8Evidence = canonicalExpressionAnalysis.expressions.flatMap(expression => expression.evidence);
+
   const careerEvents = buildCareerEvents({
     trajectory: careerTrajectory,
     dasha: canonicalDashaAnalysis
@@ -1203,6 +1208,13 @@ export function interpretCareerV2(
     mechanismCandidates: careerMechanismCandidates, // Pass through explicitly (may be empty array)
     careerDashaEvidence: canonicalDashaAnalysis.evidence,
     careerAvailabilityDiagnosticTrace: Object.freeze({
+      c8ExpressionCoverage: Object.freeze({
+        mechanismCandidateCount: careerMechanismCandidates.length,
+        expressionCount: mechanismExpressionResult.expressions.length,
+        expressionsWithEvidenceCount: c8ExpressionsWithEvidence,
+        evidenceCount: c8Evidence.length,
+        evidenceWithPlanetAttributionCount: c8Evidence.filter(item => item.planets.length > 0).length
+      }),
       structuralPrimarySupportPassedToC9: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.structuralPrimarySupport,
       c9ExpressionTrace: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.expressionTrace,
       c9PlanetContextResolution: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.planetContextResolution,

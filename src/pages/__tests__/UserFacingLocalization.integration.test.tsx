@@ -4,6 +4,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import i18n from '../../i18n/i18n';
 import { CareerPage } from '../CareerPage';
 import { CareerJourney } from '../../components/career/CareerJourney';
+import { CareerExpressionSection } from '../../components/career/CareerExpressionSection';
 import { OverviewPage } from '../OverviewPage';
 import { ReasoningPage } from '../ReasoningPage';
 import { WealthPage } from '../WealthPage';
@@ -44,6 +45,23 @@ afterEach(async () => {
 });
 
 describe('user-facing assessment localization at page boundaries', () => {
+  it('renders the executed-empty C8 state in Hindi rather than translation keys', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    render(
+      <CareerExpressionSection expression={{
+        available: false,
+        status: 'EXECUTED_NO_CANDIDATES',
+        candidates: []
+      }} />
+    );
+
+    expect(screen.getByText('अभिव्यक्ति विश्लेषण पूरा हुआ, लेकिन कोई उम्मीदवार नहीं मिला।')).toBeInTheDocument();
+    expect(screen.getByText('इस प्रोफ़ाइल के लिए कोई प्रामाणिक करियर अभिव्यक्ति उम्मीदवार उपलब्ध नहीं हैं।')).toBeInTheDocument();
+    expect(screen.queryByText('ui.expression.executedNoCandidatesTitle')).not.toBeInTheDocument();
+  });
+
   it('renders all expanded Career journey states with Hindi labels', async () => {
     await act(async () => {
       await i18n.changeLanguage('hi');

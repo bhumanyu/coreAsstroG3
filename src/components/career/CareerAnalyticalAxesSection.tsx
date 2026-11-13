@@ -68,6 +68,9 @@ const AxisCard: React.FC<{ label: string; axis: Axis; renderResult: () => React.
     NOT_APPLICABLE: 'ui.axes.notApplicable'
   };
   const statusDescription = axis.unavailableReason || t(statusKey[axis.status]);
+  const diagnosticMessages: Record<string, string> = {
+    C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT: t('ui.axes.partialConditionAssessment')
+  };
   return (
   <article className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 space-y-2">
     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -77,6 +80,9 @@ const AxisCard: React.FC<{ label: string; axis: Axis; renderResult: () => React.
     <p className="text-xs leading-relaxed text-slate-400">{statusDescription}</p>
     <p className="text-xs text-slate-300">{t('ui.axes.coverage')}: {enumLabel(tEnum, 'careerAxisCoverage', axis.coverage.status)} · {t('ui.axes.occurrences', { count: axis.coverage.evidenceOccurrenceCount })}</p>
     {axis.diagnostic && <p className="text-xs text-amber-300">{axis.diagnostic}</p>}
+    {axis.diagnostics?.map(code => diagnosticMessages[code] && (
+      <p key={code} className="text-xs text-amber-300" title={code}>{diagnosticMessages[code]}</p>
+    ))}
     {axis.coverage.missingSources.length > 0 && <p className="text-xs text-amber-300">{t('ui.axes.missingSources')}: {axis.coverage.missingSources.join(', ')}</p>}
     {axis.conflictingEvidenceOccurrenceIds.length > 0 && <p className="text-xs text-amber-300">{t('ui.axes.conflictingOccurrences')}: {axis.conflictingEvidenceOccurrenceIds.join(', ')}</p>}
     {renderResult()}

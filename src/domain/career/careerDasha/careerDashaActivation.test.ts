@@ -430,7 +430,7 @@ describe('Career Dasha Activation', () => {
     expect(result.md.effect).toBe('ACTIVATES');
     expect(result.md.statement).toContain('Affliction was not assessed');
     expect(result.md.evidence.find(item => item.role === 'PLANETARY_CONDITION')?.statement)
-      .toContain('no affliction-based challenge is inferred');
+      .toContain('(partially assessed; affliction not evaluated)');
     expect(result.diagnosticTrace?.levels[0]).toMatchObject({
       contextResolved: true,
       conditionAssessment: 'PARTIAL',
@@ -438,6 +438,46 @@ describe('Career Dasha Activation', () => {
       direction: 'SUPPORT',
       effect: 'ACTIVATES'
     });
+  });
+
+  it('preserves partial versus full condition assessment for the same weak-condition challenge', () => {
+    const partialPlanet = Object.freeze({
+      ...makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'WEAK'),
+      conditionAssessment: 'PARTIAL' as const,
+      afflictionAssessed: false
+    });
+    const fullPlanet = Object.freeze({
+      ...makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'WEAK'),
+      conditionAssessment: 'FULL' as const,
+      afflictionAssessed: true
+    });
+    const partialResult = resolveCareerDashaActivation(makeContext({
+      planetContexts: Object.freeze([partialPlanet])
+    }));
+    const fullResult = resolveCareerDashaActivation(makeContext({
+      planetContexts: Object.freeze([fullPlanet])
+    }));
+    const partial = partialResult.md;
+    const full = fullResult.md;
+    const partialConditionEvidence = partial.evidence.find(item => item.role === 'PLANETARY_CONDITION');
+    const fullConditionEvidence = full.evidence.find(item => item.role === 'PLANETARY_CONDITION');
+
+    expect(partial.direction).toBe('CHALLENGE');
+    expect(partial.effect).toBe('CHALLENGES');
+    expect(partial.conditionAssessment).toBe('PARTIAL');
+    expect(partialResult.conditionAssessment).toBe('PARTIAL');
+    expect(partialResult.diagnostics).toContain('C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT');
+    expect(partial.afflictionAssessed).toBe(false);
+    expect(partial.diagnostics).toContain('C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT');
+    expect(full.direction).toBe(partial.direction);
+    expect(full.effect).toBe(partial.effect);
+    expect(full.conditionAssessment).toBe('FULL');
+    expect(fullResult.conditionAssessment).toBe('FULL');
+    expect(full.diagnostics).not.toContain('C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT');
+    expect(partialConditionEvidence?.statement)
+      .toBe('Planet SATURN has weak condition (partially assessed; affliction not evaluated).');
+    expect(fullConditionEvidence?.statement)
+      .toBe('Planet SATURN has weak condition (fully assessed).');
   });
 
   describe('Test 10: Only C8 expressions activate', () => {
@@ -449,7 +489,7 @@ describe('Career Dasha Activation', () => {
             'PRIMARY',
             Object.freeze(['CAREER_LORD']),
             'STRONG',
-            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED')])
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED', ['c8-expression-evidence'])])
           )
         ])
       });
@@ -458,6 +498,8 @@ describe('Career Dasha Activation', () => {
 
       expect(result.md.effect).toBe('ACTIVATES');
       expect(result.md.evidence.some(e => e.role === 'EXPRESSION')).toBe(true);
+      expect(result.md.expressionEvidenceCount).toBe(1);
+      expect(result.md.evidenceBasis).toBe('CONDITION_RELEVANCE_AND_C8_EXPRESSION');
     });
   });
 

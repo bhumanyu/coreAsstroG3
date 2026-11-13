@@ -704,6 +704,7 @@ function mapCareerAnalyticalAxes(
     readonly methodVersion: string;
     readonly unavailableReason?: string;
     readonly diagnostic?: string;
+    readonly diagnostics?: readonly string[];
     readonly axis: TAxis;
   }) => ({
     ...axis,
@@ -715,7 +716,8 @@ function mapCareerAnalyticalAxes(
       availableSources: [...axis.coverage.availableSources],
       missingSources: [...axis.coverage.missingSources]
     },
-    confidence: { ...axis.confidence }
+    confidence: { ...axis.confidence },
+    diagnostics: axis.diagnostics ? [...axis.diagnostics] : undefined
   });
 
   return {
@@ -989,6 +991,7 @@ function mapCareer(
     },
     expression: detail
       ? {
+        analysisStatus: detail.canonicalExpressionAnalysis ? 'EXECUTED' as const : 'ABSENT' as const,
         primaryStyle: detail.capacityLevel ? String(detail.capacityLevel) : undefined,
         leadershipPotential: detail.actionableTakeaways?.[0],
         secondaryTraits: detail.actionableTakeaways?.slice(1),

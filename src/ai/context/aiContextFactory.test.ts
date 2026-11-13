@@ -3,9 +3,11 @@ import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { Planet } from '../../types';
 import type { Horoscope } from '../../types';
+import type { AiEvidence } from '../types/aiContextTypes';
 import { AI_CONTEXT_SCHEMA_VERSION } from '../types/aiTypes';
 import {
   buildAiContext,
+  buildAiContextEvidenceLookup,
   buildEvidenceFromDomainInterpretations,
   projectDomainEvidenceToAi,
   projectDashaEvidenceToAi,
@@ -50,6 +52,47 @@ describe('AI Context Factory', () => {
     const temporalState = resolveAnalysisTemporalState(horoscope, context);
     return { context, temporalState };
   }
+
+  describe('evidence identity lookup', () => {
+    const makeEvidence = (id: string, identityKey: string, statement: string): AiEvidence => ({
+      id,
+      source: 'CAREER',
+      effect: 'SUPPORT',
+      strength: 'STRONG',
+      statement,
+      identityKey
+    });
+
+    it('resolves both occurrence id and identity key to the same evidence object', () => {
+      const evidence = makeEvidence('occurrence-a', 'identity-a', 'Evidence A');
+      const lookup = buildAiContextEvidenceLookup([evidence]);
+
+      expect(lookup.get('occurrence-a')).toBe(evidence);
+      expect(lookup.get('identity-a')).toBe(evidence);
+    });
+
+    it('uses the last evidence item for a duplicate identity key while preserving occurrence lookups', () => {
+      const first = makeEvidence('occurrence-a', 'shared-identity', 'First');
+      const second = makeEvidence('occurrence-b', 'shared-identity', 'Second');
+      const lookup = buildAiContextEvidenceLookup([first, second]);
+
+      expect(lookup.get('shared-identity')).toBe(second);
+      expect(lookup.get('occurrence-a')).toBe(first);
+      expect(lookup.get('occurrence-b')).toBe(second);
+    });
+
+    it('keeps distinct evidence occurrences isolated', () => {
+      const first = makeEvidence('occurrence-a', 'identity-a', 'First');
+      const second = makeEvidence('occurrence-b', 'identity-b', 'Second');
+      const lookup = buildAiContextEvidenceLookup([first, second]);
+
+      expect(lookup.get('occurrence-a')?.statement).toBe('First');
+      expect(lookup.get('identity-a')?.statement).toBe('First');
+      expect(lookup.get('occurrence-b')?.statement).toBe('Second');
+      expect(lookup.get('identity-b')?.statement).toBe('Second');
+      expect(lookup.get('identity-a')).not.toBe(lookup.get('identity-b'));
+    });
+  });
 
   const analysisContext = createAnalysisContext({
     asOf: CANONICAL_BIRTH_DETAILS.dateTimeStr,

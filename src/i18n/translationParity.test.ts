@@ -129,7 +129,15 @@ describe('English/Hindi localization resource parity', () => {
       'ui.profession.missingD10',
       'ui.profession.missingDomainEvidence'
     ];
-    const journeyStateKeys = ['available', 'partial', 'unavailable'].flatMap((state) => [
+    const careerJourneyStateKeys = [
+      'available',
+      'partial',
+      'unavailable',
+      'absent',
+      'notAssessed',
+      'executedNoCandidates',
+      'qualificationBlocked'
+    ].flatMap((state) => [
       `ui.journey.${state}`
     ]);
     const dashaLevelKeys = ['MD', 'AD', 'PD'].map((level) => `ui.dasha.levels.${level}`);
@@ -139,11 +147,16 @@ describe('English/Hindi localization resource parity', () => {
       ...professionMissingKeys,
       'ui.hero.notices',
       'ui.hero.noticePlural',
-      ...journeyStateKeys,
+      'ui.axes.partialConditionAssessment',
+      'ui.expression.executedNoCandidatesTitle',
+      'ui.expression.executedNoCandidatesDescription',
+      'ui.expression.executedNoCandidatesMessage',
+      ...careerJourneyStateKeys,
       ...dashaLevelKeys
     ];
+    const wealthJourneyStateKeys = ['available', 'partial', 'unavailable'].map((state) => `ui.journey.${state}`);
     const wealthDynamicKeys = [
-      ...journeyStateKeys,
+      ...wealthJourneyStateKeys,
       ...dashaLevelKeys
     ];
 

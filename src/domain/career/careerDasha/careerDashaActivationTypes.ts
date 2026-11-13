@@ -56,6 +56,15 @@ export type CareerDashaActivationRole =
   | 'REFINEMENT'
   | 'TRIGGER';
 
+export type CareerDashaEvidenceBasis =
+  | 'CONDITION_AND_RELEVANCE'
+  | 'CONDITION_RELEVANCE_AND_C8_EXPRESSION'
+  | 'UNAVAILABLE';
+
+export type CareerDashaActivationDiagnosticCode =
+  | 'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT'
+  | 'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE';
+
 export type CareerDashaEvidenceRole =
   | 'STRUCTURAL'
   | 'PLANETARY_RELEVANCE'
@@ -99,6 +108,11 @@ export interface CareerDashaActivation {
   readonly effect: CareerDashaActivationEffect;
   readonly direction: CareerDashaActivationDirection;
   readonly strength: CareerDashaActivationStrength;
+  readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+  readonly afflictionAssessed?: boolean;
+  readonly expressionEvidenceCount?: number;
+  readonly evidenceBasis?: CareerDashaEvidenceBasis;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly evidence: readonly CareerDashaActivationEvidence[];
   readonly statement: string;
   readonly start?: string;
@@ -116,6 +130,8 @@ export interface CareerDashaActivationHierarchy {
   readonly overallEffect: CareerDashaActivationEffect;
   readonly overallDirection: CareerDashaActivationDirection;
   readonly overallStrength: CareerDashaActivationStrength;
+  readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly dominantLevel: 'MD' | 'AD' | 'PD' | 'NONE';
   readonly statement: string;
   readonly diagnosticTrace?: CareerDashaActivationDiagnosticTrace;
@@ -138,6 +154,9 @@ export interface CareerDashaActivationDiagnosticTrace {
     readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
     readonly afflictionAssessed?: boolean;
     readonly expressionCount?: number;
+    readonly expressionEvidenceCount?: number;
+    readonly evidenceBasis?: CareerDashaEvidenceBasis;
+    readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
     readonly hasCareerPromise?: boolean;
     readonly planetActivates?: boolean;
     readonly planetChallenges?: boolean;

@@ -272,6 +272,24 @@ describe('CareerPage (P-UI-04)', () => {
     expect(within(journey).getAllByRole('link')).toHaveLength(10);
     expect(within(journey).getByRole('link', { name: /Natal promise/ })).toHaveAttribute('href', '#career-promise');
     expect(within(journey).getByRole('link', { name: /Candidate timeline/ })).toHaveAttribute('href', '#career-events');
+  });
+
+  it('labels an executed empty C8 result as no candidates, not absent', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        expression: { analysisStatus: 'EXECUTED', candidates: [] }
+      }
+    });
+
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
+
+    const journey = screen.getByRole('navigation', { name: 'Guided career journey' });
+    const expressions = within(journey).getByRole('link', { name: /Career expressions/ });
+    expect(expressions).toHaveAttribute('data-state', 'EXECUTED_NO_CANDIDATES');
+    expect(expressions).toHaveTextContent('Analysis ran; no candidates');
+    expect(screen.getByText('The expression analysis completed without producing candidates.')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Career overview' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Career evidence and confidence' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Career Sustainability, Risk & Timing Context' })).toBeInTheDocument();

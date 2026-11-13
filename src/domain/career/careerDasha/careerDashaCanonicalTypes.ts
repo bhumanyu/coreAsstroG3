@@ -6,8 +6,11 @@ import type {
 import type {
   CareerDashaActivationHierarchy,
   CareerDashaActivationEvidence,
+  CareerDashaActivationDiagnosticCode,
+  CareerDashaEvidenceBasis,
   CareerDashaTiming
 } from './careerDashaActivationTypes';
+import type { CareerPlanetaryConditionAssessment } from '../careerPlanetaryCondition';
 
 import {
   Planet
@@ -82,6 +85,11 @@ export interface CareerDashaCanonicalEvidence {
   readonly statement: string;
   readonly sourceIds: readonly string[];
   readonly provenance: CareerDashaCanonicalProvenance;
+  readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+  readonly afflictionAssessed?: boolean;
+  readonly expressionEvidenceCount?: number;
+  readonly evidenceBasis?: CareerDashaEvidenceBasis;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
 }
 
 /**
@@ -108,6 +116,11 @@ export interface CareerDashaCanonicalPeriod {
   readonly start?: string;
   readonly end?: string;
   readonly statement: string;
+  readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+  readonly afflictionAssessed?: boolean;
+  readonly expressionEvidenceCount?: number;
+  readonly evidenceBasis?: CareerDashaEvidenceBasis;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
 }
 
 /**

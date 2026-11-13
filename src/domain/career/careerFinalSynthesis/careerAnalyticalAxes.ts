@@ -2,6 +2,7 @@ import type { CareerNatalAnalysis } from '../careerNatalAnalysis';
 import type { CareerDashaCanonicalAnalysis } from '../careerDasha/careerDashaCanonicalTypes';
 import type { CareerD10CanonicalAnalysis } from '../careerD10/careerD10CanonicalTypes';
 import type { CareerFinalSynthesisResult } from './careerFinalSynthesisTypes';
+import type { CareerDashaActivationDiagnosticCode } from '../careerDasha/careerDashaActivationTypes';
 import { isNatalStrengthMappable } from '../canonicalCareerEvidenceMapper';
 
 export const CAREER_ANALYTICAL_AXES_VERSION = 'B01-AXIS-PROJECTION-v1' as const;
@@ -41,6 +42,7 @@ interface CareerAnalyticalAxisBase<TResult> {
   readonly methodVersion: typeof CAREER_ANALYTICAL_AXES_VERSION;
   readonly unavailableReason?: string;
   readonly diagnostic?: string;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
 }
 
 export interface CareerPromiseAxisResult {
@@ -53,6 +55,7 @@ export interface CareerActivationAxisResult {
   readonly effect: CareerDashaCanonicalAnalysis['overallEffect'];
   readonly strength: CareerDashaCanonicalAnalysis['overallStrength'];
   readonly dominantLevel: CareerDashaCanonicalAnalysis['dominantLevel'];
+  readonly conditionAssessment?: NonNullable<CareerDashaCanonicalAnalysis['hierarchy']>['conditionAssessment'];
 }
 
 export interface CareerSustainabilityAxisResult {
@@ -222,7 +225,12 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
           item.evidence.some(evidenceItem => evidenceItem.id.trim().length > 0)
       ).length
     : 0;
-  const status: CareerAnalyticalAxisStatus = !hierarchy
+  const partialConditionEffect = Boolean(hierarchy && [hierarchy.md, hierarchy.ad, hierarchy.pd].some(
+    item => item.conditionAssessment === 'PARTIAL' && (item.effect === 'ACTIVATES' || item.effect === 'CHALLENGES')
+  ));
+  const status: CareerAnalyticalAxisStatus = partialConditionEffect
+    ? 'PARTIAL'
+    : !hierarchy
     ? (hasEvidence ? 'PARTIAL' : 'UNAVAILABLE')
     : validDirection && validEffect && hasEvidence && completeLevels === 3
       ? 'AVAILABLE'
@@ -246,7 +254,8 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
           direction: dasha.overallDirection,
           effect: dasha.overallEffect,
           strength: dasha.overallStrength,
-          dominantLevel: dasha.dominantLevel
+          dominantLevel: dasha.dominantLevel,
+          conditionAssessment: hierarchy?.conditionAssessment ?? 'UNAVAILABLE'
         })
       : null,
     supportingEvidenceOccurrenceIds: sortedUnique(supporting),
@@ -259,7 +268,8 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
         ? [
             ...(completeLevels < 3 ? ['C9_DASHA_PERIOD_LEVELS'] : []),
             ...(canonicalEvidenceOccurrences.length === 0 ? ['C9_DASHA_EVIDENCE_PROVENANCE'] : []),
-            ...(!validDirection || !validEffect ? ['C9_DASHA_OVERALL_CLASSIFICATION'] : [])
+            ...(!validDirection || !validEffect ? ['C9_DASHA_OVERALL_CLASSIFICATION'] : []),
+            ...(partialConditionEffect ? ['C9_PARTIAL_CONDITION_ASSESSMENT'] : [])
           ]
         : ['C9_DASHA_HIERARCHY'],
       canonicalEvidenceOccurrences.length
@@ -271,7 +281,8 @@ function makeActivationAxis(dasha: CareerDashaCanonicalAnalysis): CareerActivati
       : {}),
     ...(hierarchy && status === 'PARTIAL'
       ? { diagnostic: 'The canonical hierarchy is present, but the overall classification, period-level evidence, or occurrence provenance is incomplete.' }
-      : {})
+      : {}),
+    ...(hierarchy?.diagnostics ? { diagnostics: hierarchy.diagnostics } : {})
   });
 }
 

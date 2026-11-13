@@ -301,73 +301,135 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     expect(result.canonicalC11.natalDirection).toBe('MIXED');
     expect(result.canonicalC11.natalStrength).toBe('STRONG');
     expect(trace).toMatchObject({
-      structuralPrimarySupportPassedToC9: expect.any(Number),
+      structuralPrimarySupportPassedToC9: 6,
       c9PlanetContextResolution: [
         { level: 'MD', planet: 'JUPITER', resolved: true },
         { level: 'AD', planet: 'MERCURY', resolved: true },
         { level: 'PD', planet: 'VENUS', resolved: true }
       ],
-      c9LevelResultsBeforeHierarchy: [
-        {
-          level: 'MD',
-          planet: 'JUPITER',
-          contextResolved: true,
-          relevance: expect.any(String),
-          condition: expect.any(String),
-          conditionAssessment: expect.any(String),
-          afflictionAssessed: expect.any(Boolean),
-          expressionCount: expect.any(Number),
-          hasCareerPromise: expect.any(Boolean),
-          planetActivates: expect.any(Boolean),
-          planetChallenges: expect.any(Boolean),
-          isRelevant: expect.any(Boolean),
-          direction: expect.any(String),
-          effect: expect.any(String)
-        },
-        {
-          level: 'AD',
-          planet: 'MERCURY',
-          contextResolved: true,
-          relevance: expect.any(String),
-          condition: expect.any(String),
-          conditionAssessment: expect.any(String),
-          afflictionAssessed: expect.any(Boolean),
-          expressionCount: expect.any(Number),
-          hasCareerPromise: expect.any(Boolean),
-          planetActivates: expect.any(Boolean),
-          planetChallenges: expect.any(Boolean),
-          isRelevant: expect.any(Boolean),
-          direction: expect.any(String),
-          effect: expect.any(String)
-        },
-        {
-          level: 'PD',
-          planet: 'VENUS',
-          contextResolved: true,
-          relevance: expect.any(String),
-          condition: expect.any(String),
-          conditionAssessment: expect.any(String),
-          afflictionAssessed: expect.any(Boolean),
-          expressionCount: expect.any(Number),
-          hasCareerPromise: expect.any(Boolean),
-          planetActivates: expect.any(Boolean),
-          planetChallenges: expect.any(Boolean),
-          isRelevant: expect.any(Boolean),
-          direction: expect.any(String),
-          effect: expect.any(String)
-        }
-      ],
-      c9ExpressionTrace: {
-        source: expect.any(String),
-        expressionCount: expect.any(Number),
-        evidenceCount: expect.any(Number),
-        evidenceWithPlanetAttributions: expect.any(Number),
-        planetAttributionCounts: expect.any(Array)
-      },
       natalPromiseDirectionPassedToProfessionRanking: 'MIXED'
     });
+    expect(trace.c9LevelResultsBeforeHierarchy).toEqual([
+      {
+        level: 'MD',
+        planet: 'JUPITER',
+        contextResolved: true,
+        relevance: 'PRIMARY',
+        condition: 'WEAK',
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false,
+        expressionCount: 0,
+        expressionEvidenceCount: 0,
+        evidenceBasis: 'CONDITION_AND_RELEVANCE',
+        diagnostics: [
+          'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
+          'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
+        ],
+        hasCareerPromise: true,
+        planetActivates: false,
+        planetChallenges: true,
+        isRelevant: true,
+        direction: 'CHALLENGE',
+        effect: 'CHALLENGES'
+      },
+      {
+        level: 'AD',
+        planet: 'MERCURY',
+        contextResolved: true,
+        relevance: 'SUPPORTING',
+        condition: 'NEUTRAL',
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false,
+        expressionCount: 0,
+        expressionEvidenceCount: 0,
+        evidenceBasis: 'CONDITION_AND_RELEVANCE',
+        diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'],
+        hasCareerPromise: true,
+        planetActivates: false,
+        planetChallenges: false,
+        isRelevant: true,
+        direction: 'NEUTRAL',
+        effect: 'DOES_NOT_ACTIVATE'
+      },
+      {
+        level: 'PD',
+        planet: 'VENUS',
+        contextResolved: true,
+        relevance: 'SUPPORTING',
+        condition: 'WEAK',
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false,
+        expressionCount: 0,
+        expressionEvidenceCount: 0,
+        evidenceBasis: 'CONDITION_AND_RELEVANCE',
+        diagnostics: [
+          'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
+          'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
+        ],
+        hasCareerPromise: true,
+        planetActivates: false,
+        planetChallenges: true,
+        isRelevant: true,
+        direction: 'CHALLENGE',
+        effect: 'CHALLENGES'
+      }
+    ]);
+    const c9Evidence = internalArtifacts.careerDashaEvidence as readonly {
+      readonly level: string;
+      readonly conditionAssessment?: string;
+      readonly afflictionAssessed?: boolean;
+      readonly expressionEvidenceCount?: number;
+      readonly evidenceBasis?: string;
+      readonly diagnostics?: readonly string[];
+    }[];
+    expect(c9Evidence.map(item => ({
+      level: item.level,
+      conditionAssessment: item.conditionAssessment,
+      afflictionAssessed: item.afflictionAssessed,
+      expressionEvidenceCount: item.expressionEvidenceCount,
+      evidenceBasis: item.evidenceBasis,
+      diagnostics: item.diagnostics
+    })).sort((a, b) => a.level.localeCompare(b.level))).toEqual([
+      {
+        level: 'AD',
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false,
+        expressionEvidenceCount: 0,
+        evidenceBasis: 'CONDITION_AND_RELEVANCE',
+        diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE']
+      },
+      {
+        level: 'MD',
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false,
+        expressionEvidenceCount: 0,
+        evidenceBasis: 'CONDITION_AND_RELEVANCE',
+        diagnostics: [
+          'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
+          'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
+        ]
+      },
+      {
+        level: 'PD',
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false,
+        expressionEvidenceCount: 0,
+        evidenceBasis: 'CONDITION_AND_RELEVANCE',
+        diagnostics: [
+          'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
+          'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
+        ]
+      }
+    ]);
     expect(trace).toMatchInlineSnapshot(`
       {
+        "c8ExpressionCoverage": {
+          "evidenceCount": 0,
+          "evidenceWithPlanetAttributionCount": 0,
+          "expressionCount": 0,
+          "expressionsWithEvidenceCount": 0,
+          "mechanismCandidateCount": 0,
+        },
         "c9ExpressionTrace": {
           "evidenceCount": 0,
           "evidenceWithPlanetAttributions": 0,
@@ -381,9 +443,15 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
             "condition": "WEAK",
             "conditionAssessment": "PARTIAL",
             "contextResolved": true,
+            "diagnostics": [
+              "C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT",
+              "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
+            ],
             "direction": "CHALLENGE",
             "effect": "CHALLENGES",
+            "evidenceBasis": "CONDITION_AND_RELEVANCE",
             "expressionCount": 0,
+            "expressionEvidenceCount": 0,
             "hasCareerPromise": true,
             "isRelevant": true,
             "level": "MD",
@@ -397,9 +465,14 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
             "condition": "NEUTRAL",
             "conditionAssessment": "PARTIAL",
             "contextResolved": true,
+            "diagnostics": [
+              "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
+            ],
             "direction": "NEUTRAL",
             "effect": "DOES_NOT_ACTIVATE",
+            "evidenceBasis": "CONDITION_AND_RELEVANCE",
             "expressionCount": 0,
+            "expressionEvidenceCount": 0,
             "hasCareerPromise": true,
             "isRelevant": true,
             "level": "AD",
@@ -413,9 +486,15 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
             "condition": "WEAK",
             "conditionAssessment": "PARTIAL",
             "contextResolved": true,
+            "diagnostics": [
+              "C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT",
+              "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
+            ],
             "direction": "CHALLENGE",
             "effect": "CHALLENGES",
+            "evidenceBasis": "CONDITION_AND_RELEVANCE",
             "expressionCount": 0,
+            "expressionEvidenceCount": 0,
             "hasCareerPromise": true,
             "isRelevant": true,
             "level": "PD",
@@ -779,6 +858,42 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
       },
       traceCheck: true
     });
+  });
+
+  it('C6 regression: dignity-derived weak conditions produce qualified Dasha challenges', () => {
+    // Weak dignity-derived condition is legitimate challenge evidence, while missing affliction
+    // remains unassessed and must not be inferred as an additional negative factor.
+    const chart = calculateHoroscope(LIVE_C9_DIAGNOSTIC_FIXTURE.birthDetails);
+    const asOf = resolveLiveC9DiagnosticAsOf(chart.vimshottari as VimshottariTimeline);
+    const result = runGoldenScenario({
+      scenarioId: 'C9-LIVE-DIAGNOSTIC',
+      description: 'Live C9 diagnostic fixture',
+      asOf,
+      temporalContext: 'Jupiter MD, Mercury AD, Venus PD',
+      expectedC11Fields: Object.freeze({}),
+      blockedFields: Object.freeze([])
+    });
+    const conclusionData = result.interpretation.conclusionData as Record<string, unknown>;
+    const internalArtifacts = conclusionData.internalArtifacts as Record<string, unknown>;
+    const diagnosticTrace = internalArtifacts.careerAvailabilityDiagnosticTrace as {
+      readonly c9LevelResultsBeforeHierarchy: readonly {
+        readonly conditionAssessment?: string;
+        readonly afflictionAssessed?: boolean;
+        readonly direction: string;
+        readonly effect: string;
+      }[];
+    };
+
+    expect(result.canonicalC11.dashaEffect).toBe('CHALLENGES');
+    expect(result.canonicalC11.timingStatus).toBe('CHALLENGED');
+    expect(diagnosticTrace.c9LevelResultsBeforeHierarchy).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false,
+        direction: 'CHALLENGE',
+        effect: 'CHALLENGES'
+      })
+    ]));
   });
 
   /**

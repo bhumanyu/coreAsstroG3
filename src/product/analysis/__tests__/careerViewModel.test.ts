@@ -61,6 +61,25 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
       .toBe('CANDIDATE');
   });
 
+  it('distinguishes an executed C8 analysis with no candidates from absent analysis', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        expression: {
+          analysisStatus: 'EXECUTED',
+          candidates: []
+        }
+      }
+    });
+
+    const expression = selectCareerViewModel(analysis).expression;
+
+    expect(expression.status).toBe('EXECUTED_NO_CANDIDATES');
+    expect(expression.available).toBe(false);
+    expect(expression.candidates).toEqual([]);
+  });
+
   it('surfaces B06 diagnostics through the career view model', () => {
     const base = createProductAnalysis();
     const analysis = createProductAnalysis({

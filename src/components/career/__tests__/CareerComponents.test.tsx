@@ -88,6 +88,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
     it('renders primary style, leadership potential, and secondary competencies when available', () => {
       const expression: CareerExpressionViewModel = {
         available: true,
+        status: 'AVAILABLE',
         primaryStyle: 'Strategic Leadership',
         leadershipPotential: 'HIGH',
         secondaryTraits: ['Analytical Reasoning', 'Organizational Governance'],
@@ -112,6 +113,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
     it('renders clean fallback when expression data is unavailable', () => {
       const expression: CareerExpressionViewModel = {
         available: false,
+        status: 'ABSENT',
         secondaryTraits: [],
         candidates: []
       };

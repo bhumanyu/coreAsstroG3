@@ -216,6 +216,35 @@ describe('B01 independent Career analytical axes', () => {
     expect(axes.activation.conflictingEvidenceOccurrenceIds).not.toContain('raw-dasha-source-1');
   });
 
+  it('marks activation partial when a contributing challenge uses partial condition data', () => {
+    const md = {
+      ...period('MD', 'CHALLENGE', 'CHALLENGES', 'md', '2025-01-01', '2026-01-01'),
+      conditionAssessment: 'PARTIAL',
+      afflictionAssessed: false,
+      expressionEvidenceCount: 0,
+      evidenceBasis: 'CONDITION_AND_RELEVANCE',
+      diagnostics: [
+        'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
+        'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
+      ]
+    };
+    const partialHierarchy = {
+      ...hierarchy({ md }),
+      conditionAssessment: 'PARTIAL',
+      diagnostics: [
+        'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
+        'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
+      ]
+    } as unknown as CareerDashaActivationHierarchy;
+    const axes = build({
+      dasha: dasha('CHALLENGE', partialHierarchy, undefined, 'STRONG', 'CHALLENGES')
+    });
+
+    expect(axes.activation.status).toBe('PARTIAL');
+    expect(axes.activation.result?.conditionAssessment).toBe('PARTIAL');
+    expect(axes.activation.diagnostics).toContain('C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT');
+  });
+
   it('keeps strong promise while exposing elevated D10 risk as a separate axis', () => {
     const axes = build({
       natal: natal('SUPPORT', 'VERY_STRONG'),

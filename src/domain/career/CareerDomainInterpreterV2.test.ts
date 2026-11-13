@@ -2999,6 +2999,18 @@ describe('CareerDomainInterpreterV2', () => {
 
       // Compare canonical C11 synthesis (authoritative conclusion)
       expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toBeDefined();
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis;
+      if (!canonicalC11) throw new Error('Canonical C11 baseline result is unavailable');
+      expect(canonicalC11.evidenceIds).toEqual(GOLDEN_C11_BASELINE.canonicalC11Synthesis.evidenceIds);
+      expect(canonicalC11.confidenceCoverage).toEqual(GOLDEN_C11_BASELINE.canonicalC11Synthesis.confidenceCoverage);
+      expect(canonicalC11.confidenceReasons).toEqual(GOLDEN_C11_BASELINE.canonicalC11Synthesis.confidenceReasons);
+      const nonDashaIds = (ids: readonly string[]) => ids.filter(id => !/^(MD|AD|PD):/.test(id));
+      expect(nonDashaIds(canonicalC11.sourceIds)).toEqual(
+        nonDashaIds(GOLDEN_C11_BASELINE.canonicalC11Synthesis.sourceIds)
+      );
+      expect(nonDashaIds(canonicalC11.ruleIds)).toEqual(
+        nonDashaIds(GOLDEN_C11_BASELINE.canonicalC11Synthesis.ruleIds)
+      );
       expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toMatchObject({
         finalDirection: GOLDEN_C11_BASELINE.canonicalC11Synthesis.finalDirection,
         finalStrength: GOLDEN_C11_BASELINE.canonicalC11Synthesis.finalStrength,

@@ -1826,6 +1826,19 @@ function projectLifeAnalysisAtAiBoundary(
   };
 }
 
+export function buildAiContextEvidenceLookup(
+  evidence: readonly AiEvidence[]
+): ReadonlyMap<string, AiEvidence> {
+  const lookup = new Map<string, AiEvidence>();
+  for (const item of evidence) {
+    lookup.set(item.id, item);
+    if (item.identityKey) {
+      lookup.set(item.identityKey, item);
+    }
+  }
+  return lookup;
+}
+
 export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOptions): AiContext {
   const source: AiContextSource = {
     engine: 'CORE_ASTRO',
@@ -1875,13 +1888,7 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
 
   const currentDasha = options?.temporalState?.dashaInterpretation?.current;
   const evidence = buildAiContextEvidence(horoscope, rawDomainInterpretations, currentDasha);
-  const evidenceMap = new Map<string, AiEvidence>();
-  for (const item of evidence) {
-    evidenceMap.set(item.id, item);
-    if (item.identityKey) {
-      evidenceMap.set(item.identityKey, item);
-    }
-  }
+  const evidenceMap = buildAiContextEvidenceLookup(evidence);
 
   // Net invariant assertion: every context.domainInterpretations[].evidence[].id MUST exist in context.evidence
   for (const di of domainInterpretations) {

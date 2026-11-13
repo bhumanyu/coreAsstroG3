@@ -140,6 +140,7 @@ export interface CareerPromiseProduct {
 }
 
 export interface CareerExpressionProduct {
+  readonly analysisStatus?: 'EXECUTED' | 'ABSENT';
   readonly primaryStyle?: string;
   readonly leadershipPotential?: string;
   readonly secondaryTraits?: readonly string[];
@@ -257,6 +258,7 @@ export interface ProductCareerAnalyticalAxis<TResult> {
   readonly methodVersion: string;
   readonly unavailableReason?: string;
   readonly diagnostic?: string;
+  readonly diagnostics?: readonly string[];
 }
 
 export interface ProductCareerTimingCandidateWindow {
@@ -284,6 +286,7 @@ export interface ProductCareerAnalyticalAxes {
     readonly effect: string;
     readonly strength: string;
     readonly dominantLevel: 'MD' | 'AD' | 'PD' | 'NONE';
+    readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   }>;
   readonly sustainability: ProductCareerAnalyticalAxis<{
     readonly assessment: 'NOT_ASSESSED';

@@ -127,9 +127,11 @@ export const CareerPage: React.FC<CareerPageProps> = ({
       return 'UNAVAILABLE' as const;
     })();
 
-  const expressionState = !viewModel.expression.available
+  const expressionState = viewModel.expression.status === 'ABSENT'
     ? 'ABSENT' as const
-    : viewModel.expression.candidates.length > 0
+    : viewModel.expression.status === 'EXECUTED_NO_CANDIDATES'
+      ? 'EXECUTED_NO_CANDIDATES' as const
+      : viewModel.expression.candidates.length > 0
       && viewModel.expression.candidates.every(candidate => candidate.qualificationStatus === 'NOT_APPLICABLE')
       ? 'NOT_ASSESSED' as const
       : viewModel.expression.candidates.length > 0

@@ -59,6 +59,7 @@ export interface CareerPromiseViewModel {
 
 export interface CareerExpressionViewModel {
   readonly available: boolean;
+  readonly status: 'AVAILABLE' | 'ABSENT' | 'EXECUTED_NO_CANDIDATES';
   readonly primaryStyle?: string;
   readonly leadershipPotential?: string;
   readonly secondaryTraits?: readonly string[];
@@ -259,9 +260,13 @@ export function selectCareerViewModel(
       (career.expression.secondaryTraits && career.expression.secondaryTraits.length > 0) ||
       expressionCandidates.length > 0)
   );
+  const expressionStatus = career.expression?.analysisStatus === 'EXECUTED' && expressionCandidates.length === 0
+    ? 'EXECUTED_NO_CANDIDATES' as const
+    : hasExpressionData ? 'AVAILABLE' as const : 'ABSENT' as const;
 
   const expression: CareerExpressionViewModel = {
-    available: hasExpressionData,
+    available: expressionStatus === 'AVAILABLE',
+    status: expressionStatus,
     primaryStyle: career.expression?.primaryStyle,
     leadershipPotential: career.expression?.leadershipPotential,
     secondaryTraits: career.expression?.secondaryTraits ?? [],
