@@ -3,6 +3,7 @@ import type { CareerProfessionViewModel } from '../../product/analysis/careerVie
 import { getMissingInputLabel } from '../../product/analysis/careerQualificationPresentation';
 import type { CareerProfessionStatus } from '../../product/analysis/careerQualificationPresentation';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerProfessionStatusSectionProps {
   readonly profession: CareerProfessionViewModel;
@@ -10,6 +11,7 @@ export interface CareerProfessionStatusSectionProps {
 
 export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSectionProps> = ({ profession }) => {
   const { t } = useTranslation('career');
+  const { t: tEnum } = useTranslation('enums');
   const statusCopyKeyByStatus: Record<CareerProfessionStatus, string> = {
     COMPLETE: 'complete',
     PARTIAL: 'partial',
@@ -34,7 +36,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
         {t('ui.profession.title')}
       </h2>
       <span className="rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-xs text-slate-300">
-        {profession.status}
+        {enumLabel(tEnum, 'professionStatus', profession.status)}
       </span>
     </div>
     <p className="text-sm text-slate-200">{statusLabel}</p>
@@ -56,7 +58,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     <div className="space-y-2 pt-3">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-xs font-semibold text-slate-300">{t('ui.profession.ranking')}</h3>
-        <span className="text-[11px] text-slate-400">{profession.ranking.status}</span>
+        <span className="text-[11px] text-slate-400">{enumLabel(tEnum, 'productAvailability', profession.ranking.status)}</span>
       </div>
       <p className="text-xs leading-relaxed text-slate-400">
         {t('ui.profession.rankingDescription')}
@@ -92,8 +94,8 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                 </ul>
               )}
               <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10')}: </dt><dd className="inline">{candidate.d10Status} ({candidate.d10Direction})</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.evidenceCoverage')}: </dt><dd className="inline">{candidate.evidenceCoverage.status} · {t('ui.profession.occurrences', { count: candidate.evidenceCoverage.occurrenceCount })} · {t('ui.profession.roots', { count: candidate.evidenceCoverage.rootIdentityCount })}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10')}: </dt><dd className="inline">{enumLabel(tEnum, 'professionCandidateStatus', candidate.d10Status)} ({enumLabel(tEnum, 'productDirection', candidate.d10Direction)})</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.evidenceCoverage')}: </dt><dd className="inline">{enumLabel(tEnum, 'careerAxisCoverage', candidate.evidenceCoverage.status)} · {t('ui.profession.occurrences', { count: candidate.evidenceCoverage.occurrenceCount })} · {t('ui.profession.roots', { count: candidate.evidenceCoverage.rootIdentityCount })}</dd></div>
               </dl>
               {candidate.reasons.length > 0 && (
                 <ul aria-label={t('ui.profession.reasonsAria', { domain: candidate.domain, family: candidate.family })} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
@@ -140,7 +142,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
               </h4>
               <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
                 <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.basis')}: </dt><dd className="inline">{candidate.basis}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10Status')}: </dt><dd className="inline">{candidate.d10Status}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.d10Status')}: </dt><dd className="inline">{enumLabel(tEnum, 'professionCandidateStatus', candidate.d10Status)}</dd></div>
                 <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.patternRefs')}: </dt><dd className="inline">{candidate.patternIds.join(', ') || t('ui.axes.none')}</dd></div>
                 <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.expressions')}: </dt><dd className="inline">{candidate.expressionTypes.join(', ') || t('ui.axes.none')}</dd></div>
                 <div><dt className="inline font-semibold text-slate-300">{t('ui.profession.mechanismTypes')}: </dt><dd className="inline">{candidate.mechanismTypes.join(', ') || t('ui.axes.none')}</dd></div>

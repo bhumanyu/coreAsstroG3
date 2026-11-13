@@ -1,17 +1,14 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningChainNodeViewModel } from '../../product/analysis/reasoningViewModel';
 import {
-  formatDirection,
   getDirectionBadgeClass,
-  formatPromiseStrength,
   getPromiseStrengthBadgeClass,
-  formatVargaRelationship,
   getVargaRelationshipBadgeClass,
-  formatTransitEffect,
-  formatAvailability,
   getAvailabilityBadgeClass
 } from './reasoningFormat';
 import { GitCommit, Star, Layers, Clock, Compass, BrainCircuit } from 'lucide-react';
+import { enumLabel, type EnumLabelTranslator } from '../../i18n/enumLabels';
 
 export interface ReasoningNodeProps {
   readonly node: ReasoningChainNodeViewModel;
@@ -57,17 +54,17 @@ interface BadgeData {
   badgeClass: string;
 }
 
-function resolveNodeBadge(node: ReasoningChainNodeViewModel): BadgeData | null {
+function resolveNodeBadge(node: ReasoningChainNodeViewModel, t: EnumLabelTranslator): BadgeData | null {
   if (node.type === 'PROMISE' && node.promiseStrength) {
     return {
-      text: formatPromiseStrength(node.promiseStrength),
+      text: enumLabel(t, 'promiseStrength', node.promiseStrength),
       badgeClass: getPromiseStrengthBadgeClass(node.promiseStrength)
     };
   }
 
   if (node.type === 'VARGA' && node.vargaRelationship) {
     return {
-      text: formatVargaRelationship(node.vargaRelationship),
+      text: enumLabel(t, 'divisionalRelationship', node.vargaRelationship),
       badgeClass: getVargaRelationshipBadgeClass(node.vargaRelationship)
     };
   }
@@ -76,13 +73,13 @@ function resolveNodeBadge(node: ReasoningChainNodeViewModel): BadgeData | null {
     const dir = node.dashaDirection ?? node.direction;
     if (dir) {
       return {
-        text: formatDirection(dir),
+        text: enumLabel(t, 'productDirection', dir),
         badgeClass: getDirectionBadgeClass(dir)
       };
     }
     if (node.availability && node.availability !== 'AVAILABLE') {
       return {
-        text: formatAvailability(node.availability),
+        text: enumLabel(t, 'productAvailability', node.availability),
         badgeClass: getAvailabilityBadgeClass(node.availability)
       };
     }
@@ -90,7 +87,7 @@ function resolveNodeBadge(node: ReasoningChainNodeViewModel): BadgeData | null {
 
   if (node.type === 'TRANSIT' && node.transitEffect) {
     return {
-      text: formatTransitEffect(node.transitEffect),
+      text: enumLabel(t, 'transitEffect', node.transitEffect),
       badgeClass: getTransitBadgeClass(node.transitEffect)
     };
   }
@@ -98,7 +95,7 @@ function resolveNodeBadge(node: ReasoningChainNodeViewModel): BadgeData | null {
   if (node.type === 'SYNTHESIS') {
     if (node.direction) {
       return {
-        text: formatDirection(node.direction),
+        text: enumLabel(t, 'productDirection', node.direction),
         badgeClass: getDirectionBadgeClass(node.direction)
       };
     }
@@ -107,7 +104,7 @@ function resolveNodeBadge(node: ReasoningChainNodeViewModel): BadgeData | null {
 
   if (node.direction) {
     return {
-      text: formatDirection(node.direction),
+      text: enumLabel(t, 'productDirection', node.direction),
       badgeClass: getDirectionBadgeClass(node.direction)
     };
   }
@@ -116,7 +113,8 @@ function resolveNodeBadge(node: ReasoningChainNodeViewModel): BadgeData | null {
 }
 
 export const ReasoningNode: React.FC<ReasoningNodeProps> = ({ node, stepNumber }) => {
-  const badge = resolveNodeBadge(node);
+  const { t } = useTranslation('enums');
+  const badge = resolveNodeBadge(node, t);
 
   return (
     <div className="relative flex items-start gap-4 p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 transition-colors">

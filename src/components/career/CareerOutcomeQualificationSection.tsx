@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ProductCareerOutcomeAnalysis } from '../../product/analysis/productAnalysisTypes';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerOutcomeQualificationSectionProps {
   readonly outcomeQualification: ProductCareerOutcomeAnalysis;
@@ -16,6 +17,7 @@ export const CareerOutcomeQualificationSection: React.FC<CareerOutcomeQualificat
   outcomeQualification
 }) => {
   const { t } = useTranslation('career');
+  const { t: tEnum } = useTranslation('enums');
   return (
   <section
     aria-labelledby="career-outcome-qualification-heading"
@@ -26,7 +28,7 @@ export const CareerOutcomeQualificationSection: React.FC<CareerOutcomeQualificat
         {t('ui.outcomes.title')}
       </h2>
       <span className="rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-xs text-slate-300">
-        {outcomeQualification.status}
+        {enumLabel(tEnum, 'careerOutcomeStatus', outcomeQualification.status)}
       </span>
     </div>
 
@@ -43,17 +45,17 @@ export const CareerOutcomeQualificationSection: React.FC<CareerOutcomeQualificat
           {outcomeQualification.candidateOutcomes.map(candidate => (
             <li key={candidate.candidateId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-medium text-slate-100">{candidate.outcomeType.replaceAll('_', ' ')}</h4>
-                <span className="text-xs text-slate-300">{candidate.qualification}</span>
+                <h4 className="text-sm font-medium text-slate-100">{enumLabel(tEnum, 'careerOutcomeType', candidate.outcomeType)}</h4>
+                <span className="text-xs text-slate-300">{enumLabel(tEnum, 'careerOutcomeQualification', candidate.qualification)}</span>
               </div>
               <p className="text-xs text-slate-400">
                 {t('ui.outcomes.candidateOnly')} · {t('ui.outcomes.noGuarantee')} · {timingLabel(candidate.timing, t('ui.outcomes.untimed'))}
               </p>
               <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.d10Qualification')}: </dt><dd className="inline">{candidate.executionConditions.d10Qualification}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.professionAnalysis')}: </dt><dd className="inline">{candidate.executionConditions.professionAnalysisStatus}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.practicalExecution')}: </dt><dd className="inline">{candidate.executionConditions.practicalExecution}</dd></div>
-                <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.counterSeverity')}: </dt><dd className="inline">{candidate.counterIndications.severity}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.d10Qualification')}: </dt><dd className="inline">{enumLabel(tEnum, 'careerOutcomeD10Qualification', candidate.executionConditions.d10Qualification)}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.professionAnalysis')}: </dt><dd className="inline">{enumLabel(tEnum, 'careerOutcomeProfessionAnalysis', candidate.executionConditions.professionAnalysisStatus)}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.practicalExecution')}: </dt><dd className="inline">{enumLabel(tEnum, 'careerPathwayAssessment', candidate.executionConditions.practicalExecution)}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">{t('ui.outcomes.counterSeverity')}: </dt><dd className="inline">{enumLabel(tEnum, 'careerCounterIndicationSeverity', candidate.counterIndications.severity)}</dd></div>
               </dl>
               <p className="text-xs text-slate-400">
                 {t('ui.outcomes.practicalChecks')}: {candidate.executionConditions.requiredChecks.join(', ')}
@@ -62,7 +64,7 @@ export const CareerOutcomeQualificationSection: React.FC<CareerOutcomeQualificat
                 <ul aria-label={t('ui.outcomes.counterIndications', { id: candidate.candidateId })} className="space-y-1 text-xs text-amber-300">
                   {candidate.counterIndications.conflicts.map((conflict, index) => (
                     <li key={`${conflict.source}-${conflict.evidenceIdentityIds.join('|')}-${index}`}>
-                      {conflict.source}: {conflict.direction} ({conflict.severity})
+                      {conflict.source}: {enumLabel(tEnum, 'productDirection', conflict.direction)} ({enumLabel(tEnum, 'careerCounterIndicationSeverity', conflict.severity)})
                     </li>
                   ))}
                 </ul>
@@ -86,7 +88,7 @@ export const CareerOutcomeQualificationSection: React.FC<CareerOutcomeQualificat
         <ul aria-label={t('ui.outcomes.observedAria')} className="space-y-2">
           {outcomeQualification.observedOutcomes.map(outcome => (
             <li key={outcome.reportId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-              <p className="text-sm font-medium text-slate-100">{outcome.outcomeType.replaceAll('_', ' ')}</p>
+              <p className="text-sm font-medium text-slate-100">{enumLabel(tEnum, 'careerOutcomeType', outcome.outcomeType)}</p>
               <p className="text-xs text-slate-300">{outcome.statement}</p>
               <p className="text-xs text-slate-500">
                 USER_REPORTED{outcome.occurredAt ? ` · ${outcome.occurredAt}` : ''} · {outcome.reportId}

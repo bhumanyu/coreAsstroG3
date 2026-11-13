@@ -1,12 +1,17 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import i18n from '../../i18n/i18n';
 import { CareerPage } from '../CareerPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 import { analyzeCareerPathways } from '../../domain/career/careerPathway';
 
 describe('CareerPage (P-UI-04)', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   it('1. Loading state: renders CareerLoadingState when status is LOADING', () => {
     render(
       <CareerPage
@@ -108,7 +113,7 @@ describe('CareerPage (P-UI-04)', () => {
 
     // Profession analysis status is distinct from pattern qualification.
     expect(screen.getByRole('heading', { name: 'Profession Analysis Status' })).toBeInTheDocument();
-    expect(screen.getByText('INSUFFICIENT_DATA')).toBeInTheDocument();
+    expect(screen.getAllByText('Insufficient data').length).toBeGreaterThan(0);
     expect(screen.getByText(/profession analysis could not be completed.*not a negative career prediction/i)).toBeInTheDocument();
 
     // Evidence
@@ -290,9 +295,9 @@ describe('CareerPage (P-UI-04)', () => {
 
     render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
     const comparison = screen.getByRole('region', { name: 'Corporate & Independent Pathways' });
-    expect(within(comparison).getByText('CONDITIONAL_DUAL_POTENTIAL')).toBeInTheDocument();
-    expect(within(comparison).getByText('employment-candidate · SUPPORTED CANDIDATE')).toBeInTheDocument();
-    expect(within(comparison).getByText('business-candidate · CONDITIONALLY SUPPORTED CANDIDATE')).toBeInTheDocument();
+    expect(within(comparison).getByText('Conditional dual potential')).toBeInTheDocument();
+    expect(within(comparison).getByText('employment-candidate · Supported candidate')).toBeInTheDocument();
+    expect(within(comparison).getByText('business-candidate · Conditionally supported candidate')).toBeInTheDocument();
     expect(within(comparison).getByText(/not a suitability verdict or recommendation/i)).toBeInTheDocument();
   });
 

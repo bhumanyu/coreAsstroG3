@@ -1,13 +1,12 @@
 import React from 'react';
 import type { CareerEvidenceViewModel } from '../../product/analysis/careerViewModel';
 import {
-  formatEvidenceRole,
-  formatDirection,
   getEvidenceRoleBadgeClass,
   getDirectionBadgeClass
 } from './careerFormat';
 import { Network, ArrowRight, ShieldCheck, Database, GitFork } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerEvidenceSectionProps {
   readonly evidence: readonly CareerEvidenceViewModel[];
@@ -19,6 +18,7 @@ export const CareerEvidenceSection: React.FC<CareerEvidenceSectionProps> = ({
   onOpenReasoning
 }) => {
   const { t } = useTranslation('career');
+  const { t: tEnum } = useTranslation('enums');
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -52,8 +52,8 @@ export const CareerEvidenceSection: React.FC<CareerEvidenceSectionProps> = ({
 
       <div className="space-y-3">
         {evidence.map((item) => {
-          const roleLabel = formatEvidenceRole(item.role);
-          const directionLabel = formatDirection(item.direction);
+          const roleLabel = enumLabel(tEnum, 'productEvidenceRole', item.role);
+          const directionLabel = enumLabel(tEnum, 'productDirection', item.direction);
           const roleClass = getEvidenceRoleBadgeClass(item.role);
           const directionClass = getDirectionBadgeClass(item.direction);
 

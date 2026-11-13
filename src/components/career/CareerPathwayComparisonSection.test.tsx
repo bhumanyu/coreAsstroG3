@@ -66,11 +66,11 @@ describe('CareerPathwayComparisonSection', () => {
   it('renders the canonical B05 dual-potential verdict with both evidence trails', () => {
     const { container } = render(<CareerPathwayComparisonSection pathwayPotential={makePathway()} />);
     const region = screen.getByRole('region', { name: 'Corporate & Independent Pathways' });
-    expect(within(region).getByText('DUAL_POTENTIAL')).toBeInTheDocument();
-    expect(within(region).getByText('employment-1 · SUPPORTED CANDIDATE')).toBeInTheDocument();
-    expect(within(region).getByText('business-1 · SUPPORTED CANDIDATE')).toBeInTheDocument();
+    expect(within(region).getByText('Dual potential')).toBeInTheDocument();
+    expect(within(region).getByText('employment-1 · Supported candidate')).toBeInTheDocument();
+    expect(within(region).getByText('business-1 · Supported candidate')).toBeInTheDocument();
     expect(within(region).getByText(/not a recommendation/i)).toBeInTheDocument();
-    expect(container).toHaveTextContent('Financial readiness: NOT_ASSESSED');
+    expect(container).toHaveTextContent('Financial readiness: Not assessed');
   });
 
   it('keeps an absent pathway as NOT_IDENTIFIED rather than unsuitable', () => {
@@ -95,7 +95,7 @@ describe('CareerPathwayComparisonSection', () => {
     };
     render(<CareerPathwayComparisonSection pathwayPotential={partial} />);
     const region = screen.getByRole('region', { name: 'Corporate & Independent Pathways' });
-    expect(within(region).getByText('NOT_IDENTIFIED')).toBeInTheDocument();
+    expect(within(region).getByText('Not identified')).toBeInTheDocument();
     expect(within(region).getByText(/absence is not evidence of unsuitability/i)).toBeInTheDocument();
   });
 

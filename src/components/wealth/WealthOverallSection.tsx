@@ -1,14 +1,12 @@
 import React from 'react';
 import type { WealthOverallViewModel } from '../../product/analysis/wealthViewModel';
 import {
-  formatStrength,
-  formatConclusionStatus,
-  formatConfidence,
   getPromiseStrengthBadgeClass,
   getConclusionStatusBadgeClass
 } from './wealthFormat';
 import { Coins, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthOverallSectionProps {
   readonly overall: WealthOverallViewModel;
@@ -16,9 +14,10 @@ export interface WealthOverallSectionProps {
 
 export const WealthOverallSection: React.FC<WealthOverallSectionProps> = ({ overall }) => {
   const { t } = useTranslation('wealth');
-  const formattedStrength = formatStrength(overall.promise);
-  const formattedStatus = formatConclusionStatus(overall.status);
-  const formattedConfidence = formatConfidence(overall.confidence);
+  const { t: tEnum } = useTranslation('enums');
+  const formattedStrength = enumLabel(tEnum, 'promiseStrength', overall.promise);
+  const formattedStatus = enumLabel(tEnum, 'wealthDimensionStatus', overall.status);
+  const formattedConfidence = enumLabel(tEnum, 'productConfidence', overall.confidence);
 
   const promiseBadgeClass = getPromiseStrengthBadgeClass(overall.promise);
   const statusBadgeClass = getConclusionStatusBadgeClass(overall.status);

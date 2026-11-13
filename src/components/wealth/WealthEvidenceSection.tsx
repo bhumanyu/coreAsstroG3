@@ -1,13 +1,12 @@
 import React from 'react';
 import type { WealthEvidenceViewModel } from '../../product/analysis/wealthViewModel';
 import {
-  formatDirection,
-  formatEvidenceRole,
   getDirectionBadgeClass,
   getEvidenceRoleBadgeClass
 } from './wealthFormat';
 import { FileText, GitFork, ArrowUpRight, BookOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthEvidenceSectionProps {
   readonly evidence: readonly WealthEvidenceViewModel[];
@@ -19,6 +18,7 @@ export const WealthEvidenceSection: React.FC<WealthEvidenceSectionProps> = ({
   onOpenReasoning
 }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
@@ -52,8 +52,8 @@ export const WealthEvidenceSection: React.FC<WealthEvidenceSectionProps> = ({
 
       <div className="space-y-3">
         {evidence.map((item) => {
-          const roleLabel = formatEvidenceRole(item.role);
-          const directionLabel = formatDirection(item.direction);
+          const roleLabel = enumLabel(tEnum, 'productEvidenceRole', item.role);
+          const directionLabel = enumLabel(tEnum, 'productDirection', item.direction);
           const roleClass = getEvidenceRoleBadgeClass(item.role);
           const directionClass = getDirectionBadgeClass(item.direction);
 

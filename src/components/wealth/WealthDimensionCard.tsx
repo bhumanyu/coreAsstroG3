@@ -1,7 +1,9 @@
 import React from 'react';
 import type { WealthDimensionItemViewModel } from '../../product/analysis/wealthViewModel';
-import { formatConclusionStatus, getConclusionStatusBadgeClass } from './wealthFormat';
+import { getConclusionStatusBadgeClass } from './wealthFormat';
 import { Landmark, TrendingUp, Sparkles, Flame } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthDimensionCardProps {
   readonly dimension: WealthDimensionItemViewModel;
@@ -15,7 +17,8 @@ const DIMENSION_ICONS: Record<string, React.ReactNode> = {
 };
 
 export const WealthDimensionCard: React.FC<WealthDimensionCardProps> = ({ dimension }) => {
-  const formattedStatus = formatConclusionStatus(dimension.status);
+  const { t } = useTranslation('enums');
+  const formattedStatus = enumLabel(t, 'wealthDimensionStatus', dimension.status);
   const statusBadgeClass = getConclusionStatusBadgeClass(dimension.status);
   const icon = DIMENSION_ICONS[dimension.id] ?? (
     <Landmark className="w-4 h-4 text-slate-400" aria-hidden="true" />

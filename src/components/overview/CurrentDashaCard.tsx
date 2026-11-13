@@ -2,8 +2,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OverviewDasha } from '../../product/analysis/overviewViewModel';
 import type { ProductDashaPeriod } from '../../product/analysis/productAnalysisTypes';
-import { formatDirection, formatEvidenceRole } from './overviewFormat';
 import { Clock, ArrowRight, Calendar, Sparkles } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CurrentDashaCardProps {
   readonly dasha: OverviewDasha;
@@ -15,6 +15,7 @@ export const CurrentDashaCard: React.FC<CurrentDashaCardProps> = ({
   onOpenDasha
 }) => {
   const { t } = useTranslation('dashboard');
+  const { t: tEnum } = useTranslation('enums');
   const levelNames: Record<string, string> = {
     MD: t('dasha.mahadasha'),
     AD: t('dasha.antardasha'),
@@ -47,8 +48,8 @@ export const CurrentDashaCard: React.FC<CurrentDashaCardProps> = ({
     }
 
     const planetName = period.planet || t('unavailable');
-    const roleText = formatEvidenceRole(period.role);
-    const directionText = formatDirection(period.direction);
+    const roleText = enumLabel(tEnum, 'productEvidenceRole', period.role);
+    const directionText = enumLabel(tEnum, 'productDirection', period.direction);
 
     return (
       <div

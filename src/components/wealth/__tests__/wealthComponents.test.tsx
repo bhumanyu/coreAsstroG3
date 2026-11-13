@@ -1,6 +1,7 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18n from '../../../i18n/i18n';
 import {
   WealthHero,
   WealthOverallSection,
@@ -13,6 +14,7 @@ import {
   WealthEvidenceSection,
   WealthConclusionSection
 } from '../index';
+import { WealthDimensionCard } from '../WealthDimensionCard';
 import type {
   WealthHeroViewModel,
   WealthOverallViewModel,
@@ -28,6 +30,10 @@ import type {
 } from '../../../product/analysis/wealthViewModel';
 
 describe('Wealth Section Components Suite (P-UI-05)', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   describe('WealthHero', () => {
     it('renders heading, chart sign chips, confidence, and notice badge', () => {
       const hero: WealthHeroViewModel = {
@@ -87,6 +93,23 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
   });
 
   describe('WealthDimensionsSection', () => {
+    it('localizes insufficient dimension status in Hindi instead of showing the enum value', async () => {
+      await i18n.changeLanguage('hi');
+      render(
+        <WealthDimensionCard
+          dimension={{
+            id: 'ACCUMULATION',
+            label: 'संचय',
+            houseLabel: '2H',
+            status: 'INSUFFICIENT_DATA'
+          }}
+        />
+      );
+
+      expect(screen.getByText('अपर्याप्त डेटा')).toBeInTheDocument();
+      expect(screen.queryByText('INSUFFICIENT_DATA')).not.toBeInTheDocument();
+    });
+
     it('renders all four dimensions with house labels and statements', () => {
       const dimensions: WealthDimensionsViewModel = {
         accumulation: {

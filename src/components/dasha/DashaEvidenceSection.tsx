@@ -2,12 +2,12 @@ import React from 'react';
 import type { DashaEvidenceViewModel } from '../../product/analysis/dashaViewModel';
 import type { ProductEvidenceRole } from '../../product/analysis/productAnalysisTypes';
 import {
-  formatRole,
-  formatDirection,
   getRoleBadgeClass,
   getDirectionBadgeClass
 } from './dashaFormat';
 import { Network, ArrowRight, ShieldCheck, Database } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface DashaEvidenceSectionProps {
   readonly evidence: DashaEvidenceViewModel;
@@ -28,6 +28,7 @@ export const DashaEvidenceSection: React.FC<DashaEvidenceSectionProps> = ({
   evidence,
   onOpenReasoning
 }) => {
+  const { t: tEnum } = useTranslation('enums');
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
       {/* Section Header */}
@@ -69,7 +70,7 @@ export const DashaEvidenceSection: React.FC<DashaEvidenceSectionProps> = ({
             const items = evidence.groups[role] || [];
             if (items.length === 0) return null;
 
-            const roleLabel = formatRole(role);
+            const roleLabel = enumLabel(tEnum, 'productEvidenceRole', role);
             const roleClass = getRoleBadgeClass(role);
 
             return (
@@ -84,7 +85,7 @@ export const DashaEvidenceSection: React.FC<DashaEvidenceSectionProps> = ({
 
                 <div className="space-y-2">
                   {items.map((item) => {
-                    const directionLabel = formatDirection(item.direction);
+                    const directionLabel = enumLabel(tEnum, 'productDirection', item.direction);
                     const directionClass = getDirectionBadgeClass(item.direction);
 
                     return (

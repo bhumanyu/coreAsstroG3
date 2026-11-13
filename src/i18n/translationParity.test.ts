@@ -38,6 +38,7 @@ describe('English/Hindi localization resource parity', () => {
   it('registers every namespace provided by the translation resources', () => {
     const registered = new Set<string>(registeredNamespaces);
     expect(Object.keys(resources.en).filter((namespace) => !registered.has(namespace))).toEqual([]);
+    expect(registeredNamespaces).toContain('enums');
   });
 
   it.each(Object.keys(resources.en) as Array<keyof typeof resources.en>)('has matching non-empty %s keys', (namespace) => {

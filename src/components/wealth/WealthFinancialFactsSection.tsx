@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WealthFinancialDataViewModel, WealthFinancialItemViewModel } from '../../product/analysis/wealthViewModel';
 import { AlertCircle, FileCheck2, LockKeyhole } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthFinancialFactsSectionProps {
   readonly financialData: WealthFinancialDataViewModel;
@@ -17,11 +18,14 @@ const displayValue = (item: WealthFinancialItemViewModel): string => {
 
 const FinancialDatum: React.FC<{ item: WealthFinancialItemViewModel }> = ({ item }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   return <article className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 space-y-2">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3 className="text-sm font-medium text-slate-200">{item.label}</h3>
       <span className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-300">
-        {item.availability === 'AVAILABLE' ? item.sourceClassification.replaceAll('_', ' ') : 'UNAVAILABLE'}
+        {item.availability === 'AVAILABLE'
+          ? enumLabel(tEnum, 'wealthFinancialSourceClassification', item.sourceClassification)
+          : enumLabel(tEnum, 'productAvailability', item.availability)}
       </span>
     </div>
     <p className="text-base font-semibold text-slate-100">{displayValue(item)}</p>
@@ -45,6 +49,7 @@ const FinancialDatum: React.FC<{ item: WealthFinancialItemViewModel }> = ({ item
 
 export const WealthFinancialFactsSection: React.FC<WealthFinancialFactsSectionProps> = ({ financialData }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   const factItems = financialData.items.filter(item => item.group === 'FINANCIAL_FACT');
   const indicationItems = financialData.items.filter(item => item.group === 'ASTROLOGICAL_INDICATION');
   const unavailableItems = financialData.items.filter(item => item.group === 'UNAVAILABLE');
@@ -57,7 +62,9 @@ export const WealthFinancialFactsSection: React.FC<WealthFinancialFactsSectionPr
           <h2 id="wealth-financial-facts-heading" className="text-base font-semibold text-slate-100">{t('financialFacts.title')}</h2>
           <p className="mt-1 text-xs text-slate-400">{t('financialFacts.description')}</p>
         </div>
-        <span className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-300">{financialData.status}</span>
+        <span className="rounded-md border border-slate-700 px-2 py-1 text-[10px] text-slate-300">
+          {enumLabel(tEnum, 'wealthFinancialDataStatus', financialData.status)}
+        </span>
       </header>
 
       <div className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-400">

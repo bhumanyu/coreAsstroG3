@@ -1686,6 +1686,254 @@ export const resources = {
         INVALID_INPUT: 'This share link contains invalid chart inputs.'
       }
     },
+    enums: {
+      productDirection: {
+        SUPPORT: 'Supporting',
+        CHALLENGE: 'Challenging',
+        NEUTRAL: 'Neutral',
+        MIXED: 'Mixed',
+        UNAVAILABLE: 'Unavailable'
+      },
+      productEvidenceRole: {
+        PRIMARY: 'Primary Driver',
+        SUPPORTING: 'Supporting',
+        CHALLENGING: 'Challenging',
+        MODIFIER: 'Modifier',
+        REFINEMENT: 'Refinement',
+        CONFLICTING: 'Conflicting',
+        NEUTRAL: 'Contextual'
+      },
+      activationEffect: {
+        ACTIVATES: 'Activates',
+        PARTIALLY_ACTIVATES: 'Partially Activates',
+        DOES_NOT_ACTIVATE: 'Does Not Activate',
+        CHALLENGES: 'Challenges',
+        STRONGLY_SUPPORTS: 'Strongly Supports',
+        SUPPORTS: 'Supports',
+        CONTRADICTS: 'Contradicts',
+        UNKNOWN: 'Unknown',
+        INSUFFICIENT_DATA: 'Insufficient Data',
+        UNAVAILABLE: 'Unavailable'
+      },
+      transitEffect: {
+        TRIGGER: 'Trigger',
+        MODIFIER: 'Modifier',
+        CHALLENGE: 'Challenge',
+        NO_MATERIAL_TRIGGER: 'No Material Trigger',
+        UNKNOWN: 'Unknown',
+        INSUFFICIENT_DATA: 'Insufficient Data',
+        UNAVAILABLE: 'Unavailable'
+      },
+      productConfidence: {
+        LOW: 'Low Confidence',
+        MEDIUM: 'Medium Confidence',
+        HIGH: 'High Confidence'
+      },
+      promiseStrength: {
+        VERY_STRONG: 'Very Strong',
+        STRONG: 'Strong',
+        MODERATE: 'Moderate',
+        WEAK: 'Weak',
+        VERY_WEAK: 'Very Weak',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerAxisStatus: {
+        AVAILABLE: 'Available',
+        PARTIAL: 'Partial',
+        UNAVAILABLE: 'Unavailable',
+        INSUFFICIENT: 'Insufficient',
+        BLOCKED: 'Blocked',
+        NOT_APPLICABLE: 'Not Applicable'
+      },
+      careerAxisCoverage: {
+        COMPLETE: 'Complete',
+        PARTIAL: 'Partial',
+        INSUFFICIENT: 'Insufficient'
+      },
+      confidenceCoverage: {
+        COMPLETE: 'Complete',
+        PARTIAL: 'Partial',
+        INSUFFICIENT: 'Insufficient',
+        UNAVAILABLE: 'Unavailable',
+        BLOCKED: 'Blocked',
+        NOT_APPLICABLE: 'Not Applicable'
+      },
+      confidenceLayerState: {
+        AVAILABLE: 'Available',
+        PARTIAL: 'Partial',
+        UNAVAILABLE: 'Unavailable',
+        BLOCKED: 'Blocked',
+        NOT_APPLICABLE: 'Not Applicable'
+      },
+      divisionalRelationship: {
+        CONFIRMS: 'Confirms',
+        PARTIALLY_CONFIRMS: 'Partially Confirms',
+        MODIFIES: 'Modifies',
+        CONFLICTS: 'Conflicts',
+        UNAVAILABLE: 'Unavailable'
+      },
+      qualificationSeverity: {
+        LOW: 'Low Impact',
+        MEDIUM: 'Moderate',
+        HIGH: 'High Severity'
+      },
+      diagnosticSeverity: {
+        INFO: 'Information',
+        WARNING: 'Warning',
+        ERROR: 'Error'
+      },
+      dashaLevel: {
+        MD: 'Mahadasha (MD)',
+        AD: 'Antardasha (AD)',
+        PD: 'Pratyantardasha (PD)',
+        NONE: 'None'
+      },
+      professionStatus: {
+        COMPLETE: 'Analysis complete',
+        PARTIAL: 'Partial analysis',
+        INSUFFICIENT_DATA: 'Insufficient data'
+      },
+      professionCandidateStatus: {
+        QUALIFIED: 'Qualified',
+        PARTIAL: 'Partial',
+        CONFLICTED: 'Conflicted',
+        NOT_PROVIDED: 'Not provided',
+        UNAVAILABLE: 'Unavailable'
+      },
+      productStatus: {
+        READY: 'Ready',
+        PARTIAL: 'Partial',
+        ERROR: 'Error'
+      },
+      productAvailability: {
+        AVAILABLE: 'Available',
+        UNAVAILABLE: 'Unavailable',
+        CONDITIONAL: 'Conditional',
+        PARTIAL: 'Partial'
+      },
+      conclusionStatus: {
+        STRONGLY_SUPPORTED: 'Strongly Supported',
+        SUPPORTED: 'Supported',
+        MIXED: 'Mixed',
+        CHALLENGED: 'Challenged',
+        LIMITED: 'Limited',
+        UNAVAILABLE: 'Unavailable'
+      },
+      wealthDimensionStatus: {
+        STRONGLY_SUPPORTED: 'Strongly Supported',
+        SUPPORTED: 'Supported',
+        MIXED: 'Mixed',
+        CHALLENGED: 'Challenged',
+        LIMITED: 'Limited',
+        UNAVAILABLE: 'Unavailable',
+        INSUFFICIENT_DATA: 'Insufficient data'
+      },
+      careerOutcomeStatus: {
+        CANDIDATES_AVAILABLE: 'Candidates Available',
+        CONDITIONAL: 'Conditional',
+        PARTIAL: 'Partial',
+        UNRESOLVED: 'Unresolved',
+        INSUFFICIENT: 'Insufficient'
+      },
+      careerOutcomeType: {
+        CAREER_GROWTH_OR_EXPANSION: 'Career growth or expansion',
+        ROLE_OR_AUTHORITY_EXPANSION: 'Role or authority expansion',
+        EMPLOYMENT_OR_SERVICE_OPPORTUNITY: 'Employment or service opportunity',
+        TECHNICAL_SPECIALIZATION_OR_SKILL_DEVELOPMENT: 'Technical specialization or skill development',
+        INDEPENDENT_OR_BUSINESS_ACTIVITY: 'Independent or business activity',
+        PUBLIC_OR_INSTITUTIONAL_CAREER: 'Public or institutional career',
+        GENERAL_CAREER_OPPORTUNITY: 'General career opportunity'
+      },
+      careerOutcomeQualification: {
+        SUPPORTED_CANDIDATE: 'Supported candidate',
+        CONDITIONALLY_SUPPORTED_CANDIDATE: 'Conditionally supported candidate'
+      },
+      careerOutcomeProfessionAnalysis: {
+        COMPLETE: 'Complete',
+        PARTIAL: 'Partial',
+        INSUFFICIENT_DATA: 'Insufficient data',
+        NOT_PROVIDED: 'Not provided'
+      },
+      careerOutcomeD10Qualification: {
+        QUALIFIED: 'Qualified',
+        PARTIAL: 'Partial',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerCounterIndicationSeverity: {
+        NONE: 'None',
+        LOW: 'Low',
+        MODERATE: 'Moderate',
+        HIGH: 'High'
+      },
+      careerEventTimelineStatus: {
+        GENERIC_WINDOWS_ONLY: 'Generic timing windows only',
+        PARTIAL: 'Partial',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerPathwayStatus: {
+        AVAILABLE: 'Available',
+        PARTIAL: 'Partial',
+        UNAVAILABLE: 'Unavailable',
+        UNRESOLVED: 'Unresolved',
+        INSUFFICIENT_DATA: 'Insufficient data'
+      },
+      careerPathwayVerdict: {
+        DUAL_POTENTIAL: 'Dual potential',
+        CONDITIONAL_DUAL_POTENTIAL: 'Conditional dual potential',
+        EMPLOYMENT_POTENTIAL_IDENTIFIED: 'Employment potential identified',
+        INDEPENDENT_POTENTIAL_IDENTIFIED: 'Independent potential identified',
+        NO_MODE_CANDIDATE: 'No mode candidate',
+        UNRESOLVED: 'Unresolved',
+        INSUFFICIENT_DATA: 'Insufficient data'
+      },
+      careerPathwayModeStatus: {
+        SUPPORTED_CANDIDATE: 'Supported candidate',
+        CONDITIONAL_CANDIDATE: 'Conditional candidate',
+        NOT_IDENTIFIED: 'Not identified'
+      },
+      careerPathwayCandidateQualification: {
+        SUPPORTED_CANDIDATE: 'Supported candidate',
+        CONDITIONALLY_SUPPORTED_CANDIDATE: 'Conditionally supported candidate'
+      },
+      careerPathwayAssessment: {
+        NOT_ASSESSED: 'Not assessed'
+      },
+      wealthFinancialDataStatus: {
+        AVAILABLE: 'Available',
+        UNAVAILABLE: 'Unavailable'
+      },
+      wealthFinancialSourceClassification: {
+        ASTROLOGICAL_INDICATOR: 'Astrological indicator',
+        USER_REPORTED_FINANCIAL_FACT: 'User-reported financial fact',
+        CALCULATED_FINANCIAL_METRIC: 'Calculated financial metric',
+        CONNECTED_FINANCIAL_SOURCE: 'Connected financial source',
+        UNAVAILABLE: 'Unavailable'
+      },
+      wealthLifecycleAvailability: {
+        CANDIDATES_AVAILABLE: 'Candidates Available',
+        CONDITIONAL: 'Conditional',
+        PARTIAL: 'Partial',
+        UNRESOLVED: 'Unresolved',
+        INSUFFICIENT: 'Insufficient',
+        BLOCKED: 'Blocked'
+      },
+      wealthLifecycleEventStatus: {
+        CANDIDATE: 'Candidate',
+        CONDITIONAL: 'Conditional',
+        CONFLICTED: 'Conflicted',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerRiskAssessment: {
+        ADVERSE_EVIDENCE_PRESENT: 'Adverse evidence present',
+        NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES: 'No adverse evidence in available sources'
+      },
+      careerSustainabilityAssessment: {
+        NOT_ASSESSED: 'Not assessed'
+      },
+      guarantee: {
+        NONE: 'None'
+      }
+    },
     navigation: {
       productViews: 'Product Views',
       researchTools: 'Research & Developer Tools',
@@ -3408,6 +3656,254 @@ export const resources = {
         BAD_JSON: 'इस साझा लिंक का डेटा पढ़ा नहीं जा सकता।',
         UNSUPPORTED_VERSION: 'यह साझा लिंक ऐसे संस्करण का उपयोग करता है जिसका यह ऐप समर्थन नहीं करता।',
         INVALID_INPUT: 'इस साझा लिंक में कुंडली के अमान्य इनपुट हैं।'
+      }
+    },
+    enums: {
+      productDirection: {
+        SUPPORT: 'समर्थक',
+        CHALLENGE: 'चुनौतीपूर्ण',
+        NEUTRAL: 'तटस्थ',
+        MIXED: 'मिश्रित',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      productEvidenceRole: {
+        PRIMARY: 'प्रमुख कारक',
+        SUPPORTING: 'सहायक',
+        CHALLENGING: 'चुनौतीपूर्ण',
+        MODIFIER: 'संशोधक',
+        REFINEMENT: 'परिष्करण',
+        CONFLICTING: 'विरोधी',
+        NEUTRAL: 'संदर्भात्मक'
+      },
+      activationEffect: {
+        ACTIVATES: 'सक्रिय करता है',
+        PARTIALLY_ACTIVATES: 'आंशिक रूप से सक्रिय करता है',
+        DOES_NOT_ACTIVATE: 'सक्रिय नहीं करता',
+        CHALLENGES: 'चुनौती देता है',
+        STRONGLY_SUPPORTS: 'दृढ़ समर्थन देता है',
+        SUPPORTS: 'समर्थन देता है',
+        CONTRADICTS: 'विरोध करता है',
+        UNKNOWN: 'अज्ञात',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      transitEffect: {
+        TRIGGER: 'समय-संकेत',
+        MODIFIER: 'संशोधक',
+        CHALLENGE: 'चुनौती',
+        NO_MATERIAL_TRIGGER: 'कोई महत्वपूर्ण समय-संकेत नहीं',
+        UNKNOWN: 'अज्ञात',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      productConfidence: {
+        LOW: 'कम विश्वास',
+        MEDIUM: 'मध्यम विश्वास',
+        HIGH: 'उच्च विश्वास'
+      },
+      promiseStrength: {
+        VERY_STRONG: 'बहुत प्रबल',
+        STRONG: 'प्रबल',
+        MODERATE: 'मध्यम',
+        WEAK: 'कमज़ोर',
+        VERY_WEAK: 'बहुत कमज़ोर',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      careerAxisStatus: {
+        AVAILABLE: 'उपलब्ध',
+        PARTIAL: 'आंशिक',
+        UNAVAILABLE: 'उपलब्ध नहीं',
+        INSUFFICIENT: 'अपर्याप्त',
+        BLOCKED: 'अवरुद्ध',
+        NOT_APPLICABLE: 'लागू नहीं'
+      },
+      careerAxisCoverage: {
+        COMPLETE: 'पूर्ण',
+        PARTIAL: 'आंशिक',
+        INSUFFICIENT: 'अपर्याप्त'
+      },
+      confidenceCoverage: {
+        COMPLETE: 'पूर्ण',
+        PARTIAL: 'आंशिक',
+        INSUFFICIENT: 'अपर्याप्त',
+        UNAVAILABLE: 'उपलब्ध नहीं',
+        BLOCKED: 'अवरुद्ध',
+        NOT_APPLICABLE: 'लागू नहीं'
+      },
+      confidenceLayerState: {
+        AVAILABLE: 'उपलब्ध',
+        PARTIAL: 'आंशिक',
+        UNAVAILABLE: 'उपलब्ध नहीं',
+        BLOCKED: 'अवरुद्ध',
+        NOT_APPLICABLE: 'लागू नहीं'
+      },
+      divisionalRelationship: {
+        CONFIRMS: 'पुष्टि करता है',
+        PARTIALLY_CONFIRMS: 'आंशिक पुष्टि करता है',
+        MODIFIES: 'संशोधित करता है',
+        CONFLICTS: 'विरोध करता है',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      qualificationSeverity: {
+        LOW: 'कम प्रभाव',
+        MEDIUM: 'मध्यम',
+        HIGH: 'उच्च गंभीरता'
+      },
+      diagnosticSeverity: {
+        INFO: 'जानकारी',
+        WARNING: 'चेतावनी',
+        ERROR: 'त्रुटि'
+      },
+      dashaLevel: {
+        MD: 'महादशा (MD)',
+        AD: 'अंतर्दशा (AD)',
+        PD: 'प्रत्यंतरदशा (PD)',
+        NONE: 'कोई नहीं'
+      },
+      professionStatus: {
+        COMPLETE: 'विश्लेषण पूर्ण',
+        PARTIAL: 'आंशिक विश्लेषण',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा'
+      },
+      professionCandidateStatus: {
+        QUALIFIED: 'योग्य',
+        PARTIAL: 'आंशिक',
+        CONFLICTED: 'विरोधी',
+        NOT_PROVIDED: 'प्रदान नहीं किया गया',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      productStatus: {
+        READY: 'तैयार',
+        PARTIAL: 'आंशिक',
+        ERROR: 'त्रुटि'
+      },
+      productAvailability: {
+        AVAILABLE: 'उपलब्ध',
+        UNAVAILABLE: 'उपलब्ध नहीं',
+        CONDITIONAL: 'सशर्त',
+        PARTIAL: 'आंशिक'
+      },
+      conclusionStatus: {
+        STRONGLY_SUPPORTED: 'दृढ़ समर्थन',
+        SUPPORTED: 'समर्थित',
+        MIXED: 'मिश्रित',
+        CHALLENGED: 'चुनौतीपूर्ण',
+        LIMITED: 'सीमित',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      wealthDimensionStatus: {
+        STRONGLY_SUPPORTED: 'दृढ़ समर्थन',
+        SUPPORTED: 'समर्थित',
+        MIXED: 'मिश्रित',
+        CHALLENGED: 'चुनौतीपूर्ण',
+        LIMITED: 'सीमित',
+        UNAVAILABLE: 'उपलब्ध नहीं',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा'
+      },
+      careerOutcomeStatus: {
+        CANDIDATES_AVAILABLE: 'संभावित विकल्प उपलब्ध',
+        CONDITIONAL: 'सशर्त',
+        PARTIAL: 'आंशिक',
+        UNRESOLVED: 'अनिर्णीत',
+        INSUFFICIENT: 'अपर्याप्त'
+      },
+      careerOutcomeType: {
+        CAREER_GROWTH_OR_EXPANSION: 'करियर विकास या विस्तार',
+        ROLE_OR_AUTHORITY_EXPANSION: 'भूमिका या अधिकार का विस्तार',
+        EMPLOYMENT_OR_SERVICE_OPPORTUNITY: 'रोज़गार या सेवा का अवसर',
+        TECHNICAL_SPECIALIZATION_OR_SKILL_DEVELOPMENT: 'तकनीकी विशेषज्ञता या कौशल विकास',
+        INDEPENDENT_OR_BUSINESS_ACTIVITY: 'स्वतंत्र कार्य या व्यवसाय',
+        PUBLIC_OR_INSTITUTIONAL_CAREER: 'सार्वजनिक या संस्थागत करियर',
+        GENERAL_CAREER_OPPORTUNITY: 'सामान्य करियर अवसर'
+      },
+      careerOutcomeQualification: {
+        SUPPORTED_CANDIDATE: 'समर्थित विकल्प',
+        CONDITIONALLY_SUPPORTED_CANDIDATE: 'सशर्त समर्थित विकल्प'
+      },
+      careerOutcomeProfessionAnalysis: {
+        COMPLETE: 'पूर्ण',
+        PARTIAL: 'आंशिक',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा',
+        NOT_PROVIDED: 'प्रदान नहीं किया गया'
+      },
+      careerOutcomeD10Qualification: {
+        QUALIFIED: 'योग्य',
+        PARTIAL: 'आंशिक',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      careerCounterIndicationSeverity: {
+        NONE: 'कोई नहीं',
+        LOW: 'कम',
+        MODERATE: 'मध्यम',
+        HIGH: 'उच्च'
+      },
+      careerEventTimelineStatus: {
+        GENERIC_WINDOWS_ONLY: 'केवल सामान्य समय-सीमाएँ',
+        PARTIAL: 'आंशिक',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      careerPathwayStatus: {
+        AVAILABLE: 'उपलब्ध',
+        PARTIAL: 'आंशिक',
+        UNAVAILABLE: 'उपलब्ध नहीं',
+        UNRESOLVED: 'अनिर्णीत',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा'
+      },
+      careerPathwayVerdict: {
+        DUAL_POTENTIAL: 'दोनों कार्य-दिशाओं की संभावना',
+        CONDITIONAL_DUAL_POTENTIAL: 'सशर्त दोहरी संभावना',
+        EMPLOYMENT_POTENTIAL_IDENTIFIED: 'रोज़गार की संभावना पहचानी गई',
+        INDEPENDENT_POTENTIAL_IDENTIFIED: 'स्वतंत्र कार्य की संभावना पहचानी गई',
+        NO_MODE_CANDIDATE: 'कोई कार्य-दिशा विकल्प नहीं',
+        UNRESOLVED: 'अनिर्णीत',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा'
+      },
+      careerPathwayModeStatus: {
+        SUPPORTED_CANDIDATE: 'समर्थित विकल्प',
+        CONDITIONAL_CANDIDATE: 'सशर्त विकल्प',
+        NOT_IDENTIFIED: 'पहचान नहीं हुई'
+      },
+      careerPathwayCandidateQualification: {
+        SUPPORTED_CANDIDATE: 'समर्थित विकल्प',
+        CONDITIONALLY_SUPPORTED_CANDIDATE: 'सशर्त समर्थित विकल्प'
+      },
+      careerPathwayAssessment: {
+        NOT_ASSESSED: 'आकलन नहीं किया गया'
+      },
+      wealthFinancialDataStatus: {
+        AVAILABLE: 'उपलब्ध',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      wealthFinancialSourceClassification: {
+        ASTROLOGICAL_INDICATOR: 'ज्योतिषीय संकेत',
+        USER_REPORTED_FINANCIAL_FACT: 'उपयोगकर्ता द्वारा बताया गया वित्तीय तथ्य',
+        CALCULATED_FINANCIAL_METRIC: 'गणना किया गया वित्तीय माप',
+        CONNECTED_FINANCIAL_SOURCE: 'जुड़ा हुआ वित्तीय स्रोत',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      wealthLifecycleAvailability: {
+        CANDIDATES_AVAILABLE: 'संभावित संकेत उपलब्ध',
+        CONDITIONAL: 'सशर्त',
+        PARTIAL: 'आंशिक',
+        UNRESOLVED: 'अनिर्णीत',
+        INSUFFICIENT: 'अपर्याप्त',
+        BLOCKED: 'अवरुद्ध'
+      },
+      wealthLifecycleEventStatus: {
+        CANDIDATE: 'संभावित संकेत',
+        CONDITIONAL: 'सशर्त',
+        CONFLICTED: 'विरोधी',
+        UNAVAILABLE: 'उपलब्ध नहीं'
+      },
+      careerRiskAssessment: {
+        ADVERSE_EVIDENCE_PRESENT: 'प्रतिकूल साक्ष्य मौजूद हैं',
+        NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES: 'उपलब्ध स्रोतों में प्रतिकूल साक्ष्य नहीं'
+      },
+      careerSustainabilityAssessment: {
+        NOT_ASSESSED: 'आकलन नहीं किया गया'
+      },
+      guarantee: {
+        NONE: 'कोई नहीं'
       }
     },
     navigation: {

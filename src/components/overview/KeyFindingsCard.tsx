@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OverviewFinding } from '../../product/analysis/overviewViewModel';
-import { formatDirection, formatEvidenceRole } from './overviewFormat';
 import { Layers, CheckCircle } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface KeyFindingsCardProps {
   readonly findings: readonly OverviewFinding[];
@@ -10,8 +10,9 @@ export interface KeyFindingsCardProps {
 
 export const FindingRow: React.FC<{ readonly finding: OverviewFinding }> = ({ finding }) => {
   const { t } = useTranslation('dashboard');
-  const roleText = formatEvidenceRole(finding.role);
-  const directionText = formatDirection(finding.direction);
+  const { t: tEnum } = useTranslation('enums');
+  const roleText = enumLabel(tEnum, 'productEvidenceRole', finding.role);
+  const directionText = enumLabel(tEnum, 'productDirection', finding.direction);
 
   return (
     <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2">

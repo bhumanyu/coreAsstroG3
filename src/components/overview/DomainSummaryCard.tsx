@@ -1,13 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OverviewDomain } from '../../product/analysis/overviewViewModel';
-import {
-  formatStrength,
-  formatConfidence,
-  formatDirection,
-  formatEvidenceRole
-} from './overviewFormat';
 import { Briefcase, Coins, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface DomainSummaryCardProps {
   readonly domain: OverviewDomain;
@@ -21,13 +16,14 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
   onOpen
 }) => {
   const { t } = useTranslation('dashboard');
+  const { t: tEnum } = useTranslation('enums');
   const isCareer = domainKey === 'career';
   const Icon = isCareer ? Briefcase : Coins;
   const iconColor = isCareer ? 'text-indigo-400' : 'text-amber-400';
   const iconBg = isCareer ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-amber-500/10 border-amber-500/20';
 
-  const strengthText = formatStrength(domain.strength);
-  const confidenceText = formatConfidence(domain.confidence);
+  const strengthText = enumLabel(tEnum, 'promiseStrength', domain.strength);
+  const confidenceText = enumLabel(tEnum, 'productConfidence', domain.confidence);
 
   return (
     <div
@@ -88,10 +84,10 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono-code font-semibold bg-indigo-950/60 border border-indigo-800/60 text-indigo-300">
-                        {formatEvidenceRole(evidence.role)}
+                        {enumLabel(tEnum, 'productEvidenceRole', evidence.role)}
                       </span>
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono-code bg-slate-800 border border-slate-700 text-slate-300">
-                        {formatDirection(evidence.direction)}
+                        {enumLabel(tEnum, 'productDirection', evidence.direction)}
                       </span>
                     </div>
                   </div>

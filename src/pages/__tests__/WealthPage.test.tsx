@@ -151,7 +151,7 @@ describe('WealthPage (P-UI-05)', () => {
 
   it('D06: renders the C04 lifecycle rule gate as BLOCKED', () => {
     render(<WealthPage productAnalysisState={{ status: 'READY', analysis: createProductAnalysis() }} />);
-    expect(screen.getByText('BLOCKED')).toBeInTheDocument();
+    expect(screen.getByText('Blocked')).toBeInTheDocument();
     expect(screen.getByText('Lifecycle event rules are not release-approved')).toBeInTheDocument();
     expect(screen.getByText(/No lifecycle event category is currently release-enabled/)).toBeInTheDocument();
     expect(screen.getByText(/C04 lifecycle candidate generation is blocked/)).toBeInTheDocument();

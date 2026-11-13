@@ -1,10 +1,15 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18n from '../../i18n/i18n';
 import { OverviewPage } from '../OverviewPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 
 describe('OverviewPage (P-UI-03)', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   it('renders loading state when status is LOADING', () => {
     render(<OverviewPage status="LOADING" />);
 
@@ -96,9 +101,9 @@ describe('OverviewPage (P-UI-03)', () => {
     expect(screen.getByText('Mercury')).toBeInTheDocument();
 
     // Check role labels rendered as text
-    expect(screen.getAllByText('Primary factor').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Transits may modify the underlying indications').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Refining factor').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Primary Driver').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Modifier').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Refinement').length).toBeGreaterThan(0);
   });
 
   it('invokes onNavigate callback when clicking domain action links', () => {

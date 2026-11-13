@@ -1,22 +1,23 @@
 import React from 'react';
 import type { DashaPeriodViewModel } from '../../product/analysis/dashaViewModel';
 import {
-  formatDashaLevel,
-  formatRole,
-  formatDirection,
   getRoleBadgeClass,
   getDirectionBadgeClass
 } from './dashaFormat';
 import { Calendar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface DashaPeriodCardProps {
   readonly period: DashaPeriodViewModel;
 }
 
 export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({ period }) => {
-  const levelLabel = formatDashaLevel(period.level);
-  const roleLabel = formatRole(period.role);
-  const directionLabel = formatDirection(period.direction);
+  const { t } = useTranslation('common');
+  const { t: tEnum } = useTranslation('enums');
+  const levelLabel = enumLabel(tEnum, 'dashaLevel', period.level);
+  const roleLabel = enumLabel(tEnum, 'productEvidenceRole', period.role);
+  const directionLabel = enumLabel(tEnum, 'productDirection', period.direction);
   const roleClass = getRoleBadgeClass(period.role);
   const directionClass = getDirectionBadgeClass(period.direction);
 
@@ -39,7 +40,7 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({ period }) => {
       {/* Planet & Direction */}
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-base font-bold text-slate-100 font-sans">
-          {period.planet || 'Unavailable'}
+          {period.planet || t('noData')}
         </span>
         <div className="flex items-center gap-1.5">
           <span
@@ -49,7 +50,7 @@ export const DashaPeriodCard: React.FC<DashaPeriodCardProps> = ({ period }) => {
           </span>
           {period.effect && (
             <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-slate-800/80 text-slate-300 border border-slate-700/80">
-              {period.effect}
+              {enumLabel(tEnum, 'activationEffect', period.effect)}
             </span>
           )}
         </div>

@@ -57,10 +57,10 @@ describe('CareerOutcomeQualificationSection', () => {
     render(<CareerOutcomeQualificationSection outcomeQualification={analysis()} />);
 
     expect(screen.getByRole('heading', { name: 'Career Outcome Qualification' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Career outcome candidates' })).toHaveTextContent('ROLE OR AUTHORITY EXPANSION');
+    expect(screen.getByRole('list', { name: 'Career outcome candidates' })).toHaveTextContent('Role or authority expansion');
     expect(screen.getByText(/Candidate only · No guaranteed outcome/)).toBeInTheDocument();
-    expect(screen.getByText('NOT_ASSESSED')).toBeInTheDocument();
-    expect(screen.getByText('D10: CHALLENGE (HIGH)')).toBeInTheDocument();
+    expect(screen.getByText('Not assessed')).toBeInTheDocument();
+    expect(screen.getByText('D10: Challenging (High)')).toBeInTheDocument();
     expect(screen.getByText(/Candidate windows are not recorded as observed events/)).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'User-reported observed career outcomes' })).not.toBeInTheDocument();
   });

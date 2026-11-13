@@ -1,21 +1,22 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReasoningEvidenceViewModel } from '../../product/analysis/reasoningViewModel';
 import {
-  formatEvidenceRole,
-  formatDirection,
   getEvidenceRoleBadgeClass,
   getDirectionBadgeClass
 } from './reasoningFormat';
 import { ReasoningProvenance } from './ReasoningProvenance';
 import { ShieldCheck } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface ReasoningEvidenceCardProps {
   readonly evidence: ReasoningEvidenceViewModel;
 }
 
 export const ReasoningEvidenceCard: React.FC<ReasoningEvidenceCardProps> = ({ evidence }) => {
-  const roleLabel = formatEvidenceRole(evidence.role);
-  const directionLabel = formatDirection(evidence.direction);
+  const { t } = useTranslation('enums');
+  const roleLabel = enumLabel(t, 'productEvidenceRole', evidence.role);
+  const directionLabel = enumLabel(t, 'productDirection', evidence.direction);
   const roleClass = getEvidenceRoleBadgeClass(evidence.role);
   const directionClass = getDirectionBadgeClass(evidence.direction);
 

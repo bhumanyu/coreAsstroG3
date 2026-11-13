@@ -4,14 +4,12 @@ import type {
   CareerDashaPeriodViewModel
 } from '../../product/analysis/careerViewModel';
 import {
-  formatEvidenceRole,
-  formatDirection,
-  formatActivationEffect,
   getDirectionBadgeClass,
   getEvidenceRoleBadgeClass
 } from './careerFormat';
 import { Clock, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerDashaSectionProps {
   readonly dasha: CareerDashaViewModel;
@@ -19,9 +17,10 @@ export interface CareerDashaSectionProps {
 
 const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }) => {
   const { t } = useTranslation('career');
-  const roleLabel = formatEvidenceRole(period.role);
-  const directionLabel = formatDirection(period.direction);
-  const effectLabel = formatActivationEffect(period.effect);
+  const { t: tEnum } = useTranslation('enums');
+  const roleLabel = enumLabel(tEnum, 'productEvidenceRole', period.role);
+  const directionLabel = enumLabel(tEnum, 'productDirection', period.direction);
+  const effectLabel = enumLabel(tEnum, 'activationEffect', period.effect);
   const directionClass = getDirectionBadgeClass(period.direction);
   const roleClass = getEvidenceRoleBadgeClass(period.role);
 
@@ -29,7 +28,7 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
     <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
         <span className="text-[11px] font-mono-code font-bold uppercase tracking-wider text-slate-400">
-          {t(`ui.dasha.levels.${period.level}`)}
+          {enumLabel(tEnum, 'dashaLevel', period.level)}
         </span>
         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase border ${roleClass}`}>
           {roleLabel}

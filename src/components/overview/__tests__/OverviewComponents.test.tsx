@@ -1,6 +1,7 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18n from '../../../i18n/i18n';
 import {
   OverviewHeader,
   OverallAssessmentCard,
@@ -17,6 +18,10 @@ import { selectOverviewViewModel } from '../../../product/analysis/overviewViewM
 import { createProductAnalysis } from '../../../product/analysis/__tests__/testHelpers';
 
 describe('Overview Component Library (P-UI-03)', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   const analysis = createProductAnalysis();
   const vm = selectOverviewViewModel(analysis);
 
@@ -65,8 +70,8 @@ describe('Overview Component Library (P-UI-03)', () => {
       );
 
       expect(screen.getByText('Career & Professional Life')).toBeInTheDocument();
-      expect(screen.getByText('Strong foundation')).toBeInTheDocument();
-      expect(screen.getByText('High evidence confidence')).toBeInTheDocument();
+      expect(screen.getByText('Strong')).toBeInTheDocument();
+      expect(screen.getByText('High Confidence')).toBeInTheDocument();
       expect(screen.getByText('Top Evidentiary Drivers')).toBeInTheDocument();
 
       const btn = screen.getByRole('button', { name: /explore career details/i });

@@ -1,7 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import i18n from '../../../i18n/i18n';
 import {
   DashaHero,
   TransitTimingSection,
@@ -47,6 +48,10 @@ const emptyWealthDimensions: ProductSelectedPeriodSynthesis['wealth']['dimension
 };
 
 describe('Dasha Presentational Components (P-UI-07)', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   function makeSynthesis(overrides: Partial<ProductSelectedPeriodSynthesis> = {}): ProductSelectedPeriodSynthesis {
     const base: ProductSelectedPeriodSynthesis = {
       synthesisVersion: 'PBA-06-v1',

@@ -1,10 +1,11 @@
 import React from 'react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CareerProfessionStatusSection } from './CareerProfessionStatusSection';
 import { getCareerProfessionStatusCopy, type CareerProfessionStatus } from '../../product/analysis/careerQualificationPresentation';
 import { selectCareerViewModel } from '../../product/analysis/careerViewModel';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
+import i18n from '../../i18n/i18n';
 
 const statuses: readonly CareerProfessionStatus[] = [
   'COMPLETE',
@@ -13,7 +14,11 @@ const statuses: readonly CareerProfessionStatus[] = [
 ];
 
 describe('CareerProfessionStatusSection', () => {
-  it.each(statuses)('renders %s alongside the unchanged machine status', (status) => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it.each(statuses)('renders the localized label for %s without exposing its enum value', (status) => {
     const profession = {
       ...selectCareerViewModel(createProductAnalysis()).profession,
       status,
@@ -23,8 +28,13 @@ describe('CareerProfessionStatusSection', () => {
     render(<CareerProfessionStatusSection profession={profession} />);
 
     expect(screen.getByRole('heading', { name: 'Profession Analysis Status' })).toBeInTheDocument();
-    expect(screen.getByText(status)).toBeInTheDocument();
-    expect(screen.getByText(profession.statusCopy.label)).toBeInTheDocument();
+    const expectedLabel = {
+      COMPLETE: 'Analysis complete',
+      PARTIAL: 'Partial analysis',
+      INSUFFICIENT_DATA: 'Insufficient data'
+    }[status];
+    expect(screen.getAllByText(expectedLabel)).toHaveLength(2);
+    expect(screen.queryByText(status)).not.toBeInTheDocument();
     expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
   });
 
@@ -54,8 +64,8 @@ describe('CareerProfessionStatusSection', () => {
     };
     render(<CareerProfessionStatusSection profession={profession} />);
 
-    expect(screen.getByText('PARTIAL')).toBeInTheDocument();
-    expect(screen.getByText('Partial analysis')).toBeInTheDocument();
+    expect(screen.queryByText('PARTIAL')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Partial analysis')).toHaveLength(2);
     expect(screen.queryByText(/mixed|neutral/i)).not.toBeInTheDocument();
   });
 
@@ -102,7 +112,7 @@ describe('CareerProfessionStatusSection', () => {
     };
     render(<CareerProfessionStatusSection profession={profession} />);
 
-    expect(screen.getByText('Partial analysis')).toBeInTheDocument();
+    expect(screen.getAllByText('Partial analysis')).toHaveLength(2);
     expect(screen.queryByText('Analysis complete')).not.toBeInTheDocument();
   });
 
@@ -153,7 +163,7 @@ describe('CareerProfessionStatusSection', () => {
     const candidates = screen.getByRole('list', { name: 'Profession candidates' });
     expect(candidates).toHaveTextContent('TECHNOLOGY · TECHNICAL_LEADERSHIP (PROFESSION_TECH_PATTERN_1)');
     expect(candidates).toHaveTextContent('Basis: EXPRESSION');
-    expect(candidates).toHaveTextContent('D10 status: NOT_PROVIDED');
+    expect(candidates).toHaveTextContent('D10 status: Not provided');
     expect(candidates).toHaveTextContent('Pattern refs: PATTERN_1');
     expect(candidates).toHaveTextContent('Expressions: LEADERSHIP_EXPRESSION');
     expect(candidates).toHaveTextContent('Mechanism types: LEADERSHIP');
@@ -244,7 +254,7 @@ describe('CareerProfessionStatusSection', () => {
     expect(ranking).toHaveTextContent('14 policy points · MEDIUM confidence');
     expect(screen.getByRole('list', { name: 'Score contributions for TECHNOLOGY TECHNICAL_LEADERSHIP' }))
       .toHaveTextContent('Strong evidence × priority 2 contributes +6 points.');
-    expect(ranking).toHaveTextContent('D10: PARTIAL (MIXED)');
+    expect(ranking).toHaveTextContent('D10: Partial (Mixed)');
     expect(ranking).toHaveTextContent('D1-derived expression establishes this broad family.');
     expect(ranking).toHaveTextContent('D10 mixed evidence constrains expression.');
     expect(ranking).toHaveTextContent('occ-d10-1');

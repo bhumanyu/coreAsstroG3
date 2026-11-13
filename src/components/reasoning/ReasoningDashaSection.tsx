@@ -5,31 +5,23 @@ import type {
   ReasoningDashaPeriodViewModel
 } from '../../product/analysis/reasoningViewModel';
 import {
-  formatEvidenceRole,
-  formatDirection,
-  formatActivationEffect,
-  formatAvailability,
   getDirectionBadgeClass,
   getEvidenceRoleBadgeClass,
   getAvailabilityBadgeClass
 } from './reasoningFormat';
 import { Clock, AlertCircle } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface ReasoningDashaSectionProps {
   readonly dasha: ReasoningDashaViewModel;
 }
 
-const LEVEL_LABELS: Record<'MD' | 'AD' | 'PD', string> = {
-  MD: 'Mahadasha (MD)',
-  AD: 'Antardasha (AD)',
-  PD: 'Pratyantardasha (PD)'
-};
-
 const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ period }) => {
   const { t } = useTranslation('reports');
-  const roleLabel = formatEvidenceRole(period.role);
-  const directionLabel = formatDirection(period.direction);
-  const effectLabel = formatActivationEffect(period.effect);
+  const { t: tEnum } = useTranslation('enums');
+  const roleLabel = enumLabel(tEnum, 'productEvidenceRole', period.role);
+  const directionLabel = enumLabel(tEnum, 'productDirection', period.direction);
+  const effectLabel = enumLabel(tEnum, 'activationEffect', period.effect);
   const directionClass = getDirectionBadgeClass(period.direction);
   const roleClass = getEvidenceRoleBadgeClass(period.role);
 
@@ -37,7 +29,7 @@ const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ perio
     <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
         <span className="text-[11px] font-mono-code font-bold uppercase tracking-wider text-slate-400">
-          {LEVEL_LABELS[period.level] || period.level}
+          {enumLabel(tEnum, 'dashaLevel', period.level)}
         </span>
         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase border ${roleClass}`}>
           {roleLabel}
@@ -77,6 +69,7 @@ const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ perio
 
 export const ReasoningDashaSection: React.FC<ReasoningDashaSectionProps> = ({ dasha }) => {
   const { t } = useTranslation('reports');
+  const { t: tEnum } = useTranslation('enums');
   // CRITICAL: Render available cards for both AVAILABLE and PARTIAL. Only treat UNAVAILABLE as empty.
   const isAvailableOrPartial = dasha.status === 'AVAILABLE' || dasha.status === 'PARTIAL';
   const hasPeriods = dasha.periods && dasha.periods.length > 0;
@@ -99,7 +92,7 @@ export const ReasoningDashaSection: React.FC<ReasoningDashaSectionProps> = ({ da
           <span
             className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${badgeClass}`}
           >
-            {formatAvailability(dasha.status)}
+            {enumLabel(tEnum, 'productAvailability', dasha.status)}
           </span>
         </div>
       </div>

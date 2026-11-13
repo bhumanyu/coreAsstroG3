@@ -1,6 +1,7 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import i18n from '../../../i18n/i18n';
 import {
   ReasoningHero,
   ReasoningOverallConclusion,
@@ -35,6 +36,10 @@ import type {
 } from '../../../product/analysis/reasoningViewModel';
 
 describe('Reasoning Section Components Suite (P-UI-06)', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   describe('ReasoningHero', () => {
     it('renders title, status, confidence, and metric counts without legacy sign fields', () => {
       const hero: ReasoningHeroViewModel = {

@@ -35,7 +35,8 @@ export const registeredNamespaces = [
   'research',
   'errors',
   'chartExport',
-  'chartSharing'
+  'chartSharing',
+  'enums'
 ] as const satisfies readonly (keyof typeof resources.en)[];
 
 void i18n.use(initReactI18next).init({

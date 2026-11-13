@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, MapPin, Globe, Compass, Sparkles, Clock } from 'lucide-react';
 import { BirthDetails, AyanamsaType } from '../types';
@@ -10,6 +10,7 @@ import { getTimeZoneResolutionStatus, isValidIanaTimeZone, resolveLocalDateTime,
 import { ChartProfileService, type ChartProfileOperationError } from '../features/chart-profiles/chartProfileService';
 import type { ChartProfile } from '../features/chart-profiles/chartProfileSchema';
 import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './language/LanguageSwitcher';
 
 interface BirthFormModalProps {
   isOpen: boolean;
@@ -62,6 +63,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const { t: tProfiles } = useTranslation('profiles');
   const { t: tValidation } = useTranslation('validation');
   const { t: tCommon } = useTranslation('common');
+  const modalContentRef = useRef<HTMLDivElement>(null);
   const profileService = useMemo(
     () => suppliedService ?? new ChartProfileService(),
     [suppliedService]
@@ -100,6 +102,30 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusable = modalContentRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        const elements = Array.from(focusable ?? []).filter((element) =>
+          element.tabIndex >= 0 && !element.closest('[aria-hidden="true"]')
+        );
+        if (elements.length === 0) {
+          e.preventDefault();
+          modalContentRef.current?.focus();
+          return;
+        }
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || !modalContentRef.current?.contains(active))) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !modalContentRef.current?.contains(active))) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     },
     [onClose]
@@ -278,12 +304,14 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
 
           {/* Animated Modal Dialog */}
           <motion.div
+            ref={modalContentRef}
             initial={{ opacity: 0, scale: 0.95, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 16 }}
             transition={{ type: 'spring', damping: 26, stiffness: 360 }}
             className="relative w-full max-w-xl z-10 my-8 overflow-hidden rounded-2xl glass-surface border border-indigo-500/30 dark:border-indigo-500/30 light:border-slate-200/90 shadow-2xl shadow-indigo-950/60 light:shadow-slate-300/60 bg-slate-900/95 dark:bg-slate-900/95 light:bg-white text-slate-100 dark:text-slate-100 light:text-slate-900"
             onClick={(e) => e.stopPropagation()}
+            tabIndex={-1}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-800/80 dark:border-slate-800/80 light:border-slate-200/90">
@@ -298,14 +326,17 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   {tBirth('title')}
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-1.5 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-800 light:hover:bg-slate-100 text-slate-400 hover:text-white dark:hover:text-white light:hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                aria-label={tBirth('close')}
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
+              <div className="flex items-center gap-2">
+                <LanguageSwitcher compact />
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-1.5 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-800 light:hover:bg-slate-100 text-slate-400 hover:text-white dark:hover:text-white light:hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  aria-label={tBirth('close')}
+                >
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
+              </div>
             </div>
 
             {/* Content Body */}

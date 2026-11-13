@@ -7,6 +7,7 @@
  */
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../i18n/enumLabels';
 import { EvidenceConfidencePanel } from '../components/lifeAnalysis/EvidenceConfidencePanel';
 import { selectEvidenceExperience } from '../product/analysis/evidenceExperienceViewModel';
 import type { ProductAnalysisState } from '../app/AppState';
@@ -159,10 +160,13 @@ import type { WealthDimensionItemViewModel } from '../product/analysis/wealthVie
 
 const DimensionDetail: React.FC<{ dimension: WealthDimensionItemViewModel }> = ({ dimension }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   return <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-2" aria-label={t('dimension.detailAria', { dimension: dimension.label })}>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h2 className="text-base font-semibold text-slate-100">{dimension.label}</h2>
-      <span className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300">{dimension.status}</span>
+      <span className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300">
+        {enumLabel(tEnum, 'wealthDimensionStatus', dimension.status)}
+      </span>
     </div>
     <p className="text-xs text-slate-400">{dimension.houseLabel}</p>
     <p className="text-sm text-slate-300">{dimension.statement || t('dimension.statementUnavailable')}</p>

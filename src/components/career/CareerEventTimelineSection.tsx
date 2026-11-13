@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ProductCareerEventTimeline } from '../../product/analysis/productAnalysisTypes';
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface CareerEventTimelineSectionProps {
   readonly eventTimeline: ProductCareerEventTimeline;
@@ -14,6 +15,7 @@ function formatTiming(timing: ProductCareerEventTimeline['genericWindows'][numbe
 
 export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProps> = ({ eventTimeline }) => {
   const { t } = useTranslation('career');
+  const { t: tEnum } = useTranslation('enums');
   return (
   <section
     aria-labelledby="career-event-timeline-heading"
@@ -24,7 +26,7 @@ export const CareerEventTimelineSection: React.FC<CareerEventTimelineSectionProp
         {t('ui.timeline.title')}
       </h2>
       <span className="rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-xs text-slate-300">
-        {eventTimeline.status}
+        {enumLabel(tEnum, 'careerEventTimelineStatus', eventTimeline.status)}
       </span>
     </div>
 

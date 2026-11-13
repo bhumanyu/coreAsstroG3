@@ -2,11 +2,13 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { WealthLifecycleViewModel } from '../../product/analysis/wealthViewModel';
 import { Clock3, AlertCircle, ShieldCheck, Lock } from 'lucide-react';
+import { enumLabel } from '../../i18n/enumLabels';
 
 export interface WealthLifecycleSectionProps { readonly lifecycle: WealthLifecycleViewModel; }
 
 export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ lifecycle }) => {
   const { t } = useTranslation('wealth');
+  const { t: tEnum } = useTranslation('enums');
   return (
     <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-4" aria-labelledby="wealth-lifecycle-title">
       <div className="flex items-start gap-3 border-b border-slate-800/80 pb-3">
@@ -15,7 +17,9 @@ export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ 
           <h2 id="wealth-lifecycle-title" className="text-base font-semibold text-slate-100">{t('lifecycle.title')}</h2>
           <p className="mt-1 text-xs text-slate-400">{t('disclaimers.lifecycle')}</p>
         </div>
-        <span className="rounded-lg border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-xs text-slate-300">{lifecycle.status.replaceAll('_', ' ')}</span>
+        <span className="rounded-lg border border-slate-700 bg-slate-800/60 px-2.5 py-1 text-xs text-slate-300">
+          {enumLabel(tEnum, 'wealthLifecycleAvailability', lifecycle.status)}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -28,7 +32,7 @@ export const WealthLifecycleSection: React.FC<WealthLifecycleSectionProps> = ({ 
         <div className="space-y-3">
           {lifecycle.candidates.map(candidate => (
             <article key={candidate.id} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold text-slate-100">{candidate.type}</h3><span className="text-xs text-slate-400">{candidate.status}</span></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold text-slate-100">{candidate.type}</h3><span className="text-xs text-slate-400">{enumLabel(tEnum, 'wealthLifecycleEventStatus', candidate.status)}</span></div>
               <p className="text-xs text-slate-300">{candidate.timingLabel}</p>
               {candidate.limitations.map((item, index) => <p key={index} className="text-xs text-slate-400">{item}</p>)}
             </article>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18n from '../../../i18n/i18n';
 import {
   CareerHero,
   CareerPromiseSection,
@@ -25,6 +26,10 @@ import type {
 } from '../../../product/analysis/careerViewModel';
 
 describe('Career Section Components Suite (P-UI-04)', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   describe('CareerHero', () => {
     it('renders heading, chart sign chips, confidence, and notice badge', () => {
       const hero: CareerHeroViewModel = {
@@ -306,6 +311,26 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       const btn = screen.getByRole('button', { name: /explore reasoning graph/i });
       fireEvent.click(btn);
       expect(onOpenReasoning).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders translated enum labels in Hindi instead of raw enum values', async () => {
+      await i18n.changeLanguage('hi');
+      const evidence: CareerEvidenceViewModel[] = [{
+        id: 'ev_1',
+        title: '10th Lord Exaltation',
+        statement: 'Mars exalted in 1st house.',
+        direction: 'SUPPORT',
+        role: 'PRIMARY',
+        source: 'CAREER_ENGINE',
+        derivedFromIds: []
+      }];
+
+      render(<CareerEvidenceSection evidence={evidence} />);
+
+      expect(screen.getByText('प्रमुख कारक')).toBeInTheDocument();
+      expect(screen.getByText('समर्थक')).toBeInTheDocument();
+      expect(screen.queryByText('PRIMARY')).not.toBeInTheDocument();
+      expect(screen.queryByText('SUPPORT')).not.toBeInTheDocument();
     });
   });
 

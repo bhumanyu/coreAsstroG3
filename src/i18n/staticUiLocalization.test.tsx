@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import i18n from './i18n';
 import { AppFooter } from '../app/AppFooter';
 import { ResearchChunkFallback } from '../app/ResearchChunkFallback';
@@ -38,6 +38,7 @@ describe('shared UI localization', () => {
   });
 
   it('switches birth and chart controls without resetting the entered chart name', async () => {
+    await i18n.changeLanguage('en');
     const birthDetails = {
       name: 'Initial chart',
       placeOfBirth: 'Ujjain, India',
@@ -55,14 +56,23 @@ describe('shared UI localization', () => {
       </>
     );
 
-    const chartName = screen.getByPlaceholderText('e.g. CoreAstro Test Vector 1');
+    const birthForm = within(screen.getByRole('dialog'));
+    const chartName = birthForm.getByPlaceholderText('e.g. CoreAstro Test Vector 1');
     fireEvent.change(chartName, { target: { value: 'My saved chart' } });
-    await i18n.changeLanguage('hi');
+    fireEvent.click(screen.getByRole('button', { name: 'हिन्दी' }));
 
-    expect(screen.getByText('कुंडली और ग्रह स्थिति की गणना करें')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('कुंडली और ग्रह स्थिति की गणना करें')).toBeInTheDocument();
+    });
     expect(screen.getAllByText('सहेजी गई कुंडली प्रोफ़ाइलें')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'कुंडली और रिपोर्ट JSON निर्यात करें' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('My saved chart')).toBeInTheDocument();
+    expect(birthForm.getByDisplayValue('My saved chart')).toBeInTheDocument();
+
+    const calculate = screen.getByRole('button', { name: 'कुंडली की गणना करें' });
+    const englishSwitcherButton = screen.getByRole('button', { name: 'EN' });
+    calculate.focus();
+    fireEvent.keyDown(calculate, { key: 'Tab' });
+    expect(englishSwitcherButton).toHaveFocus();
   });
 
   it('localizes research labels while retaining canonical planetary data labels', async () => {
