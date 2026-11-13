@@ -32,14 +32,15 @@ This branch implements the first localization foundation for CoreAstroG3 based o
 - Hindi language switching changes presentation only; it does not reset form input or trigger analysis/controller work.
 
 ## Remaining work
-The planned static-UI migration is implemented across the birth form, chart and research tools, career/wealth detail views, reasoning, full natal reports, and app fallback surfaces. `translationParity.test.ts` checks that all declared namespaces have matching English/Hindi keys and that statically referenced translation keys exist in both locales.
+The planned static-UI migration is implemented across the birth form, chart and research tools, career/wealth detail views, reasoning, full natal reports, and app fallback surfaces. `translationParity.test.ts` checks that all declared namespaces have matching English/Hindi keys, every resource namespace is registered with i18next, statically referenced keys exist in both locales, and computed career/wealth key families remain present.
 
 Remaining release work:
-- Complete browser acceptance across all product and research routes, including persistence after reload and preservation of route, theme, and in-progress form state during language changes.
+- Complete browser acceptance across all product and research routes, including persistence after reload and preservation of route and theme state during language changes.
+- The birth-form modal is modal and blocks interaction with the global language switcher while open. Switching languages mid-form is therefore not a supported interaction, and preserving unsaved form input across such a switch is not applicable.
 - Have a native Hindi reviewer review Jyotish terminology and phrasing. Do not mark this migration release-ready until that review is complete.
 - Keep canonical IDs, enum/status/contract values, chart data, and engine-generated prose unchanged; formatter output from `overviewFormat.ts` and `userFacingInterpretation.ts` remains intentionally English.
 
 ## Validation
 `npm run lint` and `npm run build` pass. The full `npx vitest --run` suite reports 372 passing files and 6,500 passing tests, with 4 skipped; the remaining failure is the existing RG-09 fixture guard (`CALCULATION_REFERENCE_FIXTURES` is empty). The localization parity/source-key tests pass within that run.
 
-Browser acceptance confirmed that Hindi is restored after reload, the `html` language attribute matches the selected locale, representative career content rerenders after language changes, route and theme state remain intact, and no raw `namespace:key` strings appear in rendered text. The modal blocks access to the global language switcher while open, so preservation of unsaved birth-form input across a language switch still requires a suitable acceptance path. Do not treat this migration as release-ready until the remaining browser checks and native Hindi review are complete.
+Browser acceptance confirmed that Hindi is restored after reload, the `html` language attribute matches the selected locale, representative career content rerenders after language changes, route and theme state remain intact, and no raw `namespace:key` strings appear in rendered text. The modal blocks access to the global language switcher while open; switching language mid-form is not possible, so there is no unsaved-form preservation risk for that interaction. Do not treat this migration as release-ready until the remaining browser checks and native Hindi review are complete.

@@ -17,12 +17,6 @@ export interface CareerDashaSectionProps {
   readonly dasha: CareerDashaViewModel;
 }
 
-const LEVEL_LABELS: Record<'MD' | 'AD' | 'PD', string> = {
-  MD: 'Mahadasha (MD)',
-  AD: 'Antardasha (AD)',
-  PD: 'Pratyantardasha (PD)'
-};
-
 const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }) => {
   const { t } = useTranslation('career');
   const roleLabel = formatEvidenceRole(period.role);
@@ -35,7 +29,7 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
     <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
         <span className="text-[11px] font-mono-code font-bold uppercase tracking-wider text-slate-400">
-          {LEVEL_LABELS[period.level] || period.level}
+          {t(`ui.dasha.levels.${period.level}`)}
         </span>
         <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase border ${roleClass}`}>
           {roleLabel}

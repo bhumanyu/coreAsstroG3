@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ProductCareerAnalyticalAxes } from '../../product/analysis/productAnalysisTypes';
+import type { ProductCareerAnalyticalAxes, ProductCareerAxisStatus } from '../../product/analysis/productAnalysisTypes';
 import { useTranslation } from 'react-i18next';
 
 export interface CareerAnalyticalAxesSectionProps {
@@ -56,14 +56,15 @@ type Axis = ProductCareerAnalyticalAxes['promise']
 
 const AxisCard: React.FC<{ label: string; axis: Axis; renderResult: () => React.ReactNode }> = ({ label, axis, renderResult }) => {
   const { t } = useTranslation('career');
-  const statusKey: Record<string, string> = {
+  const statusKey: Record<ProductCareerAxisStatus, string> = {
     AVAILABLE: 'ui.axes.available',
     PARTIAL: 'ui.axes.partial',
+    UNAVAILABLE: 'ui.axes.unavailableStatus',
     BLOCKED: 'ui.axes.blocked',
     INSUFFICIENT: 'ui.axes.insufficient',
     NOT_APPLICABLE: 'ui.axes.notApplicable'
   };
-  const statusDescription = axis.unavailableReason || t(statusKey[axis.status] ?? 'ui.axes.unavailableStatus');
+  const statusDescription = axis.unavailableReason || t(statusKey[axis.status]);
   return (
   <article className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 space-y-2">
     <div className="flex flex-wrap items-center justify-between gap-2">

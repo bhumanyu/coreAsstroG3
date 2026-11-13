@@ -542,6 +542,11 @@ export const resources = {
         dasha: {
           title: 'Career Timing & Vimshottari Dasha Hierarchy',
           description: 'Chronological activation via Mahadasha, Antardasha, and Pratyantardasha levels',
+          levels: {
+            MD: 'Mahadasha (MD)',
+            AD: 'Antardasha (AD)',
+            PD: 'Pratyantardasha (PD)'
+          },
           activeWindow: 'Active Window',
           unavailable: 'Unavailable',
           unknownPlanet: 'Unknown Planet',
@@ -819,6 +824,11 @@ export const resources = {
         dasha: {
           title: 'Wealth Timing & Vimshottari Dasha Hierarchy',
           description: 'Chronological activation via Mahadasha, Antardasha, and Pratyantardasha levels',
+          levels: {
+            MD: 'Mahadasha (MD)',
+            AD: 'Antardasha (AD)',
+            PD: 'Pratyantardasha (PD)'
+          },
           partialWindow: 'Partial Window',
           activeWindow: 'Active Window',
           unavailable: 'Unavailable',
@@ -2256,6 +2266,11 @@ export const resources = {
         dasha: {
           title: 'करियर समय और विंशोत्तरी दशा क्रम',
           description: 'महादशा, अंतर्दशा और प्रत्यंतरदशा स्तरों के माध्यम से कालानुक्रमिक सक्रियता',
+          levels: {
+            MD: 'महादशा (MD)',
+            AD: 'अंतर्दशा (AD)',
+            PD: 'प्रत्यंतरदशा (PD)'
+          },
           activeWindow: 'सक्रिय अवधि',
           unavailable: 'उपलब्ध नहीं',
           unknownPlanet: 'अज्ञात ग्रह',
@@ -2533,6 +2548,11 @@ export const resources = {
         dasha: {
           title: 'धन समय और विंशोत्तरी दशा क्रम',
           description: 'महादशा, अंतर्दशा और प्रत्यंतरदशा स्तरों के माध्यम से कालानुक्रमिक सक्रियता',
+          levels: {
+            MD: 'महादशा (MD)',
+            AD: 'अंतर्दशा (AD)',
+            PD: 'प्रत्यंतरदशा (PD)'
+          },
           partialWindow: 'आंशिक अवधि',
           activeWindow: 'सक्रिय अवधि',
           unavailable: 'उपलब्ध नहीं',

@@ -75,6 +75,7 @@ describe('CareerProfessionStatusSection', () => {
   it('renders labels for each known missing input and preserves the generic explanation', () => {
     const profession = {
       ...selectCareerViewModel(createProductAnalysis()).profession,
+      status: 'PARTIAL' as const,
       missingInputs: [
         'career10HFoundation',
         'career10LFoundation',
@@ -91,6 +92,18 @@ describe('CareerProfessionStatusSection', () => {
     expect(list).toHaveTextContent('10th-lord career foundation');
     expect(list).toHaveTextContent('Canonical D10 career analysis');
     expect(list).toHaveTextContent('Career domain evidence');
+  });
+
+  it('uses the canonical profession status rather than display-copy wording as its key', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      status: 'PARTIAL' as const,
+      statusCopy: getCareerProfessionStatusCopy('COMPLETE')
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText('Partial analysis')).toBeInTheDocument();
+    expect(screen.queryByText('Analysis complete')).not.toBeInTheDocument();
   });
 
   it('falls back to the raw key for an unmapped missing input', () => {

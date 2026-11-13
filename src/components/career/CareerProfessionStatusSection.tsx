@@ -1,6 +1,7 @@
 import React from 'react';
 import type { CareerProfessionViewModel } from '../../product/analysis/careerViewModel';
 import { getMissingInputLabel } from '../../product/analysis/careerQualificationPresentation';
+import type { CareerProfessionStatus } from '../../product/analysis/careerQualificationPresentation';
 import { useTranslation } from 'react-i18next';
 
 export interface CareerProfessionStatusSectionProps {
@@ -9,14 +10,14 @@ export interface CareerProfessionStatusSectionProps {
 
 export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSectionProps> = ({ profession }) => {
   const { t } = useTranslation('career');
-  const statusCopyKeyByLabel: Record<string, string> = {
-    'Analysis complete': 'complete',
-    'Partial analysis': 'partial',
-    'Insufficient data': 'insufficient'
+  const statusCopyKeyByStatus: Record<CareerProfessionStatus, string> = {
+    COMPLETE: 'complete',
+    PARTIAL: 'partial',
+    INSUFFICIENT_DATA: 'insufficient'
   };
-  const statusCopyKey = statusCopyKeyByLabel[profession.statusCopy.label];
-  const statusLabel = statusCopyKey ? t(`ui.profession.${statusCopyKey}Label`) : profession.statusCopy.label;
-  const statusExplanation = statusCopyKey ? t(`ui.profession.${statusCopyKey}Explanation`) : profession.statusCopy.explanation;
+  const statusCopyKey = statusCopyKeyByStatus[profession.status];
+  const statusLabel = t(`ui.profession.${statusCopyKey}Label`);
+  const statusExplanation = t(`ui.profession.${statusCopyKey}Explanation`);
   const missingInputKeys: Record<string, string> = {
     career10HFoundation: 'missingCareer10H',
     career10LFoundation: 'missingCareer10L',

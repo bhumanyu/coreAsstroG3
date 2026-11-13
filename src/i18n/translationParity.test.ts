@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { registeredNamespaces } from './i18n';
 import { resources } from './resources';
 
 function flattenKeys(value: Record<string, unknown>, prefix = ''): string[] {
@@ -34,6 +35,11 @@ function hasTranslationKey(language: 'en' | 'hi', namespace: string, key: string
 }
 
 describe('English/Hindi localization resource parity', () => {
+  it('registers every namespace provided by the translation resources', () => {
+    const registered = new Set<string>(registeredNamespaces);
+    expect(Object.keys(resources.en).filter((namespace) => !registered.has(namespace))).toEqual([]);
+  });
+
   it.each(Object.keys(resources.en) as Array<keyof typeof resources.en>)('has matching non-empty %s keys', (namespace) => {
     const en = resources.en[namespace] as Record<string, unknown>;
     const hi = resources.hi[namespace] as Record<string, unknown>;
@@ -89,5 +95,54 @@ describe('English/Hindi localization resource parity', () => {
     }
 
     expect(missing).toEqual([]);
+  });
+
+  it('provides both locales for computed career and wealth translation key families', () => {
+    const careerStatusKeys = [
+      'ui.axes.available',
+      'ui.axes.partial',
+      'ui.axes.blocked',
+      'ui.axes.insufficient',
+      'ui.axes.notApplicable',
+      'ui.axes.unavailableStatus'
+    ];
+    const professionStatusKeys = ['complete', 'partial', 'insufficient'].flatMap((status) => [
+      `ui.profession.${status}Label`,
+      `ui.profession.${status}Explanation`
+    ]);
+    const professionMissingKeys = [
+      'ui.profession.missingInputs',
+      'ui.profession.missingInputsAria',
+      'ui.profession.missingCareer10H',
+      'ui.profession.missingCareer10L',
+      'ui.profession.missingD10',
+      'ui.profession.missingDomainEvidence'
+    ];
+    const journeyStateKeys = ['available', 'partial', 'unavailable'].flatMap((state) => [
+      `ui.journey.${state}`
+    ]);
+    const dashaLevelKeys = ['MD', 'AD', 'PD'].map((level) => `ui.dasha.levels.${level}`);
+    const careerDynamicKeys = [
+      ...careerStatusKeys,
+      ...professionStatusKeys,
+      ...professionMissingKeys,
+      'ui.hero.notices',
+      'ui.hero.noticePlural',
+      ...journeyStateKeys,
+      ...dashaLevelKeys
+    ];
+    const wealthDynamicKeys = [
+      ...journeyStateKeys,
+      ...dashaLevelKeys
+    ];
+
+    for (const key of careerDynamicKeys) {
+      expect(hasTranslationKey('en', 'career', key), `en:career:${key}`).toBe(true);
+      expect(hasTranslationKey('hi', 'career', key), `hi:career:${key}`).toBe(true);
+    }
+    for (const key of wealthDynamicKeys) {
+      expect(hasTranslationKey('en', 'wealth', key), `en:wealth:${key}`).toBe(true);
+      expect(hasTranslationKey('hi', 'wealth', key), `hi:wealth:${key}`).toBe(true);
+    }
   });
 });

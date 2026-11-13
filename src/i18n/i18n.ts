@@ -18,31 +18,33 @@ if (typeof document !== 'undefined') {
   document.documentElement.lang = initialLanguage;
 }
 
+export const registeredNamespaces = [
+  'common',
+  'navigation',
+  'settings',
+  'birthForm',
+  'dateTime',
+  'validation',
+  'profiles',
+  'dashboard',
+  'astrology',
+  'dasha',
+  'career',
+  'wealth',
+  'reports',
+  'research',
+  'errors',
+  'chartExport',
+  'chartSharing'
+] as const satisfies readonly (keyof typeof resources.en)[];
+
 void i18n.use(initReactI18next).init({
   resources,
   lng: initialLanguage,
   fallbackLng: DEFAULT_LANGUAGE,
   supportedLngs: [...SUPPORTED_LANGUAGES],
   load: 'languageOnly',
-  ns: [
-    'common',
-    'navigation',
-    'settings',
-    'birthForm',
-    'dateTime',
-    'validation',
-    'profiles',
-    'dashboard',
-    'astrology',
-    'dasha',
-    'career',
-    'wealth',
-    'reports',
-    'research',
-    'errors',
-    'chartExport',
-    'chartSharing'
-  ],
+  ns: [...registeredNamespaces],
   defaultNS: 'common',
   fallbackNS: 'common',
   interpolation: { escapeValue: false },

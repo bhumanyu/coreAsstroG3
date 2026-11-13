@@ -27,6 +27,7 @@ describe('language preference manager', () => {
     await changeAppLanguage('en');
     expect(getCurrentLanguage()).toBe('en');
     expect(window.localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
   });
 
   it('continues to switch for the active session if storage is unavailable', async () => {
@@ -35,6 +36,7 @@ describe('language preference manager', () => {
     });
     await expect(changeAppLanguage('hi')).resolves.toBeUndefined();
     expect(getCurrentLanguage()).toBe('hi');
+    expect(document.documentElement.lang).toBe('hi');
     setItem.mockRestore();
   });
 });
