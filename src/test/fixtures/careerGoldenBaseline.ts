@@ -41,6 +41,9 @@
  * but no EXPRESSION supporting layer; the C11 policy caps one missing supporting layer at MEDIUM.
  * The domain conclusion maps C11 MEDIUM to MODERATE without changing the domain vocabulary.
  * The baseline also records the explicit coverage reasons and restored Dasha rule provenance.
+ *
+ * C6 partial-condition resolution intentionally changes canonical C9/C11 timing outputs. Tests
+ * compare unaffected baseline fields and assert the new C9/C11 results separately.
  */
 
 export const GOLDEN_C11_BASELINE = {
@@ -48,7 +51,7 @@ export const GOLDEN_C11_BASELINE = {
   conclusion: {
     strength: 'MIXED',
     confidence: 'MODERATE',
-    statement: 'Career final synthesis evaluates to MIXED (MIXED, MIXED) with MEDIUM confidence. Natal foundation: MIXED (STRONG). Dasha activation: NEUTRAL. Timing status: NOT_ACTIVE.',
+    statement: 'Career final synthesis evaluates to MIXED (MIXED, MIXED) with MEDIUM confidence. Natal foundation: MIXED (STRONG). Dasha activation: CHALLENGE. Timing status: CHALLENGED.',
     primaryEvidenceIds: [],
     supportingEvidenceIds: [],
     challengingEvidenceIds: []

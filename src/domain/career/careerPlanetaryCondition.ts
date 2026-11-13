@@ -12,6 +12,11 @@ export type CareerPlanetaryCondition =
   | 'AFFLICTED'
   | 'UNAVAILABLE';
 
+export type CareerPlanetaryConditionAssessment =
+  | 'FULL'
+  | 'PARTIAL'
+  | 'UNAVAILABLE';
+
 export type CareerPlanetaryDignity =
   | 'EXALTED'
   | 'OWN_SIGN'
@@ -101,6 +106,10 @@ export interface CareerPlanetaryConditionResult {
   readonly relatedPlanets: readonly Planet[];
 
   readonly conditional: boolean;
+
+  readonly assessment?: CareerPlanetaryConditionAssessment;
+
+  readonly afflictionAssessed?: boolean;
 
   readonly statement: string;
 }
@@ -282,7 +291,6 @@ function hasRequiredConditionData(
   return (
     context.dataAvailable &&
     context.dignity !== 'UNAVAILABLE' &&
-    context.affliction !== 'UNAVAILABLE' &&
     context.combustion !== 'UNAVAILABLE' &&
     context.motion !== 'UNKNOWN'
   );
@@ -388,6 +396,12 @@ function createConditionStatement(
     );
   }
 
+  if (context.affliction === 'UNAVAILABLE') {
+    parts.push(
+      'Affliction was not assessed; no affliction-based challenge is inferred.'
+    );
+  }
+
   return parts.join(' ');
 }
 
@@ -409,6 +423,8 @@ export function interpretCareerPlanetaryCondition(
       negativeFactors: Object.freeze([]),
       relatedPlanets: Object.freeze([]),
       conditional: false,
+      assessment: 'UNAVAILABLE',
+      afflictionAssessed: context.affliction !== 'UNAVAILABLE',
       statement:
         `Planet ${context.planet} has no established Career relevance; ` +
         `Career condition is unavailable.`
@@ -436,7 +452,13 @@ export function interpretCareerPlanetaryCondition(
     positiveFactors: factors.positive,
     negativeFactors: factors.negative,
     relatedPlanets: Object.freeze([]),
-    conditional: condition === 'UNAVAILABLE',
+    conditional: condition === 'UNAVAILABLE' || context.affliction === 'UNAVAILABLE',
+    assessment: condition === 'UNAVAILABLE'
+      ? 'UNAVAILABLE'
+      : context.affliction === 'UNAVAILABLE'
+        ? 'PARTIAL'
+        : 'FULL',
+    afflictionAssessed: context.affliction !== 'UNAVAILABLE',
     statement
   });
 }

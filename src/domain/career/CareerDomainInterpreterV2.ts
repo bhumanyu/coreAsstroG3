@@ -1204,6 +1204,7 @@ export function interpretCareerV2(
     careerDashaEvidence: canonicalDashaAnalysis.evidence,
     careerAvailabilityDiagnosticTrace: Object.freeze({
       structuralPrimarySupportPassedToC9: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.structuralPrimarySupport,
+      c9ExpressionTrace: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.expressionTrace,
       c9PlanetContextResolution: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.planetContextResolution,
       c9LevelResultsBeforeHierarchy: canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels,
       natalPromiseDirectionPassedToProfessionRanking: canonicalC11Result.natalDirection

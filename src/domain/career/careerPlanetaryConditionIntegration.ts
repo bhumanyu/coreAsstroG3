@@ -163,6 +163,7 @@ function resolveAspectInfluence(
 
 /**
  * Builds a CareerPlanetaryConditionContext for a single planet.
+ * dataAvailable covers engine-sourced dignity, motion, and combustion; affliction is optional.
  * If planetFact is missing, returns a frozen context with all UNAVAILABLE/UNKNOWN and dataAvailable=false.
  */
 function buildCareerPlanetaryConditionContext(
@@ -194,7 +195,6 @@ function buildCareerPlanetaryConditionContext(
 
   const dataAvailable =
     dignity !== 'UNAVAILABLE' &&
-    affliction !== 'UNAVAILABLE' &&
     motion !== 'UNKNOWN' &&
     combustion !== 'UNAVAILABLE';
 
