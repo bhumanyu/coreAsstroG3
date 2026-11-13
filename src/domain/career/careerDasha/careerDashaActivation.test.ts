@@ -407,6 +407,36 @@ describe('Career Dasha Activation', () => {
       expect(result.md.effect).toBe('INSUFFICIENT_DATA');
       expect(result.md.direction).toBe('UNAVAILABLE');
       expect(result.md.strength).toBe('UNDETERMINED');
+      expect(result.diagnosticTrace?.levels[0]).toMatchObject({
+        level: 'MD',
+        contextResolved: false,
+        direction: 'UNAVAILABLE',
+        effect: 'INSUFFICIENT_DATA'
+      });
+    });
+  });
+
+  it('uses a partially assessed condition and records that affliction was not assessed', () => {
+    const planetContext = Object.freeze({
+      ...makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'STRONG'),
+      conditionAssessment: 'PARTIAL' as const,
+      afflictionAssessed: false
+    });
+    const result = resolveCareerDashaActivation(makeContext({
+      planetContexts: Object.freeze([planetContext])
+    }));
+
+    expect(result.md.direction).toBe('SUPPORT');
+    expect(result.md.effect).toBe('ACTIVATES');
+    expect(result.md.statement).toContain('Affliction was not assessed');
+    expect(result.md.evidence.find(item => item.role === 'PLANETARY_CONDITION')?.statement)
+      .toContain('no affliction-based challenge is inferred');
+    expect(result.diagnosticTrace?.levels[0]).toMatchObject({
+      contextResolved: true,
+      conditionAssessment: 'PARTIAL',
+      afflictionAssessed: false,
+      direction: 'SUPPORT',
+      effect: 'ACTIVATES'
     });
   });
 

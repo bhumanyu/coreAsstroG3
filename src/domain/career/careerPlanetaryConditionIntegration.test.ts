@@ -103,7 +103,7 @@ function createMockRelevance(
 describe('W1.3 C6 Planetary Condition Integration', () => {
   // Group A — C5 relevance gating
   describe('Group A — C5 relevance gating', () => {
-    it('PRIMARY relevance → condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
+    it('PRIMARY relevance → condition resolves from required factors with affliction unassessed', () => {
       const horoscope = createMockHoroscope();
       const relevance = [createMockRelevance(Planet.SATURN, 'PRIMARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -113,10 +113,13 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const saturnResult = result.find(r => r.planet === Planet.SATURN);
       expect(saturnResult).toBeDefined();
       expect(saturnResult!.relevance).toBe('PRIMARY');
-      expect(saturnResult!.condition).toBe('UNAVAILABLE');
+      expect(saturnResult!.condition).toBe('NEUTRAL');
+      expect(saturnResult!.assessment).toBe('PARTIAL');
+      expect(saturnResult!.afflictionAssessed).toBe(false);
+      expect(saturnResult!.negativeFactors).toEqual([]);
     });
 
-    it('SUPPORTING relevance → condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
+    it('SUPPORTING relevance → condition resolves from required factors with affliction unassessed', () => {
       const horoscope = createMockHoroscope();
       const relevance = [createMockRelevance(Planet.MERCURY, 'SUPPORTING')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -126,10 +129,12 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
       expect(mercuryResult).toBeDefined();
       expect(mercuryResult!.relevance).toBe('SUPPORTING');
-      expect(mercuryResult!.condition).toBe('UNAVAILABLE');
+      expect(mercuryResult!.condition).toBe('NEUTRAL');
+      expect(mercuryResult!.assessment).toBe('PARTIAL');
+      expect(mercuryResult!.afflictionAssessed).toBe(false);
     });
 
-    it('SECONDARY relevance → condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
+    it('SECONDARY relevance → C6 condition can resolve without changing C9 relevance gates', () => {
       const horoscope = createMockHoroscope();
       const relevance = [createMockRelevance(Planet.JUPITER, 'SECONDARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -139,10 +144,11 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const jupiterResult = result.find(r => r.planet === Planet.JUPITER);
       expect(jupiterResult).toBeDefined();
       expect(jupiterResult!.relevance).toBe('SECONDARY');
-      expect(jupiterResult!.condition).toBe('UNAVAILABLE');
+      expect(jupiterResult!.condition).toBe('NEUTRAL');
+      expect(jupiterResult!.assessment).toBe('PARTIAL');
     });
 
-    it('CONDITIONAL relevance → condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
+    it('CONDITIONAL relevance → C6 condition can resolve without changing C9 relevance gates', () => {
       const horoscope = createMockHoroscope();
       const relevance = [createMockRelevance(Planet.MARS, 'CONDITIONAL')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -152,7 +158,8 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const marsResult = result.find(r => r.planet === Planet.MARS);
       expect(marsResult).toBeDefined();
       expect(marsResult!.relevance).toBe('CONDITIONAL');
-      expect(marsResult!.condition).toBe('UNAVAILABLE');
+      expect(marsResult!.condition).toBe('NEUTRAL');
+      expect(marsResult!.assessment).toBe('PARTIAL');
     });
 
     it('NEUTRAL relevance → UNAVAILABLE', () => {
@@ -629,7 +636,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
 
   // Group H — relevance/condition separation
   describe('Group H — relevance/condition separation', () => {
-    it('PRIMARY relevance + DEBILITATED dignity → relevance stays PRIMARY, condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
+    it('PRIMARY relevance + DEBILITATED dignity → weak condition with affliction unassessed', () => {
       const horoscope = createMockHoroscope({
         [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, {
           dignityStatus: DignityStatus.DEBILITATED
@@ -642,7 +649,14 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const saturnResult = result.find(r => r.planet === Planet.SATURN);
 
       expect(saturnResult!.relevance).toBe('PRIMARY');
-      expect(saturnResult!.condition).toBe('UNAVAILABLE');
+      expect(saturnResult!.condition).toBe('WEAK');
+      expect(saturnResult!.assessment).toBe('PARTIAL');
+      expect(saturnResult!.negativeFactors).toContainEqual(
+        expect.objectContaining({ type: 'DIGNITY', effect: 'CHALLENGE' })
+      );
+      expect(saturnResult!.negativeFactors).not.toContainEqual(
+        expect.objectContaining({ type: 'AFFLICTION' })
+      );
       expect(saturnResult!.relevance).not.toBe('NEUTRAL');
     });
   });

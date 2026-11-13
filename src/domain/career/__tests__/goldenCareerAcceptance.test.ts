@@ -93,7 +93,8 @@ interface GoldenScenarioResult {
 }
 
 function runGoldenScenario(
-  scenario: GoldenScenarioMetadata
+  scenario: GoldenScenarioMetadata,
+  options: { readonly omitDasha?: boolean } = {}
 ): GoldenScenarioResult {
   // Load birth details (use override if specified, otherwise canonical)
   const birthDetails: BirthDetails = {
@@ -111,7 +112,13 @@ function runGoldenScenario(
   });
 
   // Resolve temporal state
-  const temporalState = resolveAnalysisTemporalState(horoscope, context);
+  const resolvedTemporalState = resolveAnalysisTemporalState(horoscope, context);
+  const scenarioHoroscope: Horoscope = options.omitDasha
+    ? { ...horoscope, dashaInterpretation: undefined }
+    : horoscope;
+  const temporalState = options.omitDasha
+    ? Object.freeze({ ...resolvedTemporalState, dashaInterpretation: undefined })
+    : resolvedTemporalState;
 
   // Build domain options
   const domainOptions: DomainReasoningOptions = {
@@ -120,7 +127,7 @@ function runGoldenScenario(
   };
 
   // Invoke real production entry point: interpretCareerV2
-  const interpretation = interpretCareerV2(horoscope, domainOptions);
+  const interpretation = interpretCareerV2(scenarioHoroscope, domainOptions);
 
   // Extract canonical C11 result (authoritative source)
   const canonicalC11 = interpretation.conclusionData?.canonicalCareerFinalSynthesis;
@@ -140,7 +147,7 @@ function runGoldenScenario(
     evidence,
     scenarioId: scenario.scenarioId,
     birthDetails,
-    horoscope,
+    horoscope: scenarioHoroscope,
     domainOptions
   };
 }
@@ -304,8 +311,11 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         {
           level: 'MD',
           planet: 'JUPITER',
+          contextResolved: true,
           relevance: expect.any(String),
           condition: expect.any(String),
+          conditionAssessment: expect.any(String),
+          afflictionAssessed: expect.any(Boolean),
           expressionCount: expect.any(Number),
           hasCareerPromise: expect.any(Boolean),
           planetActivates: expect.any(Boolean),
@@ -317,8 +327,11 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         {
           level: 'AD',
           planet: 'MERCURY',
+          contextResolved: true,
           relevance: expect.any(String),
           condition: expect.any(String),
+          conditionAssessment: expect.any(String),
+          afflictionAssessed: expect.any(Boolean),
           expressionCount: expect.any(Number),
           hasCareerPromise: expect.any(Boolean),
           planetActivates: expect.any(Boolean),
@@ -330,8 +343,11 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         {
           level: 'PD',
           planet: 'VENUS',
+          contextResolved: true,
           relevance: expect.any(String),
           condition: expect.any(String),
+          conditionAssessment: expect.any(String),
+          afflictionAssessed: expect.any(Boolean),
           expressionCount: expect.any(Number),
           hasCareerPromise: expect.any(Boolean),
           planetActivates: expect.any(Boolean),
@@ -341,27 +357,47 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           effect: expect.any(String)
         }
       ],
+      c9ExpressionTrace: {
+        source: expect.any(String),
+        expressionCount: expect.any(Number),
+        evidenceCount: expect.any(Number),
+        evidenceWithPlanetAttributions: expect.any(Number),
+        planetAttributionCounts: expect.any(Array)
+      },
       natalPromiseDirectionPassedToProfessionRanking: 'MIXED'
     });
     expect(trace).toMatchInlineSnapshot(`
       {
+        "c9ExpressionTrace": {
+          "evidenceCount": 0,
+          "evidenceWithPlanetAttributions": 0,
+          "expressionCount": 0,
+          "planetAttributionCounts": [],
+          "source": "EXPRESSION_EVIDENCE_PLANETS",
+        },
         "c9LevelResultsBeforeHierarchy": [
           {
-            "condition": "UNAVAILABLE",
-            "direction": "UNAVAILABLE",
-            "effect": "DOES_NOT_ACTIVATE",
+            "afflictionAssessed": false,
+            "condition": "WEAK",
+            "conditionAssessment": "PARTIAL",
+            "contextResolved": true,
+            "direction": "CHALLENGE",
+            "effect": "CHALLENGES",
             "expressionCount": 0,
             "hasCareerPromise": true,
             "isRelevant": true,
             "level": "MD",
             "planet": "JUPITER",
             "planetActivates": false,
-            "planetChallenges": false,
+            "planetChallenges": true,
             "relevance": "PRIMARY",
           },
           {
-            "condition": "UNAVAILABLE",
-            "direction": "UNAVAILABLE",
+            "afflictionAssessed": false,
+            "condition": "NEUTRAL",
+            "conditionAssessment": "PARTIAL",
+            "contextResolved": true,
+            "direction": "NEUTRAL",
             "effect": "DOES_NOT_ACTIVATE",
             "expressionCount": 0,
             "hasCareerPromise": true,
@@ -373,16 +409,19 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
             "relevance": "SUPPORTING",
           },
           {
-            "condition": "UNAVAILABLE",
-            "direction": "UNAVAILABLE",
-            "effect": "DOES_NOT_ACTIVATE",
+            "afflictionAssessed": false,
+            "condition": "WEAK",
+            "conditionAssessment": "PARTIAL",
+            "contextResolved": true,
+            "direction": "CHALLENGE",
+            "effect": "CHALLENGES",
             "expressionCount": 0,
             "hasCareerPromise": true,
             "isRelevant": true,
             "level": "PD",
             "planet": "VENUS",
             "planetActivates": false,
-            "planetChallenges": false,
+            "planetChallenges": true,
             "relevance": "SUPPORTING",
           },
         ],
@@ -810,22 +849,20 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
   });
 
   /**
-   * G05: Missing optional inputs → UNAVAILABLE/NOT_PROVIDED, not negative
+   * G05: Missing optional inputs → INSUFFICIENT_DATA/UNKNOWN, not negative
    */
-  it('G05: Missing optional inputs (Dasha/D10) → UNAVAILABLE, not negative (C11-INV-05)', () => {
+  it('G05: Missing optional inputs (Dasha/D10) → INSUFFICIENT_DATA, not negative (C11-INV-05)', () => {
     const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G05')!;
-    const result = runGoldenScenario(scenario);
+    const result = runGoldenScenario(scenario, { omitDasha: true });
     const { canonicalC11 } = result;
 
     // Natal still available
     expect(canonicalC11.natalDirection).toBe('MIXED');
     expect(['VERY_STRONG', 'STRONG', 'MIXED', 'MODERATE'].includes(canonicalC11.natalStrength)).toBe(true);
 
-    // Dasha unavailable (no asOf date) - actual behavior
-    // Restored to single observed values as documented in the fixture notes
-    // The fixture specifies DOES_NOT_ACTIVATE and NOT_ACTIVE as the actual behavior
-    expect(canonicalC11.dashaEffect).toBe('DOES_NOT_ACTIVATE');
-    expect(canonicalC11.timingStatus).toBe('NOT_ACTIVE');
+    // Missing Dasha is unknown, not a challenge or a synthesized inactive period.
+    expect(canonicalC11.dashaEffect).toBe('INSUFFICIENT_DATA');
+    expect(canonicalC11.timingStatus).toBe('UNKNOWN');
 
     // Final direction should not be CHALLENGE just because Dasha is missing
     expect(canonicalC11.finalDirection).not.toBe('CHALLENGE');

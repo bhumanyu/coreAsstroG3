@@ -1875,7 +1875,13 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
 
   const currentDasha = options?.temporalState?.dashaInterpretation?.current;
   const evidence = buildAiContextEvidence(horoscope, rawDomainInterpretations, currentDasha);
-  const evidenceMap = new Map(evidence.map((item) => [item.id, item]));
+  const evidenceMap = new Map<string, AiEvidence>();
+  for (const item of evidence) {
+    evidenceMap.set(item.id, item);
+    if (item.identityKey) {
+      evidenceMap.set(item.identityKey, item);
+    }
+  }
 
   // Net invariant assertion: every context.domainInterpretations[].evidence[].id MUST exist in context.evidence
   for (const di of domainInterpretations) {

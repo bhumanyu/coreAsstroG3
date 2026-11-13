@@ -30,7 +30,8 @@ import type {
   CareerDashaPlanetContext,
   CareerDashaTiming,
   CareerDashaActivation,
-  CareerDashaActivationHierarchy
+  CareerDashaActivationHierarchy,
+  CareerDashaExpressionDiagnosticTrace
 } from './careerDashaActivationTypes';
 
 import type {
@@ -190,6 +191,60 @@ function getCurrentDasha(
  * - Sorts relatedHouses numerically and relatedPlanets by canonical order
  * - Freezes each context
  */
+function isAfflictionAssessed(
+  condition: CareerPlanetaryConditionResult | undefined
+): boolean {
+  return condition
+    ? condition.afflictionAssessed ?? condition.affliction !== 'UNAVAILABLE'
+    : false;
+}
+
+function getConditionAssessment(
+  condition: CareerPlanetaryConditionResult | undefined,
+  afflictionAssessed: boolean
+): NonNullable<CareerDashaPlanetContext['conditionAssessment']> {
+  if (!condition || condition.condition === 'UNAVAILABLE') {
+    return 'UNAVAILABLE';
+  }
+  return condition.assessment ?? (afflictionAssessed ? 'FULL' : 'PARTIAL');
+}
+
+function buildExpressionDiagnosticTrace(
+  expression: CareerExpressionAnalysis,
+  source: CareerDashaExpressionDiagnosticTrace['source']
+): CareerDashaExpressionDiagnosticTrace {
+  const planetCounts = new Map<Planet, number>();
+  let evidenceCount = 0;
+  let evidenceWithPlanetAttributions = 0;
+
+  for (const item of expression.expressions) {
+    for (const evidence of item.evidence) {
+      evidenceCount += 1;
+      if (evidence.planets.length > 0) {
+        evidenceWithPlanetAttributions += 1;
+      }
+      for (const planet of evidence.planets) {
+        planetCounts.set(planet, (planetCounts.get(planet) ?? 0) + 1);
+      }
+    }
+  }
+
+  return Object.freeze({
+    source,
+    expressionCount: expression.expressions.length,
+    evidenceCount,
+    evidenceWithPlanetAttributions,
+    planetAttributionCounts: Object.freeze(
+      CAREER_DASHA_PLANET_ORDER
+        .filter(planet => planetCounts.has(planet))
+        .map(planet => Object.freeze({
+          planet,
+          count: planetCounts.get(planet) ?? 0
+        }))
+    )
+  });
+}
+
 function buildPlanetContexts(
   natal: CareerNatalAnalysis,
   expression: CareerExpressionAnalysis
@@ -237,6 +292,8 @@ function buildPlanetContexts(
 
     // Preserve C6 UNAVAILABLE — do NOT default to WEAK/MODERATE
     const planetCondition = condition?.condition ?? 'UNAVAILABLE';
+    const afflictionAssessed = isAfflictionAssessed(condition);
+    const conditionAssessment = getConditionAssessment(condition, afflictionAssessed);
 
     // Merge relatedPlanets from relevance and condition, deduped and sorted by canonical order
     const relevanceRelatedPlanets = relevance.relatedPlanets;
@@ -267,6 +324,8 @@ function buildPlanetContexts(
       relevance: relevance.relevance,
       roles: Object.freeze([...relevance.roles]),
       condition: planetCondition,
+      conditionAssessment,
+      afflictionAssessed,
       expressions: Object.freeze(planetExpressions),
       relatedHouses: Object.freeze(sortedRelatedHouses),
       relatedPlanets: Object.freeze(mergedRelatedPlanets)
@@ -355,6 +414,10 @@ function buildCareerDashaActivationContext(
   const planetContexts = mechanismAwareInput
     ? buildPlanetContextsFromMechanismAware(natal, mechanismAwareInput)
     : buildPlanetContexts(natal, input.expression);
+  const expressionTrace = buildExpressionDiagnosticTrace(
+    input.expression,
+    mechanismAwareInput ? 'MECHANISM_AWARE_PARTICIPANTS' : 'EXPRESSION_EVIDENCE_PLANETS'
+  );
 
   // Build activation context from natal.structural
   const context: CareerDashaActivationContext = Object.freeze({
@@ -363,6 +426,7 @@ function buildCareerDashaActivationContext(
     structuralPrimarySupport: natal.structural.primarySupport,
     structuralPrimaryChallenge: natal.structural.primaryChallenge,
     planetContexts,
+    expressionTrace,
     mdTiming,
     adTiming,
     pdTiming
@@ -420,6 +484,8 @@ function buildPlanetContextsFromMechanismAware(
     // If planet is not in relevance/condition maps, treat as UNAVAILABLE (not negative evidence)
     const planetRelevance = relevance?.relevance ?? 'NEUTRAL';
     const planetCondition = condition?.condition ?? 'UNAVAILABLE';
+    const afflictionAssessed = isAfflictionAssessed(condition);
+    const conditionAssessment = getConditionAssessment(condition, afflictionAssessed);
 
     // Skip planets with no relevance (missing evidence is not negative evidence)
     if (planetRelevance === 'NEUTRAL') {
@@ -450,6 +516,8 @@ function buildPlanetContextsFromMechanismAware(
       relevance: planetRelevance,
       roles: Object.freeze(relevance?.roles ?? []),
       condition: planetCondition,
+      conditionAssessment,
+      afflictionAssessed,
       expressions: Object.freeze([]), // No expressions from mechanism-aware path
       relatedHouses: Object.freeze(sortedRelatedHouses),
       relatedPlanets: Object.freeze(mergedRelatedPlanets)

@@ -4,7 +4,8 @@ import type {
 } from '../careerPlanetaryRelevance';
 
 import type {
-  CareerPlanetaryCondition
+  CareerPlanetaryCondition,
+  CareerPlanetaryConditionAssessment
 } from '../careerPlanetaryCondition';
 
 import type {
@@ -68,6 +69,8 @@ export interface CareerDashaPlanetContext {
   readonly relevance: CareerPlanetRelevance;
   readonly roles: readonly CareerPlanetRole[];
   readonly condition: CareerPlanetaryCondition;
+  readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+  readonly afflictionAssessed?: boolean;
   readonly expressions: readonly CareerExpression[];
   readonly relatedHouses: readonly number[];
   readonly relatedPlanets: readonly Planet[];
@@ -120,6 +123,7 @@ export interface CareerDashaActivationHierarchy {
 
 export interface CareerDashaActivationDiagnosticTrace {
   readonly structuralPrimarySupport: number;
+  readonly expressionTrace?: CareerDashaExpressionDiagnosticTrace;
   readonly planetContextResolution: readonly {
     readonly level: CareerDashaActivationLevel;
     readonly planet?: Planet;
@@ -128,8 +132,11 @@ export interface CareerDashaActivationDiagnosticTrace {
   readonly levels: readonly {
     readonly level: CareerDashaActivationLevel;
     readonly planet?: Planet;
+    readonly contextResolved: boolean;
     readonly relevance?: CareerPlanetRelevance;
     readonly condition?: CareerPlanetaryCondition;
+    readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+    readonly afflictionAssessed?: boolean;
     readonly expressionCount?: number;
     readonly hasCareerPromise?: boolean;
     readonly planetActivates?: boolean;
@@ -137,6 +144,17 @@ export interface CareerDashaActivationDiagnosticTrace {
     readonly isRelevant?: boolean;
     readonly direction: CareerDashaActivationDirection;
     readonly effect: CareerDashaActivationEffect;
+  }[];
+}
+
+export interface CareerDashaExpressionDiagnosticTrace {
+  readonly source: 'EXPRESSION_EVIDENCE_PLANETS' | 'MECHANISM_AWARE_PARTICIPANTS';
+  readonly expressionCount: number;
+  readonly evidenceCount: number;
+  readonly evidenceWithPlanetAttributions: number;
+  readonly planetAttributionCounts: readonly {
+    readonly planet: Planet;
+    readonly count: number;
   }[];
 }
 
@@ -152,6 +170,7 @@ export interface CareerDashaActivationContext {
   readonly structuralPrimarySupport: number;
   readonly structuralPrimaryChallenge: number;
   readonly planetContexts: readonly CareerDashaPlanetContext[];
+  readonly expressionTrace?: CareerDashaExpressionDiagnosticTrace;
   readonly mdTiming: CareerDashaTiming;
   readonly adTiming: CareerDashaTiming;
   readonly pdTiming: CareerDashaTiming;

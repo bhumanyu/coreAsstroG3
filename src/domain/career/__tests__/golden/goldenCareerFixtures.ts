@@ -150,7 +150,7 @@ export const G04_MIXED_EVIDENCE: GoldenScenarioMetadata = Object.freeze({
 });
 
 /**
- * G05: Missing optional inputs → UNAVAILABLE/NOT_PROVIDED, not negative
+ * G05: Missing optional inputs → INSUFFICIENT_DATA/UNKNOWN, not negative
  *
  * Per C11-INV-05: Missing evidence ≠ negative evidence. Absence of data must not be treated as challenge.
  * Tests with missing Dasha or D10 inputs.
@@ -158,16 +158,16 @@ export const G04_MIXED_EVIDENCE: GoldenScenarioMetadata = Object.freeze({
 export const G05_MISSING_OPTIONAL_INPUTS: GoldenScenarioMetadata = Object.freeze({
   scenarioId: 'G05',
   description: 'Missing optional inputs (Dasha/D10) → UNAVAILABLE, not negative (C11-INV-05)',
-  asOf: undefined, // No asOf to trigger missing temporal state
-  temporalContext: 'No asOf date provided → Dasha unavailable',
+  asOf: '2026-01-01T00:00:00.000Z',
+  temporalContext: 'Dasha interpretation intentionally omitted from the scenario',
   expectedC11Fields: Object.freeze({
     natalDirection: 'MIXED', // Canonical chart produces MIXED (actual behavior)
     natalStrength: 'MIXED', // or MODERATE
-    dashaEffect: 'DOES_NOT_ACTIVATE', // Dasha unavailable (actual behavior)
-    timingStatus: 'NOT_ACTIVE' // Timing status not active (actual behavior)
+    dashaEffect: 'INSUFFICIENT_DATA',
+    timingStatus: 'UNKNOWN'
   }),
   blockedFields: Object.freeze([]),
-  notes: 'Validates C11-INV-05: Missing data ≠ negative evidence.'
+  notes: 'Validates C11-INV-05: missing Dasha evidence remains unknown, not inactive or challenging.'
 });
 
 /**

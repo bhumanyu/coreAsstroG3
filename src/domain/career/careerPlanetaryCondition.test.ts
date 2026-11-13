@@ -152,7 +152,7 @@ describe('Career Planetary Condition (C6)', () => {
       expect(result.condition).not.toBe('NEUTRAL');
     });
 
-    it('PRIMARY + dataAvailable=true + affliction=UNAVAILABLE → UNAVAILABLE', () => {
+    it('PRIMARY + required data + affliction=UNAVAILABLE → partial condition', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
@@ -167,8 +167,13 @@ describe('Career Planetary Condition (C6)', () => {
 
       const result = interpretCareerPlanetaryCondition(context);
 
-      expect(result.condition).toBe('UNAVAILABLE');
-      expect(result.condition).not.toBe('NEUTRAL');
+      expect(result.condition).toBe('STRONG');
+      expect(result.conditional).toBe(true);
+      expect(result.assessment).toBe('PARTIAL');
+      expect(result.afflictionAssessed).toBe(false);
+      expect(result.negativeFactors).toEqual([]);
+      expect(result.statement).toContain('Affliction was not assessed');
+      expect(result.statement).toContain('no affliction-based challenge is inferred');
     });
 
     it('PRIMARY + dataAvailable=true + combustion=UNAVAILABLE → UNAVAILABLE', () => {
