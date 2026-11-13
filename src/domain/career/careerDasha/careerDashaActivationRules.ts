@@ -3,7 +3,8 @@ import type {
 } from '../careerPlanetaryRelevance';
 
 import type {
-  CareerPlanetaryCondition
+  CareerPlanetaryCondition,
+  CareerPlanetaryConditionAssessment
 } from '../careerPlanetaryCondition';
 
 import type {
@@ -26,6 +27,27 @@ import type {
 import {
   Planet
 } from '../../../types';
+
+export function resolveConditionAssessmentMetadata(
+  planetContext: Pick<CareerDashaPlanetContext, 'condition' | 'conditionAssessment' | 'afflictionAssessed'>
+): {
+  readonly conditionAssessment: CareerPlanetaryConditionAssessment;
+  readonly afflictionAssessed: boolean;
+} {
+  const conditionAssessment = planetContext.conditionAssessment
+    ?? (planetContext.condition === 'UNAVAILABLE'
+      ? 'UNAVAILABLE'
+      : planetContext.afflictionAssessed === true
+        ? 'FULL'
+        : planetContext.afflictionAssessed === false
+          ? 'PARTIAL'
+          : 'UNAVAILABLE');
+
+  return {
+    conditionAssessment,
+    afflictionAssessed: planetContext.afflictionAssessed ?? false
+  };
+}
 
 export function resolveCareerDashaPlanetDirection(
   planetContext: CareerDashaPlanetContext

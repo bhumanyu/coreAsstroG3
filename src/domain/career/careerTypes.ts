@@ -33,6 +33,12 @@ import type {
 import type {
   CareerDashaCanonicalAnalysis
 } from './careerDasha/careerDashaCanonicalTypes';
+import type {
+  CareerDashaActivationDiagnosticTrace
+} from './careerDasha/careerDashaActivationTypes';
+import type {
+  CareerFinalSynthesisResult
+} from './careerFinalSynthesis/careerFinalSynthesisTypes';
 
 export interface CareerC8ExpressionCoverage {
   readonly mechanismCandidateCount: number;
@@ -44,7 +50,11 @@ export interface CareerC8ExpressionCoverage {
 
 export interface CareerAvailabilityDiagnosticTrace {
   readonly c8ExpressionCoverage?: CareerC8ExpressionCoverage;
-  readonly [key: string]: unknown;
+  readonly structuralPrimarySupportPassedToC9?: number;
+  readonly c9ExpressionTrace?: CareerDashaActivationDiagnosticTrace['expressionTrace'];
+  readonly c9PlanetContextResolution?: CareerDashaActivationDiagnosticTrace['planetContextResolution'];
+  readonly c9LevelResultsBeforeHierarchy?: CareerDashaActivationDiagnosticTrace['levels'];
+  readonly natalPromiseDirectionPassedToProfessionRanking?: CareerFinalSynthesisResult['natalDirection'];
 }
 
 export type CareerManifestationMode =

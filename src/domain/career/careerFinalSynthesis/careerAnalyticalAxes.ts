@@ -66,7 +66,11 @@ export interface CareerSustainabilityAxisResult {
 export interface CareerRiskAxisResult {
   readonly assessment: 'ADVERSE_EVIDENCE_PRESENT' | 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES';
   readonly conflictCount: number;
-  readonly nonActivationOccurrences: readonly string[];
+  readonly nonActivationOccurrences: readonly {
+    readonly occurrenceId: string;
+    readonly planet?: string;
+    readonly level: 'MD' | 'AD' | 'PD';
+  }[];
 }
 
 export interface CareerTimingCandidateWindow {
@@ -317,10 +321,18 @@ function makeRiskAxis(
   const dashaRisk = dasha.evidence
     .filter(item => item.direction === 'CHALLENGE' || item.direction === 'MIXED' || item.effect === 'CHALLENGES')
     .map(item => item.id);
-  const nonActivationOccurrences = sortedUnique(
-    dasha.evidence
-      .filter(item => item.effect === 'DOES_NOT_ACTIVATE')
-      .map(item => item.id)
+  const nonActivationById = new Map<string, CareerRiskAxisResult['nonActivationOccurrences'][number]>();
+  dasha.evidence
+    .filter(item => item.effect === 'DOES_NOT_ACTIVATE')
+    .forEach(item => nonActivationById.set(item.id, {
+      occurrenceId: item.id,
+      level: item.level,
+      ...(item.planet ? { planet: String(item.planet) } : {})
+    }));
+  const nonActivationOccurrences = Object.freeze(
+    [...nonActivationById.values()].sort((a, b) =>
+      `${a.level}:${a.planet ?? ''}:${a.occurrenceId}`.localeCompare(`${b.level}:${b.planet ?? ''}:${b.occurrenceId}`)
+    )
   );
   const d10Risk = d10.evidence
     .filter(item => item.direction === 'CHALLENGE' || item.d10Effect === 'CONFLICTS' || item.d10Effect === 'WEAKENS')

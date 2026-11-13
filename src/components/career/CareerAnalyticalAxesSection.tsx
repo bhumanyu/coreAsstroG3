@@ -35,7 +35,9 @@ export const CareerAnalyticalAxesSection: React.FC<CareerAnalyticalAxesSectionPr
               <p className="text-xs text-slate-300">{enumLabel(tEnum, 'careerRiskAssessment', axes.risk.result.assessment)} · {t('ui.axes.conflictCount', { count: axes.risk.result.conflictCount })}</p>
               {axes.risk.result.nonActivationOccurrences.length > 0 && (
                 <p className="text-xs text-slate-400">
-                  {t('ui.axes.nonActivationOccurrences')}: {axes.risk.result.nonActivationOccurrences.join(', ')}
+                  {t('ui.axes.nonActivationOccurrences')}: {axes.risk.result.nonActivationOccurrences
+                    .map(occurrence => `${occurrence.planet ?? t('ui.axes.unknown')} · ${enumLabel(tEnum, 'dashaLevel', occurrence.level)}`)
+                    .join(', ')}
                 </p>
               )}
             </div>

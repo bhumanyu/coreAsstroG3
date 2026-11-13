@@ -276,6 +276,29 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     expect(timing?.mahadasha).toMatchObject({ conditionAssessment: 'PARTIAL', afflictionAssessed: false });
     expect(timing?.antardasha).toMatchObject({ conditionAssessment: 'FULL', afflictionAssessed: true });
     expect(timing?.pratyantardasha).toMatchObject({ conditionAssessment: 'UNAVAILABLE', afflictionAssessed: false });
+
+    const internalArtifacts = interpretation.conclusionData?.internalArtifacts ?? {};
+    const { canonicalDashaAnalysis: _removed, ...internalArtifactsWithoutDasha } = internalArtifacts;
+    const interpretationWithoutCanonicalDasha = {
+      ...interpretation,
+      conclusionData: {
+        ...interpretation.conclusionData,
+        internalArtifacts: internalArtifactsWithoutDasha
+      }
+    } as typeof interpretation;
+    const timingWithoutCanonicalDasha = buildNormalizedCareerTiming(interpretationWithoutCanonicalDasha);
+
+    expect(timingWithoutCanonicalDasha?.mahadasha).toBeDefined();
+    expect(timingWithoutCanonicalDasha?.antardasha).toBeDefined();
+    expect(timingWithoutCanonicalDasha?.pratyantardasha).toBeDefined();
+    for (const period of [
+      timingWithoutCanonicalDasha?.mahadasha,
+      timingWithoutCanonicalDasha?.antardasha,
+      timingWithoutCanonicalDasha?.pratyantardasha
+    ]) {
+      expect(period).not.toHaveProperty('conditionAssessment');
+      expect(period).not.toHaveProperty('afflictionAssessed');
+    }
   });
 
   it('buildNormalizedWealthTiming includes traceability status on each period', () => {
@@ -345,13 +368,25 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
       ]
     });
 
-    const timing = buildNormalizedWealthTiming(interpretation);
+    const interpretationWithCareerAssessmentMetadata = {
+      ...interpretation,
+      periodTimingActivations: interpretation.periodTimingActivations?.map(period => ({
+        ...period,
+        conditionAssessment: 'PARTIAL',
+        afflictionAssessed: false
+      }))
+    } as typeof interpretation;
+    const timing = buildNormalizedWealthTiming(interpretationWithCareerAssessmentMetadata);
 
     expect(timing).toBeDefined();
     expect(timing?.status).toBe('AVAILABLE');
     expect(timing?.mahadasha?.traceability).toBe('RESOLVED');
     expect(timing?.antardasha?.traceability).toBe('DEGRADED'); // No AD evidence
     expect(timing?.pratyantardasha?.traceability).toBe('DEGRADED'); // No PD evidence
+    for (const period of [timing?.mahadasha, timing?.antardasha, timing?.pratyantardasha]) {
+      expect(period).not.toHaveProperty('conditionAssessment');
+      expect(period).not.toHaveProperty('afflictionAssessed');
+    }
   });
 });
 

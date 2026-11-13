@@ -286,6 +286,12 @@ export interface ProductCareerTimingCandidateWindow {
   readonly ruleIds: readonly string[];
 }
 
+export interface ProductCareerNonActivationOccurrence {
+  readonly occurrenceId: string;
+  readonly planet?: string;
+  readonly level: 'MD' | 'AD' | 'PD';
+}
+
 export interface ProductCareerAnalyticalAxes {
   readonly version: string;
   readonly promise: ProductCareerAnalyticalAxis<{
@@ -306,7 +312,7 @@ export interface ProductCareerAnalyticalAxes {
   readonly risk: ProductCareerAnalyticalAxis<{
     readonly assessment: 'ADVERSE_EVIDENCE_PRESENT' | 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES';
     readonly conflictCount: number;
-    readonly nonActivationOccurrences: readonly string[];
+    readonly nonActivationOccurrences: readonly ProductCareerNonActivationOccurrence[];
   }>;
   readonly timing: ProductCareerAnalyticalAxis<{
     readonly candidateWindows: readonly ProductCareerTimingCandidateWindow[];

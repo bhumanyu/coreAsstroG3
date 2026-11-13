@@ -22,6 +22,7 @@ import {
   hasEstablishedCareerPromise,
   doesPlanetActivateCareerPromise,
   doesPlanetChallengeCareerPromise,
+  resolveConditionAssessmentMetadata,
   resolveCareerDashaEffect,
   resolveCareerDashaStrength,
   resolveCareerDashaPlanetDirection,
@@ -150,11 +151,8 @@ function resolveLevel(
   const planetActivates = doesPlanetActivateCareerPromise(actualPlanetContext, structuralDirection);
   const planetChallenges = doesPlanetChallengeCareerPromise(actualPlanetContext);
   const isRelevant = isCareerDashaRelevant(actualPlanetContext.relevance);
-  const conditionAssessment = actualPlanetContext.conditionAssessment
-    ?? (actualPlanetContext.condition === 'UNAVAILABLE'
-      ? 'UNAVAILABLE'
-      : actualPlanetContext.afflictionAssessed === true ? 'FULL' : 'PARTIAL');
-  const afflictionAssessed = actualPlanetContext.afflictionAssessed ?? false;
+  const conditionMetadata = resolveConditionAssessmentMetadata(actualPlanetContext);
+  const { conditionAssessment, afflictionAssessed } = conditionMetadata;
   const expressionEvidenceCount = new Set(
     actualPlanetContext.expressions.flatMap(expression => expression.evidence.map(item => item.id))
   ).size;
@@ -178,8 +176,8 @@ function resolveLevel(
   if (diagnostic) {
     diagnostic.relevance = actualPlanetContext.relevance;
     diagnostic.condition = actualPlanetContext.condition;
-    diagnostic.conditionAssessment = conditionAssessment;
-    diagnostic.afflictionAssessed = afflictionAssessed;
+    diagnostic.conditionAssessment = conditionMetadata.conditionAssessment;
+    diagnostic.afflictionAssessed = conditionMetadata.afflictionAssessed;
     diagnostic.expressionCount = actualPlanetContext.expressions.length;
     diagnostic.expressionEvidenceCount = expressionEvidenceCount;
     diagnostic.evidenceBasis = evidenceBasis;

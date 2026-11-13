@@ -141,7 +141,11 @@ describe('user-facing assessment localization at page boundaries', () => {
         result: {
           assessment: 'NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES',
           conflictCount: 0,
-          nonActivationOccurrences: ['dasha-non-activation']
+          nonActivationOccurrences: [{
+            occurrenceId: 'dasha-non-activation',
+            planet: 'SATURN',
+            level: 'MD'
+          }]
         },
         diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE']
       },
@@ -156,7 +160,7 @@ describe('user-facing assessment localization at page boundaries', () => {
 
     const diagnostic = screen.getByText('सक्रियता साक्ष्य को अभी व्यक्तिगत जन्म-कुंडली अभिलेखों तक नहीं खोजा जा सकता।');
     expect(diagnostic).toHaveAttribute('title', 'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE');
-    expect(screen.getByText('सक्रिय न करने वाली अवधियाँ: dasha-non-activation')).toBeInTheDocument();
+    expect(screen.getByText('सक्रिय न करने वाली अवधियाँ: SATURN · महादशा (MD)')).toBeInTheDocument();
   });
 
   it('renders all expanded Career journey states with Hindi labels', async () => {

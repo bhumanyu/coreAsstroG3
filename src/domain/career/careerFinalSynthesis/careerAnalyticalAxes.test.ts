@@ -252,6 +252,7 @@ describe('B01 independent Career analytical axes', () => {
         identityKey: 'dasha-limiting-semantic',
         id: 'dasha-limiting-occurrence',
         level: 'MD',
+        planet: Planet.SATURN,
         role: 'PRIMARY_DRIVER',
         effect: 'DOES_NOT_ACTIVATE',
         direction: 'NEUTRAL',
@@ -292,7 +293,9 @@ describe('B01 independent Career analytical axes', () => {
     expect(axes.risk.supportingEvidenceOccurrenceIds).toContain('d10-risk-occurrence');
     expect(axes.risk.supportingEvidenceOccurrenceIds).toContain('d10-weakening-occurrence');
     expect(axes.risk.supportingEvidenceOccurrenceIds).not.toContain('dasha-limiting-occurrence');
-    expect(axes.risk.result?.nonActivationOccurrences).toContain('dasha-limiting-occurrence');
+    expect(axes.risk.result?.nonActivationOccurrences).toContainEqual(
+      expect.objectContaining({ occurrenceId: 'dasha-limiting-occurrence', planet: Planet.SATURN, level: 'MD' })
+    );
   });
 
   it('keeps non-activating Dasha occurrences visible without classifying them as adverse', () => {
@@ -314,7 +317,11 @@ describe('B01 independent Career analytical axes', () => {
     });
 
     expect(axes.risk.result?.assessment).toBe('NO_ADVERSE_EVIDENCE_IN_AVAILABLE_SOURCES');
-    expect(axes.risk.result?.nonActivationOccurrences).toEqual(['dasha-non-activation-occurrence']);
+    expect(axes.risk.result?.nonActivationOccurrences).toEqual([{
+      occurrenceId: 'dasha-non-activation-occurrence',
+      planet: Planet.SATURN,
+      level: 'MD'
+    }]);
     expect(axes.risk.supportingEvidenceOccurrenceIds).not.toContain('dasha-non-activation-occurrence');
     expect(axes.risk.ruleIds).not.toContain('RULE_DASHA_NON_ACTIVATION');
   });
