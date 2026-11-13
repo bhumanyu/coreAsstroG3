@@ -110,6 +110,7 @@ export const CareerPage: React.FC<CareerPageProps> = ({
   const axesState = !viewModel.analyticalAxes
     ? 'ABSENT' as const
     : (() => {
+      // Sustainability is deliberately excluded: it is NOT_ASSESSED by design, not missing coverage.
       const assessedAxes = [
         viewModel.analyticalAxes.promise,
         viewModel.analyticalAxes.activation,

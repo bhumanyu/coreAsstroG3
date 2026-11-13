@@ -2,6 +2,7 @@ import { Planet } from '../../../../types';
 import { CANONICAL_BIRTH_DETAILS } from '../../../../test/fixtures/canonicalChart';
 import type { VimshottariTimeline } from '../../../../engine/dasha/vimshottari';
 
+// This uses CANONICAL_BIRTH_DETAILS as a canonical diagnostic fixture; it is not verified against the user's live-report inputs.
 export const LIVE_C9_DIAGNOSTIC_FIXTURE = Object.freeze({
   birthDetails: CANONICAL_BIRTH_DETAILS,
   mahadasha: Planet.JUPITER,

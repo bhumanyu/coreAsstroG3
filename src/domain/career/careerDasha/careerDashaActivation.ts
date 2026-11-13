@@ -50,6 +50,18 @@ function toCareerDashaActivationEffect(
   return effect as CareerDashaActivationEffect;
 }
 
+interface CareerDashaLevelDiagnosticCapture {
+  level: CareerDashaActivationLevel;
+  planet?: CareerDashaTiming['planet'];
+  relevance?: CareerDashaPlanetContext['relevance'];
+  condition?: CareerDashaPlanetContext['condition'];
+  expressionCount?: number;
+  hasCareerPromise?: boolean;
+  planetActivates?: boolean;
+  planetChallenges?: boolean;
+  isRelevant?: boolean;
+}
+
 export function resolveCareerDashaActivation(
   context: CareerDashaActivationContext
 ): CareerDashaActivationHierarchy {
@@ -57,10 +69,13 @@ export function resolveCareerDashaActivation(
   const mdContext = mdTiming.planet ? findPlanetContext(context, mdTiming.planet) : undefined;
   const adContext = adTiming.planet ? findPlanetContext(context, adTiming.planet) : undefined;
   const pdContext = pdTiming.planet ? findPlanetContext(context, pdTiming.planet) : undefined;
+  const mdDiagnostic: CareerDashaLevelDiagnosticCapture = { level: 'MD', planet: mdTiming.planet };
+  const adDiagnostic: CareerDashaLevelDiagnosticCapture = { level: 'AD', planet: adTiming.planet };
+  const pdDiagnostic: CareerDashaLevelDiagnosticCapture = { level: 'PD', planet: pdTiming.planet };
 
-  const md = resolveLevel(context, 'MD', 'PRIMARY_DRIVER', mdTiming, mdContext);
-  const ad = resolveLevel(context, 'AD', 'MODIFIER', adTiming, adContext);
-  const pd = resolveLevel(context, 'PD', 'REFINEMENT', pdTiming, pdContext);
+  const md = resolveLevel(context, 'MD', 'PRIMARY_DRIVER', mdTiming, mdContext, mdDiagnostic);
+  const ad = resolveLevel(context, 'AD', 'MODIFIER', adTiming, adContext, adDiagnostic);
+  const pd = resolveLevel(context, 'PD', 'REFINEMENT', pdTiming, pdContext, pdDiagnostic);
 
   const diagnosticTrace = Object.freeze({
     structuralPrimarySupport: context.structuralPrimarySupport,
@@ -69,12 +84,11 @@ export function resolveCareerDashaActivation(
       Object.freeze({ level: 'AD' as const, planet: adTiming.planet, resolved: adContext !== undefined }),
       Object.freeze({ level: 'PD' as const, planet: pdTiming.planet, resolved: pdContext !== undefined })
     ]),
-    levels: Object.freeze([md, ad, pd].map(level => Object.freeze({
-      level: level.level,
-      planet: level.planet,
-      direction: level.direction,
-      effect: level.effect
-    })))
+    levels: Object.freeze([
+      Object.freeze({ ...mdDiagnostic, direction: md.direction, effect: md.effect }),
+      Object.freeze({ ...adDiagnostic, direction: ad.direction, effect: ad.effect }),
+      Object.freeze({ ...pdDiagnostic, direction: pd.direction, effect: pd.effect })
+    ])
   });
 
   return resolveCareerDashaHierarchy(md, ad, pd, diagnosticTrace);
@@ -85,7 +99,8 @@ function resolveLevel(
   level: CareerDashaActivationLevel,
   role: CareerDashaActivationRole,
   timing: CareerDashaTiming,
-  planetContext?: CareerDashaPlanetContext
+  planetContext?: CareerDashaPlanetContext,
+  diagnostic?: CareerDashaLevelDiagnosticCapture
 ): CareerDashaActivation {
   const { structuralDirection, structuralPrimarySupport } = context;
 
@@ -114,6 +129,15 @@ function resolveLevel(
   const planetActivates = doesPlanetActivateCareerPromise(actualPlanetContext, structuralDirection);
   const planetChallenges = doesPlanetChallengeCareerPromise(actualPlanetContext);
   const isRelevant = isCareerDashaRelevant(actualPlanetContext.relevance);
+  if (diagnostic) {
+    diagnostic.relevance = actualPlanetContext.relevance;
+    diagnostic.condition = actualPlanetContext.condition;
+    diagnostic.expressionCount = actualPlanetContext.expressions.length;
+    diagnostic.hasCareerPromise = hasCareerPromise;
+    diagnostic.planetActivates = planetActivates;
+    diagnostic.planetChallenges = planetChallenges;
+    diagnostic.isRelevant = isRelevant;
+  }
 
   const effect = resolveCareerDashaEffect(
     hasCareerPromise,

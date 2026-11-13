@@ -351,6 +351,22 @@ describe('CareerPage (P-UI-04)', () => {
     expect(screen.getByRole('link', { name: /Risk & sustainability/ })).toHaveAttribute('data-state', 'AVAILABLE');
   });
 
+  it('does not downgrade complete assessed-axis coverage for by-design NOT_ASSESSED sustainability', () => {
+    const base = createProductAnalysis();
+    const axes = careerAxes('AVAILABLE');
+    const analysis = createProductAnalysis({
+      career: { ...base.career, analyticalAxes: axes }
+    });
+
+    expect(axes.risk.status).toBe('AVAILABLE');
+    expect(axes.sustainability.status).toBe('UNAVAILABLE');
+    expect(axes.sustainability.result).toMatchObject({ assessment: 'NOT_ASSESSED' });
+    render(<CareerPage productAnalysisState={{ status: 'READY', analysis }} />);
+
+    expect(screen.getByRole('link', { name: /Risk & sustainability/ }))
+      .toHaveAttribute('data-state', 'AVAILABLE');
+  });
+
   it('B05: dual pathway verdict is based on explicit canonical B02 candidates', () => {
     const base = createProductAnalysis();
     const outcomeQualification = {

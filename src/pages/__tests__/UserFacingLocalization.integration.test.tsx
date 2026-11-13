@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import i18n from '../../i18n/i18n';
 import { CareerPage } from '../CareerPage';
+import { CareerJourney } from '../../components/career/CareerJourney';
 import { OverviewPage } from '../OverviewPage';
 import { ReasoningPage } from '../ReasoningPage';
 import { WealthPage } from '../WealthPage';
@@ -43,6 +44,31 @@ afterEach(async () => {
 });
 
 describe('user-facing assessment localization at page boundaries', () => {
+  it('renders all expanded Career journey states with Hindi labels', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    render(
+      <CareerJourney steps={[
+        { id: 'absent', title: 'Absent', description: 'Absent state', state: 'ABSENT' },
+        { id: 'not-assessed', title: 'Not assessed', description: 'Not assessed state', state: 'NOT_ASSESSED' },
+        { id: 'executed-empty', title: 'Empty execution', description: 'Executed state', state: 'EXECUTED_NO_CANDIDATES' },
+        { id: 'blocked', title: 'Blocked', description: 'Blocked state', state: 'QUALIFICATION_BLOCKED' }
+      ]} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('अनुपस्थित')).toBeInTheDocument();
+      expect(screen.getByText('डिज़ाइन के अनुसार आकलन नहीं किया गया')).toBeInTheDocument();
+      expect(screen.getByText('विश्लेषण चला; कोई उम्मीदवार नहीं')).toBeInTheDocument();
+      expect(screen.getByText('पुष्टि-प्रवेश अवरुद्ध')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('ui.journey.absent')).not.toBeInTheDocument();
+    expect(screen.queryByText('ui.journey.notAssessed')).not.toBeInTheDocument();
+    expect(screen.queryByText('ui.journey.executedNoCandidates')).not.toBeInTheDocument();
+    expect(screen.queryByText('ui.journey.qualificationBlocked')).not.toBeInTheDocument();
+  });
+
   it('updates Overview assessment copy while retaining canonical values and evidence prose', async () => {
     await act(async () => {
       await i18n.changeLanguage('en');

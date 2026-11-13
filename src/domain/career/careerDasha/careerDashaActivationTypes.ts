@@ -128,6 +128,13 @@ export interface CareerDashaActivationDiagnosticTrace {
   readonly levels: readonly {
     readonly level: CareerDashaActivationLevel;
     readonly planet?: Planet;
+    readonly relevance?: CareerPlanetRelevance;
+    readonly condition?: CareerPlanetaryCondition;
+    readonly expressionCount?: number;
+    readonly hasCareerPromise?: boolean;
+    readonly planetActivates?: boolean;
+    readonly planetChallenges?: boolean;
+    readonly isRelevant?: boolean;
     readonly direction: CareerDashaActivationDirection;
     readonly effect: CareerDashaActivationEffect;
   }[];

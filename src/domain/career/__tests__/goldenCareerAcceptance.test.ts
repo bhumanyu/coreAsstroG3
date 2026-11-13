@@ -301,9 +301,45 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         { level: 'PD', planet: 'VENUS', resolved: true }
       ],
       c9LevelResultsBeforeHierarchy: [
-        { level: 'MD', planet: 'JUPITER', direction: expect.any(String), effect: expect.any(String) },
-        { level: 'AD', planet: 'MERCURY', direction: expect.any(String), effect: expect.any(String) },
-        { level: 'PD', planet: 'VENUS', direction: expect.any(String), effect: expect.any(String) }
+        {
+          level: 'MD',
+          planet: 'JUPITER',
+          relevance: expect.any(String),
+          condition: expect.any(String),
+          expressionCount: expect.any(Number),
+          hasCareerPromise: expect.any(Boolean),
+          planetActivates: expect.any(Boolean),
+          planetChallenges: expect.any(Boolean),
+          isRelevant: expect.any(Boolean),
+          direction: expect.any(String),
+          effect: expect.any(String)
+        },
+        {
+          level: 'AD',
+          planet: 'MERCURY',
+          relevance: expect.any(String),
+          condition: expect.any(String),
+          expressionCount: expect.any(Number),
+          hasCareerPromise: expect.any(Boolean),
+          planetActivates: expect.any(Boolean),
+          planetChallenges: expect.any(Boolean),
+          isRelevant: expect.any(Boolean),
+          direction: expect.any(String),
+          effect: expect.any(String)
+        },
+        {
+          level: 'PD',
+          planet: 'VENUS',
+          relevance: expect.any(String),
+          condition: expect.any(String),
+          expressionCount: expect.any(Number),
+          hasCareerPromise: expect.any(Boolean),
+          planetActivates: expect.any(Boolean),
+          planetChallenges: expect.any(Boolean),
+          isRelevant: expect.any(Boolean),
+          direction: expect.any(String),
+          effect: expect.any(String)
+        }
       ],
       natalPromiseDirectionPassedToProfessionRanking: 'MIXED'
     });
@@ -311,22 +347,43 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
       {
         "c9LevelResultsBeforeHierarchy": [
           {
+            "condition": "UNAVAILABLE",
             "direction": "UNAVAILABLE",
             "effect": "DOES_NOT_ACTIVATE",
+            "expressionCount": 0,
+            "hasCareerPromise": true,
+            "isRelevant": true,
             "level": "MD",
             "planet": "JUPITER",
+            "planetActivates": false,
+            "planetChallenges": false,
+            "relevance": "PRIMARY",
           },
           {
+            "condition": "UNAVAILABLE",
             "direction": "UNAVAILABLE",
             "effect": "DOES_NOT_ACTIVATE",
+            "expressionCount": 0,
+            "hasCareerPromise": true,
+            "isRelevant": true,
             "level": "AD",
             "planet": "MERCURY",
+            "planetActivates": false,
+            "planetChallenges": false,
+            "relevance": "SUPPORTING",
           },
           {
+            "condition": "UNAVAILABLE",
             "direction": "UNAVAILABLE",
             "effect": "DOES_NOT_ACTIVATE",
+            "expressionCount": 0,
+            "hasCareerPromise": true,
+            "isRelevant": true,
             "level": "PD",
             "planet": "VENUS",
+            "planetActivates": false,
+            "planetChallenges": false,
+            "relevance": "SUPPORTING",
           },
         ],
         "c9PlanetContextResolution": [

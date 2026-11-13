@@ -216,6 +216,31 @@ describe('B04 deterministic profession-family ranking', () => {
     expect(result.diagnostics).toContain('D1_NATAL_PROMISE_MIXED_CONTESTED');
   });
 
+  it('does not let D10 qualification bypass the mixed D1 promise gate', () => {
+    const item = candidate({
+      id: 'candidate-mixed-d1-qualified-d10',
+      domain: 'TECHNOLOGY',
+      family: 'TECHNICAL_LEADERSHIP',
+      occurrenceIds: ['occ-d1'],
+      semanticIds: ['identity-d1'],
+      rootIds: ['root-d1'],
+      d10Status: 'QUALIFIED',
+      d10Direction: 'SUPPORT',
+      d10OccurrenceIds: ['occ-d10']
+    });
+    const result = buildCareerProfessionRanking({
+      candidates: [item],
+      domainEvidence: [
+        evidence({ id: 'occ-d1', identityKey: 'identity-d1', rootEvidenceIds: ['root-d1'] })
+      ],
+      natalPromiseDirection: 'MIXED'
+    });
+
+    expect(result.status).toBe('UNAVAILABLE');
+    expect(result.rankedCandidates).toEqual([]);
+    expect(result.diagnostics).toContain('D1_NATAL_PROMISE_MIXED_CONTESTED');
+  });
+
   it('distinguishes a missing D1 direction from an unestablished promise', () => {
     const result = buildCareerProfessionRanking({
       candidates: [],
