@@ -113,7 +113,7 @@ describe('user-facing assessment localization at page boundaries', () => {
     render(<ReasoningPage productAnalysisState={{ status: 'READY', analysis: assessmentAnalysis }} />);
 
     expect(screen.getAllByText(/Strong foundation with mixed indications/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Jupiter in Cancer in 7th house.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Jupiter in Cancer in 7th house').length).toBeGreaterThan(0);
 
     await act(async () => {
       await i18n.changeLanguage('hi');
@@ -122,7 +122,7 @@ describe('user-facing assessment localization at page boundaries', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/मजबूत आधार के साथ मिश्रित संकेत/).length).toBeGreaterThan(0);
     });
-    expect(screen.getAllByText('Jupiter in Cancer in 7th house.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Jupiter in Cancer in 7th house').length).toBeGreaterThan(0);
   });
 
   it('localizes the safe not-assessed fallback', async () => {

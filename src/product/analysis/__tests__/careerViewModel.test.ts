@@ -183,17 +183,15 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     expect(vm.evidence).toHaveLength(2);
     expect(vm.evidence[0]).toMatchObject({
       id: 'ev_career_1',
-      title: '10th Lord Exaltation',
       direction: 'SUPPORT',
       role: 'PRIMARY',
-      source: 'CAREER_ENGINE'
+      technical: { source: 'CAREER_ENGINE', statement: 'Mars exalted in 1st house.' }
     });
     expect(vm.evidence[1]).toMatchObject({
       id: 'ev_career_2',
-      title: 'Saturn Aspect',
       direction: 'CHALLENGE',
       role: 'MODIFIER',
-      source: 'CAREER_ENGINE'
+      technical: { source: 'CAREER_ENGINE', statement: 'Saturn aspects 10th house.' }
     });
   });
 

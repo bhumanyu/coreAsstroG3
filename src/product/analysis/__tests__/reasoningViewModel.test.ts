@@ -144,13 +144,15 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
       direction: 'SUPPORT',
       role: 'PRIMARY',
       source: 'TEST_ENGINE',
+      house: 2,
+      planet: 'Jupiter',
       ruleId: 'RULE_JUP_2ND',
       derivedFromIds: ['ev_birth_d1']
     };
 
     const mapped = mapEvidence(rawEvidence);
     expect(mapped.id).toBe('ev_test_1');
-    expect(mapped.title).toBe('Jupiter in 2nd House');
+    expect(mapped.title).toBe('Jupiter in house 2');
     expect(mapped.direction).toBe('SUPPORT');
     expect(mapped.role).toBe('PRIMARY');
     expect(mapped.source).toBe('TEST_ENGINE');
@@ -208,7 +210,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
       }
     ];
 
-    const mappedEvidence = evidenceList.map(mapEvidence);
+    const mappedEvidence = evidenceList.map((e) => mapEvidence(e));
     const groups = buildEvidenceGroups(mappedEvidence);
 
     // Assert that primary driver is in PRIMARY
@@ -248,7 +250,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
         source: 'CORE'
       }
     ];
-    const groups = buildEvidenceGroups(evidenceList.map(mapEvidence));
+    const groups = buildEvidenceGroups(evidenceList.map((e) => mapEvidence(e)));
 
     // Only PRIMARY should exist; SUPPORTING, MODIFIER, REFINEMENT, CHALLENGING, CONFLICTING, NEUTRAL, OTHER should be absent
     const groupIds = groups.map((g) => g.id);

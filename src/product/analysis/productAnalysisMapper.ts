@@ -605,6 +605,14 @@ export function mapEvidenceItems(
         direction: item.direction,
         role: item.role,
         source: String(item.source || fallbackDomain),
+        sourceType: typeof item.sourceType === 'string' ? item.sourceType : undefined,
+        phase: typeof item.phase === 'string' ? item.phase : undefined,
+        dimension: typeof item.dimension === 'string' ? item.dimension : undefined,
+        house: Number.isInteger(item.house) ? item.house : undefined,
+        houses: Array.isArray(item.houses)
+          ? item.houses.filter((house: unknown): house is number => Number.isInteger(house))
+          : undefined,
+        planet: typeof item.planet === 'string' ? item.planet : undefined,
         ruleId: item.ruleId ? String(item.ruleId) : undefined,
         derivedFromIds: Array.isArray(item.derivedFromIds) ? [...item.derivedFromIds] : undefined
       };
@@ -631,11 +639,19 @@ export function mapEvidenceItems(
 
     return {
       id: String(id),
-      title: item.title || item.source ? `${item.source || fallbackDomain} Evidence` : String(id),
+      title: typeof item.title === 'string' ? item.title : '',
       statement: String(item.statement || item.description || ''),
       direction,
       role,
       source: String(item.source || fallbackDomain),
+      sourceType: typeof item.sourceType === 'string' ? item.sourceType : undefined,
+      phase: typeof item.phase === 'string' ? item.phase : undefined,
+      dimension: typeof item.dimension === 'string' ? item.dimension : undefined,
+      house: Number.isInteger(item.house) ? item.house : undefined,
+      houses: Array.isArray(item.houses)
+        ? item.houses.filter((house: unknown): house is number => Number.isInteger(house))
+        : undefined,
+      planet: typeof item.planet === 'string' ? item.planet : undefined,
       ruleId: item.ruleId ? String(item.ruleId) : undefined,
       derivedFromIds: Array.isArray(item.derivedFromIds) ? [...item.derivedFromIds] : undefined
     };

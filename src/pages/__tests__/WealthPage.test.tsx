@@ -136,7 +136,8 @@ describe('WealthPage (P-UI-05)', () => {
 
     // Evidential Reasoning Provenance
     expect(screen.getByText('Evidential Reasoning Provenance')).toBeInTheDocument();
-    expect(screen.getAllByText('2nd Lord Exalted')).toHaveLength(2);
+    expect(screen.getAllByText('2nd Lord Exalted')).toHaveLength(1);
+    expect(screen.getAllByText('Jupiter in Cancer in 7th house').length).toBeGreaterThan(0);
 
     // D03 evidence diagnostics: preserve D2 unavailable state and distinguish confidence from promise
     expect(screen.getByRole('heading', { name: 'Evidence, confidence & limitations' })).toBeInTheDocument();

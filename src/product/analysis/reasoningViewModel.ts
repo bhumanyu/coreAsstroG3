@@ -29,6 +29,10 @@ import {
   ENGLISH_USER_FACING_COPY,
   type UserFacingCopyProvider
 } from '../life-analysis/userFacingInterpretation';
+import {
+  buildUserFacingEvidence,
+  type UserFacingEvidence
+} from '../life-analysis/evidencePresentation';
 
 export type ReasoningDomain = 'CAREER' | 'WEALTH';
 
@@ -53,15 +57,8 @@ export interface ReasoningProvenanceViewModel {
   readonly isAvailable: boolean;
 }
 
-export interface ReasoningEvidenceViewModel {
-  readonly id: string;
-  readonly title: string;
-  readonly statement: string;
-  readonly direction: ProductDirection;
-  readonly role: ProductEvidenceRole;
+export interface ReasoningEvidenceViewModel extends UserFacingEvidence {
   readonly source: string;
-  readonly ruleId?: string;
-  readonly derivedFromIds: readonly string[];
   readonly provenance: ReasoningProvenanceViewModel;
 }
 
@@ -199,18 +196,15 @@ const DASHA_LEVEL_ORDER: Record<string, number> = {
  * Pure field-copy mapper for ProductEvidence.
  * Performs NO source-based or heuristic inference.
  */
-export function mapEvidence(e: ProductEvidence): ReasoningEvidenceViewModel {
+export function mapEvidence(
+  e: ProductEvidence,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): ReasoningEvidenceViewModel {
   const derivedFromIds = e.derivedFromIds ?? [];
   const provenanceAvailable = Boolean(e.ruleId || derivedFromIds.length > 0);
   return {
-    id: e.id,
-    title: e.title,
-    statement: e.statement,
-    direction: e.direction,
-    role: e.role,
+    ...buildUserFacingEvidence(e, copy),
     source: e.source,
-    ruleId: e.ruleId,
-    derivedFromIds,
     provenance: {
       ruleId: e.ruleId,
       derivedFromIds,
@@ -368,7 +362,7 @@ export function buildCareerReasoningViewModel(
   const uniqueEvidenceMap = new Map<string, ReasoningEvidenceViewModel>();
   for (const raw of rawEvidence) {
     if (!uniqueEvidenceMap.has(raw.id)) {
-      uniqueEvidenceMap.set(raw.id, mapEvidence(raw));
+      uniqueEvidenceMap.set(raw.id, mapEvidence(raw, copy));
     }
   }
   const allEvidence = Array.from(uniqueEvidenceMap.values());
@@ -556,7 +550,7 @@ export function buildWealthReasoningViewModel(
   const uniqueEvidenceMap = new Map<string, ReasoningEvidenceViewModel>();
   for (const raw of rawEvidence) {
     if (!uniqueEvidenceMap.has(raw.id)) {
-      uniqueEvidenceMap.set(raw.id, mapEvidence(raw));
+      uniqueEvidenceMap.set(raw.id, mapEvidence(raw, copy));
     }
   }
   const allEvidence = Array.from(uniqueEvidenceMap.values());
@@ -813,10 +807,11 @@ export function selectReasoningOverview(
  * Delegates to selectAllEvidence from productAnalysisSelectors.ts.
  */
 export function selectDedupedEvidence(
-  analysis: ProductAnalysis
+  analysis: ProductAnalysis,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
 ): readonly ReasoningEvidenceViewModel[] {
   const canonicalEvidence = selectAllEvidence(analysis);
-  return canonicalEvidence.map(mapEvidence);
+  return canonicalEvidence.map((e) => mapEvidence(e, copy));
 }
 
 /**
@@ -831,7 +826,7 @@ export function selectUnifiedReasoningViewModel(
   const career = buildCareerReasoningViewModel(analysis, copy);
   const wealth = buildWealthReasoningViewModel(analysis, copy);
   const overview = selectReasoningOverview(analysis, copy);
-  const dedupedEvidence = selectDedupedEvidence(analysis);
+  const dedupedEvidence = selectDedupedEvidence(analysis, copy);
   const dedupedEvidenceGroups = buildEvidenceGroups(dedupedEvidence);
   const ai = mapAi(analysis.ai);
 

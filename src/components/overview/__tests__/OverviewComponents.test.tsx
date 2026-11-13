@@ -234,7 +234,7 @@ describe('Overview Component Library (P-UI-03)', () => {
 
       expect(screen.getByText('Key Cross-Domain Findings')).toBeInTheDocument();
       expect(vm.findings.length).toBeGreaterThan(0);
-      expect(screen.getByText(vm.findings[0].title)).toBeInTheDocument();
+      expect(screen.getAllByText(vm.findings[0].title).length).toBeGreaterThan(0);
     });
 
     it('renders empty finding state when no findings present', () => {

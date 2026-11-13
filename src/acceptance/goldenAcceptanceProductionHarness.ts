@@ -560,7 +560,7 @@ function uiConclusionFromViewModel(
 
     const evidenceItems = result.careerView.evidence.map(e => ({
       id: e.id,
-      source: e.source,
+      source: e.technical.source,
       ruleId: e.ruleId,
       role: e.role
     }));
@@ -586,7 +586,7 @@ function uiConclusionFromViewModel(
 
   const evidenceItems = result.wealthView.evidence.map(e => ({
     id: e.id,
-    source: e.source,
+    source: e.technical.source,
     ruleId: e.ruleId,
     role: e.role
   }));

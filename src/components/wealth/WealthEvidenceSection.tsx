@@ -4,9 +4,10 @@ import {
   getDirectionBadgeClass,
   getEvidenceRoleBadgeClass
 } from './wealthFormat';
-import { FileText, GitFork, ArrowUpRight, BookOpen } from 'lucide-react';
+import { FileText, GitFork, ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { enumLabel } from '../../i18n/enumLabels';
+import { TechnicalEvidenceDetails } from '../reasoning/TechnicalEvidenceDetails';
 
 export interface WealthEvidenceSectionProps {
   readonly evidence: readonly WealthEvidenceViewModel[];
@@ -64,9 +65,6 @@ export const WealthEvidenceSection: React.FC<WealthEvidenceSectionProps> = ({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono-code text-slate-400">
-                    {item.id}
-                  </span>
                   <span className="text-xs font-bold text-slate-200">
                     {item.title}
                   </span>
@@ -83,30 +81,11 @@ export const WealthEvidenceSection: React.FC<WealthEvidenceSectionProps> = ({
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                {item.statement}
+                {item.explanation}
               </p>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] font-mono-code text-slate-400 border-t border-slate-900">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-3 h-3 text-slate-400" aria-hidden="true" />
-                  <span>{item.source}</span>
-                  {item.ruleId && (
-                    <>
-                      <span>•</span>
-                      <span className="text-indigo-400">{item.ruleId}</span>
-                    </>
-                  )}
-                </div>
-
-                {item.derivedFromIds && item.derivedFromIds.length > 0 && (
-                  <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                    <span>{t('ui.evidence.derivedFrom')}:</span>
-                    <span className="text-slate-300 font-mono-code">
-                      {item.derivedFromIds.join(', ')}
-                    </span>
-                  </div>
-                )}
-              </div>
+              <p className="text-[11px] text-slate-500">{item.sourceLabel}</p>
+              <TechnicalEvidenceDetails evidence={item} />
             </div>
           );
         })}

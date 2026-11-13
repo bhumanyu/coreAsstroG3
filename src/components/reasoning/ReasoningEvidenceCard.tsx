@@ -39,7 +39,7 @@ export const ReasoningEvidenceCard: React.FC<ReasoningEvidenceCardProps> = ({ ev
       </div>
 
       <p className="text-xs text-slate-300 leading-relaxed font-sans">
-        {evidence.statement}
+        {evidence.explanation}
       </p>
 
       <ReasoningProvenance provenance={evidence.provenance} />

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { OverviewFinding } from '../../product/analysis/overviewViewModel';
 import { Layers, CheckCircle } from 'lucide-react';
 import { enumLabel } from '../../i18n/enumLabels';
+import { TechnicalEvidenceDetails } from '../reasoning/TechnicalEvidenceDetails';
 
 export interface KeyFindingsCardProps {
   readonly findings: readonly OverviewFinding[];
@@ -31,8 +32,10 @@ export const FindingRow: React.FC<{ readonly finding: OverviewFinding }> = ({ fi
       </div>
 
       <p className="text-xs text-slate-400 leading-relaxed">
-        {finding.statement}
+        {finding.explanation}
       </p>
+      <p className="text-[10px] text-slate-500">{finding.sourceLabel}</p>
+      <TechnicalEvidenceDetails evidence={finding} />
 
       {finding.evidenceIds.length > 0 && (
         <div className="flex items-center gap-2 pt-1 text-[10px] font-mono-code text-slate-400">

@@ -227,12 +227,24 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       const evidence: ReasoningEvidenceViewModel = {
         id: 'ev_1',
         title: 'Exalted 10th Lord',
-        statement: 'Mars exalted in Capricorn in 10th house.',
-        direction: 'SUPPORT',
+        roleLabel: 'Primary factor',
+        directionLabel: 'Supportive',
+        explanation: 'Mars exalted in Capricorn in 10th house.',
+        sourceLabel: 'CAREER_ENGINE',
         role: 'PRIMARY',
-        source: 'CAREER_ENGINE',
+        direction: 'SUPPORT',
         ruleId: 'RULE_RUCHAKA_YOGA',
         derivedFromIds: ['ev_mars_capricorn'],
+        source: 'CAREER_ENGINE',
+        technical: {
+          id: 'ev_1',
+          ruleId: 'RULE_RUCHAKA_YOGA',
+          source: 'CAREER_ENGINE',
+          direction: 'SUPPORT',
+          role: 'PRIMARY',
+          statement: 'Mars exalted in Capricorn in 10th house.',
+          derivedFromIds: ['ev_mars_capricorn']
+        },
         provenance: {
           ruleId: 'RULE_RUCHAKA_YOGA',
           derivedFromIds: ['ev_mars_capricorn'],
@@ -277,11 +289,21 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
           {
             id: 'ev_1',
             title: 'Exalted Lord',
-            statement: 'Exalted planet in quadrant.',
-            direction: 'SUPPORT',
+            roleLabel: 'Primary factor',
+            directionLabel: 'Supportive',
+            explanation: 'Exalted planet in quadrant.',
+            sourceLabel: 'ENGINE',
             role: 'PRIMARY',
+            direction: 'SUPPORT',
             source: 'ENGINE',
             derivedFromIds: [],
+            technical: {
+              id: 'ev_1',
+              source: 'ENGINE',
+              direction: 'SUPPORT',
+              role: 'PRIMARY',
+              statement: 'Exalted planet in quadrant.'
+            },
             provenance: {
               derivedFromIds: [],
               source: 'ENGINE',

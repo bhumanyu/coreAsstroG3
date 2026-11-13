@@ -287,12 +287,23 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         {
           id: 'ev_1',
           title: '10th Lord Exaltation',
-          statement: 'Mars exalted in 1st house.',
-          direction: 'SUPPORT',
+          roleLabel: 'Primary factor',
+          directionLabel: 'Supportive',
+          explanation: 'Mars exalted in 1st house.',
+          sourceLabel: 'CAREER_ENGINE',
           role: 'PRIMARY',
-          source: 'CAREER_ENGINE',
+          direction: 'SUPPORT',
           ruleId: 'RULE_RUCHAKA',
-          derivedFromIds: ['ev_mars_exalted']
+          derivedFromIds: ['ev_mars_exalted'],
+          technical: {
+            id: 'ev_1',
+            ruleId: 'RULE_RUCHAKA',
+            source: 'CAREER_ENGINE',
+            direction: 'SUPPORT',
+            role: 'PRIMARY',
+            statement: 'Mars exalted in 1st house.',
+            derivedFromIds: ['ev_mars_exalted']
+          }
         }
       ];
 
@@ -305,8 +316,8 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       expect(screen.getByText('Primary Driver')).toBeInTheDocument();
       expect(screen.getByText('Supporting')).toBeInTheDocument();
       expect(screen.getByText('Source: CAREER_ENGINE')).toBeInTheDocument();
-      expect(screen.getByText('| Rule: RULE_RUCHAKA')).toBeInTheDocument();
-      expect(screen.getByText('Provenance: ev_mars_exalted')).toBeInTheDocument();
+      expect(screen.getByText('RULE_RUCHAKA')).toBeInTheDocument();
+      expect(screen.getByText('ev_mars_exalted')).toBeInTheDocument();
 
       const btn = screen.getByRole('button', { name: /explore reasoning graph/i });
       fireEvent.click(btn);
@@ -318,19 +329,28 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       const evidence: CareerEvidenceViewModel[] = [{
         id: 'ev_1',
         title: '10th Lord Exaltation',
-        statement: 'Mars exalted in 1st house.',
-        direction: 'SUPPORT',
+        roleLabel: 'Primary factor',
+        directionLabel: 'Supportive',
+        explanation: 'Mars exalted in 1st house.',
+        sourceLabel: 'CAREER_ENGINE',
         role: 'PRIMARY',
-        source: 'CAREER_ENGINE',
-        derivedFromIds: []
+        direction: 'SUPPORT',
+        derivedFromIds: [],
+        technical: {
+          id: 'ev_1',
+          source: 'CAREER_ENGINE',
+          direction: 'SUPPORT',
+          role: 'PRIMARY',
+          statement: 'Mars exalted in 1st house.'
+        }
       }];
 
       render(<CareerEvidenceSection evidence={evidence} />);
 
       expect(screen.getByText('प्रमुख कारक')).toBeInTheDocument();
       expect(screen.getByText('समर्थक')).toBeInTheDocument();
-      expect(screen.queryByText('PRIMARY')).not.toBeInTheDocument();
-      expect(screen.queryByText('SUPPORT')).not.toBeInTheDocument();
+      expect(screen.queryByText('PRIMARY', { selector: 'span' })).not.toBeInTheDocument();
+      expect(screen.queryByText('SUPPORT', { selector: 'span' })).not.toBeInTheDocument();
     });
   });
 

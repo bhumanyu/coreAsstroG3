@@ -218,7 +218,44 @@ const hindiUserFacingCopy: UserFacingCopyProvider = {
     }
     return 'यह जन्मकुंडली के धन-आधार का वर्णन है, निश्चित वित्तीय परिणाम की गारंटी नहीं।';
   },
-  additionalDetailLabel: (index) => `अतिरिक्त आकलन (${index})`
+  additionalDetailLabel: (index) => `अतिरिक्त आकलन (${index})`,
+  evidenceRoleLabels: Object.freeze({
+    PRIMARY: 'मुख्य कारक',
+    SUPPORTING: 'सहायक साक्ष्य',
+    CHALLENGING: 'चुनौतीपूर्ण साक्ष्य',
+    MODIFIER: 'बदलावकारी कारक',
+    REFINEMENT: 'सूक्ष्मता बताने वाला कारक',
+    CONFLICTING: 'विरोधी साक्ष्य',
+    NEUTRAL: 'तटस्थ साक्ष्य'
+  }),
+  evidenceDirectionLabels: Object.freeze({
+    SUPPORT: 'सहायक',
+    CHALLENGE: 'चुनौतीपूर्ण',
+    NEUTRAL: 'तटस्थ',
+    MIXED: 'मिश्रित',
+    UNAVAILABLE: 'आकलन नहीं हुआ'
+  }),
+  evidenceSourceLabels: Object.freeze({
+    C4_STRUCTURAL_REASONING: 'कुंडली का संरचनात्मक विश्लेषण',
+    D1: 'जन्मकुंडली (D1)',
+    D2: 'धन विभागीय कुंडली (D2)',
+    D10: 'करियर विभागीय कुंडली (D10)',
+    DASHA: 'ग्रह अवधि का विश्लेषण',
+    TRANSIT: 'गोचर विश्लेषण'
+  }),
+  unknownEvidenceRoleLabel: 'साक्ष्य कारक',
+  unknownEvidenceDirectionLabel: 'दिशा का आकलन नहीं हुआ',
+  unknownEvidenceSourceLabel: 'कुंडली विश्लेषण',
+  evidenceHousePairTitle: (firstHouse, secondHouse) =>
+    `${firstHouse}वें और ${secondHouse}वें भाव का संबंध`,
+  evidenceHouseTitle: (house, sourceType) =>
+    sourceType?.toUpperCase() === 'STRENGTH'
+      ? `${house}वें भाव की शक्ति`
+      : `${house}वें भाव का विश्लेषण`,
+  evidencePlanetTitle: (planet, house) =>
+    house === undefined ? `${planet} का कुंडली विश्लेषण` : `${house}वें भाव में ${planet}`,
+  evidenceSummary: (roleLabel, directionLabel) =>
+    `${roleLabel}: ${directionLabel}।`
 };
 
 export const HINDI_USER_FACING_COPY: UserFacingCopyProvider = Object.freeze(hindiUserFacingCopy);

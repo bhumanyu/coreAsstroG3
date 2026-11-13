@@ -120,6 +120,12 @@ export interface ProductEvidence {
   readonly direction: ProductDirection;
   readonly role: ProductEvidenceRole;
   readonly source: string;
+  readonly sourceType?: string;
+  readonly phase?: string;
+  readonly dimension?: string;
+  readonly house?: number;
+  readonly houses?: readonly number[];
+  readonly planet?: string;
   readonly ruleId?: string;
   readonly derivedFromIds?: readonly string[];
 }

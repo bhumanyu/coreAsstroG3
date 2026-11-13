@@ -394,12 +394,23 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
         {
           id: 'ev_dhana_1',
           title: 'Exalted 2nd Lord',
-          statement: 'Jupiter exalted in 7th house Kendra creating strong Dhana Yoga.',
-          direction: 'SUPPORT',
+          roleLabel: 'Primary factor',
+          directionLabel: 'Supportive',
+          explanation: 'Jupiter exalted in 7th house Kendra creating strong Dhana Yoga.',
+          sourceLabel: 'WEALTH_ENGINE',
           role: 'PRIMARY',
-          source: 'WEALTH_ENGINE',
+          direction: 'SUPPORT',
           ruleId: 'RULE_DHANA_YOGA',
-          derivedFromIds: ['natal_jupiter']
+          derivedFromIds: ['natal_jupiter'],
+          technical: {
+            id: 'ev_dhana_1',
+            ruleId: 'RULE_DHANA_YOGA',
+            source: 'WEALTH_ENGINE',
+            direction: 'SUPPORT',
+            role: 'PRIMARY',
+            statement: 'Jupiter exalted in 7th house Kendra creating strong Dhana Yoga.',
+            derivedFromIds: ['natal_jupiter']
+          }
         }
       ];
 

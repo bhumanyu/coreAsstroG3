@@ -4,9 +4,10 @@ import {
   getEvidenceRoleBadgeClass,
   getDirectionBadgeClass
 } from './careerFormat';
-import { Network, ArrowRight, ShieldCheck, Database, GitFork } from 'lucide-react';
+import { Network, ArrowRight, ShieldCheck, Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { enumLabel } from '../../i18n/enumLabels';
+import { TechnicalEvidenceDetails } from '../reasoning/TechnicalEvidenceDetails';
 
 export interface CareerEvidenceSectionProps {
   readonly evidence: readonly CareerEvidenceViewModel[];
@@ -80,23 +81,15 @@ export const CareerEvidenceSection: React.FC<CareerEvidenceSectionProps> = ({
                 </div>
               </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed font-sans">{item.statement}</p>
+              <p className="text-xs text-slate-300 leading-relaxed font-sans">{item.explanation}</p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-800/40 text-[11px] text-slate-400 font-mono-code">
                 <div className="flex items-center gap-1">
                   <Database className="w-3 h-3 text-slate-500" aria-hidden="true" />
-                  <span>{t('ui.evidence.source')}: {item.source}</span>
+                  <span>{t('ui.evidence.source')}: {item.sourceLabel}</span>
                 </div>
-
-                {item.ruleId && <span className="text-slate-500">| {t('ui.evidence.ruleLabel')}: {item.ruleId}</span>}
-
-                {item.derivedFromIds.length > 0 && (
-                  <div className="flex items-center gap-1 text-slate-400">
-                    <GitFork className="w-3 h-3 text-indigo-400" aria-hidden="true" />
-                    <span>{t('ui.evidence.provenance')}: {item.derivedFromIds.join(', ')}</span>
-                  </div>
-                )}
               </div>
+              <TechnicalEvidenceDetails evidence={item} />
             </div>
           );
         })}

@@ -341,8 +341,9 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     expect(vm1.warnings).toBe(analysis.warnings);
     expect(vm2.warnings).toBe(analysis.warnings);
 
-    // Top evidence items preserve object identity
-    expect(vm1.career.topEvidence[0]).toBe(analysis.career.evidence[0]);
+    // Top evidence items project canonical evidence IDs
+    expect(vm1.career.topEvidence[0].id).toBe(analysis.career.evidence[0].id);
+    expect(vm1.career.topEvidence[0].technical.statement).toBe(analysis.career.evidence[0].statement);
   });
 
   it('selectOverviewFindings deduplicates by evidence ID and extracts findings', () => {
@@ -352,7 +353,7 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     expect(findings.length).toBeGreaterThan(0);
     expect(findings[0]).toHaveProperty('id');
     expect(findings[0]).toHaveProperty('title');
-    expect(findings[0]).toHaveProperty('statement');
+    expect(findings[0]).toHaveProperty('explanation');
     expect(findings[0]).toHaveProperty('direction');
     expect(findings[0]).toHaveProperty('role');
     expect(findings[0]).toHaveProperty('evidenceIds');
