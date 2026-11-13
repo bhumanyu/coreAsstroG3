@@ -28,6 +28,10 @@ import {
   ENGLISH_USER_FACING_COPY,
   type UserFacingCopyProvider
 } from '../life-analysis/userFacingInterpretation';
+import {
+  buildUserFacingEvidence,
+  type UserFacingEvidence
+} from '../life-analysis/evidencePresentation';
 
 export interface WealthHeroViewModel {
   readonly ascendantSign?: string;
@@ -219,16 +223,7 @@ export interface WealthQualificationViewModel {
   readonly description: string;
 }
 
-export interface WealthEvidenceViewModel {
-  readonly id: string;
-  readonly title: string;
-  readonly statement: string;
-  readonly direction: ProductDirection;
-  readonly role: ProductEvidenceRole;
-  readonly source: string;
-  readonly ruleId?: string;
-  readonly derivedFromIds: readonly string[];
-}
+export type WealthEvidenceViewModel = UserFacingEvidence;
 
 export interface WealthConclusionViewModel {
   readonly headline?: string;
@@ -489,16 +484,9 @@ export function selectWealthViewModel(
     })
   );
 
-  const evidence: WealthEvidenceViewModel[] = (wealth.evidence ?? []).map((e) => ({
-    id: e.id,
-    title: e.title,
-    statement: e.statement,
-    direction: e.direction,
-    role: e.role,
-    source: e.source,
-    ruleId: e.ruleId,
-    derivedFromIds: e.derivedFromIds ?? []
-  }));
+  const evidence: WealthEvidenceViewModel[] = (wealth.evidence ?? []).map((e) =>
+    buildUserFacingEvidence(e, copy)
+  );
 
   const primaryCount = evidence.filter((e) => e.role === 'PRIMARY').length;
   const supportingCount = evidence.filter((e) => e.direction === 'SUPPORT').length;

@@ -209,6 +209,16 @@ export interface UserFacingCopyProvider {
   readonly combinedSummary: (careerOutcome: string, wealthOutcome: string) => string;
   readonly wealthFoundationExplanation: (status: string) => string;
   readonly additionalDetailLabel: (index: number) => string;
+  readonly evidenceRoleLabels: Readonly<Record<ProductEvidenceRole, string>>;
+  readonly evidenceDirectionLabels: Readonly<Record<ProductDirection, string>>;
+  readonly evidenceSourceLabels: Readonly<Record<string, string>>;
+  readonly unknownEvidenceRoleLabel: string;
+  readonly unknownEvidenceDirectionLabel: string;
+  readonly unknownEvidenceSourceLabel: string;
+  readonly evidenceHousePairTitle: (firstHouse: number, secondHouse: number) => string;
+  readonly evidenceHouseTitle: (house: number, sourceType?: string) => string;
+  readonly evidencePlanetTitle: (planet: string, house?: number) => string;
+  readonly evidenceSummary: (roleLabel: string, directionLabel: string) => string;
 }
 
 type AssessmentOutcomeKey =
@@ -244,7 +254,10 @@ type UserFacingCopyMapKey =
   | 'strengthLabels'
   | 'wealthFoundationLabels'
   | 'detailLabels'
-  | 'titles';
+  | 'titles'
+  | 'evidenceRoleLabels'
+  | 'evidenceDirectionLabels'
+  | 'evidenceSourceLabels';
 type UserFacingCopyStringKey =
   | 'confidenceUnavailable'
   | 'foundationUnavailable'
@@ -256,7 +269,10 @@ type UserFacingCopyStringKey =
   | 'conditionalSupportExplanation'
   | 'timingExplanation'
   | 'confidenceExplanation'
-  | 'periodSupportExplanation';
+  | 'periodSupportExplanation'
+  | 'unknownEvidenceRoleLabel'
+  | 'unknownEvidenceDirectionLabel'
+  | 'unknownEvidenceSourceLabel';
 type UserFacingCopyFunctionKey =
   | 'mixedFoundationLabel'
   | 'mixedFoundationExplanation'
@@ -270,7 +286,11 @@ type UserFacingCopyFunctionKey =
   | 'domainOutcome'
   | 'combinedSummary'
   | 'wealthFoundationExplanation'
-  | 'additionalDetailLabel';
+  | 'additionalDetailLabel'
+  | 'evidenceHousePairTitle'
+  | 'evidenceHouseTitle'
+  | 'evidencePlanetTitle'
+  | 'evidenceSummary';
 
 const englishUserFacingCopy: UserFacingCopyProvider = {
   labels: LABELS,
@@ -427,7 +447,43 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
     }
     return 'This describes the natal wealth foundation, not a guaranteed financial outcome.';
   },
-  additionalDetailLabel: (index) => `Additional assessment (${index})`
+  additionalDetailLabel: (index) => `Additional assessment (${index})`,
+  evidenceRoleLabels: Object.freeze({
+    PRIMARY: 'Main factor',
+    SUPPORTING: 'Supporting evidence',
+    CHALLENGING: 'Challenging evidence',
+    MODIFIER: 'Modifying factor',
+    REFINEMENT: 'Refining factor',
+    CONFLICTING: 'Conflicting evidence',
+    NEUTRAL: 'Neutral evidence'
+  }),
+  evidenceDirectionLabels: Object.freeze({
+    SUPPORT: 'Supportive',
+    CHALLENGE: 'Challenging',
+    NEUTRAL: 'Neutral',
+    MIXED: 'Mixed',
+    UNAVAILABLE: 'Not assessed'
+  }),
+  evidenceSourceLabels: Object.freeze({
+    C4_STRUCTURAL_REASONING: 'Structural chart analysis',
+    D1: 'Birth chart (D1)',
+    D2: 'Wealth divisional chart (D2)',
+    D10: 'Career divisional chart (D10)',
+    DASHA: 'Planetary period analysis',
+    TRANSIT: 'Transit analysis'
+  }),
+  unknownEvidenceRoleLabel: 'Evidence factor',
+  unknownEvidenceDirectionLabel: 'Direction not assessed',
+  unknownEvidenceSourceLabel: 'Chart analysis',
+  evidenceHousePairTitle: (firstHouse, secondHouse) =>
+    `Connection between houses ${firstHouse} and ${secondHouse}`,
+  evidenceHouseTitle: (house, sourceType) =>
+    sourceType?.toUpperCase() === 'STRENGTH'
+      ? `House ${house} strength`
+      : `House ${house} analysis`,
+  evidencePlanetTitle: (planet, house) =>
+    house === undefined ? `${planet} chart analysis` : `${planet} in house ${house}`,
+  evidenceSummary: (roleLabel, directionLabel) => `${roleLabel}: ${directionLabel}.`
 };
 
 export const ENGLISH_USER_FACING_COPY: UserFacingCopyProvider = Object.freeze(englishUserFacingCopy);
@@ -454,7 +510,10 @@ export const USER_FACING_COPY_CONTRACT = Object.freeze({
     wealthFoundationLabels: Object.keys(englishUserFacingCopy.wealthFoundationLabels),
     detailLabels: Object.keys(englishUserFacingCopy.detailLabels),
     titles: Object.keys(englishUserFacingCopy.titles),
-    explanations: Object.keys(EXPLANATIONS)
+    explanations: Object.keys(EXPLANATIONS),
+    evidenceRoleLabels: Object.keys(englishUserFacingCopy.evidenceRoleLabels),
+    evidenceDirectionLabels: Object.keys(englishUserFacingCopy.evidenceDirectionLabels),
+    evidenceSourceLabels: Object.keys(englishUserFacingCopy.evidenceSourceLabels)
   } satisfies Record<UserFacingCopyMapKey, readonly string[]>),
   strings: Object.freeze([
     'confidenceUnavailable',
@@ -467,7 +526,10 @@ export const USER_FACING_COPY_CONTRACT = Object.freeze({
     'conditionalSupportExplanation',
     'timingExplanation',
     'confidenceExplanation',
-    'periodSupportExplanation'
+    'periodSupportExplanation',
+    'unknownEvidenceRoleLabel',
+    'unknownEvidenceDirectionLabel',
+    'unknownEvidenceSourceLabel'
   ] satisfies readonly UserFacingCopyStringKey[]),
   functions: Object.freeze({
     mixedFoundationLabel: (copy: UserFacingCopyProvider) => copy.mixedFoundationLabel('Strong foundation'),
@@ -482,7 +544,11 @@ export const USER_FACING_COPY_CONTRACT = Object.freeze({
     domainOutcome: (copy: UserFacingCopyProvider) => copy.domainOutcome('Supportive outlook', 'career'),
     combinedSummary: (copy: UserFacingCopyProvider) => copy.combinedSummary('Career outlook', 'Wealth outlook'),
     wealthFoundationExplanation: (copy: UserFacingCopyProvider) => copy.wealthFoundationExplanation('STRONG'),
-    additionalDetailLabel: (copy: UserFacingCopyProvider) => copy.additionalDetailLabel(1)
+    additionalDetailLabel: (copy: UserFacingCopyProvider) => copy.additionalDetailLabel(1),
+    evidenceHousePairTitle: (copy: UserFacingCopyProvider) => copy.evidenceHousePairTitle(10, 11),
+    evidenceHouseTitle: (copy: UserFacingCopyProvider) => copy.evidenceHouseTitle(5, 'STRENGTH'),
+    evidencePlanetTitle: (copy: UserFacingCopyProvider) => copy.evidencePlanetTitle('Jupiter', 5),
+    evidenceSummary: (copy: UserFacingCopyProvider) => copy.evidenceSummary('Supporting evidence', 'Supportive')
   } satisfies Record<UserFacingCopyFunctionKey, (copy: UserFacingCopyProvider) => string>)
 });
 

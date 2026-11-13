@@ -9,7 +9,6 @@ import type {
   ProductAnalysis,
   ProductStatus,
   ProductConfidence,
-  ProductDirection,
   ProductEvidenceRole,
   ProductEvidence,
   ProductDashaPeriod,
@@ -25,6 +24,10 @@ import {
   type UserFacingCopyProvider,
   type UserFacingAssessment
 } from '../life-analysis/userFacingInterpretation';
+import {
+  buildUserFacingEvidence,
+  type UserFacingEvidence
+} from '../life-analysis/evidencePresentation';
 
 export interface OverviewOverall {
   readonly status: ProductStatus;
@@ -46,7 +49,7 @@ export interface OverviewDomain {
   readonly confidence: ProductConfidence;
   readonly summary: string;
   readonly assessment: UserFacingAssessment;
-  readonly topEvidence: readonly ProductEvidence[];
+  readonly topEvidence: readonly UserFacingEvidence[];
 }
 
 export interface OverviewDasha {
@@ -60,12 +63,7 @@ export interface OverviewDasha {
   readonly currentPeriodLabel: string;
 }
 
-export interface OverviewFinding {
-  readonly id: string;
-  readonly title: string;
-  readonly statement: string;
-  readonly direction: ProductDirection;
-  readonly role: ProductEvidenceRole;
+export interface OverviewFinding extends UserFacingEvidence {
   readonly evidenceIds: readonly string[];
 }
 
@@ -109,8 +107,9 @@ export const EVIDENCE_ROLE_PRIORITY: Record<ProductEvidenceRole, number> = {
  */
 export function selectTopEvidence(
   evidence: readonly ProductEvidence[],
-  limit = 3
-): readonly ProductEvidence[] {
+  limit = 3,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): readonly UserFacingEvidence[] {
   const indexed = evidence.map((e, index) => ({ e, index }));
   indexed.sort((a, b) => {
     const pA = EVIDENCE_ROLE_PRIORITY[a.e.role] ?? 99;
@@ -120,7 +119,9 @@ export function selectTopEvidence(
     }
     return a.index - b.index;
   });
-  return indexed.slice(0, limit).map((item) => item.e);
+  return indexed
+    .slice(0, limit)
+    .map((item) => buildUserFacingEvidence(item.e, copy));
 }
 
 /**
@@ -158,18 +159,12 @@ export function deriveOverallConfidence(analysis: ProductAnalysis): ProductConfi
  */
 export function selectOverviewFindings(
   analysis: ProductAnalysis,
-  limit = 5
+  limit = 5,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
 ): readonly OverviewFinding[] {
   const allEvidence = selectAllEvidence(analysis);
-  const prioritized = selectTopEvidence(allEvidence, limit);
-  return prioritized.map((e) => ({
-    id: e.id,
-    title: e.title,
-    statement: e.statement,
-    direction: e.direction,
-    role: e.role,
-    evidenceIds: e.derivedFromIds ?? []
-  }));
+  const prioritized = selectTopEvidence(allEvidence, limit, copy);
+  return prioritized.map((e) => ({ ...e, evidenceIds: e.derivedFromIds }));
 }
 
 /**
@@ -246,7 +241,7 @@ export function selectOverviewViewModel(
     confidence: analysis.career.promise.confidence,
     summary: careerAssessment.summary,
     assessment: careerAssessment,
-    topEvidence: selectTopEvidence(analysis.career.evidence, 3)
+    topEvidence: selectTopEvidence(analysis.career.evidence, 3, copy)
   };
 
   const wealthDomain: OverviewDomain = {
@@ -255,7 +250,7 @@ export function selectOverviewViewModel(
     confidence: analysis.wealth.overall.confidence,
     summary: wealthAssessment.summary,
     assessment: wealthAssessment,
-    topEvidence: selectTopEvidence(analysis.wealth.evidence, 3)
+    topEvidence: selectTopEvidence(analysis.wealth.evidence, 3, copy)
   };
 
   const md = analysis.dasha.current.mahadasha;
@@ -296,7 +291,7 @@ export function selectOverviewViewModel(
     career: careerDomain,
     wealth: wealthDomain,
     dasha,
-    findings: selectOverviewFindings(analysis, 5),
+    findings: selectOverviewFindings(analysis, 5, copy),
     qualifications: selectOverviewQualifications(analysis),
     totalEvidenceCount: selectAllEvidence(analysis).length,
     warnings: analysis.warnings

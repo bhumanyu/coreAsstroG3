@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { OverviewDomain } from '../../product/analysis/overviewViewModel';
 import { Briefcase, Coins, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { enumLabel, enumLabelWithFallback } from '../../i18n/enumLabels';
+import { TechnicalEvidenceDetails } from '../reasoning/TechnicalEvidenceDetails';
 
 export interface DomainSummaryCardProps {
   readonly domain: OverviewDomain;
@@ -122,11 +123,13 @@ export const DomainSummaryCard: React.FC<DomainSummaryCardProps> = ({
                       </span>
                     </div>
                   </div>
-                  {evidence.statement && (
+                  {evidence.explanation && (
                     <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
-                      {evidence.statement}
+                      {evidence.explanation}
                     </p>
                   )}
+                  <p className="text-[10px] text-slate-500">{evidence.sourceLabel}</p>
+                  <TechnicalEvidenceDetails evidence={evidence} />
                 </div>
               ))}
             </div>

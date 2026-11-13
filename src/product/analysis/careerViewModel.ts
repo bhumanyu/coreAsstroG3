@@ -34,6 +34,10 @@ import {
   ENGLISH_USER_FACING_COPY,
   type UserFacingCopyProvider
 } from '../life-analysis/userFacingInterpretation';
+import {
+  buildUserFacingEvidence,
+  type UserFacingEvidence
+} from '../life-analysis/evidencePresentation';
 
 export interface CareerHeroViewModel {
   readonly ascendantSign?: string;
@@ -99,16 +103,7 @@ export interface CareerQualificationViewModel {
   readonly description: string;
 }
 
-export interface CareerEvidenceViewModel {
-  readonly id: string;
-  readonly title: string;
-  readonly statement: string;
-  readonly direction: ProductDirection;
-  readonly role: ProductEvidenceRole;
-  readonly source: string;
-  readonly ruleId?: string;
-  readonly derivedFromIds: readonly string[];
-}
+export type CareerEvidenceViewModel = UserFacingEvidence;
 
 export interface CareerConclusionViewModel {
   readonly headline?: string;
@@ -302,16 +297,9 @@ export function selectCareerViewModel(
     })
   );
 
-  const evidence: CareerEvidenceViewModel[] = (career.evidence ?? []).map((e) => ({
-    id: e.id,
-    title: e.title,
-    statement: e.statement,
-    direction: e.direction,
-    role: e.role,
-    source: e.source,
-    ruleId: e.ruleId,
-    derivedFromIds: e.derivedFromIds ?? []
-  }));
+  const evidence: CareerEvidenceViewModel[] = (career.evidence ?? []).map((e) =>
+    buildUserFacingEvidence(e, copy)
+  );
 
   const assessment = buildUserFacingAssessment({
     outcome: career.synthesis?.finalStatus,
