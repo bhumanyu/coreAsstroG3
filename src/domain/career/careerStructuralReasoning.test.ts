@@ -7,6 +7,9 @@ import {
 import type {
   CareerHouseRelationship
 } from './careerHouseRelationship';
+import {
+  careerHouseRelationshipKey
+} from './careerHouseRelationship';
 
 import {
   interpretCareerHouseRelationship
@@ -163,6 +166,46 @@ describe('CareerStructuralReasoning', () => {
     expect(result.evidence).toHaveLength(2);
     expect(result.evidence.map(item => item.relationship.type))
       .toEqual(expect.arrayContaining(['LORD_CONJUNCTION', 'LORD_ASPECT']));
+  });
+
+  it('keeps reversed lord-in-house relationships as distinct directional evidence', () => {
+    const secondLordInEighth = relationship({
+      type: 'LORD_IN_HOUSE',
+      houseA: 2,
+      houseB: 8,
+      lordA: 'SATURN' as Planet,
+      lordB: 'MARS' as Planet,
+      lordAHouse: 8,
+      lordBHouse: 2
+    });
+    const eighthLordInSecond = relationship({
+      type: 'LORD_IN_HOUSE',
+      houseA: 8,
+      houseB: 2,
+      lordA: 'MARS' as Planet,
+      lordB: 'SATURN' as Planet,
+      lordAHouse: 2,
+      lordBHouse: 8
+    });
+
+    expect(careerHouseRelationshipKey(secondLordInEighth))
+      .not.toBe(careerHouseRelationshipKey(eighthLordInSecond));
+
+    const result = resolveCareerStructuralReasoningFromRelationships([
+      secondLordInEighth,
+      eighthLordInSecond
+    ]);
+
+    expect(result.evidence).toHaveLength(2);
+    expect(result.evidence.map(item => [
+      item.relationship.houseA,
+      item.relationship.houseB,
+      item.relationship.lordA,
+      item.relationship.lordAHouse
+    ])).toEqual(expect.arrayContaining([
+      [2, 8, 'SATURN', 8],
+      [8, 2, 'MARS', 2]
+    ]));
   });
 
   it('preserves primary supporting structure', () => {

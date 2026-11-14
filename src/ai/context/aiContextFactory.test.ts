@@ -900,7 +900,7 @@ describe('AI Context Factory', () => {
     ]));
   });
 
-  it('preserves per-period partial availability in the career hierarchy', () => {
+  it('preserves MD/AD/PD evidence across a mixed-availability career hierarchy', () => {
     const baseDasha = makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.VENUS, Planet.MARS);
     const careerWithPartialAvailability = createDomainInterpretation({
       domain: 'CAREER',
@@ -913,12 +913,41 @@ describe('AI Context Factory', () => {
           canonicalDashaAnalysis: {
             ...baseDasha,
             md: { ...baseDasha.md, effect: 'ACTIVATES' },
-            ad: { ...baseDasha.ad, effect: 'UNKNOWN' },
-            pd: { ...baseDasha.pd, effect: 'INSUFFICIENT_DATA' }
+            ad: { ...baseDasha.ad, effect: 'INSUFFICIENT_DATA' },
+            pd: { ...baseDasha.pd, effect: 'CHALLENGES' }
           }
         } as CareerInternalArtifacts
       },
-      evidence: []
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:MD_JUPITER_MIXED',
+            ruleId: 'CAREER_DASHA_TIMING_001',
+            sourceType: 'DASHA',
+            role: 'TIMING',
+            strength: 'STRONG',
+            polarity: 'SUPPORTING',
+            statement: 'Jupiter Mahadasha activates career timing'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: { level: 'MD', planet: Planet.JUPITER }
+        } as any,
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:PD_MARS_MIXED',
+            ruleId: 'CAREER_DASHA_TIMING_001',
+            sourceType: 'DASHA',
+            role: 'TIMING',
+            strength: 'STRONG',
+            polarity: 'CHALLENGING',
+            statement: 'Mars Pratyantardasha challenges career timing'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: { level: 'PD', planet: Planet.MARS }
+        } as any
+      ]
     });
 
     const contextWithPartialAvailability = buildAiContext(horoscope, {
@@ -928,13 +957,20 @@ describe('AI Context Factory', () => {
 
     expect(timing?.status).toBe('AVAILABLE');
     expect(timing?.hierarchy?.primary.effect).toBe('ACTIVATES');
-    expect(timing?.hierarchy?.modifier.effect).toBe('UNKNOWN');
-    expect(timing?.hierarchy?.trigger.effect).toBe('INSUFFICIENT_DATA');
-    expect(new Set([
-      timing?.hierarchy?.primary.effect,
-      timing?.hierarchy?.modifier.effect,
-      timing?.hierarchy?.trigger.effect
-    ]).size).toBe(3);
+    expect(timing?.mahadasha?.evidenceIds).toEqual(['CAREER_DASHA:MD_JUPITER_MIXED']);
+    expect(timing?.antardasha?.effect).toBe('INSUFFICIENT_DATA');
+    expect(timing?.antardasha?.evidenceIds).toEqual([]);
+    expect(timing?.antardasha?.traceability).toBe('DEGRADED');
+    expect(timing?.hierarchy?.modifier.effect).toBe('INSUFFICIENT_DATA');
+    expect(timing?.pratyantardasha?.effect).toBe('CHALLENGES');
+    expect(timing?.pratyantardasha?.evidenceIds).toEqual(['CAREER_DASHA:PD_MARS_MIXED']);
+    expect(timing?.hierarchy?.trigger.effect).toBe('CHALLENGES');
+    expect(timing?.hierarchy?.traceability).toBe('DEGRADED');
+    expect(timing?.hierarchy?.evidenceIds).toEqual(expect.arrayContaining([
+      'CAREER_DASHA:MD_JUPITER_MIXED',
+      'CAREER_DASHA:PD_MARS_MIXED'
+    ]));
+    expect(timing?.hierarchy?.evidenceIds).not.toContain('CAREER_DASHA:AD_VENUS_MIXED');
   });
 
   it('should throw an error on conflicting evidence ID with different payload', () => {

@@ -1897,6 +1897,118 @@ describe('Career Pattern Qualification', () => {
       });
     });
 
+    describe.each([
+      {
+        policyName: 'Career House Network Policy',
+        classification: 'CAREER_HOUSE_NETWORK' as const
+      },
+      {
+        policyName: 'Service-to-Profession-to-Gains Policy',
+        classification: 'SERVICE_TO_PROFESSION_TO_GAINS' as const
+      }
+    ])('$policyName participant-condition precedence', ({ classification }) => {
+      it.each([
+        {
+          name: 'FULL WEAK plus UNAVAILABLE',
+          planets: [Planet.SATURN, Planet.MERCURY],
+          conditions: [
+            { planet: Planet.SATURN, condition: 'WEAK', assessment: 'FULL' },
+            { planet: Planet.MERCURY, condition: 'UNAVAILABLE', assessment: 'UNAVAILABLE' }
+          ],
+          expectedStatus: 'UNQUALIFIED'
+        },
+        {
+          name: 'FULL AFFLICTED plus UNAVAILABLE',
+          planets: [Planet.SATURN, Planet.MERCURY],
+          conditions: [
+            { planet: Planet.SATURN, condition: 'AFFLICTED', assessment: 'FULL' },
+            { planet: Planet.MERCURY, condition: 'UNAVAILABLE', assessment: 'UNAVAILABLE' }
+          ],
+          expectedStatus: 'UNQUALIFIED'
+        },
+        {
+          name: 'PARTIAL WEAK plus UNAVAILABLE',
+          planets: [Planet.SATURN, Planet.MERCURY],
+          conditions: [
+            { planet: Planet.SATURN, condition: 'WEAK', assessment: 'PARTIAL' },
+            { planet: Planet.MERCURY, condition: 'UNAVAILABLE', assessment: 'UNAVAILABLE' }
+          ],
+          expectedStatus: 'INSUFFICIENT_DATA'
+        },
+        {
+          name: 'FULL WEAK plus FULL STRONG',
+          planets: [Planet.SATURN, Planet.JUPITER],
+          conditions: [
+            { planet: Planet.SATURN, condition: 'WEAK', assessment: 'FULL' },
+            { planet: Planet.JUPITER, condition: 'STRONG', assessment: 'FULL' }
+          ],
+          expectedStatus: 'UNQUALIFIED'
+        },
+        {
+          name: 'NEUTRAL relevance plus FULL WEAK',
+          planets: [Planet.SATURN],
+          conditions: [
+            { planet: Planet.SATURN, condition: 'WEAK', assessment: 'FULL' }
+          ],
+          relevance: 'NEUTRAL',
+          expectedStatus: 'UNQUALIFIED'
+        },
+        {
+          name: 'missing condition assessment metadata',
+          planets: [Planet.SATURN],
+          conditions: [
+            { planet: Planet.SATURN, condition: 'STRONG', assessment: undefined }
+          ],
+          expectedStatus: 'INSUFFICIENT_DATA'
+        }
+      ] as const)('$name → $expectedStatus', (testCase) => {
+        const pattern = makePattern({
+          planets: testCase.planets,
+          classification,
+          ...(classification === 'SERVICE_TO_PROFESSION_TO_GAINS'
+            ? {
+                provenance: Object.freeze({
+                  sourceNetworkIds: ['network-1'],
+                  relationshipIds: ['REL:6→10', 'REL:10→11'],
+                  ruleIds: ['rule-1'],
+                  establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+                  supportingRelationshipIds: []
+                })
+              }
+            : {})
+        });
+        const result = qualifyCareerPatterns({
+          patterns: [pattern],
+          relevance: testCase.planets.map(planet =>
+            makeRelevance(planet, testCase.relevance ?? 'PRIMARY')
+          ),
+          condition: testCase.conditions.map(({ planet, condition, assessment }) =>
+            makeCondition(planet, condition, { assessment })
+          ),
+          ...(classification === 'SERVICE_TO_PROFESSION_TO_GAINS'
+            ? { networks: [makeDirectedServiceProfessionNetwork()] }
+            : {})
+        });
+        const qualified = result.qualifiedPatterns[0];
+
+        expect(qualified.status).toBe(testCase.expectedStatus);
+        if (testCase.name === 'PARTIAL WEAK plus UNAVAILABLE') {
+          expect(qualified.decisionBlockingReasons).toContainEqual({
+            reason: 'planetary condition is only partially assessed',
+            kind: 'MISSING_INPUT'
+          });
+          expect(qualified.decisionBlockingReasons).toContainEqual({
+            reason: 'planetary condition data unavailable',
+            kind: 'MISSING_INPUT'
+          });
+        }
+        if (testCase.name === 'FULL AFFLICTED plus UNAVAILABLE') {
+          expect(qualified.participants.find(participant => participant.planet === Planet.SATURN)?.condition)
+            .toBe('WEAK');
+        }
+      });
+    });
+
     describe('Missing vs Absent Distinction (Spec §20-21)', () => {
       it('missing prerequisite → UNQUALIFIED (explicitly absent, not missing data)', () => {
         const pattern = makePattern({

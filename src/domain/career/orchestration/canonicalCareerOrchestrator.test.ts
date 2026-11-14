@@ -330,6 +330,86 @@ describe('CanonicalCareerOrchestrator', () => {
       });
     });
 
+    it('counts missing qualification results by distinct candidate ID and warns on duplicate candidates', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [
+          createStubPattern('PATTERN_1'),
+          createStubPattern('PATTERN_1'),
+          createStubPattern('PATTERN_2')
+        ],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.c8StageDiagnostics).toMatchObject({
+        patternCandidateCount: 3,
+        qualificationResultMissingCount: 1
+      });
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_DUPLICATE_PATTERN_CANDIDATE_PATTERN_1',
+        severity: 'WARNING',
+        stage: 'PATTERN'
+      }));
+    });
+
+    it('warns when duplicate qualification results have the same verdict', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED'),
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')
+        ]
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_DUPLICATE_PATTERN_QUALIFICATION_PATTERN_1',
+        severity: 'WARNING',
+        stage: 'QUALIFICATION'
+      }));
+      expect(foundation.c8StageDiagnostics.qualificationResultMissingCount).toBe(0);
+    });
+
+    it('rejects conflicting duplicate qualification verdicts instead of selecting the last result', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED'),
+          createStubQualifiedPattern('PATTERN_1', 'UNQUALIFIED')
+        ]
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_DUPLICATE_PATTERN_QUALIFICATION_PATTERN_1',
+        severity: 'ERROR',
+        stage: 'QUALIFICATION',
+        message: expect.stringContaining('conflicting qualification verdicts')
+      }));
+      expect(foundation.c8StageDiagnostics.qualificationResultMissingCount).toBe(1);
+      expect(foundation.participantRoleAssignments).toEqual([]);
+      expect(ports.participantRoles.assignParticipantRoles).not.toHaveBeenCalled();
+      expect(foundation.resolvedMechanisms).toEqual([]);
+    });
+
     it.each([
       ['missing all records', 'MISSING', []],
       ['missing a required record', 'MISSING', [['NETWORK_1', true]]],
