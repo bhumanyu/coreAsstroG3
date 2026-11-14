@@ -3,7 +3,6 @@ import {
   ArrowRight,
   CalendarDays,
   Clock3,
-  Compass,
   MapPin,
   Sunrise,
   Sunset,
@@ -13,17 +12,19 @@ import { useTranslation } from 'react-i18next';
 import type { BirthContext } from '../../app/birthContext';
 import type { AppPage } from '../../app/navigation/navigationTypes';
 import { RESEARCH_NAVIGATION } from '../../app/navigation/navigation';
-import { SIGNS_METADATA, SIGNS_ORDER } from '../../data/astroData';
 import { computePanchang } from '../../engine/panchang';
 import type { ProductAnalysisState } from '../../app/AppState';
 import { FEATURE_TILES } from './featureTiles';
 import { FestivalsCard } from './FestivalsCard';
+import { RashiForecastCard } from './RashiForecastCard';
+import type { Horoscope } from '../../types';
 
 export interface HomePageProps {
   readonly birthContext?: BirthContext;
   readonly onNavigate: (page: AppPage) => void;
   readonly onOpenBirthForm: () => void;
   readonly analysisStatus: ProductAnalysisState['status'];
+  readonly horoscope?: Horoscope;
 }
 
 const BirthContextStrip: React.FC<{
@@ -110,40 +111,6 @@ const PanchangCard: React.FC = () => {
   );
 };
 
-const DailyHoroscopeGrid: React.FC<{ onNavigate: (page: AppPage) => void }> = ({ onNavigate }) => {
-  const { t } = useTranslation('home');
-  return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-300">{t('dailyHoroscope.eyebrow')}</p>
-          <h2 className="mt-1 font-serif-astro text-lg font-semibold text-slate-100">{t('dailyHoroscope.title')}</h2>
-          <p className="mt-1 text-xs text-slate-400">{t('dailyHoroscope.description')}</p>
-        </div>
-        <Compass className="h-5 w-5 shrink-0 text-indigo-300" aria-hidden="true" />
-      </div>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {SIGNS_ORDER.map((sign) => {
-          const metadata = SIGNS_METADATA[sign];
-          const signName = metadata.englishName ?? String(sign);
-          return (
-            <button
-              key={sign}
-              type="button"
-              onClick={() => onNavigate('transit')}
-              className="rounded-xl border border-slate-800 bg-slate-950/40 px-2 py-3 text-center transition-colors hover:border-indigo-500/40 hover:bg-indigo-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-              aria-label={t('dailyHoroscope.openSign', { sign: t(`signs.${signName}`) })}
-            >
-              <span className="block text-lg text-indigo-300" aria-hidden="true">{signName.slice(0, 1)}</span>
-              <span className="mt-1 block text-[11px] font-medium text-slate-300">{t(`signs.${signName}`)}</span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-};
-
 const ExploreYourChartGrid: React.FC<{
   onNavigate: (page: AppPage) => void;
   onOpenBirthForm: () => void;
@@ -179,7 +146,8 @@ export const HomePage: React.FC<HomePageProps> = ({
   birthContext,
   onNavigate,
   onOpenBirthForm,
-  analysisStatus
+  analysisStatus,
+  horoscope
 }) => {
   const { t } = useTranslation('home');
   const hasBirthDetails = Boolean(birthContext);
@@ -197,7 +165,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <PanchangCard />
-          <DailyHoroscopeGrid onNavigate={onNavigate} />
+          <RashiForecastCard horoscope={horoscope} />
           <FestivalsCard />
         </div>
       </section>

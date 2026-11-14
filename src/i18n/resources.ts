@@ -2486,11 +2486,33 @@ export const resources = {
         sunrise: 'Sunrise',
         sunset: 'Sunset'
       },
-      dailyHoroscope: {
-        eyebrow: 'Explore the signs',
-        title: 'Daily Horoscope',
-        description: 'Choose a sign to explore transit analysis. Daily predictions are coming later.',
-        openSign: 'Explore {{sign}} transit analysis'
+      rashiForecast: {
+        eyebrow: 'Vedic astrology',
+        title: 'General Rashi forecast',
+        disclaimer: 'Based on Moon sign, not your full chart',
+        periodLabel: 'Forecast period',
+        periods: {
+          daily: 'Daily',
+          weekly: 'Weekly',
+          monthly: 'Monthly',
+          yearly: 'Yearly'
+        },
+        browseSign: 'Browse another Rashi',
+        loading: 'Loading forecast',
+        error: 'The forecast could not be loaded.',
+        retry: 'Retry',
+        unavailable: 'A forecast is not available for this selection yet.',
+        languageFallback: 'Hindi unavailable — showing English.',
+        more: 'More',
+        less: 'Less',
+        attribution: 'Source: {{provider}} · Published {{publishedAt}}',
+        sections: {
+          love: 'Love',
+          career: 'Career',
+          health: 'Health',
+          luckyColour: 'Lucky colour',
+          luckyNumber: 'Lucky number'
+        }
       },
       explore: {
         eyebrow: 'Your chart, made approachable',
@@ -5026,11 +5048,33 @@ export const resources = {
         sunrise: 'सूर्योदय',
         sunset: 'सूर्यास्त'
       },
-      dailyHoroscope: {
-        eyebrow: 'राशियाँ देखें',
-        title: 'दैनिक राशिफल',
-        description: 'गोचर विश्लेषण देखने के लिए राशि चुनें। दैनिक भविष्यवाणी बाद में उपलब्ध होगी।',
-        openSign: '{{sign}} गोचर विश्लेषण देखें'
+      rashiForecast: {
+        eyebrow: 'वैदिक ज्योतिष',
+        title: 'सामान्य राशि भविष्यफल',
+        disclaimer: 'चंद्र राशि पर आधारित, पूरी कुंडली पर नहीं',
+        periodLabel: 'भविष्यफल अवधि',
+        periods: {
+          daily: 'दैनिक',
+          weekly: 'साप्ताहिक',
+          monthly: 'मासिक',
+          yearly: 'वार्षिक'
+        },
+        browseSign: 'दूसरी राशि देखें',
+        loading: 'भविष्यफल लोड हो रहा है',
+        error: 'भविष्यफल लोड नहीं हो सका।',
+        retry: 'पुनः प्रयास करें',
+        unavailable: 'इस चयन के लिए अभी भविष्यफल उपलब्ध नहीं है।',
+        languageFallback: 'हिंदी उपलब्ध नहीं — अंग्रेज़ी दिखाई जा रही है।',
+        more: 'और पढ़ें',
+        less: 'कम दिखाएँ',
+        attribution: 'स्रोत: {{provider}} · प्रकाशित {{publishedAt}}',
+        sections: {
+          love: 'प्रेम',
+          career: 'करियर',
+          health: 'स्वास्थ्य',
+          luckyColour: 'शुभ रंग',
+          luckyNumber: 'शुभ अंक'
+        }
       },
       explore: {
         eyebrow: 'आपकी कुंडली, सरल रूप में',

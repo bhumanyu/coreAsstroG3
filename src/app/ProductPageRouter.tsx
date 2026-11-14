@@ -161,6 +161,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
           onNavigate={onNavigate}
           onOpenBirthForm={onOpenBirthForm}
           analysisStatus={state.productAnalysis.status}
+          horoscope={horoscope}
         />
       );
 

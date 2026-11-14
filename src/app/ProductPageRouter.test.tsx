@@ -61,15 +61,15 @@ describe('ProductPageRouter lazy research pages', () => {
     expect(onOpenBirthForm).toHaveBeenCalledOnce();
   });
 
-  it('renders the home dashboard and wires daily sign navigation and birth editing', () => {
+  it('renders the home dashboard and wires birth editing', () => {
     const onNavigate = vi.fn();
     const onOpenBirthForm = vi.fn();
     renderResearchPage('home', onNavigate, onOpenBirthForm);
     expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Explore Your Chart' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /^Explore .* transit analysis$/ })).toHaveLength(12);
-    fireEvent.click(screen.getByRole('button', { name: 'Explore Aries transit analysis' }));
-    expect(onNavigate).toHaveBeenCalledWith('transit');
+    expect(screen.getByRole('heading', { name: 'General Rashi forecast' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Browse another Rashi' })).toBeInTheDocument();
+    expect(onNavigate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Edit Birth Details' }));
     expect(onOpenBirthForm).toHaveBeenCalledOnce();
   });

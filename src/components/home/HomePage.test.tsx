@@ -18,7 +18,7 @@ describe('HomePage without birth details', () => {
 
     expect(screen.getByText('Enter your birth details to calculate your horoscope')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Today’s Panchang' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Daily Horoscope' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'General Rashi forecast' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Festivals & Holidays' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Kundli/ }));
