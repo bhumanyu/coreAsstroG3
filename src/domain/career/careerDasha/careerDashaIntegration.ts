@@ -603,25 +603,21 @@ function buildCanonicalPeriod(
 /**
  * Resolves natal root evidence IDs for a planet.
  *
- * This function extracts natal evidence IDs that are associated with a specific planet
- * by parsing the identityKey field of WeightedReasoningEvidence items.
+ * This function extracts eligible primary-promise evidence identities associated with
+ * a specific planet.
  *
  * The identityKey format for natal evidence (from buildEvidenceIdentityKey) is:
  * 'CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]'
  * where SUBJECT_KEY is the planet name (e.g., 'JUPITER', 'SATURN').
  *
- * This parser only trusts canonical CW-... format identityKeys. Non-canonical keys
- * (e.g., raw occurrence-ID fallbacks from classifyReasoningEvidence when neither planet
- * nor house is present) are safely ignored rather than mis-parsed.
+ * Canonical keys are accepted only when they identify CAREER/NATAL/D1 and the requested
+ * subject planet. The current natal producer also emits CAREER_STRUCTURAL keys; those use
+ * fixed participant slots 6 and 7. Other non-canonical keys fail closed.
  *
- * The parseEvidenceIdentityKey function validates:
- * - CW prefix
- * - Segment count (6 or 7)
- * - Domain, Axis, and Source values against known enums
- * - All required segments are non-empty
- *
- * We parse the identityKey to extract the subjectKey (planet) and match it against
- * the requested planet.
+ * WeightedReasoningEvidence has no explicit planet/domain/phase/role fields. The
+ * CareerNatalAnalysis container supplies domain/phase context, while layer and direction
+ * provide the available promise/role checks. The legacy structural slot convention is the
+ * remaining schema limitation.
  *
  * Returns the identityKey (semantic identity) of matching natal evidence items.
  * Occurrence evidenceId values are deliberately not used as root references.
@@ -639,11 +635,25 @@ function resolveNatalRootEvidenceIds(
   const matchingIds: string[] = [];
 
   for (const evidence of natal.evidence) {
-    // Parse identityKey using the canonical parser
     const parsed = parseEvidenceIdentityKey(evidence.identityKey);
+    const identitySegments = evidence.identityKey.split('_');
+    const canonicalPlanetMatch = parsed?.domain === 'CAREER' &&
+      parsed.axis === 'NATAL' &&
+      parsed.source === 'D1' &&
+      parsed.subjectKey === planet;
+    const legacyStructuralPlanetMatch = !parsed &&
+      evidence.identityKey.startsWith('CAREER_STRUCTURAL_') &&
+      (identitySegments[6] === planet || identitySegments[7] === planet);
 
-    // Only match if the key is canonical AND the subjectKey matches the planet
-    if (parsed && parsed.subjectKey === planet) {
+    const isPromiseDirection =
+      evidence.direction === 'SUPPORT' ||
+      evidence.direction === 'MIXED' ||
+      evidence.direction === 'CHALLENGE';
+    if (
+      (canonicalPlanetMatch || legacyStructuralPlanetMatch) &&
+      evidence.layer === 'PRIMARY_PROMISE' &&
+      isPromiseDirection
+    ) {
       // Root references use the semantic identity namespace, never occurrence IDs.
       matchingIds.push(evidence.identityKey);
     }

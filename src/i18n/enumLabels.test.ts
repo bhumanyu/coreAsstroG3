@@ -39,6 +39,16 @@ describe('canonical enum label registry', () => {
     expect(enumLabel((key) => `localized:${key}`, 'productDirection', undefined)).toBe('');
   });
 
+  it('localizes unavailable product confidence in English and Hindi', () => {
+    const english = enumLabel(key => translation('en', key) ?? key, 'productConfidence', 'UNAVAILABLE');
+    const hindi = enumLabel(key => translation('hi', key) ?? key, 'productConfidence', 'UNAVAILABLE');
+
+    expect(english).toBe('Unavailable');
+    expect(hindi).toBe('उपलब्ध नहीं');
+    expect(english).not.toBe('UNAVAILABLE');
+    expect(hindi).not.toBe('UNAVAILABLE');
+  });
+
   it('returns an unknown enum value in Hindi rather than a translation key', () => {
     expect(enumLabel((key) => translation('hi', key) ?? key, 'professionDomain', 'FUTURE_DOMAIN'))
       .toBe('FUTURE_DOMAIN');

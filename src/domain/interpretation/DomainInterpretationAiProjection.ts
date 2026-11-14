@@ -89,6 +89,13 @@ export interface DomainInterpretationAiProjection {
   readonly evidenceOccurrenceIds: readonly string[];
   readonly evidenceIdentityKeys: readonly string[];
 
+  readonly diagnostics?: readonly {
+    readonly code: string;
+    readonly severity: 'WARNING' | 'ERROR';
+    readonly message: string;
+    readonly relatedIds?: readonly string[];
+  }[];
+
   readonly evidence: readonly DomainEvidenceAiProjection[];
 }
 
@@ -168,6 +175,18 @@ export function projectDomainInterpretationForAi(
     ),
     evidenceOccurrenceIds: Object.freeze(interpretation.evidence.map(e => e.id)),
     evidenceIdentityKeys: Object.freeze(interpretation.evidence.flatMap(e => e.identityKey ? [e.identityKey] : [])),
+    ...(interpretation.diagnostics
+      ? {
+          diagnostics: Object.freeze(interpretation.diagnostics.map(diagnostic =>
+            Object.freeze({
+              code: diagnostic.code,
+              severity: diagnostic.severity,
+              message: diagnostic.message,
+              ...(diagnostic.relatedIds ? { relatedIds: Object.freeze([...diagnostic.relatedIds]) } : {})
+            })
+          ))
+        }
+      : {}),
 
     evidence: Object.freeze(
       interpretation.evidence.map((e) =>

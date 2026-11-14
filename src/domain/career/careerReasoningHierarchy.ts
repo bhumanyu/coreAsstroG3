@@ -49,7 +49,8 @@ import {
 } from './careerManifestations';
 
 /**
- * C9 confidence requires resolved planet context, natal-linked evidence, and a resolved effect.
+ * CW-01 timing confidence requires resolved planet context, at least one natal-linked root,
+ * and a resolved effect.
  * FULL assessments receive 1; PARTIAL assessments receive 0.5.
  */
 export function deriveDashaTimingConfidence(
@@ -67,8 +68,7 @@ export function deriveDashaTimingConfidence(
   const natalIdentityKeys = new Set(natalEvidence.map(item => item.identityKey));
   const hasLinkedEvidence = evidence.some(item =>
     item.id.trim().length > 0 &&
-    item.provenance.natalRootIds.length > 0 &&
-    item.provenance.natalRootIds.every(rootId => natalIdentityKeys.has(rootId))
+    item.provenance.natalRootIds.some(rootId => natalIdentityKeys.has(rootId))
   );
   const hasResolvedEffect = effect !== 'INSUFFICIENT_DATA' && effect !== 'UNKNOWN';
   if (!hasLinkedEvidence || !hasResolvedEffect) return 0;

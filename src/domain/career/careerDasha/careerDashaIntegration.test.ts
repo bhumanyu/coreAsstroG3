@@ -630,6 +630,36 @@ describe('C9 Dasha Integration', () => {
       }
     });
 
+    it.each(['MODIFIER', 'SECONDARY_SUPPORT'] as const)(
+      'does not resolve a planet with %s natal evidence as a promise root',
+      layer => {
+      const modifierEvidence: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN',
+        evidenceId: 'natal-saturn-modifier',
+        ruleId: 'SATURN_10TH_LORD',
+        layer,
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 90,
+        weight: 2.7,
+        statement: 'Modifier evidence for Saturn.',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-modifier']
+      });
+      const natal = Object.freeze({
+        ...makeMinimalNatal(),
+        evidence: Object.freeze([modifierEvidence])
+      });
+
+      const result = buildCareerDashaAnalysis(makeInput({ natal }));
+      const saturnEvidence = result.evidence.filter(e => e.planet === Planet.SATURN);
+
+      expect(saturnEvidence.length).toBeGreaterThan(0);
+      expect(saturnEvidence.every(e => e.provenance.natalRootIds.length === 0)).toBe(true);
+      expect(result.rootEvidenceIds).toEqual([]);
+      }
+    );
+
     it('natalRootIds are empty when no planet specified', () => {
       const input = makeInput();
       const result = buildCareerDashaAnalysis(input);

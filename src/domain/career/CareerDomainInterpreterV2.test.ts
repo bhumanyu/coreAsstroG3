@@ -1829,31 +1829,75 @@ describe('CareerDomainInterpreterV2', () => {
     }));
   });
 
-  it('C11 manifestation mapping reports duplicate modes and deterministically keeps the first', () => {
-    const interpretation = interpretCareerV2(horoscope, makeDomainOptions());
-    const compatibilityMode = interpretation.manifestations[0];
-    if (!compatibilityMode) throw new Error('Expected a compatibility manifestation mode.');
-    const duplicateCanonical = {
-      confidence: 'HIGH',
-      statement: 'Duplicate-mode test',
-      expressions: [
-        { mode: compatibilityMode.mode, direction: 'SUPPORT', evidenceIds: [] },
-        { mode: compatibilityMode.mode, direction: 'CHALLENGE', evidenceIds: [] }
-      ]
-    } as unknown as CareerFinalSynthesisResult;
-
-    const mapped = mapC11Manifestations(
-      duplicateCanonical,
-      [compatibilityMode!],
-      interpretation.evidence
-    );
-
-    expect(mapped.diagnostics).toContainEqual(expect.objectContaining({
-      code: 'C11_DUPLICATE_EXPRESSION_MODE',
+  it.each([
+    {
+      label: 'SUPPORT + CHALLENGE',
+      directions: ['SUPPORT', 'CHALLENGE'],
+      status: 'MIXED',
+      severity: 'ERROR'
+    },
+    {
+      label: 'SUPPORT + UNAVAILABLE',
+      directions: ['SUPPORT', 'UNAVAILABLE'],
+      status: 'INSUFFICIENT_DATA',
       severity: 'WARNING'
-    }));
-    expect(mapped.manifestations[0]?.status).toBe('SUPPORTED');
-  });
+    },
+    {
+      label: 'SUPPORT + NEUTRAL',
+      directions: ['SUPPORT', 'NEUTRAL'],
+      status: 'INSUFFICIENT_DATA',
+      severity: 'WARNING'
+    },
+    {
+      label: 'SUPPORT + SUPPORT',
+      directions: ['SUPPORT', 'SUPPORT'],
+      status: 'SUPPORTED',
+      severity: 'WARNING'
+    },
+    {
+      label: 'CHALLENGE + CHALLENGE',
+      directions: ['CHALLENGE', 'CHALLENGE'],
+      status: 'CHALLENGED',
+      severity: 'WARNING'
+    }
+  ] as const)(
+    'C11 duplicate manifestation aggregation: $label',
+    ({ directions, status, severity }) => {
+      const interpretation = interpretCareerV2(horoscope, makeDomainOptions());
+      const compatibilityMode = interpretation.manifestations[0];
+      if (!compatibilityMode) throw new Error('Expected a compatibility manifestation mode.');
+      const duplicateCanonical = {
+        confidence: 'HIGH',
+        statement: 'Duplicate-mode test',
+        expressions: directions.map((direction, index) => ({
+          mode: compatibilityMode.mode,
+          direction,
+          evidenceIds: directions[0] === 'SUPPORT' && directions[1] === 'SUPPORT'
+            ? [`key-${index + 1}`]
+            : []
+        }))
+      } as unknown as CareerFinalSynthesisResult;
+
+      const mapped = mapC11Manifestations(
+        duplicateCanonical,
+        [compatibilityMode],
+        [
+          ...interpretation.evidence,
+          createDomainEvidence({ id: 'merged-evidence-1', sourceType: 'STRUCTURAL', identityKey: 'key-1' }),
+          createDomainEvidence({ id: 'merged-evidence-2', sourceType: 'STRUCTURAL', identityKey: 'key-2' })
+        ]
+      );
+
+      expect(mapped.diagnostics).toContainEqual(expect.objectContaining({
+        code: 'C11_DUPLICATE_EXPRESSION_MODE',
+        severity
+      }));
+      expect(mapped.manifestations[0]?.status).toBe(status);
+      if (directions[0] === 'SUPPORT' && directions[1] === 'SUPPORT') {
+        expect(mapped.manifestations[0]?.evidenceIds).toEqual(['merged-evidence-1', 'merged-evidence-2']);
+      }
+    }
+  );
 
   // End-to-end CW-05 Career Final Synthesis Pipeline Test
   it('CW-05 end-to-end pipeline: produces deterministic career final synthesis with multi-axis evaluation and provenance', () => {

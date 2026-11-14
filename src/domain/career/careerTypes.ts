@@ -161,6 +161,8 @@ export interface CareerInternalArtifacts {
   readonly canonicalExpressionAnalysis?: CareerExpressionCanonicalResult;
   readonly mechanismCandidates?: readonly CareerMechanismCandidate[];
   readonly canonicalDashaAnalysis?: CareerDashaCanonicalAnalysis;
+  /** Legacy CW-01 per-level timing confidence; distinct from canonical C9 data. */
+  readonly cw01DashaTimingHierarchy?: import('../reasoning/reasoningTypes').TimingHierarchyResult;
   readonly careerDashaEvidence: readonly DomainEvidence[];
   readonly careerAvailabilityDiagnosticTrace?: CareerAvailabilityDiagnosticTrace;
 }

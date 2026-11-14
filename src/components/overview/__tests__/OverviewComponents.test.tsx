@@ -57,6 +57,17 @@ describe('Overview Component Library (P-UI-03)', () => {
       expect(screen.getByText(vm.overall.summary)).toBeInTheDocument();
     });
 
+    it('renders UNAVAILABLE confidence as a localized label, not a raw key', () => {
+      render(
+        <OverallAssessmentCard
+          overall={{ ...vm.overall, confidence: 'UNAVAILABLE' }}
+        />
+      );
+
+      expect(screen.getByText('Unavailable')).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('UNAVAILABLE');
+    });
+
     it('renders all assessment dimensions and a concise mixed-domain conclusion without enum tokens', () => {
       const base = createProductAnalysis();
       const analysis = createProductAnalysis({

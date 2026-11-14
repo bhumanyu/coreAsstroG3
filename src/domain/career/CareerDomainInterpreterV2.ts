@@ -1233,6 +1233,7 @@ export function interpretCareerV2(
     canonicalExpressionAnalysis: careerMechanismCandidates !== undefined ? canonicalMechanismExpressionResult : undefined,
     mechanismCandidates: careerMechanismCandidates, // Pass through explicitly (may be empty array)
     canonicalDashaAnalysis,
+    cw01DashaTimingHierarchy: cw01Result.timingHierarchy,
     careerDashaEvidence: canonicalDashaAnalysis.evidence,
     careerAvailabilityDiagnosticTrace: Object.freeze({
       c8ExpressionCoverage: Object.freeze({
@@ -1663,23 +1664,53 @@ export function mapC11Manifestations(
   readonly manifestations: readonly DomainManifestation[];
   readonly diagnostics: readonly DomainInterpretationDiagnostic[];
 } {
-  const expressionModes = c11.expressions.map(expression => expression.mode);
+  const expressionsByMode = new Map<string, CareerFinalSynthesisResult['expressions'][number][]>();
+  for (const expression of c11.expressions) {
+    const expressions = expressionsByMode.get(expression.mode) ?? [];
+    expressions.push(expression);
+    expressionsByMode.set(expression.mode, expressions);
+  }
+  const duplicateGroups = Array.from(expressionsByMode.entries())
+    .filter(([, expressions]) => expressions.length > 1);
   const diagnostics: DomainInterpretationDiagnostic[] = [];
-  if (new Set(expressionModes).size !== expressionModes.length) {
+  if (duplicateGroups.length > 0) {
+    const hasContradictoryPair = duplicateGroups.some(([, expressions]) => {
+      const directions = new Set(expressions.map(expression => expression.direction));
+      return directions.has('SUPPORT') && directions.has('CHALLENGE');
+    });
     diagnostics.push({
       code: 'C11_DUPLICATE_EXPRESSION_MODE',
-      severity: 'WARNING',
-      message: 'C11 supplied duplicate manifestation modes; the first expression for each mode was used.',
-      relatedIds: expressionModes
+      severity: hasContradictoryPair ? 'ERROR' : 'WARNING',
+      message: 'C11 supplied duplicate manifestation modes; expressions were aggregated using the fail-closed direction contract.',
+      relatedIds: duplicateGroups.map(([mode]) => mode)
     });
   }
+
+  const aggregatedExpressions = new Map(
+    Array.from(expressionsByMode.entries()).map(([mode, expressions]) => {
+      const directions = new Set(expressions.map(expression => expression.direction));
+      const hasUnavailableDirection = directions.has('UNAVAILABLE') || directions.has('NEUTRAL');
+      const hasSupport = directions.has('SUPPORT');
+      const hasChallenge = directions.has('CHALLENGE');
+      const direction: CareerFinalSynthesisResult['expressions'][number]['direction'] =
+        hasUnavailableDirection
+          ? 'UNAVAILABLE'
+          : hasSupport && hasChallenge
+            ? 'MIXED'
+            : directions.size === 1
+              ? expressions[0]!.direction
+              : 'UNAVAILABLE';
+      const evidenceIds = Array.from(new Set(expressions.flatMap(expression => expression.evidenceIds)));
+      return [mode, Object.freeze({ ...expressions[0]!, direction, evidenceIds })] as const;
+    })
+  );
 
   const confidence: DomainManifestation['confidence'] =
     c11.confidence === 'HIGH' ? 'HIGH'
       : c11.confidence === 'MEDIUM' ? 'MODERATE' : 'LOW';
 
   const manifestations = compatibilityModes.map(compatibilityMode => {
-    const expression = c11.expressions.find(item => item.mode === compatibilityMode.mode);
+    const expression = aggregatedExpressions.get(compatibilityMode.mode);
     const status: NonNullable<DomainManifestation['status']> = expression
       ? expression.direction === 'SUPPORT' ? 'SUPPORTED'
         : expression.direction === 'CONDITIONAL' ? 'PARTIALLY_SUPPORTED'

@@ -35,6 +35,24 @@ describe('D01 unified confidence and completeness projection', () => {
     expect(projection.domains.WEALTH.confidence).toBe('HIGH');
   });
 
+  it('preserves UNAVAILABLE ProductConfidence values', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        promise: { ...base.career.promise, confidence: 'UNAVAILABLE' }
+      },
+      wealth: {
+        ...base.wealth,
+        overall: { ...base.wealth.overall, confidence: 'UNAVAILABLE' }
+      }
+    });
+
+    const projection = selectUnifiedConfidenceProjection(analysis);
+    expect(projection.domains.CAREER.confidence).toBe('UNAVAILABLE');
+    expect(projection.domains.WEALTH.confidence).toBe('UNAVAILABLE');
+  });
+
   it('maps partial required layer availability without changing domain confidence', () => {
     const base = createProductAnalysis();
     const analysis = {

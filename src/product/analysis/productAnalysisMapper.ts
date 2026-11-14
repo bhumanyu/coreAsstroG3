@@ -13,6 +13,7 @@
 
 import type { BirthDetails, Horoscope } from '../../types';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
+import type { DomainInterpretation } from '../../domain/interpretation/DomainInterpretation';
 import { Planet } from '../../types';
 import type {
   LifeAnalysisViewModel,
@@ -97,6 +98,7 @@ export interface ProductAnalysisMapperInput {
   readonly context: AnalysisContext;
   readonly aiExplanation?: AiExplanationResult;
   readonly warnings?: readonly ProductWarning[];
+  readonly domainInterpretations?: readonly DomainInterpretation[];
   readonly careerEvidence?: readonly ProductEvidence[];
   readonly wealthEvidence?: readonly ProductEvidence[];
   readonly temporalState?: import('../../core/analysis/AnalysisTemporalState').AnalysisTemporalState;
@@ -368,6 +370,7 @@ export function sanitizeSpeculativePropensityDescription(value?: string): string
 export function mapConfidence(val?: string): ProductConfidence {
   if (!val) return 'MEDIUM';
   const u = val.toUpperCase();
+  if (u === 'UNAVAILABLE') return 'UNAVAILABLE';
   if (u.includes('HIGH')) return 'HIGH';
   if (u.includes('LOW')) return 'LOW';
   return 'MEDIUM';
@@ -1909,7 +1912,15 @@ export function mapSelectedPeriodSynthesis(
 export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAnalysis {
   const asOf = input.context.asOf;
   const analysisId = createAnalysisId(input.birthDetails, asOf);
-  const warnings = input.warnings || [];
+  const domainWarnings = (input.domainInterpretations ?? []).flatMap(interpretation =>
+    (interpretation.diagnostics ?? []).map(diagnostic => ({
+      code: diagnostic.code,
+      message: diagnostic.message,
+      severity: diagnostic.severity,
+      domain: interpretation.domain
+    }))
+  );
+  const warnings = [...(input.warnings ?? []), ...domainWarnings];
 
   const birth = mapBirth(input.birthDetails);
   const methodology = input.context.methodology;

@@ -11,11 +11,13 @@ import {
   mapSpeculativePropensity,
   sanitizeSpeculativePropensityDescription,
   mapMethodology,
-  mapDashaPeriodOptions
+  mapDashaPeriodOptions,
+  mapConfidence
 } from '../productAnalysisMapper';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import { listSelectableMdAdPeriods } from '../../../core/analysis/selectedMdAdPeriod';
 import { createUnavailableWealthFinancialDataSet, createUserReportedFinancialDatum, createConnectedFinancialDatum } from '../../../domain/wealth/wealthFinancialData';
+import { createDomainInterpretation, createNatalPromise } from '../../../domain/interpretation';
 import type { ProductTemporalRelation } from '../productAnalysisTypes';
 import {
   selectCareer,
@@ -35,6 +37,11 @@ import type { CareerProfessionAnalysis } from '../../../domain/career/careerProf
 import type { CareerOutcomeAnalysis } from '../../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 
 describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
+  it('preserves UNAVAILABLE confidence through the product confidence mapper', () => {
+    expect(mapConfidence('UNAVAILABLE')).toBe('UNAVAILABLE');
+    expect(mapConfidence('unavailable')).toBe('UNAVAILABLE');
+  });
+
   const sampleBirth: BirthDetails = {
     name: 'Test Chart A',
     placeOfBirth: 'New Delhi, India',
@@ -270,6 +277,46 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysis.career.eventTimeline?.genericWindows[0].specificEventInference).toBe('NOT_MADE');
     expect(analysis.career.eventTimeline?.taxonomy[0].releaseEnabled).toBe(false);
     expect(analysis.career.eventTimeline?.observedOutcomeReportIds).toEqual(['report-1']);
+  });
+
+  it('projects domain diagnostics into product warnings with their severity and domain', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ domain: 'CAREER', strength: 'UNDETERMINED' }),
+      diagnostics: [
+        {
+          code: 'C11_DUPLICATE_EXPRESSION_MODE',
+          severity: 'ERROR',
+          message: 'Contradictory duplicate manifestation mode.'
+        },
+        {
+          code: 'C11_UNRESOLVED_EVIDENCE_IDENTITY_KEY',
+          severity: 'WARNING',
+          message: 'An expression evidence identity key did not resolve.'
+        }
+      ]
+    });
+
+    const analysis = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: sampleViewModel,
+      context: sampleContext,
+      domainInterpretations: [interpretation]
+    });
+
+    expect(analysis.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'C11_DUPLICATE_EXPRESSION_MODE',
+        severity: 'ERROR',
+        domain: 'CAREER'
+      }),
+      expect.objectContaining({
+        code: 'C11_UNRESOLVED_EVIDENCE_IDENTITY_KEY',
+        severity: 'WARNING',
+        domain: 'CAREER'
+      })
+    ]));
   });
 
   it('projects structured canonical career and wealth synthesis while retaining diagnostic statements', () => {

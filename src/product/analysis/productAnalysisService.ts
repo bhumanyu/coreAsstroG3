@@ -176,6 +176,7 @@ export class ProductAnalysisService {
         horoscope,
         lifeAnalysisViewModel: pipelineState.analysis,
         aiExplanation: pipelineState.aiExplanation,
+        domainInterpretations: pipelineState.domainInterpretations,
         careerEvidence: pipelineState.career?.evidence
           ? mapEvidenceItems(pipelineState.career.evidence, 'CAREER')
           : undefined,
@@ -422,6 +423,7 @@ export class ProductAnalysisService {
       horoscope,
       lifeAnalysisViewModel: pipelineState.analysis!,
       aiExplanation: pipelineState.aiExplanation,
+      domainInterpretations: pipelineState.domainInterpretations,
       careerEvidence: pipelineState.career?.evidence
         ? mapEvidenceItems(pipelineState.career.evidence, 'CAREER')
         : undefined,

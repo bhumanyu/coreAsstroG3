@@ -56,11 +56,21 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
         true,
         [{
           id: 'dasha-evidence',
-          provenance: { natalRootIds: ['natal-root'] as const }
+          provenance: { natalRootIds: ['unmatched-root', 'natal-root'] as const }
         }],
         [{ identityKey: 'natal-root' }],
         'ACTIVATES'
       )).toBe(1);
+    });
+
+    it('assigns no confidence when resolved activation evidence has empty natal roots', () => {
+      const evidence = [{
+        id: 'dasha-evidence',
+        provenance: { natalRootIds: [] as const }
+      }];
+
+      expect(deriveDashaTimingConfidence('FULL', true, evidence, [{ identityKey: 'natal-root' }], 'ACTIVATES')).toBe(0);
+      expect(deriveDashaTimingConfidence('PARTIAL', true, evidence, [{ identityKey: 'natal-root' }], 'ACTIVATES')).toBe(0);
     });
 
     describe('Transit availability', () => {
@@ -154,6 +164,7 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
 
     it('assigns no confidence when condition assessment is unavailable', () => {
       expect(deriveDashaTimingConfidence('UNAVAILABLE', true, [], [], 'ACTIVATES')).toBe(0);
+      expect(deriveDashaTimingConfidence(undefined, true, [], [], 'ACTIVATES')).toBe(0);
     });
   });
 

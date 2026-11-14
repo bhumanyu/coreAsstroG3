@@ -31,7 +31,7 @@ export function formatStrength(strength?: PromiseStrength | string): string {
 
 /**
  * Format ProductConfidence over REAL literals:
- * 'LOW' | 'MEDIUM' | 'HIGH'
+ * 'LOW' | 'MEDIUM' | 'HIGH' | 'UNAVAILABLE'
  */
 export function formatConfidence(confidence?: ProductConfidence | string): string {
   if (!confidence || confidence.toUpperCase() === 'UNAVAILABLE') {

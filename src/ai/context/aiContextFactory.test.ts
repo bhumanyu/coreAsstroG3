@@ -326,6 +326,35 @@ describe('AI Context Factory', () => {
     expect(moderateContext.domainInterpretations?.[0].conclusion.confidence).toBe('MEDIUM');
   });
 
+  it('projects C11 diagnostics to the AI domain interpretation boundary', () => {
+    const careerWithC11Diagnostics = createDomainInterpretation({
+      ...career,
+      diagnostics: [
+        {
+          code: 'C11_DUPLICATE_EXPRESSION_MODE',
+          severity: 'ERROR',
+          message: 'Contradictory duplicate manifestation mode.'
+        },
+        {
+          code: 'C11_UNRESOLVED_EVIDENCE_IDENTITY_KEY',
+          severity: 'WARNING',
+          message: 'An expression evidence identity key did not resolve.'
+        }
+      ]
+    });
+
+    const context = buildAiContext(horoscope, {
+      domainInterpretations: [careerWithC11Diagnostics],
+      temporalState
+    });
+    const careerProjection = context.domainInterpretations?.find(item => item.domain === 'CAREER');
+
+    expect(careerProjection?.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'C11_DUPLICATE_EXPRESSION_MODE', severity: 'ERROR' }),
+      expect.objectContaining({ code: 'C11_UNRESOLVED_EVIDENCE_IDENTITY_KEY', severity: 'WARNING' })
+    ]));
+  });
+
   it('omits unsupported optional confidence values from divisional and life-theme facts', () => {
     const d9 = horoscope.divisionalInterpretation?.d9;
     const d10 = horoscope.divisionalInterpretation?.d10;

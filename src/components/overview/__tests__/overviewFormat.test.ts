@@ -42,6 +42,7 @@ describe('Overview Presentation Formatters (P-UI-03)', () => {
       expect(formatConfidence('HIGH')).toBe('High evidence confidence');
       expect(formatConfidence('MEDIUM')).toBe('Moderate evidence confidence');
       expect(formatConfidence('LOW')).toBe('Limited evidence confidence');
+      expect(formatConfidence('UNAVAILABLE')).toBe('Confidence unavailable');
       expect(formatConfidence(undefined)).toBe('Confidence unavailable');
     });
   });

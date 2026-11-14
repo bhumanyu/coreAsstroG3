@@ -10,6 +10,7 @@ import type {
 type Domain = 'CAREER' | 'WEALTH';
 
 function asConfidence(value: unknown): ProductConfidence {
+  if (value === 'UNAVAILABLE') return 'UNAVAILABLE';
   return value === 'HIGH' || value === 'LOW' || value === 'MEDIUM' ? value : 'LOW';
 }
 

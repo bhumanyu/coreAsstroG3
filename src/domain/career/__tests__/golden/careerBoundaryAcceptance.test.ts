@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { Planet } from '../../../../types';
+import { Planet, type Horoscope } from '../../../../types';
+import { calculateHoroscope } from '../../../../engine/astroEngine';
+import { CANONICAL_BIRTH_DETAILS } from '../../../../test/fixtures/canonicalChart';
+import { createAnalysisContext } from '../../../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../../../core/analysis/resolveAnalysisTemporalState';
 import { createDomainEvidence } from '../../../interpretation/DomainEvidence';
+import { interpretCareerV2 } from '../../CareerDomainInterpreterV2';
 import { evaluateCareerReasoningHierarchy, deriveDashaTimingConfidence } from '../../careerReasoningHierarchy';
 import { buildCareerAnalyticalAxes } from '../../careerFinalSynthesis/careerAnalyticalAxes';
 import { synthesizeCareerFinal } from '../../careerFinalSynthesis/careerFinalSynthesis';
@@ -15,6 +20,7 @@ import type { Career10LFoundation } from '../../career10h/career10LFoundationTyp
 import type { CareerNatalAnalysis } from '../../careerNatalAnalysis';
 import type { CareerD10CanonicalAnalysis } from '../../careerD10/careerD10CanonicalTypes';
 import type { CareerProfessionInput } from '../../careerProfession/careerProfessionTypes';
+import type { CareerInternalArtifacts } from '../../careerTypes';
 import {
   buildCareerProfessionAnalysis,
   resolveCareerProfessionAnalysisStatus
@@ -51,6 +57,56 @@ function makeDashaActivation(
     challengedPromiseEvidenceIds: [],
     expressionEvidenceIds: []
   };
+}
+
+function withMahadashaPlanet(horoscope: Horoscope, planet: Planet): Horoscope {
+  const dashaInterpretation = horoscope.dashaInterpretation;
+  const current = dashaInterpretation?.current;
+  return {
+    ...horoscope,
+    dashaInterpretation: {
+      ...dashaInterpretation,
+      current: {
+        ...current,
+        mahadasha: {
+          ...current?.mahadasha,
+          planet,
+          start: current?.mahadasha?.start ?? '2024-01-01',
+          end: current?.mahadasha?.end ?? '2030-01-01'
+        }
+      }
+    }
+  } as Horoscope;
+}
+
+function interpretWithCurrentDasha(horoscope: Horoscope) {
+  const context = createAnalysisContext({
+    asOf: '2024-06-01T00:00:00.000Z',
+    methodology: {
+      zodiacSystem: 'SIDEREAL',
+      houseSystem: 'WHOLE_SIGN',
+      ayanamsa: 'LAHIRI',
+      calculationEngine: 'ASTRO_CORE_V1',
+      rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+      vargaRules: 'PARASHARA_D10_D2',
+      dashaSystem: 'VIMSHOTTARI'
+    }
+  });
+  const resolvedTemporalState = resolveAnalysisTemporalState(horoscope, context);
+  const requestedCurrent = horoscope.dashaInterpretation?.current;
+  const temporalState = resolvedTemporalState.dashaInterpretation && requestedCurrent
+    ? Object.freeze({
+        ...resolvedTemporalState,
+        dashaInterpretation: Object.freeze({
+          ...resolvedTemporalState.dashaInterpretation,
+          current: requestedCurrent
+        })
+      })
+    : resolvedTemporalState;
+  return interpretCareerV2(horoscope, {
+    context,
+    temporalState
+  });
 }
 
 function makeSynthesisInput(
@@ -303,6 +359,53 @@ describe('Career production-boundary acceptance (CAR)', () => {
     expect(axes.activation.status).toBe('PARTIAL');
     expect(axes.activation.result?.conditionAssessment).toBe('PARTIAL');
     expect(axes.activation.coverage.missingSources).toContain('C9_PARTIAL_CONDITION_ASSESSMENT');
+  });
+
+  it('C-34: CW-01 MD timing confidence requires a root resolving to canonical natal evidence', () => {
+    const asOf = '2024-06-01T00:00:00.000Z';
+    const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf });
+    const seed = interpretWithCurrentDasha(baseHoroscope);
+    const seedArtifacts = seed.conclusionData?.internalArtifacts as CareerInternalArtifacts | undefined;
+    const natal = seedArtifacts?.natal;
+    if (!natal) throw new Error('Expected canonical Career natal analysis.');
+
+    const isPromiseRoot = (item: typeof natal.evidence[number], planet: Planet): boolean => {
+      const segments = item.identityKey.split('_');
+      return item.layer === 'PRIMARY_PROMISE' &&
+        (item.direction === 'SUPPORT' || item.direction === 'MIXED' || item.direction === 'CHALLENGE') &&
+        item.identityKey.startsWith('CAREER_STRUCTURAL_') &&
+        (segments[6] === planet || segments[7] === planet);
+    };
+    const linkedPlanet = natal.relevance
+      .map(item => item.planet)
+      .find(planet => natal.evidence.some(item => isPromiseRoot(item, planet)));
+    if (!linkedPlanet) throw new Error('Expected a relevant planet with eligible natal promise evidence.');
+
+    const linkedInterpretation = interpretWithCurrentDasha(withMahadashaPlanet(baseHoroscope, linkedPlanet));
+    const linkedArtifacts = linkedInterpretation.conclusionData?.internalArtifacts as CareerInternalArtifacts | undefined;
+    const linkedNatalKeys = new Set(linkedArtifacts?.natal.evidence.map(item => item.identityKey) ?? []);
+    const linkedMdEvidence = linkedArtifacts?.canonicalDashaAnalysis?.evidence.filter(item => item.level === 'MD') ?? [];
+    expect(linkedMdEvidence.some(item =>
+      item.provenance.natalRootIds.some(rootId => linkedNatalKeys.has(rootId))
+    )).toBe(true);
+    expect(linkedArtifacts?.cw01DashaTimingHierarchy?.md.confidence).toBeGreaterThan(0);
+
+    const unlinkedPlanet = natal.relevance
+      .map(item => item.planet)
+      .find(planet => !natal.evidence.some(item => isPromiseRoot(item, planet)));
+    if (!unlinkedPlanet) throw new Error('Expected a relevant planet without eligible natal promise roots.');
+
+    const unlinkedInterpretation = interpretWithCurrentDasha(withMahadashaPlanet(baseHoroscope, unlinkedPlanet));
+    const unlinkedArtifacts = unlinkedInterpretation.conclusionData?.internalArtifacts as CareerInternalArtifacts | undefined;
+    const unlinkedDasha = unlinkedArtifacts?.canonicalDashaAnalysis;
+    const mdContextResolved = unlinkedDasha?.hierarchy?.diagnosticTrace?.levels
+      .find(level => level.level === 'MD')?.contextResolved;
+    const unlinkedMdEvidence = unlinkedDasha?.evidence.filter(item => item.level === 'MD') ?? [];
+
+    expect(mdContextResolved).toBe(true);
+    expect(unlinkedMdEvidence.length).toBeGreaterThan(0);
+    expect(unlinkedMdEvidence.every(item => item.provenance.natalRootIds.length === 0)).toBe(true);
+    expect(unlinkedArtifacts?.cw01DashaTimingHierarchy?.md.confidence).toBe(0);
   });
 
   it('CAR-005: absent transit evidence produces UNAVAILABLE direction', () => {
