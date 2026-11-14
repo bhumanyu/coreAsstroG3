@@ -42,6 +42,7 @@ import {
   resolveCurrentPressure,
   buildCareerDashaStatement,
   buildCareerTransitStatement,
+  mapC11EvidenceIdentityKeysToOccurrenceIds,
   mapCareerSource,
   mapCareerPhase,
   type CareerConclusionData
@@ -777,6 +778,138 @@ describe('CareerDomainInterpreterV2', () => {
       const emptyEffect = evaluateTransitEffect([]);
       expect(emptyEffect).toBe('NO_MATERIAL_TRIGGER');
     });
+
+    it.each([
+      {
+        name: 'unresolved MD',
+        conditionAssessment: 'FULL' as const,
+        contextResolved: false,
+        linkedEvidence: true,
+        missingSiblingLevels: false,
+        expectedConfidence: 0
+      },
+      {
+        name: 'resolved MD with PARTIAL assessment',
+        conditionAssessment: 'PARTIAL' as const,
+        contextResolved: true,
+        linkedEvidence: true,
+        missingSiblingLevels: false,
+        expectedConfidence: 0.5
+      },
+      {
+        name: 'FULL MD without linked evidence',
+        conditionAssessment: 'FULL' as const,
+        contextResolved: true,
+        linkedEvidence: false,
+        missingSiblingLevels: false,
+        expectedConfidence: 0
+      },
+      {
+        name: 'resolved FULL MD with unavailable AD and PD',
+        conditionAssessment: 'FULL' as const,
+        contextResolved: true,
+        linkedEvidence: true,
+        missingSiblingLevels: true,
+        expectedConfidence: 1
+      }
+    ])(
+      'C-17 interpreter passes evidence-qualified confidence for $name',
+      async ({
+        conditionAssessment,
+        contextResolved,
+        linkedEvidence,
+        missingSiblingLevels,
+        expectedConfidence
+      }) => {
+        const dashaModule = await import('./careerDasha/careerDashaIntegration');
+        const hierarchyModule = await import('./careerReasoningHierarchy');
+        const originalDashaBuilder = dashaModule.buildCareerDashaAnalysis;
+        const originalHierarchyEvaluator = hierarchyModule.evaluateCareerReasoningHierarchy;
+        let mdConfidence: number | undefined;
+        const mdEvidence: CareerDashaCanonicalEvidence = {
+          identityKey: 'C9:TEST_MD_IDENTITY',
+          id: 'C9:TEST_MD_OCCURRENCE',
+          level: 'MD',
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          statement: 'Test MD activation',
+          sourceIds: [],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: []
+          }
+        };
+
+        const dashaSpy = vi.spyOn(dashaModule, 'buildCareerDashaAnalysis')
+          .mockImplementation(input => {
+            const canonical = originalDashaBuilder(input);
+            const diagnosticTrace = canonical.hierarchy?.diagnosticTrace;
+            if (!diagnosticTrace) {
+              throw new Error('Expected canonical C9 diagnostic trace in interpreter test.');
+            }
+            const mdTrace = diagnosticTrace.levels.some(level => level.level === 'MD');
+            if (!mdTrace) {
+              throw new Error('Expected canonical MD trace level in interpreter test.');
+            }
+            return {
+              ...canonical,
+              md: {
+                ...canonical.md,
+                effect: 'ACTIVATES',
+                direction: 'SUPPORT',
+                strength: 'STRONG',
+                conditionAssessment
+              },
+              ...(missingSiblingLevels
+                ? {
+                    ad: {
+                      ...canonical.ad,
+                      effect: 'INSUFFICIENT_DATA',
+                      direction: 'UNAVAILABLE',
+                      strength: 'UNDETERMINED',
+                      conditionAssessment: 'UNAVAILABLE'
+                    },
+                    pd: {
+                      ...canonical.pd,
+                      effect: 'INSUFFICIENT_DATA',
+                      direction: 'UNAVAILABLE',
+                      strength: 'UNDETERMINED',
+                      conditionAssessment: 'UNAVAILABLE'
+                    }
+                  }
+                : {}),
+              evidence: linkedEvidence ? [mdEvidence] : [],
+              hierarchy: {
+                ...canonical.hierarchy!,
+                diagnosticTrace: {
+                  ...diagnosticTrace,
+                  levels: diagnosticTrace.levels.map(level =>
+                    level.level === 'MD'
+                      ? { ...level, contextResolved }
+                      : level
+                  )
+                }
+              }
+            };
+          });
+        const evaluatorSpy = vi.spyOn(hierarchyModule, 'evaluateCareerReasoningHierarchy')
+          .mockImplementation(input => {
+            mdConfidence = input.dashaTimings?.md?.confidence;
+            return originalHierarchyEvaluator(input);
+          });
+
+        try {
+          interpretCareerV2(horoscope, makeDomainOptions());
+          expect(mdConfidence).toBe(expectedConfidence);
+        } finally {
+          evaluatorSpy.mockRestore();
+          dashaSpy.mockRestore();
+        }
+      }
+    );
   });
 
   // 8. Conflict tiers and natal promise preservation (§32)
@@ -1554,6 +1687,16 @@ describe('CareerDomainInterpreterV2', () => {
     expect(serviceResult.conclusion).toBeDefined();
   });
 
+  it('C-24 production orchestration does not emit a legacy relationship-ID fallback diagnostic', () => {
+    const result = interpretCareerV2(horoscope, makeDomainOptions());
+    const diagnostics: readonly { readonly diagnosticId: string }[] =
+      result.conclusionData?.canonicalCareerFoundation?.diagnostics ?? [];
+
+    expect(diagnostics.some(diagnostic =>
+      diagnostic.diagnosticId.includes('LEGACY_RELATIONSHIP_ID_FALLBACK')
+    )).toBe(false);
+  });
+
   // 18. End-to-end CW-04 Career Manifestation Pipeline Test
   it('CW-04 end-to-end pipeline: produces deterministic career manifestation synthesis with explicit asOf date', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
@@ -1580,6 +1723,9 @@ describe('CareerDomainInterpreterV2', () => {
       'INDEPENDENT_WORK',
       'BUSINESS_ENTREPRENEURSHIP'
     ]);
+    const c11Modes = result1.conclusionData?.canonicalCareerFinalSynthesis?.expressions
+      .map((expression: CareerFinalExpression) => expression.mode) ?? [];
+    expect(new Set(c11Modes).size).toBe(c11Modes.length);
 
     // Pin deterministic per-mode statuses for canonical chart at asOf date
     const byMode = Object.fromEntries(
@@ -1635,6 +1781,20 @@ describe('CareerDomainInterpreterV2', () => {
     expect(result1.conclusionData?.careerManifestationSynthesis).toEqual(
       result2.conclusionData?.careerManifestationSynthesis
     );
+  });
+
+  it('C11 manifestation identity mapping includes every matching evidence occurrence once', () => {
+    const sharedIdentityKey = 'C11:SHARED_IDENTITY';
+    const evidence = [
+      createDomainEvidence({ id: 'occurrence-1', sourceType: 'STRUCTURAL', identityKey: sharedIdentityKey }),
+      createDomainEvidence({ id: 'occurrence-2', sourceType: 'STRUCTURAL', identityKey: sharedIdentityKey }),
+      createDomainEvidence({ id: 'unrelated', sourceType: 'STRUCTURAL', identityKey: 'C11:OTHER' })
+    ];
+
+    expect(mapC11EvidenceIdentityKeysToOccurrenceIds(
+      [sharedIdentityKey, sharedIdentityKey],
+      evidence
+    )).toEqual(['occurrence-1', 'occurrence-2']);
   });
 
   // End-to-end CW-05 Career Final Synthesis Pipeline Test

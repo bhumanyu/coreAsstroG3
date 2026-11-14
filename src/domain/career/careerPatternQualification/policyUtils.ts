@@ -105,31 +105,16 @@ export function hasAllEstablishingRelationships(
   );
 }
 
-/**
- * Uses canonical edge semantics when networks are supplied. The ID path remains
- * only for legacy callers that do not yet provide network context.
- */
+/** Uses only canonical network edges; relationship ID strings are never interpreted. */
 export function hasDirectedHouseRelationshipId(
   pattern: CareerPattern,
   fromHouse: number,
   toHouse: number,
-  networks?: readonly CareerHouseNetwork[],
-  diagnostics?: string[]
+  networks: readonly CareerHouseNetwork[]
 ): boolean {
-  if (networks !== undefined) {
-    return networks
-      .filter(network => pattern.networkIds.includes(network.networkId))
-      .some(network => hasDirectedHouseRelationship(network, fromHouse, toHouse));
-  }
-
-  diagnostics?.push('LEGACY_RELATIONSHIP_ID_FALLBACK');
-  const establishingIds = pattern.provenance.establishingRelationshipIds;
-
-  // Check for relationship IDs that represent the directed flow fromHouse → toHouse
-  // Expected formats: REL:from→to, REL:from-to, from→to, from-to
-  const arrowPattern = new RegExp(`(?:REL:)?${fromHouse}[→-]${toHouse}\\b`);
-
-  return establishingIds.some(id => arrowPattern.test(id));
+  return networks
+    .filter(network => pattern.networkIds.includes(network.networkId))
+    .some(network => hasDirectedHouseRelationship(network, fromHouse, toHouse));
 }
 
 /**

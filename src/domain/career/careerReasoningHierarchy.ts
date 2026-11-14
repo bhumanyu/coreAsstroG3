@@ -36,7 +36,8 @@ import type {
   HierarchicalDomainResult,
   ReasoningDirection,
   ReasoningTrace,
-  TimingHierarchyResult
+  TimingHierarchyResult,
+  TimingActivationEffect
 } from '../reasoning/reasoningTypes';
 
 import { CAREER_MANIFESTATION_RULES } from './careerReasoningRules';
@@ -45,12 +46,21 @@ import {
   groupEvidenceByIndependence
 } from './careerManifestations';
 
+/**
+ * FULL C9 confidence requires resolved planet context, linked evidence, and a resolved effect.
+ */
 export function deriveDashaTimingConfidence(
   conditionAssessment: 'FULL' | 'PARTIAL' | 'UNAVAILABLE' | undefined,
-  contextResolved: boolean
+  contextResolved: boolean,
+  evidenceIds: readonly string[],
+  effect: TimingActivationEffect
 ): number {
   if (!contextResolved) return 0;
-  if (conditionAssessment === 'FULL') return 1;
+  if (conditionAssessment === 'FULL') {
+    const hasLinkedEvidence = evidenceIds.some(id => id.trim().length > 0);
+    const hasResolvedEffect = effect !== 'INSUFFICIENT_DATA' && effect !== 'UNKNOWN';
+    return hasLinkedEvidence && hasResolvedEffect ? 1 : 0;
+  }
   if (conditionAssessment === 'PARTIAL') return 0.5;
   return 0;
 }

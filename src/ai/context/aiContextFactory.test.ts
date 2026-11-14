@@ -14,6 +14,8 @@ import {
   buildDashaEvidence,
   toAiConfidence
 } from './aiContextFactory';
+import type { CareerFinalSynthesisResult } from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
+import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 import {
   DomainInterpretation,
   createDomainInterpretation,
@@ -105,6 +107,181 @@ describe('AI Context Factory', () => {
     domainInterpretations: [career, wealth],
     temporalState
   });
+
+  it.each([
+    {
+      name: 'D1 unavailable with D10 support',
+      c11: {
+        finalStatus: 'INSUFFICIENT_DATA',
+        finalDirection: 'UNAVAILABLE',
+        finalStrength: 'UNDETERMINED',
+        natalDirection: 'UNAVAILABLE',
+        natalStrength: 'UNDETERMINED',
+        d10Direction: 'SUPPORT'
+      },
+      professionStatus: 'INSUFFICIENT_DATA',
+      expectedNatalDirection: 'UNAVAILABLE',
+      expectedFinalStatus: 'INSUFFICIENT_DATA'
+    },
+    {
+      name: 'MIXED promise with available ranking',
+      c11: {
+        finalStatus: 'MIXED',
+        natalDirection: 'MIXED',
+        natalStrength: 'MIXED',
+        finalDirection: 'MIXED'
+      },
+      professionStatus: 'PARTIAL',
+      rankingStatus: 'AVAILABLE',
+      expectedNatalDirection: 'MIXED',
+      expectedFinalStatus: 'MIXED'
+    },
+    {
+      name: 'SUPPORT with partial profession status',
+      c11: {
+        finalStatus: 'SUPPORTED',
+        natalDirection: 'SUPPORT',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG'
+      },
+      professionStatus: 'PARTIAL',
+      expectedNatalDirection: 'SUPPORT',
+      expectedFinalStatus: 'SUPPORTED'
+    },
+    {
+      name: 'SUPPORT with unavailable ranking',
+      c11: {
+        finalStatus: 'SUPPORTED',
+        natalDirection: 'SUPPORT',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG'
+      },
+      professionStatus: 'PARTIAL',
+      rankingStatus: 'UNAVAILABLE',
+      expectedNatalDirection: 'SUPPORT',
+      expectedFinalStatus: 'SUPPORTED'
+    },
+    {
+      name: 'partial C9 with supported C11',
+      c11: {
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        natalDirection: 'SUPPORT'
+      },
+      dashaAssessment: 'PARTIAL',
+      expectedNatalDirection: 'SUPPORT',
+      expectedFinalStatus: 'SUPPORTED'
+    },
+    {
+      name: 'sustainability remains not assessed',
+      c11: {
+        finalStatus: 'SUPPORTED',
+        finalStrength: 'STRONG',
+        finalDirection: 'SUPPORT',
+        natalDirection: 'SUPPORT'
+      },
+      sustainabilityNotAssessed: true,
+      expectedNatalDirection: 'SUPPORT',
+      expectedFinalStatus: 'SUPPORTED'
+    },
+    {
+      name: 'supported C11 with zero profession candidates',
+      c11: {
+        finalStatus: 'SUPPORTED',
+        finalStrength: 'STRONG',
+        finalDirection: 'SUPPORT',
+        natalDirection: 'SUPPORT'
+      },
+      professionStatus: 'INSUFFICIENT_DATA',
+      zeroCandidates: true,
+      expectedNatalDirection: 'SUPPORT',
+      expectedFinalStatus: 'SUPPORTED'
+    }
+  ] as const)(
+    'C-20 full-context projection does not upgrade $name',
+    ({
+      c11: c11Overrides,
+      professionStatus,
+      rankingStatus,
+      dashaAssessment,
+      sustainabilityNotAssessed,
+      zeroCandidates,
+      expectedNatalDirection,
+      expectedFinalStatus
+    }) => {
+      const baseC11 = career.conclusionData?.canonicalCareerFinalSynthesis;
+      const baseProfession = career.conclusionData?.careerProfessionAnalysis;
+      if (!baseC11 || !baseProfession) {
+        throw new Error('Full-context C-20 test requires canonical C11 and profession analysis.');
+      }
+
+      const interpretation: DomainInterpretation = {
+        ...career,
+        conclusionData: {
+          ...career.conclusionData,
+          canonicalCareerFinalSynthesis: {
+            ...baseC11,
+            ...c11Overrides
+          } as CareerFinalSynthesisResult,
+          careerProfessionAnalysis: {
+            ...baseProfession,
+            ...(professionStatus ? { status: professionStatus } : {}),
+            ...(zeroCandidates ? { candidates: [] } : {}),
+            ...(rankingStatus && baseProfession.ranking
+              ? { ranking: { ...baseProfession.ranking, status: rankingStatus } }
+              : {})
+          } as CareerProfessionAnalysis,
+          ...(dashaAssessment
+            ? {
+                canonicalDashaAnalysis: {
+                  ...career.conclusionData.canonicalDashaAnalysis,
+                  hierarchy: {
+                    ...career.conclusionData.canonicalDashaAnalysis?.hierarchy,
+                    conditionAssessment: dashaAssessment
+                  }
+                }
+              }
+            : {}),
+          ...(sustainabilityNotAssessed && career.conclusionData.careerAnalyticalAxes
+            ? {
+                careerAnalyticalAxes: {
+                  ...career.conclusionData.careerAnalyticalAxes,
+                  sustainability: {
+                    ...career.conclusionData.careerAnalyticalAxes.sustainability,
+                    result: {
+                      assessment: 'NOT_ASSESSED',
+                      requiredEvidenceFamily: 'CAREER_SUSTAINABILITY'
+                    }
+                  }
+                }
+              }
+            : {})
+        }
+      };
+
+      const fullContext = buildAiContext(horoscope, {
+        domainInterpretations: [interpretation],
+        temporalState
+      });
+      const careerFact = fullContext.career;
+      expect(careerFact?.canonicalC11?.natalDirection).toBe(expectedNatalDirection);
+      expect(careerFact?.canonicalC11?.finalStatus).toBe(expectedFinalStatus);
+      if (professionStatus) {
+        expect(careerFact?.profession.status).toBe(professionStatus);
+        expect(careerFact?.profession.availability).toBe('AVAILABLE');
+        if (professionStatus === 'PARTIAL' || professionStatus === 'INSUFFICIENT_DATA') {
+          expect(['COMPLETE', 'SUPPORTED', 'STRONG']).not.toContain(careerFact?.profession.status);
+        }
+      }
+      if (rankingStatus) {
+        expect(careerFact?.profession.status).toBe(professionStatus);
+      }
+      if (zeroCandidates) {
+        expect(careerFact?.profession.candidates).toEqual([]);
+      }
+    }
+  );
 
   it.each([
     ['VERY_HIGH', 'HIGH'],

@@ -319,6 +319,7 @@ export interface CareerProfessionAnalysis {
     readonly matchedRules: number;
     readonly generatedCandidates: number;
     readonly d10QualifiedCandidates: number;
+    readonly d10RemovedCandidates: number;
     readonly rankingEligibleCandidates: number;
     readonly rankedCandidates: number;
   };
@@ -334,6 +335,7 @@ export type CareerProfessionAnalysisDiagnostic =
   | 'NO_PROFESSION_CANDIDATES_AVAILABLE'
   | 'PROFESSION_RANKING_REJECTED_BY_D1_GATE'
   | 'PROFESSION_D10_CANDIDATES_REMOVED'
+  | 'ALL_CANDIDATES_REMOVED_BY_D10_QUALIFICATION'
   | 'PROFESSION_ZERO_EVIDENCE_CANDIDATES'
   | 'PROFESSION_PARTIAL_LINKAGE_CANDIDATES';
 

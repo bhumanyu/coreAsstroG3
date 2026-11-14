@@ -23,6 +23,7 @@ import type {
   CareerProfessionInput,
   CareerProfessionAnalysis,
   CareerProfessionAnalysisStatus,
+  CareerProfessionRankingStatus,
   CareerProfessionAnalysisDiagnostic,
   CareerProfessionCandidate,
   CareerProfessionEvidence,
@@ -160,23 +161,25 @@ export function buildCareerProfessionAnalysis(
 
   // Build provenance from emitted candidates' evidence only
   const provenance = buildProvenance(d10QualifiedCandidates);
+  const rankingInputCandidates = d10QualifiedCandidates.filter(
+    candidate => candidate.linkageCoverage === 'FULL'
+  );
   const ranking = buildCareerProfessionRanking({
-    candidates: d10QualifiedCandidates,
+    candidates: rankingInputCandidates,
     domainEvidence,
     natalPromiseDirection: input.natalPromiseDirection
   });
 
-  let status: CareerProfessionAnalysisStatus;
-  if (candidates.length === 0) {
-    status = 'INSUFFICIENT_DATA';
-  } else if (missingInputs.length > 0 || ranking.status !== 'AVAILABLE') {
-    status = 'PARTIAL';
-  } else {
-    status = 'COMPLETE';
-  }
+  const d10RemovedCandidateCount = candidates.length - d10QualifiedCandidates.length;
+  const allCandidatesRemovedByD10 = candidates.length > 0 && d10QualifiedCandidates.length === 0;
+  const status = resolveCareerProfessionAnalysisStatus({
+    generatedCandidateCount: candidates.length,
+    d10QualifiedCandidateCount: d10QualifiedCandidates.length,
+    missingInputCount: missingInputs.length,
+    rankingStatus: ranking.status
+  });
 
   const diagnostics: CareerProfessionAnalysisDiagnostic[] = [];
-  const d10RemovedCandidateCount = candidates.length - d10QualifiedCandidates.length;
   const zeroEvidenceCandidateCount = d10QualifiedCandidates.filter(
     candidate => candidate.evidenceOccurrenceIds.length === 0
   ).length;
@@ -188,6 +191,9 @@ export function buildCareerProfessionAnalysis(
   }
   if (d10RemovedCandidateCount > 0) {
     diagnostics.push('PROFESSION_D10_CANDIDATES_REMOVED');
+  }
+  if (allCandidatesRemovedByD10) {
+    diagnostics.push('ALL_CANDIDATES_REMOVED_BY_D10_QUALIFICATION');
   }
   if (zeroEvidenceCandidateCount > 0) {
     diagnostics.push('PROFESSION_ZERO_EVIDENCE_CANDIDATES');
@@ -218,10 +224,6 @@ export function buildCareerProfessionAnalysis(
   const sortedCandidates = canonicalSortProfessionCandidates(
     deduplicateProfessionCandidates(d10QualifiedCandidates)
   );
-  const rankingEligibleCandidateIds = new Set(
-    ranking.rankedCandidates.flatMap(candidate => candidate.supportingCandidateIds)
-  );
-
   // Freeze and return
   return freezeProfessionAnalysis({
     candidates: sortedCandidates,
@@ -233,7 +235,8 @@ export function buildCareerProfessionAnalysis(
       matchedRules: matchedRuleCount,
       generatedCandidates: candidates.length,
       d10QualifiedCandidates: d10QualifiedCandidates.length,
-      rankingEligibleCandidates: rankingEligibleCandidateIds.size,
+      d10RemovedCandidates: d10RemovedCandidateCount,
+      rankingEligibleCandidates: rankingInputCandidates.length,
       rankedCandidates: ranking.rankedCandidates.length
     },
     unresolvedExpressionTypes,
@@ -241,6 +244,23 @@ export function buildCareerProfessionAnalysis(
     missingInputs,
     provenance
   });
+}
+
+export function resolveCareerProfessionAnalysisStatus(input: {
+  readonly generatedCandidateCount: number;
+  readonly d10QualifiedCandidateCount: number;
+  readonly missingInputCount: number;
+  readonly rankingStatus: CareerProfessionRankingStatus;
+}): CareerProfessionAnalysisStatus {
+  if (input.generatedCandidateCount === 0) return 'INSUFFICIENT_DATA';
+  if (
+    input.d10QualifiedCandidateCount === 0 ||
+    input.missingInputCount > 0 ||
+    input.rankingStatus !== 'AVAILABLE'
+  ) {
+    return 'PARTIAL';
+  }
+  return 'COMPLETE';
 }
 
 /**
@@ -451,7 +471,7 @@ function evaluateRule(
       // Capture the exact mechanism instances referenced by qualifying expressions
       const referencedMechanismIds = new Set<string>();
       for (const expr of patternExpressions) {
-        if (!('qualificationStatus' in expr) || expr.qualificationStatus !== 'QUALIFIED') {
+        if (!hasCompleteExpressionQualification(expr)) {
           continue;
         }
         const referencedMechanismTypes = new Set<CareerMechanismType>();
@@ -502,6 +522,56 @@ function evaluateRule(
   }
 
   return { satisfyingExpressions, satisfyingMechanisms };
+}
+
+function hasCompleteExpressionQualification(expression: CareerExpressionCandidate): boolean {
+  const canonicalExpression = expression as CareerExpressionCandidate & {
+    readonly qualificationStatus?: unknown;
+    readonly qualification?: unknown;
+  };
+  if (canonicalExpression.qualificationStatus !== 'QUALIFIED') return false;
+
+  const qualification = canonicalExpression.qualification;
+  if (typeof qualification !== 'object' || qualification === null) return false;
+  const qualified = qualification as {
+    readonly qualificationStatus?: unknown;
+    readonly ruleIds?: unknown;
+    readonly provenance?: unknown;
+  };
+  if (
+    qualified.qualificationStatus !== 'QUALIFIED' ||
+    !Array.isArray(qualified.ruleIds) ||
+    qualified.ruleIds.length === 0 ||
+    typeof qualified.provenance !== 'object' ||
+    qualified.provenance === null
+  ) {
+    return false;
+  }
+
+  const provenance = qualified.provenance as {
+    readonly mechanismId?: unknown;
+    readonly ruleIds?: unknown;
+    readonly sourceMechanismIds?: unknown;
+    readonly sourceEvidenceIds?: unknown;
+  };
+  if (
+    typeof provenance.mechanismId !== 'string' ||
+    provenance.mechanismId.length === 0 ||
+    !Array.isArray(provenance.ruleIds) ||
+    !Array.isArray(provenance.sourceMechanismIds) ||
+    !Array.isArray(provenance.sourceEvidenceIds) ||
+    provenance.sourceEvidenceIds.length === 0
+  ) {
+    return false;
+  }
+
+  const qualificationRuleIds = qualified.ruleIds;
+  const provenanceRuleIds = provenance.ruleIds;
+  const provenanceMechanismIds = provenance.sourceMechanismIds;
+  return (
+    qualificationRuleIds.every(ruleId => provenanceRuleIds.includes(ruleId)) &&
+    expression.sourceMechanismIds.every(id => provenanceMechanismIds.includes(id))
+  );
 }
 
 /**

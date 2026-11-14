@@ -54,53 +54,59 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
     const evidence: QualificationEvidence[] = [];
     const decisionBlockingReasons: DecisionBlockingReason[] = [];
     const deferredDimensions: CareerPatternDeferredDimension[] = [];
-    const diagnostics: Array<'LEGACY_RELATIONSHIP_ID_FALLBACK'> = [];
     let status: CareerPatternQualificationStatus = 'INSUFFICIENT_DATA';
 
     // Step 1: Check for required establishing relationships (structural prerequisites)
     // For SERVICE_TO_PROFESSION_TO_GAINS, we need both 6→10 and 10→11
-    const has6to10 = hasDirectedHouseRelationshipId(pattern, 6, 10, networks, diagnostics);
-    const has10to11 = hasDirectedHouseRelationshipId(pattern, 10, 11, networks, diagnostics);
-
-    if (!has6to10 && !has10to11) {
-      // Both prerequisites explicitly absent → UNQUALIFIED
-      status = 'UNQUALIFIED';
-      evidence.push(
-        createQualificationEvidence(
-          generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
-          'structuralStrength',
-          'STRUCTURAL_RELATIONSHIP',
-          pattern.patternId,
-          establishingIds,
-          'Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Neither found.'
-        )
-      );
-    } else if (!has6to10 || !has10to11) {
-      // One prerequisite absent, one present → UNQUALIFIED
-      status = 'UNQUALIFIED';
-      const missing = !has6to10 ? '6→10' : '10→11';
-      evidence.push(
-        createQualificationEvidence(
-          generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
-          'structuralStrength',
-          'STRUCTURAL_RELATIONSHIP',
-          pattern.patternId,
-          establishingIds,
-          `Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Missing: ${missing}.`
-        )
-      );
+    if (networks === undefined) {
+      decisionBlockingReasons.push({
+        reason: 'canonical house-network context unavailable',
+        kind: 'MISSING_INPUT'
+      });
     } else {
-      // Both prerequisites present - proceed to dimension assessment
-      evidence.push(
-        createQualificationEvidence(
-          generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
-          'structuralStrength',
-          'STRUCTURAL_RELATIONSHIP',
-          pattern.patternId,
-          establishingIds,
-          'Service-to-Profession-to-Gains has both required establishing relationships: 6→10 and 10→11.'
-        )
-      );
+      const has6to10 = hasDirectedHouseRelationshipId(pattern, 6, 10, networks);
+      const has10to11 = hasDirectedHouseRelationshipId(pattern, 10, 11, networks);
+
+      if (!has6to10 && !has10to11) {
+        // Both prerequisites explicitly absent → UNQUALIFIED
+        status = 'UNQUALIFIED';
+        evidence.push(
+          createQualificationEvidence(
+            generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
+            'structuralStrength',
+            'STRUCTURAL_RELATIONSHIP',
+            pattern.patternId,
+            establishingIds,
+            'Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Neither found.'
+          )
+        );
+      } else if (!has6to10 || !has10to11) {
+        // One prerequisite absent, one present → UNQUALIFIED
+        status = 'UNQUALIFIED';
+        const missing = !has6to10 ? '6→10' : '10→11';
+        evidence.push(
+          createQualificationEvidence(
+            generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
+            'structuralStrength',
+            'STRUCTURAL_RELATIONSHIP',
+            pattern.patternId,
+            establishingIds,
+            `Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Missing: ${missing}.`
+          )
+        );
+      } else {
+        // Both prerequisites present - proceed to dimension assessment
+        evidence.push(
+          createQualificationEvidence(
+            generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
+            'structuralStrength',
+            'STRUCTURAL_RELATIONSHIP',
+            pattern.patternId,
+            establishingIds,
+            'Service-to-Profession-to-Gains has both required establishing relationships: 6→10 and 10→11.'
+          )
+        );
+      }
     }
 
     // Step 2: Build dimensions using legacy computation
@@ -185,8 +191,7 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       decisionBlockingReasons: Object.freeze(decisionBlockingReasons),
       deferredDimensions: Object.freeze(deferredDimensions),
       ruleId: this.policyId,
-      explanation,
-      diagnostics: Object.freeze([...new Set(diagnostics)])
+      explanation
     });
   }
 

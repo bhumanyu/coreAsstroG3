@@ -962,6 +962,7 @@ function mapCareer(
   const dashaPeriods = mapDashaPeriods(detail?.timing);
 
   const rawStatus =
+    detail?.canonicalFinalSynthesis?.finalStatus ??
     summary?.status ??
     detail?.finalSynthesis?.finalStatus ??
     detail?.finalSynthesis?.status ??
@@ -986,14 +987,18 @@ function mapCareer(
       : undefined,
     promise: {
       status: careerStatus,
-      strength: detail?.status
+      strength: detail?.canonicalFinalSynthesis?.natalStrength
+        ? String(detail.canonicalFinalSynthesis.natalStrength)
+        : detail?.status
         ? String(detail.status)
         : detail?.natalPromise
           ? String(detail.natalPromise)
           : 'UNAVAILABLE',
       confidence: mapConfidence(summary?.confidence),
-      headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
-      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
+      headline: detail?.canonicalFinalSynthesis?.statement ||
+        detail?.promiseHeadline || detail?.headline || summary?.headline,
+      statement: detail?.canonicalFinalSynthesis?.statement ||
+        detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
       dominantManifestations: detail?.dominantManifestations
         ? [...detail.dominantManifestations]
         : detail?.manifestations
@@ -1078,8 +1083,10 @@ function mapCareer(
     qualifications: mapQualifications(detail?.qualifications),
     evidence,
     synthesis: {
-      headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
-      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
+      headline: detail?.canonicalFinalSynthesis?.statement ||
+        detail?.promiseHeadline || detail?.headline || summary?.headline,
+      statement: detail?.canonicalFinalSynthesis?.statement ||
+        detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
       ...(detail?.canonicalFinalSynthesis ? {
         finalStatus: detail.canonicalFinalSynthesis.finalStatus,
         finalDirection: detail.canonicalFinalSynthesis.finalDirection,

@@ -502,6 +502,7 @@ describe('careerIntelligenceProjection', () => {
           matchedRules: 0,
           generatedCandidates: 0,
           d10QualifiedCandidates: 0,
+          d10RemovedCandidates: 0,
           rankingEligibleCandidates: 0,
           rankedCandidates: 0
         },

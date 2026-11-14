@@ -249,7 +249,13 @@ describe('Career Pattern Qualification', () => {
       const input: CareerPatternQualificationInput = {
         patterns: [pattern],
         relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        condition: [makeCondition(Planet.SATURN, 'STRONG')],
+        networks: [{
+          ...makeDirectedServiceProfessionNetwork(),
+          relationships: makeDirectedServiceProfessionNetwork().relationships.filter(
+            edge => edge.edgeId === 'LORD:6' || edge.edgeId === 'OCCUPIES:6-10'
+          )
+        }]
       };
 
       const result = qualifyCareerPatterns(input);
@@ -1446,7 +1452,7 @@ describe('Career Pattern Qualification', () => {
         );
       });
 
-      it('reports the legacy ID fallback when network context is omitted', () => {
+      it('does not interpret legacy relationship IDs when canonical network context is omitted', () => {
         const pattern = makePattern({
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
           provenance: Object.freeze({
@@ -1463,7 +1469,12 @@ describe('Career Pattern Qualification', () => {
           condition: [makeCondition(Planet.SATURN, 'STRONG')]
         });
 
-        expect(result.diagnostics).toContainEqual({
+        expect(result.qualifiedPatterns[0].status).toBe('INSUFFICIENT_DATA');
+        expect(result.qualifiedPatterns[0].decisionBlockingReasons).toContainEqual({
+          reason: 'canonical house-network context unavailable',
+          kind: 'MISSING_INPUT'
+        });
+        expect(result.diagnostics).not.toContainEqual({
           patternId: 'pattern-1',
           code: 'LEGACY_RELATIONSHIP_ID_FALLBACK'
         });
@@ -1484,7 +1495,11 @@ describe('Career Pattern Qualification', () => {
         const input: CareerPatternQualificationInput = {
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          networks: [{
+            ...makeDirectedServiceProfessionNetwork(),
+            relationships: []
+          }]
         };
 
         const result = qualifyCareerPatterns(input);
@@ -1511,7 +1526,13 @@ describe('Career Pattern Qualification', () => {
         const input: CareerPatternQualificationInput = {
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          networks: [{
+            ...makeDirectedServiceProfessionNetwork(),
+            relationships: makeDirectedServiceProfessionNetwork().relationships.filter(
+              edge => edge.edgeId === 'LORD:6' || edge.edgeId === 'OCCUPIES:6-10'
+            )
+          }]
         };
 
         const result = qualifyCareerPatterns(input);
@@ -1537,7 +1558,8 @@ describe('Career Pattern Qualification', () => {
         const input: CareerPatternQualificationInput = {
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          networks: [makeDirectedServiceProfessionNetwork()]
         };
 
         const result = qualifyCareerPatterns(input);
@@ -1570,7 +1592,8 @@ describe('Career Pattern Qualification', () => {
         const input: CareerPatternQualificationInput = {
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-          condition: [makeCondition(Planet.SATURN, 'WEAK')]
+          condition: [makeCondition(Planet.SATURN, 'WEAK')],
+          networks: [makeDirectedServiceProfessionNetwork()]
         };
 
         const result = qualifyCareerPatterns(input);
@@ -1602,7 +1625,8 @@ describe('Career Pattern Qualification', () => {
         const input: CareerPatternQualificationInput = {
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'NEUTRAL')],
-          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          networks: [makeDirectedServiceProfessionNetwork()]
         };
 
         const result = qualifyCareerPatterns(input);
@@ -1631,7 +1655,8 @@ describe('Career Pattern Qualification', () => {
         const input: CareerPatternQualificationInput = {
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-          condition: [makeCondition(Planet.SATURN, 'WEAK')]
+          condition: [makeCondition(Planet.SATURN, 'WEAK')],
+          networks: [makeDirectedServiceProfessionNetwork()]
         };
 
         const result = qualifyCareerPatterns(input);
@@ -1725,7 +1750,13 @@ describe('Career Pattern Qualification', () => {
         const input: CareerPatternQualificationInput = {
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          networks: [{
+            ...makeDirectedServiceProfessionNetwork(),
+            relationships: makeDirectedServiceProfessionNetwork().relationships.filter(
+              edge => edge.edgeId === 'LORD:6' || edge.edgeId === 'OCCUPIES:6-10'
+            )
+          }]
         };
 
         const result = qualifyCareerPatterns(input);

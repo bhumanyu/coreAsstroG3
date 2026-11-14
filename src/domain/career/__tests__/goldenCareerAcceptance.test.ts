@@ -49,6 +49,7 @@ import { interpretWealthV2 } from '../../wealth/WealthDomainInterpreterV2';
 import { buildLifeAnalysisViewModel } from '../../../product/life-analysis/lifeAnalysisMapper';
 import { mapProductAnalysis } from '../../../product/analysis/productAnalysisMapper';
 import { selectCareerViewModel } from '../../../product/analysis/careerViewModel';
+import { buildAiContext } from '../../../ai/context/aiContextFactory';
 import type { ProductAnalysis } from '../../../product/analysis/productAnalysisTypes';
 import type { EvidenceContinuityReport, EvidenceContinuityIssueCode, EvidenceContinuitySeverity } from '../evidenceContinuity';
 import * as trajectoryEngine from '../careerTrajectory/careerTrajectoryEngine';
@@ -1281,6 +1282,63 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     expect(product.career.expression?.coverageSummary).toEqual(coverage);
     expect(careerViewModel.expression.status).toBe('EXECUTED_NO_CANDIDATES');
     expect(careerViewModel.expression.coverageSummary?.mechanismCandidateCount).toBe(0);
+  });
+
+  it('CAR-013: product, AI, and UI consumers follow conflicting canonical C11 over legacy outputs', () => {
+    const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G01')!;
+    const originalBuild = careerFinalSynthesisIntegration.buildCareerFinalAnalysis;
+    const c11Spy = vi.spyOn(careerFinalSynthesisIntegration, 'buildCareerFinalAnalysis')
+      .mockImplementation(input => {
+        const result = originalBuild(input);
+        return Object.freeze({
+          ...result,
+          finalStatus: 'CHALLENGED',
+          finalDirection: 'CHALLENGE',
+          finalStrength: 'VERY_WEAK',
+          confidence: 'LOW',
+          natalDirection: 'CHALLENGE',
+          natalStrength: 'VERY_WEAK',
+          statement: 'Injected canonical C11 authority'
+        });
+      });
+
+    try {
+      const result = runGoldenScenario(scenario);
+      const canonicalC11 = result.interpretation.conclusionData?.canonicalCareerFinalSynthesis;
+      expect(canonicalC11?.statement).toBe('Injected canonical C11 authority');
+
+      const aiContext = buildAiContext(result.horoscope, {
+        domainInterpretations: [result.interpretation],
+        temporalState: result.domainOptions.temporalState
+      });
+      expect(aiContext.career?.canonicalC11?.statement).toBe(canonicalC11?.statement);
+      expect(aiContext.career?.status).toBe(canonicalC11?.finalStrength);
+      expect(aiContext.career?.natalPromise).toBe(canonicalC11?.natalStrength);
+
+      const wealth = interpretWealthV2(result.horoscope, result.domainOptions);
+      const lifeAnalysis = buildLifeAnalysis([result.interpretation, wealth]);
+      const lifeAnalysisViewModel = buildLifeAnalysisViewModel(
+        lifeAnalysis,
+        result.interpretation,
+        wealth,
+        []
+      );
+      const product: ProductAnalysis = mapProductAnalysis({
+        birthDetails: result.birthDetails,
+        horoscope: result.horoscope,
+        lifeAnalysisViewModel,
+        context: result.domainOptions.context,
+        temporalState: result.domainOptions.temporalState
+      });
+      const careerViewModel = selectCareerViewModel(product);
+
+      expect(product.career?.synthesis?.finalStrength).toBe(canonicalC11?.finalStrength);
+      expect(product.career?.synthesis?.statement).toBe(canonicalC11?.statement);
+      expect(careerViewModel.promise.strength).toBe(canonicalC11?.natalStrength);
+      expect(careerViewModel.conclusion.headline).toBe(canonicalC11?.statement);
+    } finally {
+      c11Spy.mockRestore();
+    }
   });
 
   /**

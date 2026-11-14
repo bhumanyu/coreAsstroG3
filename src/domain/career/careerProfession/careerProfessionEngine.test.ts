@@ -6,7 +6,8 @@ import type {
 import type {
   CareerExpressionAnalysisResult,
   CareerExpressionCandidate,
-  CareerExpressionProvenance
+  CareerExpressionProvenance,
+  QualifiedExpression
 } from '../careerExpression/careerExpressionTypes';
 import type {
   CareerMechanismCandidate,
@@ -27,9 +28,38 @@ import type {
 import type {
   DomainEvidence
 } from '../../interpretation/DomainEvidence';
-import { buildCareerProfessionAnalysis } from './careerProfessionEngine';
+import {
+  buildCareerProfessionAnalysis,
+  resolveCareerProfessionAnalysisStatus
+} from './careerProfessionEngine';
 
 describe('Career Profession Engine (P2-10A)', () => {
+  describe('C-21 D10 stage status', () => {
+    it('marks an empty D10-qualified set PARTIAL when candidates were generated', () => {
+      expect(resolveCareerProfessionAnalysisStatus({
+        generatedCandidateCount: 2,
+        d10QualifiedCandidateCount: 0,
+        missingInputCount: 0,
+        rankingStatus: 'UNAVAILABLE'
+      })).toBe('PARTIAL');
+    });
+
+    it('allows surviving D10 candidates to complete only with complete inputs and available ranking', () => {
+      expect(resolveCareerProfessionAnalysisStatus({
+        generatedCandidateCount: 2,
+        d10QualifiedCandidateCount: 1,
+        missingInputCount: 0,
+        rankingStatus: 'AVAILABLE'
+      })).toBe('COMPLETE');
+      expect(resolveCareerProfessionAnalysisStatus({
+        generatedCandidateCount: 2,
+        d10QualifiedCandidateCount: 1,
+        missingInputCount: 0,
+        rankingStatus: 'UNAVAILABLE'
+      })).toBe('PARTIAL');
+    });
+  });
+
   describe('Spec §7.A: Explicit-rule-only emission', () => {
     it('should emit candidates only for rules that match', () => {
       const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
@@ -57,7 +87,8 @@ describe('Career Profession Engine (P2-10A)', () => {
         matchedRules: 1,
         generatedCandidates: 1,
         d10QualifiedCandidates: 1,
-        rankingEligibleCandidates: 0,
+        d10RemovedCandidates: 0,
+        rankingEligibleCandidates: 1,
         rankedCandidates: 0
       });
     });
@@ -258,6 +289,129 @@ describe('Career Profession Engine (P2-10A)', () => {
       expect(technicalLeadershipCandidate).toBeDefined();
       expect(technicalLeadershipCandidate!.mechanismTypes).toContain('INNOVATION');
       expect(technicalLeadershipCandidate!.mechanismTypes).toContain('AUTHORITY');
+    });
+
+    describe('C-23 composite expression instance validation', () => {
+      it('does not satisfy a composite with duplicate instances of only one required mechanism type', () => {
+        const innovationA = createMockMechanismCandidate('INNOVATION', 'PATTERN_1', 'A');
+        const innovationB = createMockMechanismCandidate('INNOVATION', 'PATTERN_1', 'B');
+        const expression = createMockQualifiedExpressionCandidate(
+          'INNOVATION_WORK',
+          'PATTERN_1',
+          [innovationA.candidateId, innovationB.candidateId]
+        );
+
+        const result = buildCareerProfessionAnalysis({
+          expressions: createMockExpressionAnalysisResult([expression]),
+          mechanisms: [innovationA, innovationB],
+          career10HFoundation: createMock10HFoundation(),
+          career10LFoundation: createMock10LFoundation()
+        });
+
+        expect(result.candidates.some(candidate =>
+          candidate.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+        )).toBe(false);
+      });
+
+      it('does not satisfy a composite when a required mechanism ID is unresolved', () => {
+        const innovation = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+        const expression = createMockQualifiedExpressionCandidate(
+          'INNOVATION_WORK',
+          'PATTERN_1',
+          [innovation.candidateId, 'UNRESOLVED_AUTHORITY_ID']
+        );
+
+        const result = buildCareerProfessionAnalysis({
+          expressions: createMockExpressionAnalysisResult([expression]),
+          mechanisms: [innovation],
+          career10HFoundation: createMock10HFoundation(),
+          career10LFoundation: createMock10LFoundation()
+        });
+
+        expect(result.candidates.some(candidate =>
+          candidate.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+        )).toBe(false);
+      });
+
+      it('rejects a qualified marker when its qualification provenance omits a required source', () => {
+        const innovation = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+        const authority = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+        const completeExpression = createMockQualifiedExpressionCandidate(
+          'INNOVATION_WORK',
+          'PATTERN_1',
+          [innovation.candidateId, authority.candidateId]
+        );
+        const expression = {
+          ...completeExpression,
+          qualification: {
+            ...completeExpression.qualification,
+            provenance: {
+              ...completeExpression.qualification.provenance,
+              sourceMechanismIds: [innovation.candidateId]
+            }
+          }
+        };
+
+        const result = buildCareerProfessionAnalysis({
+          expressions: createMockExpressionAnalysisResult([expression]),
+          mechanisms: [innovation, authority],
+          career10HFoundation: createMock10HFoundation(),
+          career10LFoundation: createMock10LFoundation()
+        });
+
+        expect(result.candidates.some(candidate =>
+          candidate.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+        )).toBe(false);
+      });
+
+      it('does not combine qualified source coverage split across separate expressions', () => {
+        const innovation = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+        const authority = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+        const result = buildCareerProfessionAnalysis({
+          expressions: createMockExpressionAnalysisResult([
+            createMockQualifiedExpressionCandidate(
+              'INNOVATION_WORK',
+              'PATTERN_1',
+              [innovation.candidateId]
+            ),
+            createMockQualifiedExpressionCandidate(
+              'AUTHORITY_EXPRESSION',
+              'PATTERN_1',
+              [authority.candidateId]
+            )
+          ]),
+          mechanisms: [innovation, authority],
+          career10HFoundation: createMock10HFoundation(),
+          career10LFoundation: createMock10LFoundation()
+        });
+
+        expect(result.candidates.some(candidate =>
+          candidate.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+        )).toBe(false);
+      });
+
+      it('keeps a composite with unresolved extra IDs visible but out of ranking', () => {
+        const innovation = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+        const authority = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+        const expression = createMockQualifiedExpressionCandidate(
+          'INNOVATION_WORK',
+          'PATTERN_1',
+          [innovation.candidateId, authority.candidateId, 'UNRESOLVED_EXTRA_ID']
+        );
+        const result = buildCareerProfessionAnalysis({
+          expressions: createMockExpressionAnalysisResult([expression]),
+          mechanisms: [innovation, authority],
+          career10HFoundation: createMock10HFoundation(),
+          career10LFoundation: createMock10LFoundation(),
+          natalPromiseDirection: 'SUPPORT'
+        });
+
+        const composite = result.candidates.find(candidate =>
+          candidate.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+        );
+        expect(composite?.linkageCoverage).toBe('PARTIAL');
+        expect(result.ranking?.rankedCandidates).not.toContain(composite);
+      });
     });
   });
 
@@ -750,7 +904,12 @@ describe('Career Profession Engine (P2-10A)', () => {
       const expressionWithPartialResolution = createMockExpressionCandidate(
         'AUTHORITY_EXPRESSION',
         'PATTERN_1',
-        [authorityMechanism.candidateId, 'NON_EXISTENT_MECH_ID']
+        [
+          authorityMechanism.candidateId,
+          'NON_EXISTENT_MECH_ID_1',
+          'NON_EXISTENT_MECH_ID_2',
+          'NON_EXISTENT_MECH_ID_3'
+        ]
       );
 
       const expressions = createMockExpressionAnalysisResult([
@@ -1226,8 +1385,11 @@ describe('Career Profession Engine (P2-10A)', () => {
       expect(expressionEvidence).toBeDefined();
       expect(expressionEvidence!.linkage).toBe('PARTIAL');
       expect(expressionEvidence!.resolvedMechanismIds).toContain(authorityMechanism.candidateId);
-      expect(expressionEvidence!.unresolvedMechanismIds).toContain('NON_EXISTENT_MECH_ID');
+      expect(expressionEvidence!.unresolvedMechanismIds).toEqual(['NON_EXISTENT_MECH_ID']);
       expect(authorityCandidate!.linkageCoverage).toBe('PARTIAL');
+      expect(result.ranking?.rankedCandidates).toEqual([]);
+      expect(result.ranking?.status).toBe('UNAVAILABLE');
+      expect(result.stageCounts?.rankingEligibleCandidates).toBe(0);
     });
   });
 });
@@ -1286,10 +1448,28 @@ function createMockQualifiedExpressionCandidate(
   expressionType: string,
   patternId: string,
   sourceMechanismIds: string[]
-): CareerExpressionCandidate & { readonly qualificationStatus: 'QUALIFIED' } {
+): CareerExpressionCandidate & {
+  readonly qualificationStatus: 'QUALIFIED';
+  readonly qualification: QualifiedExpression;
+} {
+  const expression = createMockExpressionCandidate(expressionType, patternId, sourceMechanismIds);
+  const ruleIds = ['RULE_EXPRESSION_TEST'];
+
   return {
-    ...createMockExpressionCandidate(expressionType, patternId, sourceMechanismIds),
-    qualificationStatus: 'QUALIFIED'
+    ...expression,
+    qualificationStatus: 'QUALIFIED',
+    qualification: {
+      qualificationStatus: 'QUALIFIED',
+      ruleIds,
+      provenance: {
+        candidateId: expression.expressionId,
+        mechanismId: sourceMechanismIds[0] ?? 'TEST_MECHANISM',
+        sourceMechanismIds,
+        ruleIds,
+        sourceEvidenceIds: ['EVID1'],
+        participantIds: []
+      }
+    }
   };
 }
 

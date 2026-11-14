@@ -999,6 +999,8 @@ function buildCareerFact(
   const careerFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(careerFinalSynthesis);
 
   const canonicalC11 = projectCanonicalCareerC11(careerInterpretation);
+  const legacyConclusionStrength = careerInterpretation?.conclusion.strength;
+  const legacyNatalStrength = careerInterpretation?.natalPromise.strength;
   const profession = projectCareerProfessionAnalysis(
     careerInterpretation?.conclusionData?.careerProfessionAnalysis ?? careerProfessionAnalysis
   );
@@ -1016,9 +1018,9 @@ function buildCareerFact(
   if (careerInterpretation) {
     const d10 = careerInterpretation.vargaConfirmations.find((v) => v.varga === 'D10');
     return {
-      status: careerInterpretation.conclusion.strength as any,
-      confidence: toAiConfidence(careerInterpretation.conclusion.confidence),
-      natalPromise: careerInterpretation.natalPromise.strength as any,
+      status: (canonicalC11?.finalStrength ?? legacyConclusionStrength) as any,
+      confidence: canonicalC11?.confidence ?? toAiConfidence(careerInterpretation.conclusion.confidence),
+      natalPromise: (canonicalC11?.natalStrength ?? legacyNatalStrength) as any,
       d10Relationship: (d10?.relationship ?? 'UNAVAILABLE') as any,
       supportingFactors: [],
       challengingFactors: [],

@@ -429,7 +429,7 @@ export interface QualificationPort {
     readonly patterns: readonly CareerPattern[];
     readonly relevance: readonly CareerPlanetaryRelevance[];
     readonly condition: readonly CareerPlanetaryConditionResult[];
-    readonly networks?: readonly CareerHouseNetwork[];
+    readonly networks: readonly CareerHouseNetwork[];
   }): {
     readonly qualifiedPatterns: readonly QualifiedCareerPattern[];
     readonly diagnostics?: readonly {

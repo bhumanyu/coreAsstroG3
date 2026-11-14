@@ -641,7 +641,9 @@ export function interpretCareerV2(
         evidenceIds: mdActivation.evidenceIds ?? [],
         confidence: deriveDashaTimingConfidence(
           canonicalDashaAnalysis.md.conditionAssessment,
-          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'MD')?.contextResolved === true
+          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'MD')?.contextResolved === true,
+          canonicalDashaAnalysis.evidence.filter(item => item.level === 'MD').map(item => item.id),
+          canonicalDashaAnalysis.md.effect
         )
       },
       ad: {
@@ -650,7 +652,9 @@ export function interpretCareerV2(
         evidenceIds: adActivation.evidenceIds ?? [],
         confidence: deriveDashaTimingConfidence(
           canonicalDashaAnalysis.ad.conditionAssessment,
-          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'AD')?.contextResolved === true
+          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'AD')?.contextResolved === true,
+          canonicalDashaAnalysis.evidence.filter(item => item.level === 'AD').map(item => item.id),
+          canonicalDashaAnalysis.ad.effect
         )
       },
       pd: {
@@ -659,7 +663,9 @@ export function interpretCareerV2(
         evidenceIds: pdActivation.evidenceIds ?? [],
         confidence: deriveDashaTimingConfidence(
           canonicalDashaAnalysis.pd.conditionAssessment,
-          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'PD')?.contextResolved === true
+          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'PD')?.contextResolved === true,
+          canonicalDashaAnalysis.evidence.filter(item => item.level === 'PD').map(item => item.id),
+          canonicalDashaAnalysis.pd.effect
         )
       }
     },
@@ -1648,6 +1654,11 @@ function mapC11Manifestations(
   compatibilityModes: readonly DomainManifestation[],
   domainEvidence: readonly DomainEvidence[]
 ): readonly DomainManifestation[] {
+  const expressionModes = c11.expressions.map(expression => expression.mode);
+  if (new Set(expressionModes).size !== expressionModes.length) {
+    throw new Error('C11 manifestation mapping requires at most one expression per mode.');
+  }
+
   const confidence: DomainManifestation['confidence'] =
     c11.confidence === 'HIGH' ? 'HIGH'
       : c11.confidence === 'MEDIUM' ? 'MODERATE' : 'LOW';
@@ -1666,13 +1677,24 @@ function mapC11Manifestations(
       confidence,
       status,
       statement: c11.statement,
-      evidenceIds: Object.freeze(Array.from(new Set(
-        (expression?.evidenceIds ?? []).flatMap(identityKey =>
-          domainEvidence.filter(item => item.identityKey === identityKey).map(item => item.id)
-        )
-      )))
+      evidenceIds: Object.freeze(mapC11EvidenceIdentityKeysToOccurrenceIds(
+        expression?.evidenceIds ?? [],
+        domainEvidence
+      ))
     });
   }));
+}
+
+/** Retains every occurrence whose semantic identity is referenced by C11. */
+export function mapC11EvidenceIdentityKeysToOccurrenceIds(
+  identityKeys: readonly string[],
+  domainEvidence: readonly DomainEvidence[]
+): string[] {
+  return Array.from(new Set(
+    identityKeys.flatMap(identityKey =>
+      domainEvidence.filter(item => item.identityKey === identityKey).map(item => item.id)
+    )
+  ));
 }
 
 // Re-exports from modular files for full backward compatibility
