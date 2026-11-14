@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { App } from './App';
 import { ProductAnalysisService, mapProductAnalysis, mapMethodology } from './product/analysis';
 import { createAnalysisContext } from './core/analysis/analysisContextFactory';
@@ -46,6 +46,12 @@ const fillBirthForm = (fields: {
     fireEvent.change(select, { target: { value: fields.ayanamsa } });
   }
 };
+
+function navigateToDesktopPage(group: string, page: string): void {
+  const navigation = screen.getAllByRole('navigation', { name: 'Product Views' })[1];
+  fireEvent.click(within(navigation).getByText(group, { selector: 'summary' }));
+  fireEvent.click(within(navigation).getByRole('button', { name: page }));
+}
 
 describe('App - Life Analysis UI Integration & Navigation', () => {
   const sampleSynthesis = buildLifeAnalysis([STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]);
@@ -120,28 +126,28 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       );
   });
 
-  it('1. Default landing: renders on Overview tab and displays Unified Life Domain Analysis heading', async () => {
+  it('1. Default landing: renders the state-driven home dashboard', async () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText('Unified Life Domain Analysis')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();
     });
+    expect(screen.getByRole('heading', { name: 'Explore Your Chart' })).toBeInTheDocument();
   });
 
-  it('2. Navigation tabs: Overview and Detailed Analysis buttons exist, while standalone AI Explanation button is NOT present', async () => {
+  it('2. Grouped navigation reaches Overview and Detailed Analysis without a standalone AI button', async () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText('Unified Life Domain Analysis')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();
     });
 
-    // Product navigation tab buttons
-    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Career' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Wealth' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dasha & Timing' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Why This Result?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Detailed Analysis' })).toBeInTheDocument();
+    navigateToDesktopPage('Insights', 'Overview');
+    await waitFor(() => {
+      expect(screen.getByText('Unified Life Domain Analysis')).toBeInTheDocument();
+    });
+    navigateToDesktopPage('Report', 'Detailed Analysis');
+    expect(await screen.findByText('Methodology & Engine Scope')).toBeInTheDocument();
 
     // Standalone AI Explanation button should NOT be present
     expect(screen.queryByRole('button', { name: 'AI Explanation' })).not.toBeInTheDocument();
@@ -235,6 +241,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     );
 
     render(<App />);
+    navigateToDesktopPage('Insights', 'Overview');
 
     // Trigger second chart request via modal
     const editBtn = screen.getByTitle('Edit Birth Details & Ayanamsa');
@@ -305,6 +312,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
 
     render(<App />);
+    navigateToDesktopPage('Insights', 'Overview');
 
     await waitFor(() => {
       expect(screen.getByText('Overview Computation Error')).toBeInTheDocument();
@@ -348,6 +356,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
 
     render(<App />);
+    navigateToDesktopPage('Insights', 'Overview');
 
     await waitFor(() => {
       expect(screen.getByText('Overview Computation Error')).toBeInTheDocument();
@@ -443,34 +452,30 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     render(<App />);
 
     await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();
+    });
+
+    navigateToDesktopPage('Insights', 'Overview');
+    await waitFor(() => {
       expect(screen.getByText('Unified Life Domain Analysis')).toBeInTheDocument();
     });
 
-    // Click Career tab - asserts career page renders from aggregate
-    const careerTab = screen.getByRole('button', { name: 'Career' });
-    fireEvent.click(careerTab);
+    // Navigate through grouped product views and assert each page consumes the aggregate.
+    navigateToDesktopPage('Insights', 'Career');
     expect(screen.getByText('Career & Professional Trajectory')).toBeInTheDocument();
 
-    // Click Wealth tab - asserts wealth page renders from aggregate
-    const wealthTab = screen.getByRole('button', { name: 'Wealth' });
-    fireEvent.click(wealthTab);
+    navigateToDesktopPage('Insights', 'Wealth');
     expect(screen.getByText('Wealth & Financial Prosperity')).toBeInTheDocument();
 
-    // Click Why This Result? tab - asserts reasoning page renders from aggregate
-    const reasoningTab = screen.getByRole('button', { name: 'Why This Result?' });
-    fireEvent.click(reasoningTab);
+    navigateToDesktopPage('Insights', 'Why This Result?');
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
     expect(screen.getAllByText('Deterministic Evidence Framework').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Total Evidence Items').length).toBeGreaterThanOrEqual(1);
 
-    // Click Dasha & Timing tab
-    const dashaTab = screen.getByRole('button', { name: 'Dasha & Timing' });
-    fireEvent.click(dashaTab);
+    navigateToDesktopPage('Insights', 'Dasha & Timing');
     expect(screen.getByText(/Vimshottari Dasha/i)).toBeInTheDocument();
 
-    // Click Detailed Analysis tab
-    const detailedAnalysisTab = screen.getByRole('button', { name: 'Detailed Analysis' });
-    fireEvent.click(detailedAnalysisTab);
+    navigateToDesktopPage('Report', 'Detailed Analysis');
 
     // Verify FullNatalReportView content renders
     expect(screen.getByText('Methodology & Engine Scope')).toBeInTheDocument();
@@ -479,23 +484,23 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.getByText('Research & Developer Tools')).toBeInTheDocument();
 
     // Click Horoscope & Charts research tool from the panel
-    const horoscopeBtn = screen.getByRole('button', { name: 'Horoscope & Charts' });
-    fireEvent.click(horoscopeBtn);
+    const horoscopeButtons = screen.getAllByRole('button', { name: 'Horoscope & Charts' });
+    fireEvent.click(horoscopeButtons[horoscopeButtons.length - 1]);
     expect(screen.getByText('Rasi Birth Chart (D1)')).toBeInTheDocument();
 
     // Click Planets & Dignity research tool from the panel
-    const planetsBtn = screen.getByRole('button', { name: 'Planets & Dignity' });
-    fireEvent.click(planetsBtn);
+    const planetsButtons = screen.getAllByRole('button', { name: 'Planets & Dignity' });
+    fireEvent.click(planetsButtons[planetsButtons.length - 1]);
     expect(screen.getByText('Planetary Facts & Dignity Analysis')).toBeInTheDocument();
 
     // Click Transit Analysis research tool from the panel
-    const transitBtn = screen.getByRole('button', { name: 'Transit Analysis' });
-    fireEvent.click(transitBtn);
+    const transitButtons = screen.getAllByRole('button', { name: 'Transit Analysis' });
+    fireEvent.click(transitButtons[transitButtons.length - 1]);
     expect(await screen.findByText('Vedic Planetary Gochara (Transit Analysis)')).toBeInTheDocument();
 
     // Click Divisional Vargas research tool from the panel
-    const divisionalBtn = screen.getByRole('button', { name: 'Divisional Vargas' });
-    fireEvent.click(divisionalBtn);
+    const divisionalButtons = screen.getAllByRole('button', { name: 'Divisional Vargas' });
+    fireEvent.click(divisionalButtons[divisionalButtons.length - 1]);
     expect(await screen.findByText('Divisional Vargas Inspection (D1, D3, D9, D10)', {}, { timeout: 30000 })).toBeInTheDocument();
   });
 });

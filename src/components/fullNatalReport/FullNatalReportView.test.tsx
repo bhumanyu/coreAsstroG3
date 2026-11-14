@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import * as vimshottariModule from '../../engine/dasha/vimshottari';
 import * as dashaInterpModule from '../../engine/dashaInterpretation/dashaInterpretation';
@@ -50,15 +50,14 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
     });
   });
 
-  // Case 3: Existing app tabs still present
-  it('3. App renders existing navigation tabs along with Detailed Analysis tab', () => {
+  // Case 3: Existing app navigation groups remain available
+  it('3. App renders Home, Chart, Insights, and Report navigation groups', () => {
     render(<App />);
-    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Career' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Wealth' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dasha & Timing' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Why This Result?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Detailed Analysis' })).toBeInTheDocument();
+    const navigationMenus = screen.getAllByRole('navigation', { name: 'Product Views' });
+    expect(within(navigationMenus[0]).getByRole('button', { name: 'Home' })).toBeInTheDocument();
+    ['Home', 'Chart', 'Insights', 'Report'].forEach((group) => {
+      expect(within(navigationMenus[1]).getByText(group, { selector: 'summary' })).toBeInTheDocument();
+    });
   });
 
   // Case 4: Birth Information

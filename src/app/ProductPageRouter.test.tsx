@@ -1,6 +1,6 @@
 import React from 'react';
-import { beforeAll, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ProductPageRouter } from './ProductPageRouter';
 import { INITIAL_APP_STATE, type AppState } from './AppState';
 import type { AppPage } from './navigation/navigationTypes';
@@ -14,7 +14,11 @@ beforeAll(() => {
   readyHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 });
 
-function renderResearchPage(activePage: AppPage) {
+function renderResearchPage(
+  activePage: AppPage,
+  onNavigate: (page: AppPage) => void = () => undefined,
+  onOpenBirthForm: () => void = () => undefined
+) {
   const state: AppState = {
     ...INITIAL_APP_STATE,
     activePage,
@@ -28,8 +32,8 @@ function renderResearchPage(activePage: AppPage) {
       horoscope={readyHoroscope}
       dashaTimingViewModel={undefined}
       lifeAnalysisState={state.lifeAnalysisState}
-      onNavigate={() => undefined}
-      onOpenBirthForm={() => undefined}
+      onNavigate={onNavigate}
+      onOpenBirthForm={onOpenBirthForm}
       onRetry={() => undefined}
       onSelectPeriod={async () => undefined}
     />
@@ -37,10 +41,17 @@ function renderResearchPage(activePage: AppPage) {
 }
 
 describe('ProductPageRouter lazy research pages', () => {
-  it('renders the state-driven home dashboard', () => {
-    renderResearchPage('home');
+  it('renders the home dashboard and wires daily sign navigation and birth editing', () => {
+    const onNavigate = vi.fn();
+    const onOpenBirthForm = vi.fn();
+    renderResearchPage('home', onNavigate, onOpenBirthForm);
     expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Explore Your Chart' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Explore .* transit analysis$/ })).toHaveLength(12);
+    fireEvent.click(screen.getByRole('button', { name: 'Explore Aries transit analysis' }));
+    expect(onNavigate).toHaveBeenCalledWith('transit');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Birth Details' }));
+    expect(onOpenBirthForm).toHaveBeenCalledOnce();
   });
 
   it('loads Nakshatra Explorer on direct navigation', async () => {
