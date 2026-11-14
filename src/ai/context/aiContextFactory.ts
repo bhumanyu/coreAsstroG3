@@ -82,7 +82,6 @@ import {
   projectDomainInterpretationForAi,
   buildNormalizedCareerTiming,
   buildNormalizedWealthTiming,
-  getCareerTimingActivations,
   getWealthPeriodTimingActivations,
   mapPeriodToCanonicalEvidenceIds,
   type DomainInterpretation,
@@ -801,12 +800,6 @@ function buildCareerFact(
 
   if (careerDashaSynthesis && careerDashaSynthesis.combined.combinedEffect !== 'INSUFFICIENT_DATA') {
     const syn = careerDashaSynthesis.combined;
-    const mapEffect = (effect: string): TimingActivationEffect => {
-      if (effect === 'STRONGLY_SUPPORTS' || effect === 'SUPPORTS') return 'ACTIVATES';
-      if (effect === 'CHALLENGES' || effect === 'STRONGLY_CHALLENGES') return 'CHALLENGES';
-      if (effect === 'MIXED') return 'PARTIALLY_ACTIVATES';
-      return 'DOES_NOT_ACTIVATE';
-    };
 
     const mapSynthesisFactor = (f: CareerDashaFactor): CareerDashaSynthesisFactorFact => ({
       id: f.id,
@@ -844,100 +837,57 @@ function buildCareerFact(
       summary: syn.summary
     };
 
+  }
+
+  if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
+    const md = timing.mahadasha;
+    const ad = timing.antardasha;
+    const pd = timing.pratyantardasha;
+    const syn = synthesizeCareerDashaHierarchy(
+      { period: 'MD', planet: md.planet, effect: md.effect, evidenceIds: md.evidenceIds },
+      { period: 'AD', planet: ad.planet, effect: ad.effect, evidenceIds: ad.evidenceIds },
+      { period: 'PD', planet: pd.planet, effect: pd.effect, evidenceIds: pd.evidenceIds }
+    );
+
     hierarchy = {
       primary: {
         level: 'MAHADASHA',
         role: 'PRIMARY',
-        planet: syn.md.planet,
-        effect: mapEffect(syn.md.effect),
-        ...(syn.md.start ? { start: syn.md.start } : {}),
-        ...(syn.md.end ? { end: syn.md.end } : {})
+        planet: md.planet,
+        effect: md.effect,
+        conditionAssessment: md.conditionAssessment,
+        ...(md.start ? { start: md.start } : {}),
+        ...(md.end ? { end: md.end } : {})
       },
       modifier: {
         level: 'ANTARDASHA',
         role: 'MODIFIER',
-        planet: syn.ad.planet,
-        effect: mapEffect(syn.ad.effect),
-        ...(syn.ad.start ? { start: syn.ad.start } : {}),
-        ...(syn.ad.end ? { end: syn.ad.end } : {})
+        planet: ad.planet,
+        effect: ad.effect,
+        conditionAssessment: ad.conditionAssessment,
+        ...(ad.start ? { start: ad.start } : {}),
+        ...(ad.end ? { end: ad.end } : {})
       },
       trigger: {
         level: 'PRATYANTARDASHA',
         role: 'TRIGGER',
-        planet: syn.pd.planet,
-        effect: mapEffect(syn.pd.effect),
-        ...(syn.pd.start ? { start: syn.pd.start } : {}),
-        ...(syn.pd.end ? { end: syn.pd.end } : {})
+        planet: pd.planet,
+        effect: pd.effect,
+        conditionAssessment: pd.conditionAssessment,
+        ...(pd.start ? { start: pd.start } : {}),
+        ...(pd.end ? { end: pd.end } : {})
       },
-      overallEffect: mapEffect(syn.combinedEffect),
-      confidence: syn.combinedConfidence === 'HIGH' ? 0.9 : syn.combinedConfidence === 'MEDIUM' ? 0.7 : 0.5,
-      /**
-       * P2-11C Gate 5: Use canonical C9 evidence IDs instead of CW-02 factor IDs
-       *
-       * The timing hierarchy references canonical C9 evidence (CAREER_DASHA:* namespace)
-       * scoped to each period's specific planet and level (MD/AD/PD).
-       * Uses the shared mapPeriodToCanonicalEvidenceIds helper to match on both
-       * source+phase AND the hierarchy's own MD/AD/PD level and planet.
-       */
-      evidenceIds: (() => {
-        const mdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'MD', syn.md.planet);
-        const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', syn.ad.planet);
-        const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', syn.pd.planet);
-        return [...mdResult.evidenceIds, ...adResult.evidenceIds, ...pdResult.evidenceIds];
-      })(),
-      /**
-       * Hierarchy-level traceability: RESOLVED only when all three periods are RESOLVED,
-       * otherwise DEGRADED (allowing mixed states like MD/AD resolved, PD degraded).
-       */
-      traceability: (() => {
-        const mdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'MD', syn.md.planet);
-        const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', syn.ad.planet);
-        const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', syn.pd.planet);
-        const allResolved = mdResult.traceability === 'RESOLVED' && adResult.traceability === 'RESOLVED' && pdResult.traceability === 'RESOLVED';
-        return allResolved ? 'RESOLVED' : 'DEGRADED';
-      })(),
+      overallEffect: syn.overallEffect,
+      confidence: syn.confidence,
+      evidenceIds: syn.evidenceIds,
+      traceability:
+        md.traceability === 'RESOLVED' &&
+        ad.traceability === 'RESOLVED' &&
+        pd.traceability === 'RESOLVED'
+          ? 'RESOLVED'
+          : 'DEGRADED',
       summary: syn.summary
     };
-  } else if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
-    const activations = getCareerTimingActivations(careerInterpretation);
-    const { md, ad, pd } = indexDashaPeriodActivations(activations);
-
-    if (md && ad && pd) {
-      const syn = synthesizeCareerDashaHierarchy(md, ad, pd);
-
-      hierarchy = {
-        primary: { level: 'MAHADASHA', role: 'PRIMARY', planet: md.planet, effect: md.effect },
-        modifier: { level: 'ANTARDASHA', role: 'MODIFIER', planet: ad.planet, effect: ad.effect },
-        trigger: { level: 'PRATYANTARDASHA', role: 'TRIGGER', planet: pd.planet, effect: pd.effect },
-        overallEffect: syn.overallEffect,
-        confidence: syn.confidence,
-        /**
-         * P2-11C Gate 5: Use canonical C9 evidence IDs scoped to period and planet
-         *
-         * The timing hierarchy references canonical C9 evidence scoped to each period's
-         * specific planet and level (MD/AD/PD). Uses the shared mapPeriodToCanonicalEvidenceIds
-         * helper to match on both source+phase AND the hierarchy's own MD/AD/PD level and planet.
-         */
-        evidenceIds: (() => {
-          const mdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'MD', md.planet);
-          const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', ad.planet);
-          const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', pd.planet);
-          return [...mdResult.evidenceIds, ...adResult.evidenceIds, ...pdResult.evidenceIds];
-        })(),
-        /**
-         * Hierarchy-level traceability: RESOLVED only when all three periods are RESOLVED,
-         * otherwise DEGRADED (allowing mixed states like MD/AD resolved, PD degraded).
-         */
-        traceability: (() => {
-          const mdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'MD', md.planet);
-          const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', ad.planet);
-          const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', pd.planet);
-          const allResolved = mdResult.traceability === 'RESOLVED' && adResult.traceability === 'RESOLVED' && pdResult.traceability === 'RESOLVED';
-          return allResolved ? 'RESOLVED' : 'DEGRADED';
-        })(),
-        summary: syn.summary
-      };
-    }
   }
 
   const careerTimingSynthesis = careerInterpretation?.conclusionData?.careerTimingSynthesis;

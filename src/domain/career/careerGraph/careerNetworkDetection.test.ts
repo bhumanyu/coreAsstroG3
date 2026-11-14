@@ -15,8 +15,84 @@ import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import { buildCareerStructuralReasoning } from '../careerStructuralReasoningIntegration';
 import { Planet } from '../../../types';
+import { classifyCareerPatterns } from '../careerPattern/careerPatternClassification';
+import { qualifyCareerPatterns } from '../careerPatternQualification/careerPatternQualification';
 
 describe('CareerNetworkDetection', () => {
+  it.each([
+    {
+      houses: [3, 6, 10, 11],
+      classification: 'UPACHAYA_PROGRESSION'
+    },
+    {
+      houses: [5, 9, 10],
+      classification: 'CREATIVE_DHARMA_TO_PROFESSION'
+    },
+    {
+      houses: [9, 10, 11],
+      classification: 'DHARMA_KARMA_ALIGNMENT'
+    }
+  ] as const)('detects and classifies secondary-house pathway $houses', ({ houses, classification }) => {
+    const provenance: CareerGraphProvenance = {
+      sourceIds: ['secondary-pathway'],
+      ruleIds: [],
+      parentIds: []
+    };
+    const facts: CareerGraphFact[] = houses.slice(1).flatMap((house, index) => {
+      const lord = ['SATURN', 'MERCURY', 'JUPITER', 'VENUS'][index];
+      return [
+        {
+          sourceNode: { type: 'PLANET', key: lord },
+          targetNode: { type: 'HOUSE', key: String(houses[index]) },
+          relationship: 'LORD_OF',
+          provenance
+        },
+        {
+          sourceNode: { type: 'PLANET', key: lord },
+          targetNode: { type: 'HOUSE', key: String(house) },
+          relationship: 'OCCUPIES',
+          provenance
+        }
+      ];
+    });
+    const graph = buildCareerAstroGraph({ facts });
+    const detected = detectCareerHouseNetworks({ graph });
+    const classified = classifyCareerPatterns({ networks: detected.networks });
+
+    expect(detected.networks.map(network => network.houses)).toEqual([houses]);
+    expect(classified.patterns.map(pattern => pattern.classification)).toContain(classification);
+  });
+
+  it('detects a network formed by secondary houses 1 and 7', () => {
+    const provenance: CareerGraphProvenance = {
+      sourceIds: ['secondary-1-7'],
+      ruleIds: [],
+      parentIds: []
+    };
+    const graph = buildCareerAstroGraph({
+      facts: [{
+        sourceNode: { type: 'HOUSE', key: '1' },
+        targetNode: { type: 'HOUSE', key: '7' },
+        relationship: 'CONJUNCT',
+        provenance
+      }]
+    });
+
+    const result = detectCareerHouseNetworks({ graph });
+    const classified = classifyCareerPatterns({ networks: result.networks });
+    expect(classified.patterns).toHaveLength(1);
+    const qualification = qualifyCareerPatterns({
+      patterns: classified.patterns,
+      relevance: [],
+      condition: []
+    });
+
+    expect(result.networks).toHaveLength(1);
+    expect(result.networks[0].houses).toEqual([1, 7]);
+    expect(qualification.qualifiedPatterns).toHaveLength(1);
+    expect(qualification.qualifiedPatterns.every(pattern => pattern.status !== 'QUALIFIED')).toBe(true);
+  });
+
   describe('DIRECT_LINK topology', () => {
     it('detects DIRECT_LINK between houses 6 and 10', () => {
       const provenance: CareerGraphProvenance = {
@@ -640,8 +716,8 @@ describe('CareerNetworkDetection', () => {
     });
   });
 
-  describe('Neutral house exclusion', () => {
-    it('excludes NEUTRAL houses (1, 4) from components', () => {
+  describe('Secondary and neutral house handling', () => {
+    it('includes connected secondary houses and excludes neutral houses', () => {
       const provenance: CareerGraphProvenance = {
         sourceIds: ['evidence-1'],
         ruleIds: [],
@@ -668,6 +744,12 @@ describe('CareerNetworkDetection', () => {
           provenance
         },
         {
+          sourceNode: { type: 'PLANET', key: 'MARS' },
+          targetNode: { type: 'HOUSE', key: '6' },
+          relationship: 'LORD_OF',
+          provenance
+        },
+        {
           sourceNode: { type: 'PLANET', key: 'VENUS' },
           targetNode: { type: 'HOUSE', key: '4' },
           relationship: 'LORD_OF',
@@ -680,10 +762,8 @@ describe('CareerNetworkDetection', () => {
       const detectionInput: CareerNetworkDetectionInput = { graph };
       const result = detectCareerHouseNetworks(detectionInput);
 
-      // Only 6-10 should be detected (1 and 4 are NEUTRAL)
       expect(result.networks).toHaveLength(1);
-      expect(result.networks[0].houses).toEqual([6, 10]);
-      expect(result.networks[0].houses).not.toContain(1);
+      expect(result.networks[0].houses).toEqual([1, 6, 10]);
       expect(result.networks[0].houses).not.toContain(4);
     });
   });

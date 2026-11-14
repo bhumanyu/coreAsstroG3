@@ -162,6 +162,7 @@ describe('English/Hindi localization resource parity', () => {
       'ui.expression.missingNetworkEvidence',
       'ui.expression.incompleteNetworkEvidence',
       'ui.expression.mechanismsNotResolved',
+      'ui.expression.noMechanismRuleMatched',
       'ui.dasha.partialAssessment',
       ...careerJourneyStateKeys,
       ...dashaLevelKeys

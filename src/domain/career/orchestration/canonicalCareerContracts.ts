@@ -381,6 +381,7 @@ export interface CanonicalCareerFoundation {
   readonly c8StageDiagnostics: {
     readonly patternCandidateCount: number;
     readonly qualifiedPatternCount: number;
+    readonly eligiblePatternCount: number;
     readonly invalidRolePatternCount: number;
     readonly roleAssignmentSkippedPatternCount: number;
     readonly resolvedMechanismCount: number;

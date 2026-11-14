@@ -396,6 +396,7 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
             role: 'PRIMARY',
             direction: 'SUPPORT',
             effect: 'ACTIVATES',
+            conditionAssessment: 'PARTIAL',
             evidenceIds: [],
             statement: 'Jupiter Mahadasha drives expansion.'
           }
@@ -409,6 +410,7 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Jupiter')).toBeInTheDocument();
       expect(screen.getByText('Primary Driver')).toBeInTheDocument();
       expect(screen.getByText('Activates')).toBeInTheDocument();
+      expect(screen.getByText('Partially assessed')).toBeInTheDocument();
       expect(screen.getByText('Jupiter Mahadasha drives expansion.')).toBeInTheDocument();
     });
 

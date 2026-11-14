@@ -12,6 +12,28 @@ import type { WeightedReasoningEvidence } from '../reasoning/reasoningTypes';
 
 describe('Career Structural Reasoning Integration', () => {
   describe('Integration Determinism', () => {
+    it('does not include secondary-house-only relationships in C4 structural strength', () => {
+      const horoscope = createMinimalHoroscope({
+        houseAnalysis: {
+          houses: [
+            { house: 1, lord: Planet.SATURN, sign: 'CAPRICORN' as any, occupants: [], evidence: [] },
+            { house: 7, lord: Planet.MERCURY, sign: 'VIRGO' as any, occupants: [], evidence: [] }
+          ]
+        } as any,
+        natalGrahaDrishti: {
+          aspects: [
+            { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'FULL' }
+          ]
+        }
+      });
+
+      const result = buildCareerStructuralReasoning({ horoscope });
+
+      expect(result.evidence).toHaveLength(0);
+      expect(result.direction).toBe('UNAVAILABLE');
+      expect(result.strength).toBe('UNDETERMINED');
+    });
+
     it('identical inputs produce identical outputs', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {

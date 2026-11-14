@@ -627,9 +627,8 @@ describe('C10 D10 Integration', () => {
 
       const result = buildCareerD10Analysis(input);
 
-      // NEUTRAL dignity maps to UNAVAILABLE condition in planet context
-      // The semantic engine returns INSUFFICIENT_DATA when planets have UNAVAILABLE condition
-      expect(result.d10Effect).toBe('INSUFFICIENT_DATA');
+      expect(result.d10Direction).toBe('UNAVAILABLE');
+      expect(result.d10Effect).toBe('UNAVAILABLE');
     });
 
     it('maps NEUTRAL_SIGN dignity to UNAVAILABLE condition in planet context', () => {
@@ -643,7 +642,8 @@ describe('C10 D10 Integration', () => {
 
       const result = buildCareerD10Analysis(input);
 
-      expect(result.d10Effect).toBe('INSUFFICIENT_DATA');
+      expect(result.d10Direction).toBe('UNAVAILABLE');
+      expect(result.d10Effect).toBe('UNAVAILABLE');
     });
 
     it('maps undefined dignity to UNAVAILABLE condition in planet context', () => {
@@ -657,7 +657,8 @@ describe('C10 D10 Integration', () => {
 
       const result = buildCareerD10Analysis(input);
 
-      expect(result.d10Effect).toBe('INSUFFICIENT_DATA');
+      expect(result.d10Direction).toBe('UNAVAILABLE');
+      expect(result.d10Effect).toBe('UNAVAILABLE');
     });
   });
 

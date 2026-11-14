@@ -24,10 +24,12 @@ export const CareerPromiseSection: React.FC<CareerPromiseSectionProps> = ({ prom
           <div>
             <h2 className="text-base font-semibold text-slate-100">{t('ui.promise.title')}</h2>
             <p className="text-xs text-slate-400">{t('ui.promise.description')}</p>
+            <p className="text-xs text-slate-500">{t('ui.promise.strengthDisclaimer')}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">{t('ui.promise.strengthLabel')}</span>
           <span className="px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider bg-indigo-950/60 border border-indigo-800/80 text-indigo-300">
             {formattedStrength}
           </span>

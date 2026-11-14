@@ -145,6 +145,22 @@ describe('Career Planetary Relevance', () => {
       expect(result.roles).toContain('SUPPORTING_LORD');
       expect(result.roles).toContain('CHALLENGING_LORD');
     });
+
+    it.each([
+      [[10, 6], 'SUPPORT'],
+      [[10, 8], 'CHALLENGE'],
+      [[6, 8], 'MIXED'],
+      [[10, 6, 8], 'MIXED']
+    ] as const)('resolves combined primary/supporting/challenging houses %j as %s', (ruledHouses, effect) => {
+      const result = interpretCareerPlanetaryRelevance(
+        createContext({
+          planet: Planet.MARS,
+          ruledHouses
+        })
+      );
+
+      expect(result.effect).toBe(effect);
+    });
   });
 
   describe('Group E: House Occupancy', () => {

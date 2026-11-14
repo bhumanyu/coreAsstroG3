@@ -142,6 +142,10 @@ function resolveEffect(
   const hasSupporting = allHouses.some(h => CAREER_SUPPORTING_HOUSES.has(h));
   const hasChallenging = allHouses.some(h => CAREER_CHALLENGING_HOUSES.has(h));
 
+  if (hasPrimary && hasSupporting && hasChallenging) {
+    return 'MIXED';
+  }
+
   if (hasPrimary && hasSupporting && !hasChallenging) {
     return 'SUPPORT';
   }

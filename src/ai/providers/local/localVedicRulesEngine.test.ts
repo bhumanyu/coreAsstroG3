@@ -84,6 +84,36 @@ describe('localVedicRulesEngine', () => {
     }
   });
 
+  it('labels partially assessed C9 effects in the local career timing statement', () => {
+    const careerRule003 = CAREER_RULES.find((rule) => rule.id === 'LOCAL-CAREER-003');
+    const hierarchy = context.career?.timing?.hierarchy;
+    if (!careerRule003 || !hierarchy) {
+      throw new Error('Expected canonical career timing hierarchy and rule.');
+    }
+
+    const mockContext: AiContext = {
+      ...context,
+      career: {
+        ...context.career!,
+        timing: {
+          ...context.career?.timing,
+          hierarchy: {
+            ...hierarchy,
+            primary: {
+              ...hierarchy.primary,
+              effect: 'CHALLENGES',
+              conditionAssessment: 'PARTIAL'
+            }
+          }
+        }
+      }
+    };
+
+    const result = careerRule003.evaluate(mockContext);
+
+    expect(result.statement).toContain('challenges (partially assessed)');
+  });
+
   it('should report canonical C11 information first in career conclusion when available', () => {
     const contextWithC11: AiContext = {
       ...context,

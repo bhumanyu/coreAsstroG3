@@ -280,6 +280,7 @@ export interface DashaHierarchyLevelFact {
   readonly role: 'PRIMARY' | 'MODIFIER' | 'TRIGGER';
   readonly planet?: Planet;
   readonly effect: TimingActivationEffect;
+  readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   readonly start?: string;
   readonly end?: string;
 }
@@ -298,8 +299,10 @@ export interface CareerHierarchyFact {
 export interface CareerPeriodTimingFact {
   readonly period: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
-  readonly effect: string;
+  readonly effect: TimingActivationEffect;
+  readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   readonly evidenceIds: readonly string[];
+  readonly traceability?: 'RESOLVED' | 'DEGRADED';
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;

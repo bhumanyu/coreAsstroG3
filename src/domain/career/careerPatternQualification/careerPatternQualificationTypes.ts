@@ -226,6 +226,7 @@ export interface QualificationPolicyContext {
   readonly pattern: CareerPattern;
   readonly relevanceByPlanet: ReadonlyMap<Planet, CareerPlanetaryRelevance>;
   readonly conditionByPlanet: ReadonlyMap<Planet, CareerPlanetaryConditionResult>;
+  readonly partiallyAssessedConditionPlanets: ReadonlySet<Planet>;
   readonly networks?: readonly CareerHouseNetwork[];
 }
 

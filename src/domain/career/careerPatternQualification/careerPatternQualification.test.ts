@@ -243,6 +243,34 @@ describe('Career Pattern Qualification', () => {
   });
 
   describe('Qualification Semantics', () => {
+    it('preserves partial weak condition evidence without hard-disqualifying the pattern', () => {
+      const pattern = makePattern();
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'PRIMARY'),
+          makeRelevance(Planet.JUPITER, 'PRIMARY')
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'WEAK', { assessment: 'PARTIAL' }),
+          makeCondition(Planet.MERCURY, 'STRONG'),
+          makeCondition(Planet.JUPITER, 'STRONG')
+        ]
+      };
+
+      const result = qualifyCareerPatterns(input);
+      const qualified = result.qualifiedPatterns[0];
+
+      expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
+      expect(qualified.status).toBe('INSUFFICIENT_DATA');
+      expect(qualified.status).not.toBe('UNQUALIFIED');
+      expect(qualified.decisionBlockingReasons).toContainEqual({
+        reason: 'planetary condition is only partially assessed',
+        kind: 'MISSING_INPUT'
+      });
+    });
+
     it('returns INSUFFICIENT_DATA when structuralStrength is NOT_ASSESSED', () => {
       const pattern = makePattern();
 
@@ -608,12 +636,12 @@ describe('Career Pattern Qualification', () => {
       expect(mapPlanetaryCondition(condition)).toBe('UNAVAILABLE');
     });
 
-    it('does not use a partial condition as a definitive qualification disqualifier', () => {
+    it('preserves the resolved value of a partial condition for qualification context', () => {
       const condition = makeCondition(Planet.SATURN, 'WEAK', {
         assessment: 'PARTIAL',
         afflictionAssessed: false
       });
-      expect(mapPlanetaryCondition(condition)).toBe('UNAVAILABLE');
+      expect(mapPlanetaryCondition(condition)).toBe('WEAK');
     });
 
     it('maps AFFLICTED condition to WEAK', () => {
@@ -948,7 +976,7 @@ describe('Career Pattern Qualification', () => {
         condition: [
           makeCondition(Planet.SATURN, 'STRONG'),
           makeCondition(Planet.MERCURY, 'WEAK', { assessment: 'PARTIAL', afflictionAssessed: false }),
-          makeCondition(Planet.JUPITER, 'WEAK') // An unavailable assessment must outrank later negative evidence.
+          makeCondition(Planet.JUPITER, 'WEAK', { assessment: 'UNAVAILABLE' })
         ]
       };
 
@@ -1633,6 +1661,37 @@ describe('Career Pattern Qualification', () => {
         expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
         // Disqualifiers (WEAK condition) are NOT in decisionBlockingReasons - they're explicit negatives
         expect(qualified.decisionBlockingReasons).toHaveLength(0);
+      });
+
+      it('does not hard-disqualify on a partially assessed WEAK condition', () => {
+        const pattern = makePattern({
+          planets: [Planet.SATURN],
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'WEAK', { assessment: 'PARTIAL' })],
+          networks: [makeDirectedServiceProfessionNetwork()]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
+        expect(qualified.decisionBlockingReasons).toContainEqual({
+          reason: 'planetary condition is only partially assessed',
+          kind: 'MISSING_INPUT'
+        });
       });
 
       it('returns UNQUALIFIED when career relevance is NEUTRAL (negative beats missing data)', () => {

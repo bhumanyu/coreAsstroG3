@@ -280,6 +280,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(foundation.c8StageDiagnostics).toEqual({
         patternCandidateCount: 0,
         qualifiedPatternCount: 0,
+        eligiblePatternCount: 0,
         invalidRolePatternCount: 0,
         roleAssignmentSkippedPatternCount: 0,
         resolvedMechanismCount: 0,
@@ -319,6 +320,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(foundation.c8StageDiagnostics).toEqual({
         patternCandidateCount: 1,
         qualifiedPatternCount: 1,
+        eligiblePatternCount: 1,
         invalidRolePatternCount: 1,
         roleAssignmentSkippedPatternCount: 0,
         resolvedMechanismCount: 0,
@@ -392,9 +394,31 @@ describe('CanonicalCareerOrchestrator', () => {
 
       expect(foundation.c8StageDiagnostics).toMatchObject({
         qualifiedPatternCount: 0,
+        eligiblePatternCount: 0,
         invalidRolePatternCount: 0,
         roleAssignmentSkippedPatternCount: 1,
         networkResolutionStatus: 'INCOMPLETE'
+      });
+    });
+
+    it('counts insufficient-data patterns as eligible for mechanism resolution', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'INSUFFICIENT_DATA')]
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.c8StageDiagnostics).toMatchObject({
+        patternCandidateCount: 1,
+        qualifiedPatternCount: 0,
+        eligiblePatternCount: 1,
+        networkResolutionStatus: 'NOT_REQUIRED'
       });
     });
 
@@ -425,6 +449,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(foundation.c8StageDiagnostics).toEqual({
         patternCandidateCount: 1,
         qualifiedPatternCount: 1,
+        eligiblePatternCount: 1,
         invalidRolePatternCount: 0,
         roleAssignmentSkippedPatternCount: 0,
         resolvedMechanismCount: 0,

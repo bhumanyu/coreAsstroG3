@@ -122,6 +122,9 @@ export class CanonicalCareerOrchestrator {
     const qualifiedPatternCount = patternQualifications.filter(
       qualification => qualification.status === 'QUALIFIED'
     ).length;
+    const eligiblePatternCount = patternQualifications.filter(
+      qualification => qualification.status !== 'UNQUALIFIED'
+    ).length;
     const requiredNetworkIds = new Set(
       patternCandidates.flatMap(candidate => candidate.sourcePattern.networkIds)
     );
@@ -194,6 +197,7 @@ export class CanonicalCareerOrchestrator {
     const c8StageDiagnostics = Object.freeze({
       patternCandidateCount,
       qualifiedPatternCount,
+      eligiblePatternCount,
       invalidRolePatternCount,
       roleAssignmentSkippedPatternCount,
       resolvedMechanismCount,

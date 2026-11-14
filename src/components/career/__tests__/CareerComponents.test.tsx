@@ -93,6 +93,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
           mechanismCandidateCount: 0,
           patternCandidateCount: 2,
           qualifiedPatternCount: 1,
+          eligiblePatternCount: 1,
           invalidRolePatternCount: 0,
           resolvedMechanismCount: 0,
           networkResolutionStatus: 'RESOLVED',
@@ -114,6 +115,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         {
           patternCandidateCount: 0,
           qualifiedPatternCount: 0,
+          eligiblePatternCount: 0,
           invalidRolePatternCount: 0,
           roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
@@ -126,6 +128,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         {
           patternCandidateCount: 2,
           qualifiedPatternCount: 0,
+          eligiblePatternCount: 0,
           invalidRolePatternCount: 0,
           roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
@@ -138,6 +141,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         {
           patternCandidateCount: 2,
           qualifiedPatternCount: 2,
+          eligiblePatternCount: 2,
           invalidRolePatternCount: 1,
           roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
@@ -150,6 +154,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         {
           patternCandidateCount: 2,
           qualifiedPatternCount: 2,
+          eligiblePatternCount: 2,
           invalidRolePatternCount: 0,
           roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
@@ -162,6 +167,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         {
           patternCandidateCount: 2,
           qualifiedPatternCount: 2,
+          eligiblePatternCount: 2,
           invalidRolePatternCount: 0,
           roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
@@ -174,18 +180,20 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         {
           patternCandidateCount: 2,
           qualifiedPatternCount: 2,
+          eligiblePatternCount: 2,
           invalidRolePatternCount: 0,
           roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
           networkResolutionStatus: 'RESOLVED' as const
         },
-        'Career mechanisms could not be resolved from the qualified patterns.'
+        'No mechanism rule matched the eligible career patterns.'
       ],
       [
         'skipped role assignment',
         {
           patternCandidateCount: 2,
           qualifiedPatternCount: 1,
+          eligiblePatternCount: 2,
           invalidRolePatternCount: 0,
           roleAssignmentSkippedPatternCount: 1,
           resolvedMechanismCount: 0,
@@ -210,6 +218,31 @@ describe('Career Section Components Suite (P-UI-04)', () => {
 
       expect(screen.getByText(expectedMessage)).toBeInTheDocument();
       expect(screen.getByText('The expression analysis completed without producing candidates.')).toBeInTheDocument();
+    });
+
+    it('attributes eligible insufficient-data patterns to mechanism matching, not qualification rejection', () => {
+      render(<CareerExpressionSection expression={{
+        available: false,
+        status: 'EXECUTED_NO_CANDIDATES',
+        coverageSummary: {
+          mechanismCandidateCount: 0,
+          patternCandidateCount: 1,
+          qualifiedPatternCount: 0,
+          eligiblePatternCount: 1,
+          invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 0,
+          resolvedMechanismCount: 0,
+          networkResolutionStatus: 'RESOLVED',
+          expressionCount: 0,
+          expressionsWithEvidenceCount: 0,
+          evidenceCount: 0,
+          evidenceWithPlanetAttributionCount: 0
+        },
+        candidates: []
+      }} />);
+
+      expect(screen.getByText('No mechanism rule matched the eligible career patterns.')).toBeInTheDocument();
+      expect(screen.queryByText('Career patterns were identified, but none passed qualification.')).not.toBeInTheDocument();
     });
 
     it('renders primary style, leadership potential, and secondary competencies when available', () => {

@@ -9,6 +9,7 @@ import { CareerPromiseSection } from '../../components/career/CareerPromiseSecti
 import { CareerDashaSection } from '../../components/career/CareerDashaSection';
 import { CareerAnalyticalAxesSection } from '../../components/career/CareerAnalyticalAxesSection';
 import { ReasoningProvenance } from '../../components/reasoning/ReasoningProvenance';
+import { ReasoningDashaSection } from '../../components/reasoning/ReasoningDashaSection';
 import { OverviewPage } from '../OverviewPage';
 import { ReasoningPage } from '../ReasoningPage';
 import { WealthPage } from '../WealthPage';
@@ -65,6 +66,7 @@ describe('user-facing assessment localization at page boundaries', () => {
           mechanismCandidateCount: 0,
           patternCandidateCount: 0,
           qualifiedPatternCount: 0,
+          eligiblePatternCount: 0,
           invalidRolePatternCount: 0,
           roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
@@ -106,6 +108,33 @@ describe('user-facing assessment localization at page boundaries', () => {
     expect(screen.queryByText('Career patterns were identified, but none passed qualification.')).not.toBeInTheDocument();
   });
 
+  it('renders mechanism-match attribution in Hindi', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    render(<CareerExpressionSection expression={{
+      available: false,
+      status: 'EXECUTED_NO_CANDIDATES',
+      coverageSummary: {
+        mechanismCandidateCount: 0,
+        patternCandidateCount: 1,
+        qualifiedPatternCount: 0,
+        eligiblePatternCount: 1,
+        invalidRolePatternCount: 0,
+        roleAssignmentSkippedPatternCount: 0,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'RESOLVED',
+        expressionCount: 0,
+        expressionsWithEvidenceCount: 0,
+        evidenceCount: 0,
+        evidenceWithPlanetAttributionCount: 0
+      },
+      candidates: []
+    }} />);
+
+    expect(screen.getByText('पात्र करियर पैटर्न के लिए कोई तंत्र नियम मेल नहीं खाया।')).toBeInTheDocument();
+  });
+
   it('localizes each labeled promise dimension in Hindi', async () => {
     await act(async () => {
       await i18n.changeLanguage('hi');
@@ -120,7 +149,23 @@ describe('user-facing assessment localization at page boundaries', () => {
     expect(screen.getByText(/आधार:/)).toBeInTheDocument();
     expect(screen.getByText(/दशा का समर्थन:/)).toBeInTheDocument();
     expect(screen.getByText(/साक्ष्य पर विश्वास:/)).toBeInTheDocument();
+    expect(screen.getByText('संरचनात्मक संबंध की प्रबलता')).toBeInTheDocument();
+    expect(screen.getByText(/इसमें दशमेश की गरिमा, लग्न या ग्रहों की स्थिति शामिल नहीं है/)).toBeInTheDocument();
     expect(screen.queryByText(/\b(MIXED|CHALLENGE|SUPPORT|INSUFFICIENT_DATA|NOT_ACTIVE)\b/)).not.toBeInTheDocument();
+  });
+
+  it('labels the C4 strength measure and its limits in English', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+    const promise = selectCareerViewModel(
+      assessmentAnalysis,
+      resolveUserFacingCopy(i18n.language)
+    ).promise;
+    render(<CareerPromiseSection promise={promise} />);
+
+    expect(screen.getByText('Structural relationship strength')).toBeInTheDocument();
+    expect(screen.getByText(/does not incorporate 10th-lord dignity, Lagna, or planetary condition/)).toBeInTheDocument();
   });
 
   it('renders the partially assessed Dasha badge in Hindi', async () => {
@@ -150,6 +195,26 @@ describe('user-facing assessment localization at page boundaries', () => {
     expect(screen.getByText('कैनोनिकल C9 साक्ष्य')).toBeInTheDocument();
     expect(screen.getByText('Jupiter challenges career.')).toBeInTheDocument();
     expect(screen.queryByText('ui.dasha.partialAssessment')).not.toBeInTheDocument();
+  });
+
+  it('localizes the partial C9 assessment badge on the reasoning dasha card', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    render(<ReasoningDashaSection dasha={{
+      status: 'AVAILABLE',
+      periods: [{
+        level: 'MD',
+        planet: 'Jupiter',
+        role: 'PRIMARY',
+        direction: 'CHALLENGE',
+        effect: 'CHALLENGES',
+        conditionAssessment: 'PARTIAL',
+        evidenceIds: []
+      }]
+    }} />);
+
+    expect(screen.getByText('आंशिक रूप से आकलित')).toBeInTheDocument();
   });
 
   it('localizes C4 rule and provenance labels in Hindi without showing internal ids', async () => {

@@ -61,7 +61,7 @@ export interface CareerLordRelationshipSemantic {
 
 
 function mapHouseDirectionToLordRole(
-  direction: 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL'
+  direction: 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'SECONDARY' | 'NEUTRAL'
 ): CareerLordRole {
   switch (direction) {
     case 'PRIMARY':
@@ -70,6 +70,7 @@ function mapHouseDirectionToLordRole(
       return 'SUPPORTING_LORD';
     case 'CHALLENGING':
       return 'CHALLENGING_LORD';
+    case 'SECONDARY':
     case 'NEUTRAL':
       return 'NEUTRAL_LORD';
   }

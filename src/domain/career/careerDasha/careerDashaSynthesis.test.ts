@@ -46,7 +46,7 @@ describe('Career Dasha Synthesis', () => {
     const portfolio = getCareerHousePortfolio();
     expect(portfolio.primary).toEqual([10]);
     expect(portfolio.supporting).toEqual([6, 2, 11]);
-    expect(portfolio.secondary).toEqual([]);
+    expect(portfolio.secondary).toEqual([1, 3, 5, 7, 9]);
   });
 
   it('classifies house ownership accurately', () => {

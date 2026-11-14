@@ -93,6 +93,31 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.chain[4].direction).toBeUndefined();
   });
 
+  it('propagates partial C9 condition assessment to the reasoning dasha period', () => {
+    const base = createProductAnalysis();
+    const firstPeriod = base.career.activation.dasha.periods[0];
+    const analysis = {
+      ...base,
+      career: {
+        ...base.career,
+        activation: {
+          ...base.career.activation,
+          dasha: {
+            ...base.career.activation.dasha,
+            periods: [
+              { ...firstPeriod, conditionAssessment: 'PARTIAL' as const },
+              ...base.career.activation.dasha.periods.slice(1)
+            ]
+          }
+        }
+      }
+    };
+
+    const vm = selectReasoningViewModel(analysis, 'CAREER');
+
+    expect(vm.dasha.md?.conditionAssessment).toBe('PARTIAL');
+  });
+
   it('2. selector maps all Wealth fields correctly', () => {
     const analysis = createProductAnalysis();
     const vm = selectReasoningViewModel(analysis, 'WEALTH');

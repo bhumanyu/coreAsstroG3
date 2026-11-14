@@ -56,6 +56,21 @@ function semantic(
 }
 
 describe('CareerStructuralReasoning', () => {
+  it('keeps only the highest-weight relationship type for each house pair', () => {
+    const conjunct = interpretCareerHouseRelationship(relationship({
+      type: 'LORD_CONJUNCTION'
+    }));
+    const aspect = interpretCareerHouseRelationship(relationship({
+      type: 'LORD_ASPECT'
+    }));
+
+    const result = resolveCareerStructuralReasoning([aspect, conjunct]);
+
+    expect(result.evidence).toHaveLength(1);
+    expect(result.evidence[0].relationship.type).toBe('LORD_CONJUNCTION');
+    expect(result.evidence[0].weight).toBe(2);
+  });
+
   it('preserves primary supporting structure', () => {
     const result =
       resolveCareerStructuralReasoning([

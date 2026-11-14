@@ -24,6 +24,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     coverage.mechanismCandidateCount !== undefined &&
     coverage.patternCandidateCount !== undefined &&
     coverage.qualifiedPatternCount !== undefined &&
+    coverage.eligiblePatternCount !== undefined &&
     coverage.invalidRolePatternCount !== undefined &&
     coverage.roleAssignmentSkippedPatternCount !== undefined &&
     coverage.resolvedMechanismCount !== undefined &&

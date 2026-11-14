@@ -52,7 +52,7 @@ import {
 
 import {
   classifyCareerHouse,
-  CAREER_HOUSE_PORTFOLIO
+  CAREER_D10_HOUSE_PORTFOLIO
 } from '../careerTypes';
 
 import {
@@ -198,7 +198,7 @@ function buildD10PlanetContexts(
  * This function:
  * - Reads d10.houses (array of DivisionalHouseInterpretation)
  * - Sorts by house number
- * - Sets role via classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO)
+ * - Sets role via the D10-specific career house portfolio
  * - Sets lordCondition via mapD10Condition(d10.planets?.[lord]?.dignity)
  * - Populates tenants from house.occupants (real D10 data)
  * - Populates tenantConditions by mapping each occupant's dignity
@@ -220,7 +220,8 @@ function buildD10HouseContexts(
   const houseContexts: CareerD10HouseContext[] = [];
 
   for (const house of sortedHouses) {
-    const role = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO) as CareerD10HouseRole;
+    const classifiedRole = classifyCareerHouse(house.house, CAREER_D10_HOUSE_PORTFOLIO);
+    const role: CareerD10HouseRole = classifiedRole === 'SECONDARY' ? 'NEUTRAL' : classifiedRole;
     const lordCondition = mapD10Condition(d10Planets?.[house.lord]?.dignity);
 
     // Populate tenants from real D10 occupants

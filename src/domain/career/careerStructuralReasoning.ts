@@ -4,7 +4,8 @@ import type {
 } from './careerHouseRelationship';
 
 import {
-  careerHouseRelationshipKey
+  careerHouseRelationshipKey,
+  CAREER_HOUSE_RELATIONSHIP_PRIORITY
 } from './careerHouseRelationship';
 
 import {
@@ -112,15 +113,48 @@ export function careerStructuralSemanticKey(
   ].join(':');
 }
 
+function conjunctionAspectDedupKey(semantic: CareerHouseRelationshipSemantic): string {
+  const [houseA, houseB] = [
+    semantic.relationship.houseA,
+    semantic.relationship.houseB
+  ].sort((a, b) => a - b);
+  const relationship = semantic.relationship;
+  const lordPlacements: string[] = [];
+  if (relationship.lordA !== undefined) {
+    lordPlacements.push(`${relationship.lordA}:${relationship.lordAHouse ?? ''}`);
+  }
+  if (relationship.lordB !== undefined) {
+    lordPlacements.push(`${relationship.lordB}:${relationship.lordBHouse ?? ''}`);
+  }
+  lordPlacements.sort();
+  return `${houseA}:${houseB}:${lordPlacements.join('|')}:${semantic.relevance}:${semantic.effect}:${semantic.conditional}`;
+}
+
 function deduplicateSemantics(
   semantics: readonly CareerHouseRelationshipSemantic[]
 ): readonly CareerHouseRelationshipSemantic[] {
   const unique = new Map<string, CareerHouseRelationshipSemantic>();
 
   for (const semantic of semantics) {
-    const key = careerStructuralSemanticKey(semantic);
-
-    if (!unique.has(key)) {
+    const type = semantic.relationship.type;
+    const shouldCollapseConjunctionAspect =
+      (type === 'LORD_CONJUNCTION' || type === 'LORD_ASPECT') &&
+      semantic.relationship.lordA !== undefined &&
+      semantic.relationship.lordB !== undefined;
+    const key = shouldCollapseConjunctionAspect
+      ? `CONJUNCTION_ASPECT:${conjunctionAspectDedupKey(semantic)}`
+      : `SEMANTIC:${careerStructuralSemanticKey(semantic)}`;
+    const existing = unique.get(key);
+    const priority = CAREER_HOUSE_RELATIONSHIP_PRIORITY[type];
+    const existingPriority = existing
+      ? CAREER_HOUSE_RELATIONSHIP_PRIORITY[existing.relationship.type]
+      : -1;
+    if (
+      !existing ||
+      priority > existingPriority ||
+      (priority === existingPriority &&
+        careerStructuralSemanticKey(semantic).localeCompare(careerStructuralSemanticKey(existing)) < 0)
+    ) {
       unique.set(key, semantic);
     }
   }

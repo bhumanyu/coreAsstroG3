@@ -110,9 +110,9 @@ export const CAREER_RULES: readonly LocalRuleDefinition[] = Object.freeze([
 
       const statement =
         `Career timing hierarchy evaluated: ` +
-        `Mahadasha of ${hierarchy.primary.planet ?? 'primary lord'} (${hierarchy.primary.role}) ${hierarchy.primary.effect.toLowerCase()}, ` +
-        `Antardasha of ${hierarchy.modifier.planet ?? 'modifier lord'} (${hierarchy.modifier.role}) ${hierarchy.modifier.effect.toLowerCase()}, ` +
-        `Pratyantardasha of ${hierarchy.trigger.planet ?? 'trigger lord'} (${hierarchy.trigger.role}) ${hierarchy.trigger.effect.toLowerCase()}. ` +
+        `Mahadasha of ${hierarchy.primary.planet ?? 'primary lord'} (${hierarchy.primary.role}) ${hierarchy.primary.effect.toLowerCase()}${hierarchy.primary.conditionAssessment === 'PARTIAL' ? ' (partially assessed)' : ''}, ` +
+        `Antardasha of ${hierarchy.modifier.planet ?? 'modifier lord'} (${hierarchy.modifier.role}) ${hierarchy.modifier.effect.toLowerCase()}${hierarchy.modifier.conditionAssessment === 'PARTIAL' ? ' (partially assessed)' : ''}, ` +
+        `Pratyantardasha of ${hierarchy.trigger.planet ?? 'trigger lord'} (${hierarchy.trigger.role}) ${hierarchy.trigger.effect.toLowerCase()}${hierarchy.trigger.conditionAssessment === 'PARTIAL' ? ' (partially assessed)' : ''}. ` +
         `Deterministic synthesis outcome is ${hierarchy.overallEffect}.`;
 
       return triggered(effect, statement, supportingIds, challengingIds);

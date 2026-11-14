@@ -5,6 +5,8 @@ import {
   careerHouseRelationshipKey,
   type CareerHouseRelationshipContext
 } from './careerHouseRelationship';
+import { interpretCareerHouseRelationships } from './careerHouseRelationshipSemantics';
+import { resolveCareerStructuralReasoning } from './careerStructuralReasoning';
 
 import type { Planet } from '../../types';
 
@@ -43,6 +45,24 @@ function createContext(
 }
 
 describe('Career house relationship semantics', () => {
+  it('deduplicates conjuncting and mutually-aspecting lords to the stronger relationship', () => {
+    const context = createContext({
+      getPlanetHouse: () => 8,
+      lordAspectsLord: () => true
+    });
+    const relationships = detectCareerHouseRelationships(context, 6, 10);
+
+    expect(relationships.map(item => item.type)).toContain('LORD_CONJUNCTION');
+    expect(relationships.map(item => item.type)).toContain('LORD_ASPECT');
+
+    const structural = resolveCareerStructuralReasoning(
+      interpretCareerHouseRelationships(relationships)
+    );
+
+    expect(structural.evidence).toHaveLength(1);
+    expect(structural.evidence[0].relationship.type).toBe('LORD_CONJUNCTION');
+  });
+
   it('detects a common lord', () => {
     const context = createContext({
       getHouseLord: () => 'SATURN' as Planet

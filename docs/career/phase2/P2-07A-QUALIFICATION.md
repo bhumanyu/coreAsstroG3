@@ -121,7 +121,8 @@ type DecisionBlockingReasonKind =
 - `coherence === 'INSUFFICIENT_DATA'` or establishing-relationship checks that are unevaluable → `INSUFFICIENT_STRUCTURAL_EVIDENCE` (structural evidence insufficient)
 
 **Disqualifiers vs Decision-Blocking Reasons:**
-- Disqualifiers (WEAK condition, NEUTRAL relevance) are explicit negatives → `UNQUALIFIED` status
+- Fully assessed disqualifiers (WEAK condition, NEUTRAL relevance) are explicit negatives → `UNQUALIFIED` status
+- A PARTIAL-assessed WEAK condition remains visible but is decision-blocking, not disqualifying
 - Disqualifiers are NOT pushed into `decisionBlockingReasons` — they are carried in `evidence`/`explanation` only
 - Decision-blocking reasons are for `INSUFFICIENT_DATA` status only (missing ≠ negative)
 
@@ -130,6 +131,14 @@ type DecisionBlockingReasonKind =
 - `deferredDimensions`: Intentionally deferred to later phases (ACTIVATION_POTENTIAL timing, DIVISIONAL_CONFIRMATION D10). These are non-decision-blocking and should not appear in insufficient-data explanation text.
 
 This split prevents C11/UI from interpreting deferred phases as incomplete charts.
+
+## Deferred Methodology
+
+The following items remain intentionally deferred: family-specific qualification
+policies, mechanism rules for non-dusthana families, a canonical affliction
+producer, and calibration of correlated relationship weights. Partial C6
+conditions remain visible to qualification, but partial WEAK evidence is
+decision-blocking and does not act as a negative disqualifier.
 
 ## Ownership Invariant
 

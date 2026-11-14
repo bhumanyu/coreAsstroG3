@@ -17,6 +17,7 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
     coverage &&
     coverage.patternCandidateCount !== undefined &&
     coverage.qualifiedPatternCount !== undefined &&
+    coverage.eligiblePatternCount !== undefined &&
     coverage.invalidRolePatternCount !== undefined &&
     coverage.roleAssignmentSkippedPatternCount !== undefined &&
     coverage.resolvedMechanismCount !== undefined &&
@@ -28,14 +29,14 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
         ? 'incompleteNetworkEvidence'
         : coverage.patternCandidateCount === 0
           ? 'noPatternsDiscovered'
-          : coverage.qualifiedPatternCount === 0
+          : coverage.eligiblePatternCount === 0
             ? 'noPatternsQualified'
             : coverage.invalidRolePatternCount > 0
               ? 'participantRoleAssignmentFailed'
               : coverage.roleAssignmentSkippedPatternCount > 0
                 ? 'participantRoleAssignmentSkipped'
               : coverage.resolvedMechanismCount === 0
-                ? 'mechanismsNotResolved'
+                ? 'noMechanismRuleMatched'
                 : undefined;
   }
   if (expression.status === 'EXECUTED_NO_CANDIDATES') {

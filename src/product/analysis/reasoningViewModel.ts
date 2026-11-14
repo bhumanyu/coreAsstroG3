@@ -74,6 +74,7 @@ export interface ReasoningDashaPeriodViewModel {
   readonly role: ProductEvidenceRole;
   readonly direction: ProductDirection;
   readonly effect: ActivationEffect;
+  readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   readonly evidenceIds: readonly string[];
   readonly statement?: string;
   readonly start?: string;
@@ -409,6 +410,7 @@ export function buildCareerReasoningViewModel(
     role: p.role,
     direction: p.direction,
     effect: normalizeActivationEffect(p.effect),
+    conditionAssessment: p.conditionAssessment,
     evidenceIds: p.evidenceIds ?? [],
     statement: p.statement,
     start: p.start,
@@ -593,6 +595,7 @@ export function buildWealthReasoningViewModel(
     role: p.role,
     direction: p.direction,
     effect: normalizeActivationEffect(p.effect),
+    conditionAssessment: p.conditionAssessment,
     evidenceIds: p.evidenceIds ?? [],
     statement: p.statement,
     start: p.start,

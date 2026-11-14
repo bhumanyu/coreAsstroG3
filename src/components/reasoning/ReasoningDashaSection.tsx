@@ -47,6 +47,12 @@ const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ perio
           <span className="px-2 py-0.5 rounded text-[10px] font-mono-code bg-slate-800/80 text-slate-300 border border-slate-700/80">
             {effectLabel}
           </span>
+          {period.conditionAssessment === 'PARTIAL' &&
+            (period.effect === 'ACTIVATES' || period.effect === 'CHALLENGES') && (
+              <span className="px-2 py-0.5 rounded text-[10px] bg-amber-950/60 text-amber-300 border border-amber-800/70">
+                {t('reasoning.detail.partialConditionAssessment')}
+              </span>
+            )}
         </div>
       </div>
 

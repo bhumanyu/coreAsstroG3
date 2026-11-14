@@ -758,8 +758,12 @@ describe('PR-8 golden acceptance contract', () => {
       ],
       'json-export': [
         { kind: 'STATUS_MISMATCH', path: '$.status' },
-        { kind: 'EVIDENCE_MISMATCH', path: '$.evidence' },
-        { kind: 'PROVENANCE_MISMATCH', path: '$.provenance' }
+        ...(domain === 'CAREER'
+          ? []
+          : [
+              { kind: 'EVIDENCE_MISMATCH', path: '$.evidence' },
+              { kind: 'PROVENANCE_MISMATCH', path: '$.provenance' }
+            ])
       ]
     } as const;
     for (const [name, expectedDifferences] of Object.entries(currentBlockingDifferenceSets)) {

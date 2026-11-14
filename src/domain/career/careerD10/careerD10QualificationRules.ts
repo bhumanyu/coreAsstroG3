@@ -25,7 +25,7 @@ import type {
 
 import {
   classifyCareerHouse,
-  CAREER_HOUSE_PORTFOLIO
+  CAREER_D10_HOUSE_PORTFOLIO
 } from '../careerTypes';
 
 import { Planet } from '../../../types';
@@ -82,7 +82,8 @@ function buildCanonicalD10Facts(
 
   // Process house lords - these are PRIMARY/SUPPORTING based on house role
   for (const house of context.d10Houses) {
-    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
+    const classifiedRole = classifyCareerHouse(house.house, CAREER_D10_HOUSE_PORTFOLIO);
+    const houseRole = classifiedRole === 'SECONDARY' ? 'NEUTRAL' : classifiedRole;
     mergeOrAddFact({
       planet: house.lord,
       house: house.house,
@@ -111,7 +112,8 @@ function buildCanonicalD10Facts(
   // Process d10Planets - these are canonical planet positions
   // They take precedence over lord/tenant representations
   for (const planet of context.d10Planets) {
-    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
+    const classifiedRole = classifyCareerHouse(planet.d10House, CAREER_D10_HOUSE_PORTFOLIO);
+    const houseRole = classifiedRole === 'SECONDARY' ? 'NEUTRAL' : classifiedRole;
     mergeOrAddFact({
       planet: planet.planet,
       house: planet.d10House,
@@ -146,7 +148,7 @@ export function hasNatalCareerPromise(
 export function isD10DataAvailable(context: CareerD10Context): boolean {
   return context.d10Available &&
     context.d10Houses.length > 0 &&
-    context.d10Planets.length > 0;
+    context.d10Planets.some(planet => planet.condition !== 'UNAVAILABLE');
 }
 
 export function resolveD10PlanetDirection(
@@ -158,7 +160,8 @@ export function resolveD10PlanetDirection(
     return 'UNAVAILABLE';
   }
 
-  const houseRole = classifyCareerHouse(d10House, CAREER_HOUSE_PORTFOLIO);
+  const classifiedRole = classifyCareerHouse(d10House, CAREER_D10_HOUSE_PORTFOLIO);
+  const houseRole = classifiedRole === 'SECONDARY' ? 'NEUTRAL' : classifiedRole;
 
   let baseDirection: CareerD10QualificationDirection;
 

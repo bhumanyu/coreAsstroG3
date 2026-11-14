@@ -98,6 +98,16 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
     });
 
     const dimensions = computeQualificationDimensions(pattern, participantConditions, participantRelevance);
+    const hasFullyAssessedWeakCondition = pattern.planets.some(planet => {
+      const condition = conditionByPlanet.get(planet);
+      return condition?.assessment === 'FULL' &&
+        (condition.condition === 'WEAK' || condition.condition === 'AFFLICTED');
+    });
+    const hasPartiallyAssessedWeakCondition = pattern.planets.some(planet => {
+      const condition = conditionByPlanet.get(planet);
+      return context.partiallyAssessedConditionPlanets.has(planet) &&
+        (condition?.condition === 'WEAK' || condition?.condition === 'AFFLICTED');
+    });
 
     // Step 3: Apply frozen decision layer (only if prerequisites present)
     if (status !== 'UNQUALIFIED') {
@@ -110,7 +120,7 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
       }
 
       // Check for known disqualifiers (explicit negatives beat missing data)
-      if (dimensions.planetaryCondition === 'WEAK') {
+      if (dimensions.planetaryCondition === 'WEAK' && hasFullyAssessedWeakCondition) {
         status = 'UNQUALIFIED';
         // Disqualifier: kept in evidence only, not in decisionBlockingReasons
       } else if (dimensions.careerRelevance === 'NEUTRAL') {
@@ -118,6 +128,12 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
         // Disqualifier: kept in evidence only, not in decisionBlockingReasons
       } else {
         // No disqualifiers - check for missing/unevaluable data (decision-blocking)
+        if (hasPartiallyAssessedWeakCondition) {
+          decisionBlockingReasons.push({
+            reason: 'planetary condition is only partially assessed',
+            kind: 'MISSING_INPUT'
+          });
+        }
         if (dimensions.structuralStrength === 'NOT_ASSESSED') {
           decisionBlockingReasons.push({
             reason: 'structural strength methodology not frozen',

@@ -40,12 +40,14 @@ import type {
  * - NEUTRAL → MODERATE (conservative: neutral dignity does not imply weak condition)
  * - WEAK → WEAK
  * - AFFLICTED → WEAK
- * - PARTIAL/UNAVAILABLE assessment, missing assessment metadata, or missing result → UNAVAILABLE
+ * - PARTIAL assessment → preserve the resolved condition; qualification policies
+ *   receive the partial-assessment flag and must not treat WEAK as a disqualifier
+ * - UNAVAILABLE assessment, missing assessment metadata, or missing result → UNAVAILABLE
  */
 export function mapPlanetaryCondition(
   result: CareerPlanetaryConditionResult | undefined
 ): CareerPatternPlanetaryCondition {
-  if (!result || result.assessment !== 'FULL') {
+  if (!result || (result.assessment !== 'FULL' && result.assessment !== 'PARTIAL')) {
     return 'UNAVAILABLE';
   }
 
@@ -199,7 +201,8 @@ export function classifyPatternCoherence(
  * Keep participants retained on the output for explainability (§8).
  */
 export function classifyQualificationStatus(
-  dimensions: CareerPatternQualificationDimensions
+  dimensions: CareerPatternQualificationDimensions,
+  hasPartiallyAssessedCondition = false
 ): CareerPatternQualificationStatus {
   // Insufficient data guard: NOT_ASSESSED, UNKNOWN, or UNAVAILABLE dimensions
   if (
@@ -210,6 +213,10 @@ export function classifyQualificationStatus(
     dimensions.careerRelevance === 'UNAVAILABLE' ||
     dimensions.coherence === 'INSUFFICIENT_DATA'
   ) {
+    return 'INSUFFICIENT_DATA';
+  }
+
+  if (hasPartiallyAssessedCondition) {
     return 'INSUFFICIENT_DATA';
   }
 

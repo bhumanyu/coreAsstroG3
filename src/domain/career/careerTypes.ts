@@ -43,14 +43,15 @@ import type {
 /**
  * C8 stage attribution is valid only when every field is present. Precedence:
  * missing networks, incomplete network/qualification evaluation, no discovered
- * patterns, no qualified patterns, role-assignment errors, skipped role
- * assignments, then mechanism resolution. Skipped patterns are distinct from
- * ERROR-severity role-assignment failures.
+ * patterns, no eligible patterns (all were UNQUALIFIED), role-assignment errors,
+ * skipped role assignments, then mechanism resolution for eligible patterns.
+ * Skipped patterns are distinct from ERROR-severity role-assignment failures.
  */
 export interface CareerC8ExpressionCoverage {
   readonly mechanismCandidateCount: number;
   readonly patternCandidateCount: number;
   readonly qualifiedPatternCount: number;
+  readonly eligiblePatternCount: number;
   readonly invalidRolePatternCount: number;
   readonly roleAssignmentSkippedPatternCount: number;
   readonly resolvedMechanismCount: number;
@@ -101,6 +102,13 @@ export const CAREER_HOUSE_PORTFOLIO: CareerHousePortfolio = Object.freeze({
   primary: Object.freeze([10]),
   supporting: Object.freeze([6, 2, 11]),
   challenging: Object.freeze([8, 12]),
+  secondary: Object.freeze([1, 3, 5, 7, 9])
+});
+
+export const CAREER_D10_HOUSE_PORTFOLIO: CareerHousePortfolio = Object.freeze({
+  primary: CAREER_HOUSE_PORTFOLIO.primary,
+  supporting: CAREER_HOUSE_PORTFOLIO.supporting,
+  challenging: CAREER_HOUSE_PORTFOLIO.challenging,
   secondary: Object.freeze([])
 });
 
@@ -108,7 +116,7 @@ export function getCareerHousePortfolio(): CareerHousePortfolio {
   return CAREER_HOUSE_PORTFOLIO;
 }
 
-export type CareerHouseDirection = 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
+export type CareerHouseDirection = 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'SECONDARY' | 'NEUTRAL';
 
 export function classifyCareerHouse(
   house: number,
@@ -122,6 +130,9 @@ export function classifyCareerHouse(
   }
   if (portfolio.challenging.includes(house)) {
     return 'CHALLENGING';
+  }
+  if (portfolio.secondary?.includes(house)) {
+    return 'SECONDARY';
   }
   return 'NEUTRAL';
 }

@@ -16,6 +16,8 @@ import {
 } from './aiContextFactory';
 import type { CareerFinalSynthesisResult } from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerDashaCanonicalAnalysis } from '../../domain/career/careerDasha/careerDashaCanonicalTypes';
+import type { CareerInternalArtifacts } from '../../domain/career/careerTypes';
 import {
   DomainInterpretation,
   createDomainInterpretation,
@@ -38,6 +40,40 @@ import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysi
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { mapMethodology } from '../../product/analysis/productAnalysisMapper';
 import type { DomainReasoningOptions } from '../../domain/reasoning/reasoningTypes';
+
+function makeCanonicalDashaAnalysis(
+  mdPlanet: Planet,
+  adPlanet: Planet,
+  pdPlanet: Planet
+): CareerDashaCanonicalAnalysis {
+  const period = (
+    level: 'MD' | 'AD' | 'PD',
+    planet: Planet,
+    role: 'PRIMARY_DRIVER' | 'MODIFIER' | 'REFINEMENT'
+  ) => ({
+    level,
+    planet,
+    role,
+    effect: 'ACTIVATES' as const,
+    direction: 'SUPPORT' as const,
+    strength: 'STRONG' as const,
+    statement: `C9 ${level} activates career.`,
+    conditionAssessment: 'FULL' as const
+  });
+
+  return {
+    overallEffect: 'ACTIVATES',
+    overallDirection: 'SUPPORT',
+    overallStrength: 'STRONG',
+    dominantLevel: 'MD',
+    md: period('MD', mdPlanet, 'PRIMARY_DRIVER'),
+    ad: period('AD', adPlanet, 'MODIFIER'),
+    pd: period('PD', pdPlanet, 'REFINEMENT'),
+    evidence: [],
+    rootEvidenceIds: [],
+    statement: 'Canonical C9 career dasha analysis.'
+  };
+}
 
 describe('AI Context Factory', () => {
   const horoscope = calculateHoroscope(
@@ -106,6 +142,51 @@ describe('AI Context Factory', () => {
   const context = buildAiContext(horoscope, {
     domainInterpretations: [career, wealth],
     temporalState
+  });
+
+  it('uses C9 hierarchy effects and preserves partial condition assessment in AI timing facts', () => {
+    const baseDasha = career.conclusionData?.internalArtifacts?.canonicalDashaAnalysis;
+    if (!baseDasha) {
+      throw new Error('Expected canonical C9 dasha analysis from the career interpreter.');
+    }
+
+    const interpretation: DomainInterpretation = {
+      ...career,
+      conclusionData: {
+        ...career.conclusionData,
+        internalArtifacts: {
+          ...career.conclusionData?.internalArtifacts,
+          canonicalDashaAnalysis: {
+            ...baseDasha,
+            md: {
+              ...baseDasha.md,
+              planet: Planet.SATURN,
+              effect: 'CHALLENGES',
+              conditionAssessment: 'PARTIAL'
+            },
+            ad: {
+              ...baseDasha.ad,
+              planet: Planet.MERCURY,
+              effect: 'ACTIVATES',
+              conditionAssessment: 'FULL'
+            },
+            pd: {
+              ...baseDasha.pd,
+              planet: Planet.VENUS,
+              effect: 'ACTIVATES',
+              conditionAssessment: 'FULL'
+            }
+          }
+        }
+      }
+    };
+    const aiContext = buildAiContext(horoscope, {
+      domainInterpretations: [interpretation],
+      temporalState
+    });
+
+    expect(aiContext.career?.timing?.hierarchy?.primary.effect).toBe('CHALLENGES');
+    expect(aiContext.career?.timing?.hierarchy?.primary.conditionAssessment).toBe('PARTIAL');
   });
 
   it.each([
@@ -643,6 +724,11 @@ describe('AI Context Factory', () => {
       dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
       transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
       conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      conclusionData: {
+        internalArtifacts: {
+          canonicalDashaAnalysis: makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.VENUS, Planet.MARS)
+        } as CareerInternalArtifacts
+      },
       evidence: [
         // MD canonical evidence
         {
@@ -731,6 +817,11 @@ describe('AI Context Factory', () => {
       dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
       transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
       conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      conclusionData: {
+        internalArtifacts: {
+          canonicalDashaAnalysis: makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.VENUS, Planet.MARS)
+        } as CareerInternalArtifacts
+      },
       evidence: [
         // MD canonical evidence
         {
@@ -1391,6 +1482,9 @@ describe('AI Context Factory', () => {
           })
         ],
         conclusionData: {
+          internalArtifacts: {
+            canonicalDashaAnalysis: makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.SATURN, Planet.MARS)
+          } as CareerInternalArtifacts,
           careerDashaSynthesis: {
             md: {
               planet: Planet.SATURN,
@@ -2211,6 +2305,9 @@ describe('AI Context Factory', () => {
           } as any
         ],
         conclusionData: {
+          internalArtifacts: {
+            canonicalDashaAnalysis: makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.SATURN, Planet.MARS)
+          } as CareerInternalArtifacts,
           careerDashaSynthesis: {
             md: {
               planet: Planet.JUPITER,

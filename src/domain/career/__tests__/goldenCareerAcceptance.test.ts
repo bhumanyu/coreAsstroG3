@@ -425,6 +425,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     expect(trace).toMatchInlineSnapshot(`
       {
         "c8ExpressionCoverage": {
+          "eligiblePatternCount": 1,
           "evidenceCount": 0,
           "evidenceWithPlanetAttributionCount": 0,
           "expressionCount": 0,

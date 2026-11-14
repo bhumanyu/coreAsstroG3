@@ -92,6 +92,7 @@ describe('CareerProfessionStatusSection', () => {
         mechanismCandidateCount: 0,
         patternCandidateCount: 2,
         qualifiedPatternCount: 1,
+        eligiblePatternCount: 1,
         invalidRolePatternCount: 0,
         roleAssignmentSkippedPatternCount: 0,
         resolvedMechanismCount: 0,

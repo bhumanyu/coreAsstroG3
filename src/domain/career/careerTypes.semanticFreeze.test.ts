@@ -8,6 +8,7 @@ import {
   CAREER_SUPPORTING_LORDS,
   CAREER_CHALLENGING_LORDS,
   CAREER_HOUSE_PORTFOLIO,
+  CAREER_D10_HOUSE_PORTFOLIO,
   classifyCareerHouse
 } from './careerTypes';
 
@@ -60,7 +61,7 @@ describe('CW-R1 C1 — Career structural portfolio freeze', () => {
       primary: [10],
       supporting: [6, 2, 11],
       challenging: [8, 12],
-      secondary: []
+      secondary: [1, 3, 5, 7, 9]
     });
   });
 
@@ -74,6 +75,17 @@ describe('CW-R1 C1 — Career structural portfolio freeze', () => {
     expect(classifyCareerHouse(8)).toBe('CHALLENGING');
     expect(classifyCareerHouse(12)).toBe('CHALLENGING');
 
-    expect(classifyCareerHouse(1)).toBe('NEUTRAL');
+    expect(classifyCareerHouse(1)).toBe('SECONDARY');
+    expect(classifyCareerHouse(3)).toBe('SECONDARY');
+    expect(classifyCareerHouse(5)).toBe('SECONDARY');
+    expect(classifyCareerHouse(7)).toBe('SECONDARY');
+    expect(classifyCareerHouse(9)).toBe('SECONDARY');
+    expect(classifyCareerHouse(4)).toBe('NEUTRAL');
+  });
+
+  it('keeps secondary career houses neutral in the D10 portfolio', () => {
+    expect(CAREER_D10_HOUSE_PORTFOLIO.secondary).toEqual([]);
+    expect(classifyCareerHouse(1, CAREER_D10_HOUSE_PORTFOLIO)).toBe('NEUTRAL');
+    expect(classifyCareerHouse(7, CAREER_D10_HOUSE_PORTFOLIO)).toBe('NEUTRAL');
   });
 });

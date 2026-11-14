@@ -14,6 +14,14 @@ P2-02 implements the network detection layer that consumes the P2-01 `CareerAstr
 - Preserves provenance without fabrication
 - Does NOT perform pattern classification or semantic interpretation (owned by P2-03)
 
+### Career house tiers
+
+Network detection includes houses in the primary (10), supporting (2, 6, 11),
+challenging (8, 12), and secondary (1, 3, 5, 7, 9) tiers. Secondary houses
+provide contextual and pattern evidence only; they are not supporting or
+challenging C4 houses, do not contribute to C4 structural strength, and cannot
+establish a career promise without pattern-specific qualification.
+
 ## Implementation Overview
 
 ### Pipeline Position
@@ -184,7 +192,7 @@ export {
 - STAR (single participant connecting multiple houses)
 - CLUSTER (multiple participants)
 - Disconnected components → 2 networks in deterministic order
-- Neutral houses (1,4) excluded from components
+- Secondary houses (1, 3, 5, 7, 9) participate when connected; neutral houses (e.g. 4) are excluded
 - Input-order independence (JSON equality across input permutations)
 - True permutation tests (permuted fact arrays produce identical output)
 - Duplicate edges → no duplicate networks/relationships

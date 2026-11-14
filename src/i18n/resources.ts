@@ -628,6 +628,7 @@ export const resources = {
           missingNetworkEvidence: 'Required career network evidence was missing.',
           incompleteNetworkEvidence: 'Career network or qualification evaluation was incomplete.',
           mechanismsNotResolved: 'Career mechanisms could not be resolved from the qualified patterns.',
+          noMechanismRuleMatched: 'No mechanism rule matched the eligible career patterns.',
           title: 'Vocational Expression & Working Style',
           description: 'Operational temperament, executive capacity, and functional orientation',
           operatingStyle: 'Primary Operating Style',
@@ -637,7 +638,9 @@ export const resources = {
         },
         promise: {
           title: 'Natal Vocational Promise',
-          description: 'Foundational 10th house, Lagna, and planetary governance',
+          description: 'Structural relationships among career houses, weighted by relationship type',
+          strengthLabel: 'Structural relationship strength',
+          strengthDisclaimer: 'This measures C4 relationship-weight dominance; it does not incorporate 10th-lord dignity, Lagna, or planetary condition.',
           manifestations: 'Dominant Vocational Manifestations'
         },
         qualifications: {
@@ -1101,6 +1104,7 @@ export const resources = {
           dashaTitle: 'Chronological Vimshottari Dasha Activation',
           dashaDescription: 'Temporal activation hierarchy via Mahadasha, Antardasha, and Pratyantardasha',
           dashaUnavailable: 'Dasha timing periods are unavailable for this calculation.',
+          partialConditionAssessment: 'Partially assessed',
           ruleCountSingular: '{{count}} Rule',
           ruleCountPlural: '{{count}} Rules',
           unavailable: 'Unavailable',
@@ -3202,6 +3206,7 @@ export const resources = {
           missingNetworkEvidence: 'आवश्यक करियर नेटवर्क साक्ष्य अनुपस्थित था।',
           incompleteNetworkEvidence: 'करियर नेटवर्क या पुष्टि-योग्यता का आकलन अधूरा था।',
           mechanismsNotResolved: 'पुष्टि-योग्य पैटर्न से करियर तंत्र का समाधान नहीं हो सका।',
+          noMechanismRuleMatched: 'पात्र करियर पैटर्न के लिए कोई तंत्र नियम मेल नहीं खाया।',
           title: 'व्यावसायिक अभिव्यक्ति और कार्यशैली',
           description: 'कार्यगत स्वभाव, कार्यकारी क्षमता और कार्यात्मक दिशा',
           operatingStyle: 'प्रमुख कार्यशैली',
@@ -3211,7 +3216,9 @@ export const resources = {
         },
         promise: {
           title: 'जन्म-कुंडली के व्यावसायिक संकेत',
-          description: 'दसवें भाव, लग्न और ग्रहों के स्वामित्व के आधारभूत संकेत',
+          description: 'करियर भावों के बीच संरचनात्मक संबंध, संबंध के प्रकार के अनुसार भारित',
+          strengthLabel: 'संरचनात्मक संबंध की प्रबलता',
+          strengthDisclaimer: 'यह C4 संबंध-भार का प्रभुत्व दर्शाता है; इसमें दशमेश की गरिमा, लग्न या ग्रहों की स्थिति शामिल नहीं है।',
           manifestations: 'प्रमुख व्यावसायिक अभिव्यक्तियाँ'
         },
         qualifications: {
@@ -3675,6 +3682,7 @@ export const resources = {
           dashaTitle: 'कालानुक्रमिक विंशोत्तरी दशा सक्रियता',
           dashaDescription: 'महादशा, अंतर्दशा और प्रत्यंतरदशा स्तरों के माध्यम से समयबद्ध सक्रियता क्रम',
           dashaUnavailable: 'इस गणना के लिए दशा समय-अवधियाँ उपलब्ध नहीं हैं।',
+          partialConditionAssessment: 'आंशिक रूप से आकलित',
           ruleCountSingular: '{{count}} नियम',
           ruleCountPlural: '{{count}} नियम',
           unavailable: 'उपलब्ध नहीं',

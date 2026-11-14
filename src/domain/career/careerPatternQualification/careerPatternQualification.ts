@@ -164,6 +164,13 @@ function normalizeConditionDuplicates(
     if (a.condition !== b.condition) {
       return a.condition.localeCompare(b.condition);
     }
+    const assessmentPrecedence = { FULL: 0, PARTIAL: 1, UNAVAILABLE: 2 } as const;
+    const assessmentDifference =
+      assessmentPrecedence[a.assessment ?? 'UNAVAILABLE'] -
+      assessmentPrecedence[b.assessment ?? 'UNAVAILABLE'];
+    if (assessmentDifference !== 0) {
+      return assessmentDifference;
+    }
     // Compare by statement
     if (a.statement !== b.statement) {
       return a.statement.localeCompare(b.statement);
@@ -374,6 +381,9 @@ function qualifyPattern(
 
   const participantConditions = participants.map(p => p.condition);
   const participantRelevance = participants.map(p => p.relevance);
+  const partiallyAssessedConditionPlanets = new Set(
+    pattern.planets.filter(planet => conditionByPlanet.get(planet)?.assessment === 'PARTIAL')
+  );
 
   // Always compute dimensions using legacy rules (for consistency)
   const dimensions = computeQualificationDimensions(
@@ -398,6 +408,7 @@ function qualifyPattern(
       pattern,
       relevanceByPlanet: Object.freeze(new Map(relevanceByPlanet)),
       conditionByPlanet: Object.freeze(new Map(conditionByPlanet)),
+      partiallyAssessedConditionPlanets,
       ...(networks !== undefined ? { networks } : {})
     });
 
@@ -415,7 +426,10 @@ function qualifyPattern(
     status = policyResult.status;
   } else {
     // Fallback to legacy status classification
-    status = classifyQualificationStatus(dimensions);
+    status = classifyQualificationStatus(
+      dimensions,
+      partiallyAssessedConditionPlanets.size > 0
+    );
     policyEvidence = [];
     decisionBlockingReasons = [];
     deferredDimensions = [];

@@ -127,6 +127,22 @@ describe('careerD10QualificationRules', () => {
       };
       expect(isD10DataAvailable(context)).toBe(true);
     });
+
+    it('treats nonempty D10 arrays with only unavailable conditions as unavailable', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'UNAVAILABLE', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
+        expressions: emptyExpressions
+      };
+
+      expect(isD10DataAvailable(context)).toBe(false);
+      expect(resolveD10Direction(context)).toBe('UNAVAILABLE');
+    });
   });
 
   describe('resolveD10PlanetDirection', () => {
