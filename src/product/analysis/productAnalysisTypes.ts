@@ -172,6 +172,15 @@ export interface ProductCareerExpressionCoverageSummary {
   readonly evidenceWithPlanetAttributionCount: number;
 }
 
+export interface ProductCareerOrchestrationQuarantineRecord {
+  readonly patternId: string;
+  readonly stage: 'PATTERN' | 'QUALIFICATION';
+  readonly reason: 'CONFLICTING_CANDIDATE_PAYLOAD' | 'CONFLICTING_QUALIFICATION_VERDICTS';
+  readonly rejectedRecordCount: number;
+  readonly differingFields: readonly string[];
+  readonly relatedIds: readonly string[];
+}
+
 export interface D10ProductResult {
   /**
    * Dasamsa relationship semantics per spec §29:
@@ -602,6 +611,8 @@ export interface CareerProductAnalysis {
   readonly pathwayPotential?: ProductCareerPathwayAnalysis;
   /** B06: specific event taxonomy is gated; only qualified generic windows are projected. */
   readonly eventTimeline?: ProductCareerEventTimeline;
+  /** C8 orchestration conflicts retained for audit and persistence. */
+  readonly quarantineRecords?: readonly ProductCareerOrchestrationQuarantineRecord[];
   readonly promise: CareerPromiseProduct;
   readonly expression?: CareerExpressionProduct;
   readonly d10: D10ProductResult;

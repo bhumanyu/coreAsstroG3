@@ -150,6 +150,8 @@ export function buildLifeAnalysisViewModel(
     canonicalExpressionAnalysis: careerConclusionData?.internalArtifacts?.canonicalExpressionAnalysis
       ?? careerConclusionData?.internalArtifacts?.canonicalExpression,
     c8ExpressionCoverage: careerConclusionData?.internalArtifacts?.careerAvailabilityDiagnosticTrace?.c8ExpressionCoverage,
+    careerOrchestrationQuarantineRecords:
+      careerConclusionData?.internalArtifacts?.careerOrchestrationQuarantineRecords,
     analyticalAxes: careerConclusionData?.careerAnalyticalAxes,
     careerOutcomeAnalysis: careerConclusionData?.careerOutcomeAnalysis,
     careerEventTimeline: careerConclusionData?.careerEventTimeline,

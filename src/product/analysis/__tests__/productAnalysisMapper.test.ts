@@ -36,6 +36,9 @@ import type { ProductEvidence, ProductWarning } from '../productAnalysisTypes';
 import type { LifeAnalysisViewModel } from '../../life-analysis/lifeAnalysisTypes';
 import type { CareerProfessionAnalysis } from '../../../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerOutcomeAnalysis } from '../../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
+import { CanonicalCareerOrchestrator } from '../../../domain/career/orchestration/canonicalCareerOrchestrator';
+import type { CareerOrchestrationPorts } from '../../../domain/career/orchestration/canonicalCareerContracts';
+import type { CareerPattern } from '../../../domain/career/careerPattern/careerPatternTypes';
 
 describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   it('maps evidence direction and derivation from C4 polarity and provenance, not role', () => {
@@ -826,6 +829,69 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     });
 
     expect(analysisWithoutProfession.career.profession).toBeUndefined();
+  });
+
+  it('round-trips orchestrator quarantine records through ProductAnalysis serialization', () => {
+    const makePattern = (name: string): CareerPattern => ({
+      patternId: 'PATTERN_DUPLICATE',
+      identityKey: 'IDENTITY_PATTERN_DUPLICATE',
+      family: 'CAREER_HOUSE_NETWORK',
+      level: 'HOUSE_NETWORK',
+      classification: 'CAREER_HOUSE_NETWORK',
+      name,
+      topology: 'DIRECT_LINK',
+      direction: 'FORWARD',
+      houses: [10],
+      houseRoles: {},
+      planets: [],
+      networkIds: [],
+      relationshipIds: [],
+      mechanisms: [],
+      relationships: [],
+      evidence: [],
+      provenance: {
+        sourceNetworkIds: [],
+        relationshipIds: [],
+        ruleIds: [],
+        establishingRelationshipIds: [],
+        supportingRelationshipIds: []
+      }
+    });
+    const ports = {
+      qualification: { qualifyCareerPatterns: () => ({ qualifiedPatterns: [] }) },
+      participantRoles: { assignParticipantRoles: () => ({ assignments: [] }) },
+      mechanismResolver: { resolve: () => ({}), resolveAll: () => [] },
+      mechanismRefiner: { refine: () => ({}) }
+    } as unknown as CareerOrchestrationPorts;
+    const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+      patterns: [makePattern('Original'), makePattern('Conflicting')],
+      relevance: [],
+      condition: [],
+      networks: []
+    });
+    const viewModel: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        careerOrchestrationQuarantineRecords: foundation.quarantineRecords
+      }
+    };
+    const productAnalysis = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: viewModel,
+      context: sampleContext
+    });
+    const restored = JSON.parse(JSON.stringify(productAnalysis)) as typeof productAnalysis;
+
+    expect(restored.career.quarantineRecords).toEqual([{
+      patternId: 'PATTERN_DUPLICATE',
+      stage: 'PATTERN',
+      reason: 'CONFLICTING_CANDIDATE_PAYLOAD',
+      rejectedRecordCount: 2,
+      differingFields: ['name'],
+      relatedIds: ['PATTERN_DUPLICATE']
+    }]);
   });
 
   it('4.6. Profession with candidates maps correctly with available status and d10Status derivation', () => {
