@@ -1019,7 +1019,7 @@ function buildCareerFact(
       status: canonicalC11
         ? canonicalC11.finalStrength as any
         : 'LIMITED_EVIDENCE',
-      confidence: canonicalC11?.confidence ?? toAiConfidence(careerInterpretation.conclusion.confidence),
+      ...(canonicalC11 ? { confidence: canonicalC11.confidence } : {}),
       natalPromise: canonicalC11
         ? canonicalC11.natalStrength as any
         : 'UNAVAILABLE',

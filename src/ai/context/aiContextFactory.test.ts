@@ -1870,6 +1870,7 @@ describe('AI Context Factory', () => {
 
       expect(context.career?.canonicalC11).toBeUndefined();
       expect(context.career?.status).toBe('LIMITED_EVIDENCE');
+      expect(context.career?.confidence).toBeUndefined();
       expect(context.career?.natalPromise).toBe('UNAVAILABLE');
       expect(context.career?.status).not.toBe('STRONG');
       expect(context.career?.natalPromise).not.toBe('STRONG');

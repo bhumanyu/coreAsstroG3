@@ -597,7 +597,7 @@ export interface CareerFact {
   | 'MIXED'
   | 'CHALLENGED'
   | 'LIMITED_EVIDENCE';
-  readonly confidence: AiConfidence;
+  readonly confidence?: AiConfidence;
   readonly natalPromise: CareerNatalPromise;
   readonly d10Relationship: CareerD10Relationship;
   readonly supportingFactors: readonly string[];
