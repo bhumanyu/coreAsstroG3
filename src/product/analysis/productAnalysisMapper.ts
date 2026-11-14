@@ -628,7 +628,13 @@ export function mapEvidenceItems(
           : undefined,
         planet: typeof item.planet === 'string' ? item.planet : undefined,
         ruleId: item.ruleId ? String(item.ruleId) : undefined,
-        derivedFromIds: Array.isArray(item.derivedFromIds) ? [...item.derivedFromIds] : undefined
+        derivedFromIds: Array.isArray(item.derivedFromIds)
+          ? [...item.derivedFromIds]
+          : Array.isArray(item.provenance?.derivedFromIds)
+            ? [...item.provenance.derivedFromIds]
+            : Array.isArray(item.relatedEvidenceIds)
+              ? [...item.relatedEvidenceIds]
+              : undefined
       };
     }
 
@@ -645,11 +651,19 @@ export function mapEvidenceItems(
 
     const direction: ProductDirection =
       item.direction ||
-      (role === 'CHALLENGING'
+      (item.provenance?.effect === 'CHALLENGE' || item.polarity === 'CHALLENGING'
         ? 'CHALLENGE'
-        : role === 'CONFLICTING'
+        : item.provenance?.effect === 'MIXED' || item.polarity === 'CONFLICTING'
           ? 'MIXED'
-          : 'SUPPORT');
+          : item.provenance?.effect === 'NEUTRAL' || item.polarity === 'NEUTRAL'
+            ? 'NEUTRAL'
+            : item.provenance?.effect === 'SUPPORT' || item.polarity === 'SUPPORTING'
+              ? 'SUPPORT'
+              : role === 'CHALLENGING'
+                ? 'CHALLENGE'
+                : role === 'CONFLICTING'
+                  ? 'MIXED'
+                  : 'SUPPORT');
 
     return {
       id: String(id),
@@ -667,7 +681,13 @@ export function mapEvidenceItems(
         : undefined,
       planet: typeof item.planet === 'string' ? item.planet : undefined,
       ruleId: item.ruleId ? String(item.ruleId) : undefined,
-      derivedFromIds: Array.isArray(item.derivedFromIds) ? [...item.derivedFromIds] : undefined
+      derivedFromIds: Array.isArray(item.derivedFromIds)
+        ? [...item.derivedFromIds]
+        : Array.isArray(item.provenance?.derivedFromIds)
+          ? [...item.provenance.derivedFromIds]
+          : Array.isArray(item.relatedEvidenceIds)
+            ? [...item.relatedEvidenceIds]
+            : undefined
     };
   });
 }
@@ -1074,10 +1094,14 @@ function mapCareer(
     },
     activation: {
       dasha: {
-        status: (dashaPeriods.length > 0 || detail?.timing?.status === 'AVAILABLE' || Boolean(detail?.timing?.currentActivation)) ? 'AVAILABLE' : 'UNAVAILABLE',
+        status: (dashaPeriods.length > 0 || detail?.timing?.status === 'AVAILABLE') ? 'AVAILABLE' : 'UNAVAILABLE',
         periods: dashaPeriods,
-        currentActivation: detail?.timing?.currentActivation || detail?.currentActivation,
-        currentPressure: detail?.timing?.currentPressure || detail?.currentPressure
+        currentActivation: detail?.timing?.status === 'AVAILABLE'
+          ? detail.timing.currentActivation || detail.currentActivation
+          : undefined,
+        currentPressure: detail?.timing?.status === 'AVAILABLE'
+          ? detail.timing.currentPressure || detail.currentPressure
+          : undefined
       },
       transit: {
         status: (detail?.timing?.transitEffect || detail?.currentTransitEffect) ? 'AVAILABLE' : 'UNAVAILABLE',

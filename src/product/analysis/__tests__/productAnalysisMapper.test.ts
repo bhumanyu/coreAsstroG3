@@ -12,12 +12,13 @@ import {
   sanitizeSpeculativePropensityDescription,
   mapMethodology,
   mapDashaPeriodOptions,
-  mapConfidence
+  mapConfidence,
+  mapEvidenceItems
 } from '../productAnalysisMapper';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import { listSelectableMdAdPeriods } from '../../../core/analysis/selectedMdAdPeriod';
 import { createUnavailableWealthFinancialDataSet, createUserReportedFinancialDatum, createConnectedFinancialDatum } from '../../../domain/wealth/wealthFinancialData';
-import { createDomainInterpretation, createNatalPromise } from '../../../domain/interpretation';
+import { createDomainInterpretation, createDomainEvidence, createNatalPromise } from '../../../domain/interpretation';
 import type { ProductTemporalRelation } from '../productAnalysisTypes';
 import {
   selectCareer,
@@ -37,6 +38,39 @@ import type { CareerProfessionAnalysis } from '../../../domain/career/careerProf
 import type { CareerOutcomeAnalysis } from '../../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 
 describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
+  it('maps evidence direction and derivation from C4 polarity and provenance, not role', () => {
+    const evidence = createDomainEvidence({
+      id: 'CAREER_STRUCTURAL_TEST',
+      sourceType: 'HOUSE',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'C4_STRUCTURAL_REASONING',
+      statement: 'A structural career challenge.',
+      polarity: 'CHALLENGING',
+      strength: 'MODERATE',
+      priority: 1,
+      ruleId: 'CAREER_STRUCTURAL_TEST',
+      relatedEvidenceIds: [],
+      provenance: {
+        evidenceId: 'CAREER_STRUCTURAL_TEST',
+        ruleId: 'CAREER_STRUCTURAL_TEST',
+        domain: 'CAREER',
+        axis: 'NATAL',
+        source: 'C4_STRUCTURAL_REASONING',
+        effect: 'CHALLENGE',
+        derivedFromIds: ['C4_STRUCTURAL_REASONING'],
+        strength: 'PRIMARY'
+      }
+    });
+
+    expect(mapEvidenceItems([evidence])[0]).toMatchObject({
+      role: 'PRIMARY',
+      direction: 'CHALLENGE',
+      derivedFromIds: ['C4_STRUCTURAL_REASONING']
+    });
+  });
+
   it('preserves UNAVAILABLE confidence through the product confidence mapper', () => {
     expect(mapConfidence('UNAVAILABLE')).toBe('UNAVAILABLE');
     expect(mapConfidence('unavailable')).toBe('UNAVAILABLE');

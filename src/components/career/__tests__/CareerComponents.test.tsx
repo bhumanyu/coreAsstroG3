@@ -297,6 +297,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
             direction: 'SUPPORT',
             effect: 'ACTIVATES',
             evidenceIds: ['ev_md'],
+            evidence: [],
             statement: 'Jupiter Mahadasha establishes primary career elevation.'
           },
           {
@@ -306,6 +307,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
             direction: 'CHALLENGE',
             effect: 'CHALLENGES',
             evidenceIds: ['ev_ad'],
+            evidence: [],
             statement: 'Saturn Antardasha demands procedural discipline.'
           },
           {
@@ -315,6 +317,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
             direction: 'SUPPORT',
             effect: 'ACTIVATES',
             evidenceIds: ['ev_pd'],
+            evidence: [],
             statement: 'Mercury Pratyantardasha enhances negotiations.'
           }
         ]
@@ -350,6 +353,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
             direction: 'CHALLENGE',
             effect: 'CHALLENGES',
             evidenceIds: [],
+            evidence: [],
             conditionAssessment: 'PARTIAL',
             afflictionAssessed: false
           },
@@ -360,6 +364,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
             direction: 'NEUTRAL',
             effect: 'DOES_NOT_ACTIVATE',
             evidenceIds: [],
+            evidence: [],
             conditionAssessment: 'PARTIAL',
             afflictionAssessed: false
           }
@@ -369,6 +374,34 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       render(<CareerDashaSection dasha={dasha} />);
 
       expect(screen.getAllByText('Partially assessed')).toHaveLength(1);
+    });
+
+    it('renders the canonical C9 challenge verdict without a conflicting legacy verdict', () => {
+      const dasha: CareerDashaViewModel = {
+        status: 'AVAILABLE',
+        periods: [{
+          level: 'MD',
+          planet: 'Jupiter',
+          role: 'PRIMARY',
+          direction: 'CHALLENGE',
+          effect: 'CHALLENGES',
+          evidenceIds: ['c9-jupiter-md'],
+          evidence: [{
+            id: 'c9-jupiter-evidence',
+            title: 'Jupiter career relationship',
+            explanation: 'Jupiter supplies challenging career evidence'
+          }],
+          statement: 'C9: Jupiter challenges career.'
+        }]
+      };
+
+      render(<CareerDashaSection dasha={dasha} />);
+
+      expect(screen.getByText('Challenges')).toBeInTheDocument();
+      expect(screen.getByText('C9: Jupiter challenges career.')).toBeInTheDocument();
+      expect(screen.getByText('Canonical C9 evidence')).toBeInTheDocument();
+      expect(screen.getByText('Jupiter supplies challenging career evidence')).toBeInTheDocument();
+      expect(screen.queryByText('STRONGLY_SUPPORTS')).not.toBeInTheDocument();
     });
 
     it('renders clean unavailable state when dasha timing is unavailable', () => {

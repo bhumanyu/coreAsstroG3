@@ -85,6 +85,7 @@ export interface CareerDashaPeriodViewModel {
   readonly direction: ProductDirection;
   readonly effect: ActivationEffect | string;
   readonly evidenceIds: readonly string[];
+  readonly evidence: readonly Pick<UserFacingEvidence, 'id' | 'title' | 'explanation'>[];
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;
@@ -303,6 +304,15 @@ export function selectCareerViewModel(
     statement: career.d10.statement
   };
 
+  const uniqueEvidence = new Map<string, ProductAnalysis['career']['evidence'][number]>();
+  for (const item of career.evidence ?? []) {
+    if (!uniqueEvidence.has(item.id)) uniqueEvidence.set(item.id, item);
+  }
+  const evidence: CareerEvidenceViewModel[] = [...uniqueEvidence.values()].map((item) =>
+    buildUserFacingEvidence(item, copy)
+  );
+  const evidenceById = new Map(evidence.map((item) => [item.id, item]));
+
   const rawPeriods = career.activation.dasha.periods ?? [];
   const sortedPeriods = [...rawPeriods].sort(
     (a, b) => (DASHA_LEVEL_ORDER[a.level] ?? 99) - (DASHA_LEVEL_ORDER[b.level] ?? 99)
@@ -315,6 +325,11 @@ export function selectCareerViewModel(
     direction: p.direction,
     effect: p.effect,
     evidenceIds: p.evidenceIds ?? [],
+    evidence: [...new Set(p.evidenceIds ?? [])]
+      .flatMap(id => {
+        const item = evidenceById.get(id);
+        return item ? [{ id: item.id, title: item.title, explanation: item.explanation }] : [];
+      }),
     statement: p.statement,
     start: p.start,
     end: p.end,
@@ -344,10 +359,6 @@ export function selectCareerViewModel(
       severity: q.severity,
       description: q.description
     })
-  );
-
-  const evidence: CareerEvidenceViewModel[] = (career.evidence ?? []).map((e) =>
-    buildUserFacingEvidence(e, copy)
   );
 
   const assessment = buildUserFacingAssessment({

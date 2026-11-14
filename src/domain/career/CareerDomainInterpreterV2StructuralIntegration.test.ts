@@ -88,6 +88,13 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
         expect(evidence.ruleId).toBeDefined();
         expect(evidence.ruleId).toMatch(/^CAREER_STRUCTURAL_/);
       });
+      const sourceRuleIds = structuralReasoning.evidence.map(
+        evidence => evidence.id.replace(/^CAREER_STRUCTURAL:/, 'CAREER_STRUCTURAL_').replace(/:/g, '_')
+      );
+      expect(new Set(sourceRuleIds).size).toBe(sourceRuleIds.length);
+      structuralEvidence.forEach(evidence => {
+        expect(evidence.provenance?.derivedFromIds).toEqual(['C4_STRUCTURAL_REASONING']);
+      });
 
       // Verify the same ruleId appears in interpretation
       const structuralIds = new Set(structuralEvidence.map(e => e.id));

@@ -596,6 +596,7 @@ export const resources = {
           unavailable: 'Unavailable',
           unknownPlanet: 'Unknown Planet',
           partialAssessment: 'Partially assessed',
+          evidence: 'Canonical C9 evidence',
           unavailableMessage: 'Vimshottari dasha timing calculations are currently unavailable for this career analysis.'
         },
         evidence: {
@@ -1122,7 +1123,10 @@ export const resources = {
           vargaD10Domain: 'vocational capacity',
           vargaD10Unavailable: 'Dasamsa (D10) divisional relationship data is unavailable for this calculation.',
           ruleWithId: 'Rule: {{id}}',
+          ruleReference: 'Rule reference',
           ruleNotSpecified: 'Rule: Not specified',
+          careerStructuralRule: 'Career structural rule',
+          careerStructuralSource: 'C4 structural reasoning',
           derivedFrom: 'Derived from',
           notSpecified: 'Not specified',
           source: 'Source',
@@ -3166,6 +3170,7 @@ export const resources = {
           unavailable: 'उपलब्ध नहीं',
           unknownPlanet: 'अज्ञात ग्रह',
           partialAssessment: 'आंशिक रूप से आकलित',
+          evidence: 'कैनोनिकल C9 साक्ष्य',
           unavailableMessage: 'इस करियर विश्लेषण के लिए विंशोत्तरी दशा समय की गणना अभी उपलब्ध नहीं है।'
         },
         evidence: {
@@ -3692,7 +3697,10 @@ export const resources = {
           vargaD10Domain: 'व्यावसायिक क्षमता',
           vargaD10Unavailable: 'इस गणना के लिए दशांश (D10) विभागीय संबंध डेटा उपलब्ध नहीं है।',
           ruleWithId: 'नियम: {{id}}',
+          ruleReference: 'नियम संदर्भ',
           ruleNotSpecified: 'नियम: निर्दिष्ट नहीं',
+          careerStructuralRule: 'करियर संरचनात्मक नियम',
+          careerStructuralSource: 'C4 संरचनात्मक तर्क',
           derivedFrom: 'इससे व्युत्पन्न',
           notSpecified: 'निर्दिष्ट नहीं',
           source: 'स्रोत',

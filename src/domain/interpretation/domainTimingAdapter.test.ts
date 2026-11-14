@@ -15,6 +15,8 @@ import {
 import { Planet } from '../../types';
 import { resolveSemanticIdentity, tryResolveSemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
 import type { DomainEvidence } from './DomainEvidence';
+import type { CareerDashaCanonicalAnalysis, CareerDashaCanonicalPeriod } from '../career/careerDasha/careerDashaCanonicalTypes';
+import type { CareerInternalArtifacts } from '../career/careerTypes';
 
 describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
   it('returns RESOLVED with matching canonical evidence IDs for MD period', () => {
@@ -178,6 +180,33 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
   });
 
   it('buildNormalizedCareerTiming includes traceability status on each period', () => {
+    const makeCanonicalPeriod = (
+      level: 'MD' | 'AD' | 'PD',
+      planet: Planet,
+      role: CareerDashaCanonicalPeriod['role']
+    ): CareerDashaCanonicalPeriod => ({
+      level,
+      planet,
+      role,
+      effect: 'CHALLENGES',
+      direction: 'CHALLENGE',
+      strength: 'WEAK',
+      statement: `C9 ${level} challenges career.`,
+      conditionAssessment: level === 'MD' ? 'PARTIAL' : level === 'AD' ? 'FULL' : 'UNAVAILABLE',
+      afflictionAssessed: level === 'AD'
+    });
+    const canonicalDashaAnalysis: CareerDashaCanonicalAnalysis = {
+      overallEffect: 'CHALLENGES',
+      overallDirection: 'CHALLENGE',
+      overallStrength: 'WEAK',
+      dominantLevel: 'MD',
+      md: makeCanonicalPeriod('MD', Planet.JUPITER, 'PRIMARY_DRIVER'),
+      ad: makeCanonicalPeriod('AD', Planet.SATURN, 'MODIFIER'),
+      pd: makeCanonicalPeriod('PD', Planet.MARS, 'REFINEMENT'),
+      evidence: [],
+      rootEvidenceIds: [],
+      statement: 'C9 career dasha analysis.'
+    };
     const interpretation = createDomainInterpretation({
       domain: 'CAREER',
       natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
@@ -257,15 +286,12 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
           asOf: '2024-01-01T00:00:00.000Z'
         },
         internalArtifacts: {
-          canonicalDashaAnalysis: {
-            md: { conditionAssessment: 'PARTIAL', afflictionAssessed: false },
-            ad: { conditionAssessment: 'FULL', afflictionAssessed: true },
-            pd: { conditionAssessment: 'UNAVAILABLE', afflictionAssessed: false }
-          }
-        } as any
+          canonicalDashaAnalysis
+        } as CareerInternalArtifacts
       }
     });
 
+    expect(interpretation.conclusionData?.careerDashaSynthesis?.md.effect).toBe('SUPPORTS');
     const timing = buildNormalizedCareerTiming(interpretation);
 
     expect(timing).toBeDefined();
@@ -273,6 +299,9 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     expect(timing?.mahadasha?.traceability).toBe('RESOLVED');
     expect(timing?.antardasha?.traceability).toBe('RESOLVED');
     expect(timing?.pratyantardasha?.traceability).toBe('DEGRADED'); // No PD evidence
+    expect(timing?.mahadasha?.effect).toBe('CHALLENGES');
+    expect(timing?.mahadasha?.statement).toBe('C9 MD challenges career.');
+    expect(timing?.mahadasha?.effect).not.toBe('ACTIVATES');
     expect(timing?.mahadasha).toMatchObject({ conditionAssessment: 'PARTIAL', afflictionAssessed: false });
     expect(timing?.antardasha).toMatchObject({ conditionAssessment: 'FULL', afflictionAssessed: true });
     expect(timing?.pratyantardasha).toMatchObject({ conditionAssessment: 'UNAVAILABLE', afflictionAssessed: false });
@@ -288,17 +317,10 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     } as typeof interpretation;
     const timingWithoutCanonicalDasha = buildNormalizedCareerTiming(interpretationWithoutCanonicalDasha);
 
-    expect(timingWithoutCanonicalDasha?.mahadasha).toBeDefined();
-    expect(timingWithoutCanonicalDasha?.antardasha).toBeDefined();
-    expect(timingWithoutCanonicalDasha?.pratyantardasha).toBeDefined();
-    for (const period of [
-      timingWithoutCanonicalDasha?.mahadasha,
-      timingWithoutCanonicalDasha?.antardasha,
-      timingWithoutCanonicalDasha?.pratyantardasha
-    ]) {
-      expect(period).not.toHaveProperty('conditionAssessment');
-      expect(period).not.toHaveProperty('afflictionAssessed');
-    }
+    expect(timingWithoutCanonicalDasha).toMatchObject({ status: 'UNAVAILABLE' });
+    expect(timingWithoutCanonicalDasha).not.toHaveProperty('mahadasha');
+    expect(timingWithoutCanonicalDasha).not.toHaveProperty('antardasha');
+    expect(timingWithoutCanonicalDasha).not.toHaveProperty('pratyantardasha');
   });
 
   it('buildNormalizedWealthTiming includes traceability status on each period', () => {

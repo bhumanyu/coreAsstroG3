@@ -292,6 +292,7 @@ export function toDomainEvidence(
           axis: 'NATAL',
           source: 'C4_STRUCTURAL_REASONING',
           effect: 'MIXED', // Preserve original MIXED effect
+          derivedFromIds: ['C4_STRUCTURAL_REASONING'],
           strength: provenanceStrength
         },
         ...(house !== undefined ? { house } : {}), // Same house for both occurrences
@@ -321,6 +322,7 @@ export function toDomainEvidence(
           axis: 'NATAL',
           source: 'C4_STRUCTURAL_REASONING',
           effect: 'MIXED', // Preserve original MIXED effect
+          derivedFromIds: ['C4_STRUCTURAL_REASONING'],
           strength: provenanceStrength
         },
         ...(house !== undefined ? { house } : {}), // Same house for both occurrences
@@ -357,6 +359,7 @@ export function toDomainEvidence(
           axis: 'NATAL',
           source: 'C4_STRUCTURAL_REASONING',
           effect: provenanceEffect,
+          derivedFromIds: ['C4_STRUCTURAL_REASONING'],
           strength: provenanceStrength
         },
         ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {}),

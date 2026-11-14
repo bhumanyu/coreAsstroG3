@@ -381,7 +381,16 @@ export function createDomainEvidence(
     ...(evidence.ruleId ? { ruleId: evidence.ruleId } : {}),
     ...(trimmedSourceRecordId ? { sourceRecordId: trimmedSourceRecordId } : {}),
     ...(evidence.notes ? { notes: evidence.notes } : {}),
-    ...(evidence.provenance ? { provenance: Object.freeze(evidence.provenance) } : {}),
+    ...(evidence.provenance
+      ? {
+          provenance: Object.freeze({
+            ...evidence.provenance,
+            ...(evidence.provenance.derivedFromIds
+              ? { derivedFromIds: Object.freeze([...evidence.provenance.derivedFromIds]) }
+              : {})
+          })
+        }
+      : {}),
     ...(evidence.timing ? { timing: Object.freeze({ ...evidence.timing }) } : {}),
     ...(evidence.evidenceFamily ? { evidenceFamily: evidence.evidenceFamily } : {}),
     ...(evidence.dimension ? { dimension: evidence.dimension } : {}),

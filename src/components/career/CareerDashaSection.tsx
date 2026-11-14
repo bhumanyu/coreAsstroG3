@@ -63,6 +63,22 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
           {period.statement}
         </p>
       )}
+
+      {period.evidence.length > 0 && (
+        <div className="border-t border-slate-800/60 pt-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            {t('ui.dasha.evidence')}
+          </p>
+          <ul className="mt-1 space-y-1">
+            {period.evidence.map((item) => (
+              <li key={item.id} className="text-xs text-slate-400">
+                <span className="font-medium text-slate-300">{item.title}: </span>
+                {item.explanation}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };

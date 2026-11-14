@@ -12,13 +12,22 @@ export const ReasoningProvenance: React.FC<ReasoningProvenanceProps> = ({ proven
   const hasRuleId = Boolean(provenance?.ruleId);
   const hasDerivedFrom = Boolean(provenance?.derivedFromIds && provenance.derivedFromIds.length > 0);
   const source = provenance?.source;
+  const ruleLabel = hasRuleId
+    ? provenance?.ruleId?.startsWith('CAREER_STRUCTURAL_')
+      ? t('reasoning.detail.careerStructuralRule')
+      : t('reasoning.detail.ruleReference')
+    : t('reasoning.detail.ruleNotSpecified');
+  const derivedFromLabel = (id: string): string =>
+    id === 'C4_STRUCTURAL_REASONING'
+      ? t('reasoning.detail.careerStructuralSource')
+      : id;
 
   return (
     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/60 text-[11px] font-mono-code text-slate-400">
       {hasRuleId ? (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900 border border-slate-700/80 text-indigo-300">
           <BookOpen className="w-3 h-3 text-indigo-400 shrink-0" aria-hidden="true" />
-          <span>{t('reasoning.detail.ruleWithId', { id: provenance!.ruleId })}</span>
+          <span>{ruleLabel}</span>
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">
@@ -30,7 +39,7 @@ export const ReasoningProvenance: React.FC<ReasoningProvenanceProps> = ({ proven
       {hasDerivedFrom ? (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900 border border-slate-700/80 text-teal-300">
           <GitFork className="w-3 h-3 text-teal-400 shrink-0" aria-hidden="true" />
-          <span>{t('reasoning.detail.derivedFrom')}: {provenance!.derivedFromIds.join(', ')}</span>
+          <span>{t('reasoning.detail.derivedFrom')}: {provenance!.derivedFromIds.map(derivedFromLabel).join(', ')}</span>
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">

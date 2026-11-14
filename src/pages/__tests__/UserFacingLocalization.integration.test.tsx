@@ -8,6 +8,7 @@ import { CareerExpressionSection } from '../../components/career/CareerExpressio
 import { CareerPromiseSection } from '../../components/career/CareerPromiseSection';
 import { CareerDashaSection } from '../../components/career/CareerDashaSection';
 import { CareerAnalyticalAxesSection } from '../../components/career/CareerAnalyticalAxesSection';
+import { ReasoningProvenance } from '../../components/reasoning/ReasoningProvenance';
 import { OverviewPage } from '../OverviewPage';
 import { ReasoningPage } from '../ReasoningPage';
 import { WealthPage } from '../WealthPage';
@@ -134,14 +135,41 @@ describe('user-facing assessment localization at page boundaries', () => {
         role: 'PRIMARY',
         direction: 'CHALLENGE',
         effect: 'CHALLENGES',
-        evidenceIds: [],
+        evidenceIds: ['c9-jupiter-evidence'],
+        evidence: [{
+          id: 'c9-jupiter-evidence',
+          title: 'Jupiter',
+          explanation: 'Jupiter challenges career.'
+        }],
         conditionAssessment: 'PARTIAL',
         afflictionAssessed: false
       }]
     }} />);
 
     expect(screen.getByText('आंशिक रूप से आकलित')).toBeInTheDocument();
+    expect(screen.getByText('कैनोनिकल C9 साक्ष्य')).toBeInTheDocument();
+    expect(screen.getByText('Jupiter challenges career.')).toBeInTheDocument();
     expect(screen.queryByText('ui.dasha.partialAssessment')).not.toBeInTheDocument();
+  });
+
+  it('localizes C4 rule and provenance labels in Hindi without showing internal ids', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    render(
+      <ReasoningProvenance
+        provenance={{
+          ruleId: 'CAREER_STRUCTURAL_LORD_IN_HOUSE_2_8_SUN',
+          derivedFromIds: ['C4_STRUCTURAL_REASONING'],
+          source: 'D1',
+          isAvailable: true
+        }}
+      />
+    );
+
+    expect(screen.getByText('करियर संरचनात्मक नियम')).toBeInTheDocument();
+    expect(screen.getByText('इससे व्युत्पन्न: C4 संरचनात्मक तर्क')).toBeInTheDocument();
+    expect(screen.queryByText(/CAREER_STRUCTURAL/)).not.toBeInTheDocument();
   });
 
   it('localizes the provenance diagnostic and keeps non-activation occurrences visible', async () => {

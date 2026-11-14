@@ -127,18 +127,6 @@ export function getCareerTimingActivations(
   return undefined;
 }
 
-function getCareerConditionMetadata(
-  career: DomainInterpretation,
-  level: 'MD' | 'AD' | 'PD'
-): Pick<CareerPeriodTimingProduct, 'conditionAssessment' | 'afflictionAssessed'> {
-  const analysis = career.conclusionData?.internalArtifacts?.canonicalDashaAnalysis;
-  const period = level === 'MD' ? analysis?.md : level === 'AD' ? analysis?.ad : analysis?.pd;
-  return {
-    ...(period?.conditionAssessment ? { conditionAssessment: period.conditionAssessment } : {}),
-    ...(period?.afflictionAssessed !== undefined ? { afflictionAssessed: period.afflictionAssessed } : {})
-  };
-}
-
 /**
  * Safely extract WealthPeriodTimingActivation array from domain interpretation.
  */
@@ -157,7 +145,8 @@ export function getWealthPeriodTimingActivations(
 }
 
 /**
- * Builds a standardized CareerTimingProduct from a domain interpretation.
+ * Builds the user-facing career timing projection from canonical C9.
+ * Legacy CW-09 timing is not used as a fallback when C9 is unavailable.
  */
 export function buildNormalizedCareerTiming(
   career?: DomainInterpretation,
@@ -165,128 +154,47 @@ export function buildNormalizedCareerTiming(
 ): CareerTimingProduct | undefined {
   if (!career) return undefined;
 
-  const careerDasha = career.conclusionData?.careerDashaSynthesis;
-  if (careerDasha && careerDasha.combined.combinedEffect !== 'INSUFFICIENT_DATA') {
-    const timingAsOf = asOf ?? careerDasha.asOf;
-
-    // Map legacy factor IDs to canonical evidence IDs
-    const mdResult = mapPeriodToCanonicalEvidenceIds(
-      career,
-      'MD',
-      careerDasha.md.planet,
-      careerDasha.md.factors.map((f: { id: string }) => f.id)
-    );
-    const adResult = mapPeriodToCanonicalEvidenceIds(
-      career,
-      'AD',
-      careerDasha.ad.planet,
-      careerDasha.ad.factors.map((f: { id: string }) => f.id)
-    );
-    const pdResult = mapPeriodToCanonicalEvidenceIds(
-      career,
-      'PD',
-      careerDasha.pd.planet,
-      careerDasha.pd.factors.map((f: { id: string }) => f.id)
+  const canonicalDasha = career.conclusionData?.internalArtifacts?.canonicalDashaAnalysis;
+  if (canonicalDasha) {
+    const mapCanonicalPeriod = (level: 'MD' | 'AD' | 'PD'): CareerPeriodTimingProduct => {
+      const period =
+        level === 'MD' ? canonicalDasha.md :
+          level === 'AD' ? canonicalDasha.ad : canonicalDasha.pd;
+      const evidence = mapPeriodToCanonicalEvidenceIds(career, level, period.planet);
+      return {
+        period: level,
+        planet: period.planet,
+        effect: period.effect,
+        evidenceIds: evidence.evidenceIds,
+        traceability: evidence.traceability,
+        conditionAssessment: period.conditionAssessment,
+        afflictionAssessed: period.afflictionAssessed,
+        statement: period.statement,
+        ...(period.start ? { start: period.start } : {}),
+        ...(period.end ? { end: period.end } : {})
+      };
+    };
+    const mahadasha = mapCanonicalPeriod('MD');
+    const antardasha = mapCanonicalPeriod('AD');
+    const pratyantardasha = mapCanonicalPeriod('PD');
+    const hasAvailablePeriod = [mahadasha, antardasha, pratyantardasha].some(
+      period => period.planet !== undefined &&
+        period.effect !== 'UNKNOWN' &&
+        period.effect !== 'INSUFFICIENT_DATA'
     );
 
     return {
-      status: 'AVAILABLE',
-      asOf: timingAsOf,
-      mahadasha: {
-        period: 'MD',
-        planet: careerDasha.md.planet,
-        effect: careerDasha.md.effect,
-        evidenceIds: mdResult.evidenceIds,
-        traceability: mdResult.traceability,
-        ...getCareerConditionMetadata(career, 'MD'),
-        statement: careerDasha.md.summary,
-        ...(careerDasha.md.start ? { start: careerDasha.md.start } : {}),
-        ...(careerDasha.md.end ? { end: careerDasha.md.end } : {})
-      },
-      antardasha: {
-        period: 'AD',
-        planet: careerDasha.ad.planet,
-        effect: careerDasha.ad.effect,
-        evidenceIds: adResult.evidenceIds,
-        traceability: adResult.traceability,
-        ...getCareerConditionMetadata(career, 'AD'),
-        statement: careerDasha.ad.summary,
-        ...(careerDasha.ad.start ? { start: careerDasha.ad.start } : {}),
-        ...(careerDasha.ad.end ? { end: careerDasha.ad.end } : {})
-      },
-      pratyantardasha: {
-        period: 'PD',
-        planet: careerDasha.pd.planet,
-        effect: careerDasha.pd.effect,
-        evidenceIds: pdResult.evidenceIds,
-        traceability: pdResult.traceability,
-        ...getCareerConditionMetadata(career, 'PD'),
-        statement: careerDasha.pd.summary,
-        ...(careerDasha.pd.start ? { start: careerDasha.pd.start } : {}),
-        ...(careerDasha.pd.end ? { end: careerDasha.pd.end } : {})
-      }
+      status: hasAvailablePeriod ? 'AVAILABLE' : 'UNAVAILABLE',
+      asOf: asOf ?? career.asOf ?? career.generatedAt,
+      mahadasha,
+      antardasha,
+      pratyantardasha
     };
   }
 
-  const activations = getCareerTimingActivations(career);
-  if (!activations || activations.length === 0) {
-    return { status: 'UNAVAILABLE', asOf };
-  }
-
-  const { md, ad, pd } = indexDashaPeriodActivations(activations);
-
-  const hasAnyData = [md, ad, pd].some(
-    (p) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
-  );
-  const status: TimingAvailabilityStatus = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
-
-  // Map legacy factor IDs to canonical evidence IDs for each period
-  const mdResult = mapPeriodToCanonicalEvidenceIds(career, 'MD', md?.planet, md?.evidenceIds);
-  const adResult = mapPeriodToCanonicalEvidenceIds(career, 'AD', ad?.planet, ad?.evidenceIds);
-  const pdResult = mapPeriodToCanonicalEvidenceIds(career, 'PD', pd?.planet, pd?.evidenceIds);
-
   return {
-    status,
-    asOf,
-    ...(md
-      ? {
-        mahadasha: {
-          period: 'MD',
-          planet: md.planet,
-          effect: md.effect,
-          evidenceIds: mdResult.evidenceIds,
-          traceability: mdResult.traceability,
-          ...getCareerConditionMetadata(career, 'MD'),
-          statement: md.statement
-        }
-      }
-      : {}),
-    ...(ad
-      ? {
-        antardasha: {
-          period: 'AD',
-          planet: ad.planet,
-          effect: ad.effect,
-          evidenceIds: adResult.evidenceIds,
-          traceability: adResult.traceability,
-          ...getCareerConditionMetadata(career, 'AD'),
-          statement: ad.statement
-        }
-      }
-      : {}),
-    ...(pd
-      ? {
-        pratyantardasha: {
-          period: 'PD',
-          planet: pd.planet,
-          effect: pd.effect,
-          evidenceIds: pdResult.evidenceIds,
-          traceability: pdResult.traceability,
-          ...getCareerConditionMetadata(career, 'PD'),
-          statement: pd.statement
-        }
-      }
-      : {})
+    status: 'UNAVAILABLE',
+    asOf: asOf ?? career.asOf ?? career.generatedAt
   };
 }
 

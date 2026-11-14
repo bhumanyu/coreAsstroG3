@@ -429,6 +429,57 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     });
   });
 
+  it('counts unique evidence from the displayed list and retains challenge-direction factors', () => {
+    const base = createProductAnalysis();
+    const jupiterChallenge = {
+      ...base.career.evidence[0],
+      id: 'ev_jupiter_challenge_150',
+      planet: 'Jupiter',
+      direction: 'CHALLENGE' as const,
+      statement: 'Jupiter challenge component: 1.50.'
+    };
+    const duplicateWithOtherDirection = {
+      ...jupiterChallenge,
+      direction: 'SUPPORT' as const
+    };
+    const dashaPeriods = base.career.activation.dasha.periods.map(period =>
+      period.level === 'MD'
+        ? { ...period, evidenceIds: [jupiterChallenge.id] }
+        : period
+    );
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        activation: {
+          ...base.career.activation,
+          dasha: {
+            ...base.career.activation.dasha,
+            periods: dashaPeriods
+          }
+        },
+        evidence: [
+          jupiterChallenge,
+          duplicateWithOtherDirection,
+          base.career.evidence[0]
+        ]
+      }
+    });
+
+    const vm = selectCareerViewModel(analysis);
+
+    expect(vm.evidence).toHaveLength(2);
+    expect(vm.evidence.find(item => item.id === jupiterChallenge.id)).toMatchObject({
+      direction: 'CHALLENGE',
+      explanation: 'Jupiter challenge component: 1.50'
+    });
+    expect(vm.dasha.md?.evidence).toContainEqual(expect.objectContaining({
+      id: jupiterChallenge.id,
+      explanation: 'Jupiter challenge component: 1.50'
+    }));
+    expect(vm.conclusion.supportingEvidenceCount).toBe(1);
+    expect(vm.conclusion.challengingEvidenceCount).toBe(1);
+  });
+
   it('12. evidence provenance passthrough: preserves derivedFromIds and handles empty arrays', () => {
     const analysis = createProductAnalysis();
     const vm = selectCareerViewModel(analysis);

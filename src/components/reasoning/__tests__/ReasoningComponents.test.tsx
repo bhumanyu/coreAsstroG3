@@ -259,9 +259,27 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Primary Driver')).toBeInTheDocument();
       expect(screen.getByText('Supporting')).toBeInTheDocument();
       expect(screen.getByText('Mars exalted in Capricorn in 10th house.')).toBeInTheDocument();
-      expect(screen.getByText('Rule: RULE_RUCHAKA_YOGA')).toBeInTheDocument();
+      expect(screen.getByText('Rule reference')).toBeInTheDocument();
+      expect(screen.queryByText('RULE_RUCHAKA_YOGA')).not.toBeInTheDocument();
       expect(screen.getByText('Derived from: ev_mars_capricorn')).toBeInTheDocument();
       expect(screen.getByText('Source: CAREER_ENGINE')).toBeInTheDocument();
+    });
+
+    it('localizes C4 provenance without rendering its internal rule or source ids', () => {
+      render(
+        <ReasoningProvenance
+          provenance={{
+            ruleId: 'CAREER_STRUCTURAL_LORD_IN_HOUSE_2_8_SUN',
+            derivedFromIds: ['C4_STRUCTURAL_REASONING'],
+            source: 'D1',
+            isAvailable: true
+          }}
+        />
+      );
+
+      expect(screen.getByText('Career structural rule')).toBeInTheDocument();
+      expect(screen.getByText('Derived from: C4 structural reasoning')).toBeInTheDocument();
+      expect(screen.queryByText(/CAREER_STRUCTURAL/)).not.toBeInTheDocument();
     });
 
     it('renders neutral text when ruleId and derivedFromIds are absent instead of null (§22, §40)', () => {
