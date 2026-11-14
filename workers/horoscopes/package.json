@@ -7,7 +7,7 @@
     "npm": "10.9.2"
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --var ALLOWED_ORIGIN:*",
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

@@ -67,12 +67,21 @@ async function fetchWithTimeout(
   effectiveDate: Date,
   timeoutMs: number
 ) {
+  const controller = new AbortController();
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
-    timeoutHandle = setTimeout(() => reject(new Error('Forecast provider timeout.')), timeoutMs);
+    timeoutHandle = setTimeout(() => {
+      controller.abort();
+      const error = new Error('Forecast provider timeout.');
+      error.name = 'TimeoutError';
+      reject(error);
+    }, timeoutMs);
   });
   try {
-    return await Promise.race([provider.fetchForecast(query, effectiveDate), timeout]);
+    return await Promise.race([
+      provider.fetchForecast(query, effectiveDate, controller.signal),
+      timeout
+    ]);
   } finally {
     if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
   }
@@ -105,10 +114,6 @@ async function handleForecast(
     }
   } catch (error) {
     console.error('Horoscope cache read failed.', error);
-    return jsonResponse(request, env, {
-      code: 'CACHE_UNAVAILABLE',
-      message: 'Forecast cache is unavailable.'
-    }, 503);
   }
 
   let forecast: Awaited<ReturnType<HoroscopeProvider['fetchForecast']>>;
@@ -140,10 +145,6 @@ async function handleForecast(
     await putCachedForecast(env.HOROSCOPE_CACHE, cacheKey, forecast, query.period);
   } catch (error) {
     console.error('Horoscope cache write failed.', error);
-    return jsonResponse(request, env, {
-      code: 'CACHE_UNAVAILABLE',
-      message: 'Forecast cache is unavailable.'
-    }, 503);
   }
 
   return jsonResponse(request, env, forecast, 200);
@@ -175,10 +176,12 @@ export async function handleRequest(
     return new Response(null, { status: 204, headers });
   }
   if (request.method !== 'GET') {
-    return jsonResponse(request, env, {
-      code: 'NOT_FOUND',
-      message: 'Not found.'
-    }, 404);
+    const response = jsonResponse(request, env, {
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'Only GET and OPTIONS are supported.'
+    }, 405);
+    response.headers.set('Allow', 'GET, OPTIONS');
+    return response;
   }
   return handleForecast(request, env, provider, options);
 }

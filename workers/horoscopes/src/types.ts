@@ -50,7 +50,7 @@ export interface ForecastQuery {
 
 export interface HoroscopeProvider {
   readonly cacheId: 'fixture' | 'starsapi';
-  fetchForecast(query: ForecastQuery, effectiveDate: Date): Promise<RashiForecast>;
+  fetchForecast(query: ForecastQuery, effectiveDate: Date, signal?: AbortSignal): Promise<RashiForecast>;
 }
 
 export interface HoroscopeCache {
