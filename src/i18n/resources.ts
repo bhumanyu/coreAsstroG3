@@ -2076,7 +2076,10 @@ export const resources = {
         PROFESSION_INPUTS_MISSING: 'One or more profession-analysis inputs are missing',
         NO_PROFESSION_RULE_MATCHED: 'Expression candidates were present, but no profession rule matched',
         NO_PROFESSION_CANDIDATES_AVAILABLE: 'No profession candidates were produced',
-        PROFESSION_RANKING_REJECTED_BY_D1_GATE: 'Candidates exist, but the D1 promise gate rejected ranking'
+        PROFESSION_RANKING_REJECTED_BY_D1_GATE: 'Candidates exist, but the D1 promise gate rejected ranking',
+        PROFESSION_D10_CANDIDATES_REMOVED: 'Some candidates were removed during D10 qualification',
+        PROFESSION_ZERO_EVIDENCE_CANDIDATES: 'Some candidates have no linked canonical evidence',
+        PROFESSION_PARTIAL_LINKAGE_CANDIDATES: 'Some candidates have partial source linkage'
       },
       careerRequiredCheck: {
         SKILLS_AND_EXPERIENCE_FIT: 'Skills and experience fit',
@@ -4480,7 +4483,10 @@ export const resources = {
         PROFESSION_INPUTS_MISSING: 'व्यवसाय विश्लेषण के एक या अधिक इनपुट अनुपलब्ध हैं',
         NO_PROFESSION_RULE_MATCHED: 'अभिव्यक्ति उम्मीदवार थे, लेकिन कोई व्यवसाय नियम मेल नहीं खाया',
         NO_PROFESSION_CANDIDATES_AVAILABLE: 'कोई व्यवसाय उम्मीदवार नहीं निकला',
-        PROFESSION_RANKING_REJECTED_BY_D1_GATE: 'उम्मीदवार मौजूद हैं, लेकिन D1 संकेत-शर्त ने क्रम निर्धारण अस्वीकार किया'
+        PROFESSION_RANKING_REJECTED_BY_D1_GATE: 'उम्मीदवार मौजूद हैं, लेकिन D1 संकेत-शर्त ने क्रम निर्धारण अस्वीकार किया',
+        PROFESSION_D10_CANDIDATES_REMOVED: 'D10 पुष्टि के दौरान कुछ उम्मीदवार हटाए गए',
+        PROFESSION_ZERO_EVIDENCE_CANDIDATES: 'कुछ उम्मीदवारों के साथ कोई जुड़ा हुआ canonical साक्ष्य नहीं है',
+        PROFESSION_PARTIAL_LINKAGE_CANDIDATES: 'कुछ उम्मीदवारों का स्रोत-संबंध आंशिक है'
       },
       careerRequiredCheck: {
         SKILLS_AND_EXPERIENCE_FIT: 'कौशल और अनुभव का मेल',

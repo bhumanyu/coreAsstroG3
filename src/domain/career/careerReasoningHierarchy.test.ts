@@ -4,7 +4,10 @@ import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { Planet, type Horoscope } from '../../types';
 import { interpretCareerV2 } from './CareerDomainInterpreterV2';
 import { createDomainEvidence } from '../interpretation/DomainEvidence';
-import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
+import {
+  deriveDashaTimingConfidence,
+  evaluateCareerReasoningHierarchy
+} from './careerReasoningHierarchy';
 import { createVargaConfirmation } from '../interpretation/VargaConfirmation';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
@@ -29,6 +32,84 @@ function makeOptions(horoscope: Horoscope, asOf: string = '2024-06-01T00:00:00.0
 describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)', () => {
   const canonicalHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
     asOf: '2024-06-01T00:00:00.000Z'
+  });
+
+  describe('Canonical Dasha confidence', () => {
+    it('does not assign full confidence when planet context is unresolved', () => {
+      expect(deriveDashaTimingConfidence('FULL', false)).toBe(0);
+    });
+
+    describe('Transit availability', () => {
+      it('marks transit direction unavailable when there is no transit input', () => {
+        const result = evaluateCareerReasoningHierarchy({ evidence: [] });
+
+        expect(result.transitDirection).toBe('UNAVAILABLE');
+      });
+
+      it('marks present neutral-only transit evidence as neutral', () => {
+        const neutralTransit = createDomainEvidence({
+          id: 'EV_TRANSIT_NEUTRAL',
+          sourceType: 'TRANSIT',
+          domain: 'CAREER',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Transit evidence is present without a directional polarity',
+          polarity: 'NEUTRAL',
+          strength: 'MODERATE',
+          priority: 50
+        });
+
+        const result = evaluateCareerReasoningHierarchy({
+          evidence: [],
+          transitEvidence: [neutralTransit]
+        });
+
+        expect(result.transitDirection).toBe('NEUTRAL');
+      });
+
+      it('marks transit evidence with both polarities as mixed', () => {
+        const supportiveTransit = createDomainEvidence({
+          id: 'EV_TRANSIT_SUPPORT',
+          sourceType: 'TRANSIT',
+          domain: 'CAREER',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Supportive transit evidence',
+          polarity: 'SUPPORTING',
+          strength: 'MODERATE',
+          priority: 50
+        });
+        const challengingTransit = createDomainEvidence({
+          id: 'EV_TRANSIT_CHALLENGE',
+          sourceType: 'TRANSIT',
+          domain: 'CAREER',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Challenging transit evidence',
+          polarity: 'CHALLENGING',
+          strength: 'MODERATE',
+          priority: 50
+        });
+
+        const result = evaluateCareerReasoningHierarchy({
+          evidence: [],
+          transitEvidence: [supportiveTransit, challengingTransit]
+        });
+
+        expect(result.transitDirection).toBe('MIXED');
+      });
+    });
+
+    it('uses lower confidence for a partial condition assessment', () => {
+      expect(deriveDashaTimingConfidence('PARTIAL', true)).toBe(0.5);
+    });
+
+    it('assigns no confidence when condition assessment is unavailable', () => {
+      expect(deriveDashaTimingConfidence('UNAVAILABLE', true)).toBe(0);
+    });
   });
 
   it('X1: CW-01 is executed unconditionally with options', () => {
@@ -304,6 +385,63 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
   });
 
   describe('Manifestation Gating & Independence Resolution', () => {
+    it('qualifies manifestation prose when support has only one independent source', () => {
+      const supporting = createDomainEvidence({
+        id: 'EV_LEADERSHIP_SINGLE',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        role: 'SECONDARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Sun supports leadership',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 70,
+        ruleId: 'CAREER_SUN_RELEVANCE_001',
+        planet: Planet.SUN
+      });
+
+      const result = evaluateCareerReasoningHierarchy({ evidence: [supporting] });
+      const leadership = result.manifestations.find((m) => m.mode === 'LEADERSHIP');
+
+      expect(leadership?.statement).toMatch(/^Limited independent corroboration:/);
+    });
+
+    it('qualifies manifestation prose when matching counter-evidence is present', () => {
+      const supporting = createDomainEvidence({
+        id: 'EV_LEADERSHIP_SUPPORT',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        role: 'SECONDARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Sun supports leadership',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 70,
+        ruleId: 'CAREER_SUN_RELEVANCE_001',
+        planet: Planet.SUN
+      });
+      const challenging = createDomainEvidence({
+        id: 'EV_LEADERSHIP_CHALLENGE',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'SECONDARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Career factors challenge leadership',
+        polarity: 'CHALLENGING',
+        strength: 'MODERATE',
+        priority: 60,
+        ruleId: 'CAREER_SUN_RELEVANCE_001'
+      });
+
+      const result = evaluateCareerReasoningHierarchy({ evidence: [supporting, challenging] });
+      const leadership = result.manifestations.find((m) => m.mode === 'LEADERSHIP');
+
+      expect(leadership?.statement).toMatch(/^Counter-evidence is present: Limited independent corroboration:/);
+    });
+
     it('Independence gating: 3 duplicate evidence items sharing the same key yield PARTIALLY_SUPPORTED, not SUPPORTED', () => {
       // 3 items with identical independence key (same sourceType, base ruleId, source, phase, planet)
       const ev1 = createDomainEvidence({

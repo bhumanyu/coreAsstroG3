@@ -6,6 +6,7 @@ import type {
   CareerPatternHouseRole
 } from '../careerPattern/careerPatternTypes';
 import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
+import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import type { CareerPlanetaryRelevance } from '../careerPlanetaryRelevance';
 import type { CareerPlanetaryConditionResult } from '../careerPlanetaryCondition';
 import type { Planet } from '../../../types';
@@ -225,6 +226,7 @@ export interface QualificationPolicyContext {
   readonly pattern: CareerPattern;
   readonly relevanceByPlanet: ReadonlyMap<Planet, CareerPlanetaryRelevance>;
   readonly conditionByPlanet: ReadonlyMap<Planet, CareerPlanetaryConditionResult>;
+  readonly networks?: readonly CareerHouseNetwork[];
 }
 
 /**
@@ -251,6 +253,7 @@ export interface PolicyEvaluationResult {
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly ruleId: string;
   readonly explanation: string;
+  readonly diagnostics?: readonly 'LEGACY_RELATIONSHIP_ID_FALLBACK'[];
 }
 
 /**
@@ -322,6 +325,7 @@ export interface CareerPatternQualificationInput {
   readonly patterns: readonly CareerPattern[];
   readonly relevance: readonly CareerPlanetaryRelevance[];
   readonly condition: readonly CareerPlanetaryConditionResult[];
+  readonly networks?: readonly CareerHouseNetwork[];
 }
 
 /**
@@ -330,4 +334,8 @@ export interface CareerPatternQualificationInput {
  */
 export interface CareerPatternQualificationResult {
   readonly qualifiedPatterns: readonly QualifiedCareerPattern[];
+  readonly diagnostics?: readonly {
+    readonly patternId: string;
+    readonly code: 'LEGACY_RELATIONSHIP_ID_FALLBACK';
+  }[];
 }

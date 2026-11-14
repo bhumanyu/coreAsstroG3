@@ -49,8 +49,13 @@ export class QualificationPortAdapter implements QualificationPort {
     readonly patterns: readonly import('../careerPattern/careerPatternTypes').CareerPattern[];
     readonly relevance: readonly import('../careerPlanetaryRelevance').CareerPlanetaryRelevance[];
     readonly condition: readonly import('../careerPlanetaryCondition').CareerPlanetaryConditionResult[];
+    readonly networks?: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[];
   }): {
     readonly qualifiedPatterns: readonly import('../careerPatternQualification/careerPatternQualificationTypes').QualifiedCareerPattern[];
+    readonly diagnostics?: readonly {
+      readonly patternId: string;
+      readonly code: 'LEGACY_RELATIONSHIP_ID_FALLBACK';
+    }[];
   } {
     return qualifyCareerPatterns(input);
   }

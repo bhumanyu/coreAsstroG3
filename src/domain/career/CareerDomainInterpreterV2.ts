@@ -10,6 +10,7 @@ import {
   createTransitTrigger,
   createVargaConfirmation,
   createDomainConclusion,
+  createDomainManifestation,
   calculateEvidenceConfidence,
   detectDomainConflicts
 } from '../interpretation';
@@ -69,7 +70,10 @@ import {
 } from './careerConclusion';
 import { calculateCareerDataCompleteness } from './careerDataCompleteness';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
-import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
+import {
+  deriveDashaTimingConfidence,
+  evaluateCareerReasoningHierarchy
+} from './careerReasoningHierarchy';
 import { synthesizeCareerTransit, synthesizeCareerTiming, type CareerTimingSynthesis } from '../timing/careerWealthTiming';
 import { synthesizeCareerManifestations } from './manifestation/careerManifestationSynthesis';
 import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
@@ -635,19 +639,28 @@ export function interpretCareerV2(
         level: 'MD',
         effect: mdActivation.effect,
         evidenceIds: mdActivation.evidenceIds ?? [],
-        confidence: 1.0
+        confidence: deriveDashaTimingConfidence(
+          canonicalDashaAnalysis.md.conditionAssessment,
+          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'MD')?.contextResolved === true
+        )
       },
       ad: {
         level: 'AD',
         effect: adActivation.effect,
         evidenceIds: adActivation.evidenceIds ?? [],
-        confidence: 1.0
+        confidence: deriveDashaTimingConfidence(
+          canonicalDashaAnalysis.ad.conditionAssessment,
+          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'AD')?.contextResolved === true
+        )
       },
       pd: {
         level: 'PD',
         effect: pdActivation.effect,
         evidenceIds: pdActivation.evidenceIds ?? [],
-        confidence: 1.0
+        confidence: deriveDashaTimingConfidence(
+          canonicalDashaAnalysis.pd.conditionAssessment,
+          canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'PD')?.contextResolved === true
+        )
       }
     },
     transitEvidence,
@@ -670,10 +683,14 @@ export function interpretCareerV2(
     : undefined;
   if (forecastContext?.ok) {
     const careerTransitSynthesis = synthesizeCareerTransit(horoscope, forecastContext.value, careerDashaSynthesis);
-    careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
+    careerTimingSynthesis = synthesizeCareerTiming(
+      mapC11StrengthToDomain(preliminaryC11Result.natalStrength),
+      careerDashaSynthesis,
+      careerTransitSynthesis
+    );
   } else {
     careerTimingSynthesis = Object.freeze({
-      natalPromise: cw01Result.natalStrength,
+      natalPromise: mapC11StrengthToDomain(preliminaryC11Result.natalStrength),
       dashaEffect: careerDashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA',
       transitEffect: 'INSUFFICIENT_DATA',
       overallEffect: 'INSUFFICIENT_DATA',
@@ -685,15 +702,21 @@ export function interpretCareerV2(
     });
   }
 
+  const preliminaryC11Manifestations = mapC11Manifestations(
+    preliminaryC11Result,
+    // CW-01 supplies only the compatibility mode list; C11 supplies all displayed values.
+    cw01Result.manifestations,
+    evidence
+  );
   const conclusionData = buildCareerConclusionData(
-    natalStrength,
+    mapC11StrengthToDomain(preliminaryC11Result.natalStrength),
     d10Relationship,
     timingActivations,
     transitTrigger,
     conflicts,
-    cw01Result.manifestations,
-    cw01Result.supportingSourceIds,
-    cw01Result.challengingSourceIds,
+    preliminaryC11Manifestations,
+    [], // C11 does not expose a polarity-specific split of source IDs.
+    [], // C11 does not expose a polarity-specific split of source IDs.
     foundationWithAdapterDiagnostics,
     c11ValidationStatus,
     undefined, // evidenceContinuityReport will be added after final C11 is built
@@ -702,8 +725,11 @@ export function interpretCareerV2(
     undefined // careerProfessionAnalysis will be added after Gate F
   );
 
+  // This CW-01 conclusion is retained only as an input to legacy statement adapters;
+  // the returned DomainConclusion below is built from canonical C11.
   const conclusion = createDomainConclusion({
     domain: 'CAREER',
+    // Legacy adapter value only; the returned strength is mapped from canonical C11 below.
     strength: cw01Result.finalStrength,
     confidence: calculateEvidenceConfidence(evidence, {
       dataCompleteness: dataCompleteness.primaryFactors === 'COMPLETE' ? 'COMPLETE' : (dataCompleteness.primaryFactors === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT'),
@@ -720,10 +746,11 @@ export function interpretCareerV2(
       {
         timingActivations,
         conflicts,
-        manifestations: cw01Result.manifestations,
+        manifestations: preliminaryC11Manifestations,
         conclusionData
       }
     ),
+    // CW-01 evidence-role projections are legacy-adapter-only; C11 does not distinguish them.
     primaryEvidenceIds: cw01Result.primaryEvidenceIds,
     supportingEvidenceIds: cw01Result.supportingEvidenceIds,
     challengingEvidenceIds: cw01Result.challengingEvidenceIds,
@@ -756,6 +783,12 @@ export function interpretCareerV2(
   });
 
   const canonicalC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(finalCanonicalC11Input);
+  const canonicalManifestations = mapC11Manifestations(
+    canonicalC11Result,
+    // CW-01 supplies only the compatibility mode list; C11 supplies all displayed values.
+    cw01Result.manifestations,
+    evidence
+  );
 
   // B01: Build orthogonal axis projections from the same canonical C4-C10 inputs.
   // Keep them beside (not inside) CareerFinalSynthesisResult so the frozen C11 contract
@@ -996,24 +1029,6 @@ export function interpretCareerV2(
   };
 
   /**
-   * P2-08D: Exhaustive Strength Mapping
-   *
-   * Map canonical C11 CareerFinalStrength to DomainStrength.
-   * This is exhaustive over the C11 strength union to catch future changes at compile time.
-   */
-  const mapC11StrengthToDomain = (c11Strength: CareerFinalStrength): DomainStrength => {
-    switch (c11Strength) {
-      case 'VERY_STRONG': return 'VERY_STRONG';
-      case 'STRONG': return 'STRONG';
-      case 'MODERATE': return 'MODERATE';
-      case 'MIXED': return 'MIXED';
-      case 'WEAK': return 'WEAK';
-      case 'VERY_WEAK': return 'VERY_WEAK';
-      case 'UNDETERMINED': return 'UNDETERMINED';
-    }
-  };
-
-  /**
    * P2-08D: Trace Adapter Helpers
    *
    * Map canonical C11 fields to legacy trace graph shape.
@@ -1123,7 +1138,7 @@ export function interpretCareerV2(
    * New code should read from conclusionData.canonicalCareerFinalSynthesis instead.
    */
   const legacyCareerFinalSynthesis = synthesizeCareerFinal({
-    natalPromise: cw01Result.natalStrength,
+    natalPromise: mapC11StrengthToDomain(canonicalC11Result.natalStrength),
     dashaSynthesis: careerDashaSynthesis,
     timingSynthesis: careerTimingSynthesis,
     manifestationSynthesis: careerManifestationSynthesis,
@@ -1175,7 +1190,7 @@ export function interpretCareerV2(
 
   const reasoningTraceGraph = buildCareerReasoningTraceGraph({
     evidence,
-    natalStrength: cw01Result.natalStrength,
+    natalStrength: mapC11StrengthToDomain(canonicalC11Result.natalStrength),
     careerDashaSynthesis,
     careerTimingSynthesis,
     d10Relationship,
@@ -1231,15 +1246,22 @@ export function interpretCareerV2(
     dashaActivation,
     transitTrigger,
     vargaConfirmations,
-    manifestations: cw01Result.manifestations,
+    manifestations: canonicalManifestations,
     conflicts,
     conclusion: c11AdaptedConclusion, // P2-08D: Use canonical C11 conclusion
     timingActivations,
     dataCompleteness,
     conclusionData: {
       ...conclusionData,
-      currentActivation: cw01Result.currentActivation,
-      currentPressure: cw01Result.currentPressure,
+      natalStatus: mapC11StrengthToDomain(canonicalC11Result.natalStrength),
+      currentActivation: mapC11TimingStatusToActivation(canonicalC11Result.timingStatus),
+      currentPressure: canonicalC11Result.currentPressure,
+      dominantManifestations: Object.freeze(
+        canonicalC11Result.expressions
+          .filter(expression => canonicalC11Result.strongestExpressions.includes(expression.mode))
+          .map(expression => expression.mode)
+      ),
+      headline: canonicalC11Result.statement,
       careerDashaSynthesis,
       careerTimingSynthesis,
       careerManifestationSynthesis,
@@ -1256,6 +1278,7 @@ export function interpretCareerV2(
       professionAnalysisFailure, // P2-11F Gate F: Profession analysis failure diagnostic (non-fatal)
       internalArtifacts // PBA-07: Internal canonical artifacts for selected-period synthesis
     },
+    // The trace retains CW-01's legacy layer details; the conclusion authority is canonical C11.
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01' // Keep version as CW-01 for downstream compatibility
   }, {
@@ -1594,6 +1617,62 @@ export function evaluateTransitEffect(
     return 'CHALLENGE';
   }
   return 'TRIGGER';
+}
+
+function mapC11StrengthToDomain(c11Strength: CareerFinalStrength): DomainStrength {
+  switch (c11Strength) {
+    case 'VERY_STRONG': return 'VERY_STRONG';
+    case 'STRONG': return 'STRONG';
+    case 'MODERATE': return 'MODERATE';
+    case 'MIXED': return 'MIXED';
+    case 'WEAK': return 'WEAK';
+    case 'VERY_WEAK': return 'VERY_WEAK';
+    case 'UNDETERMINED': return 'UNDETERMINED';
+  }
+}
+
+function mapC11TimingStatusToActivation(
+  status: CareerFinalSynthesisResult['timingStatus']
+): 'ACTIVE' | 'PARTIALLY_ACTIVE' | 'INACTIVE' | 'LOW' | 'UNKNOWN' {
+  switch (status) {
+    case 'ACTIVE': return 'ACTIVE';
+    case 'PARTIALLY_ACTIVE': return 'PARTIALLY_ACTIVE';
+    case 'CHALLENGED': return 'LOW';
+    case 'NOT_ACTIVE': return 'INACTIVE';
+    case 'UNKNOWN': return 'UNKNOWN';
+  }
+}
+
+function mapC11Manifestations(
+  c11: CareerFinalSynthesisResult,
+  compatibilityModes: readonly DomainManifestation[],
+  domainEvidence: readonly DomainEvidence[]
+): readonly DomainManifestation[] {
+  const confidence: DomainManifestation['confidence'] =
+    c11.confidence === 'HIGH' ? 'HIGH'
+      : c11.confidence === 'MEDIUM' ? 'MODERATE' : 'LOW';
+
+  return Object.freeze(compatibilityModes.map(compatibilityMode => {
+    const expression = c11.expressions.find(item => item.mode === compatibilityMode.mode);
+    const status: NonNullable<DomainManifestation['status']> = expression
+      ? expression.direction === 'SUPPORT' ? 'SUPPORTED'
+        : expression.direction === 'CONDITIONAL' ? 'PARTIALLY_SUPPORTED'
+          : expression.direction === 'CHALLENGE' ? 'CHALLENGED'
+            : expression.direction === 'MIXED' ? 'MIXED' : 'INSUFFICIENT_DATA'
+      : 'INSUFFICIENT_DATA';
+
+    return createDomainManifestation({
+      mode: compatibilityMode.mode,
+      confidence,
+      status,
+      statement: c11.statement,
+      evidenceIds: Object.freeze(Array.from(new Set(
+        (expression?.evidenceIds ?? []).flatMap(identityKey =>
+          domainEvidence.filter(item => item.identityKey === identityKey).map(item => item.id)
+        )
+      )))
+    });
+  }));
 }
 
 // Re-exports from modular files for full backward compatibility

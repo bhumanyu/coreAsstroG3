@@ -1,4 +1,5 @@
 import type { CareerPattern } from '../careerPattern/careerPatternTypes';
+import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import type { CareerPlanetaryRelevance, CareerPlanetRelevance } from '../careerPlanetaryRelevance';
 import type { CareerPlanetaryConditionResult, CareerPlanetaryCondition } from '../careerPlanetaryCondition';
 import type { Planet } from '../../../types';
@@ -358,7 +359,12 @@ function buildQualificationStatement(
 function qualifyPattern(
   pattern: CareerPattern,
   relevanceByPlanet: Map<Planet, CareerPlanetaryRelevance>,
-  conditionByPlanet: Map<Planet, CareerPlanetaryConditionResult>
+  conditionByPlanet: Map<Planet, CareerPlanetaryConditionResult>,
+  networks: readonly CareerHouseNetwork[] | undefined,
+  diagnostics: Array<{
+    readonly patternId: string;
+    readonly code: 'LEGACY_RELATIONSHIP_ID_FALLBACK';
+  }>
 ): QualifiedCareerPattern {
   const participants = buildParticipantQualifications(
     pattern,
@@ -391,10 +397,14 @@ function qualifyPattern(
     const policyContext = Object.freeze({
       pattern,
       relevanceByPlanet: Object.freeze(new Map(relevanceByPlanet)),
-      conditionByPlanet: Object.freeze(new Map(conditionByPlanet))
+      conditionByPlanet: Object.freeze(new Map(conditionByPlanet)),
+      ...(networks !== undefined ? { networks } : {})
     });
 
     const policyResult = policy.evaluate(policyContext);
+    for (const code of policyResult.diagnostics ?? []) {
+      diagnostics.push({ patternId: pattern.patternId, code });
+    }
 
     // Use policy status and evidence, but keep legacy dimensions
     policyEvidence = [...policyResult.evidence];
@@ -472,7 +482,7 @@ function qualifyPattern(
 export function qualifyCareerPatterns(
   input: CareerPatternQualificationInput
 ): CareerPatternQualificationResult {
-  const { patterns, relevance, condition } = input;
+  const { patterns, relevance, condition, networks } = input;
 
   // Build maps with deterministic duplicate normalization
   // Collect all records per planet first
@@ -505,11 +515,16 @@ export function qualifyCareerPatterns(
   );
 
   // Qualify each pattern
+  const diagnostics: Array<{
+    readonly patternId: string;
+    readonly code: 'LEGACY_RELATIONSHIP_ID_FALLBACK';
+  }> = [];
   const qualifiedPatterns = sortedPatterns.map(pattern =>
-    qualifyPattern(pattern, relevanceByPlanet, conditionByPlanet)
+    qualifyPattern(pattern, relevanceByPlanet, conditionByPlanet, networks, diagnostics)
   );
 
   return Object.freeze({
-    qualifiedPatterns: Object.freeze(qualifiedPatterns)
+    qualifiedPatterns: Object.freeze(qualifiedPatterns),
+    diagnostics: Object.freeze(diagnostics)
   });
 }

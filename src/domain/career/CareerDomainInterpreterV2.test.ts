@@ -87,6 +87,7 @@ import type {
 import {
   buildCareerFinalAnalysis
 } from './careerFinalSynthesis/careerFinalSynthesisIntegration';
+import * as CareerFinalSynthesisIntegration from './careerFinalSynthesis/careerFinalSynthesisIntegration';
 import {
   EMPTY_CAREER_NATAL_ANALYSIS
 } from './careerNatalAnalysis';
@@ -1959,6 +1960,61 @@ describe('CareerDomainInterpreterV2', () => {
 
       // Conclusion statement should match canonical C11 statement
       expect(v2.conclusion.statement).toBe(canonicalC11.statement);
+    });
+
+    it('CAR-013: conflicting C11 output controls all user-facing conclusion projections', () => {
+      const buildOriginal = CareerFinalSynthesisIntegration.buildCareerFinalAnalysis;
+      const c11Spy = vi.spyOn(CareerFinalSynthesisIntegration, 'buildCareerFinalAnalysis')
+        .mockImplementation(input => {
+          const result = buildOriginal(input);
+          return Object.freeze({
+            ...result,
+            finalStatus: 'CHALLENGED',
+            finalDirection: 'CHALLENGE',
+            finalStrength: 'VERY_WEAK',
+            confidence: 'LOW',
+            natalStrength: 'VERY_WEAK',
+            timingStatus: 'CHALLENGED',
+            currentPressure: 'HIGH',
+            statement: 'Injected canonical C11 authority',
+            expressions: Object.freeze(result.expressions.map(expression => Object.freeze({
+              ...expression,
+              direction: 'CHALLENGE' as const,
+              qualified: false,
+              evidenceIds: Object.freeze([])
+            }))),
+            strongestExpressions: Object.freeze([])
+          });
+        });
+
+      try {
+        const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+        const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis;
+
+        expect(canonicalC11?.statement).toBe('Injected canonical C11 authority');
+        expect(v2.conclusion.strength).toBe('VERY_WEAK');
+        expect(v2.conclusion.statement).toBe('Injected canonical C11 authority');
+        expect(v2.conclusionData?.natalStatus).toBe('VERY_WEAK');
+        expect(v2.conclusionData?.currentActivation).toBe('LOW');
+        expect(v2.conclusionData?.currentPressure).toBe('HIGH');
+        expect(v2.conclusionData?.headline).toBe('Injected canonical C11 authority');
+        expect(v2.conclusionData?.dominantManifestations).toEqual([]);
+        expect(v2.conclusionData?.supportingSourceIds).toEqual([]);
+        expect(v2.conclusionData?.challengingSourceIds).toEqual([]);
+        for (const manifestation of v2.manifestations) {
+          const matchingExpression = canonicalC11?.expressions.find(
+            (expression: CareerFinalExpression) => expression.mode === manifestation.mode
+          );
+          expect(manifestation.status).toBe(
+            matchingExpression ? 'CHALLENGED' : 'INSUFFICIENT_DATA'
+          );
+          expect(manifestation.confidence).toBe('LOW');
+          expect(manifestation.statement).toBe('Injected canonical C11 authority');
+          expect(manifestation.evidenceIds).toEqual([]);
+        }
+      } finally {
+        c11Spy.mockRestore();
+      }
     });
 
     // Finding 3: Gate D acceptance-boundary test - throws on invalid continuity

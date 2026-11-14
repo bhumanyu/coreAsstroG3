@@ -1,4 +1,6 @@
 import type { CareerPattern } from '../careerPattern/careerPatternTypes';
+import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
+import { hasDirectedHouseRelationship } from '../careerPattern/careerPatternPredicates';
 import type { CareerPlanetaryRelevance } from '../careerPlanetaryRelevance';
 import type { CareerPlanetaryConditionResult } from '../careerPlanetaryCondition';
 import type { Planet } from '../../../types';
@@ -104,31 +106,23 @@ export function hasAllEstablishingRelationships(
 }
 
 /**
- * Checks if the pattern has a directed house relationship ID from fromHouse to toHouse.
- * This is a temporary ID-string check that examines establishingRelationshipIds for the pattern.
- *
- * CONTRACT: This helper depends on identity-key format and should be removed when
- * QualificationPolicyContext gains canonical relationship access in P2-07B. At that point,
- * policies should call the real P2-06 predicates (hasDirectedHouseRelationship(network, 6, 10)
- * style) from careerPatternPredicates.ts instead of parsing identity strings.
- *
- * TODO(P2-07B): Resolve via canonical edge semantics by extending QualificationPolicyContext
- * to carry source CareerHouseNetwork[] and using the frozen P2-06A hasDirectedHouseRelationship
- * predicate from careerPatternPredicates.ts.
- *
- * Note: The ID format `REL:...` is a temporary contract. This helper should be replaced with
- * canonical relationship resolution once the context exposes networks.
- *
- * @param pattern - The career pattern to check
- * @param fromHouse - Source house number
- * @param toHouse - Target house number
- * @returns true if a directed relationship ID from fromHouse to toHouse exists
+ * Uses canonical edge semantics when networks are supplied. The ID path remains
+ * only for legacy callers that do not yet provide network context.
  */
 export function hasDirectedHouseRelationshipId(
   pattern: CareerPattern,
   fromHouse: number,
-  toHouse: number
+  toHouse: number,
+  networks?: readonly CareerHouseNetwork[],
+  diagnostics?: string[]
 ): boolean {
+  if (networks !== undefined) {
+    return networks
+      .filter(network => pattern.networkIds.includes(network.networkId))
+      .some(network => hasDirectedHouseRelationship(network, fromHouse, toHouse));
+  }
+
+  diagnostics?.push('LEGACY_RELATIONSHIP_ID_FALLBACK');
   const establishingIds = pattern.provenance.establishingRelationshipIds;
 
   // Check for relationship IDs that represent the directed flow fromHouse → toHouse

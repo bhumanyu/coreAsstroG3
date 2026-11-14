@@ -213,6 +213,8 @@ export interface CareerProfessionCandidate {
   readonly expressionTypes: readonly CareerExpressionType[];
   readonly mechanismTypes: readonly CareerMechanismType[];
   readonly patternIds: readonly string[];
+  /** Linkage completeness for source mechanisms; UNRESOLVED candidates are not emitted. */
+  readonly linkageCoverage?: 'FULL' | 'PARTIAL' | 'UNRESOLVED';
   readonly d10Status: CareerProfessionD10Status;
   readonly d10Qualification?: CareerProfessionD10Qualification;
   /** Canonical DomainEvidence occurrence IDs linked to this candidate. */
@@ -311,6 +313,15 @@ export interface CareerProfessionAnalysis {
   readonly ranking?: CareerProfessionRanking;
   readonly status: CareerProfessionAnalysisStatus;
   readonly diagnostics?: readonly CareerProfessionAnalysisDiagnostic[];
+  /** Stage counts are populated by the engine; optional for legacy external fixtures. */
+  readonly stageCounts?: {
+    readonly inputExpressions: number;
+    readonly matchedRules: number;
+    readonly generatedCandidates: number;
+    readonly d10QualifiedCandidates: number;
+    readonly rankingEligibleCandidates: number;
+    readonly rankedCandidates: number;
+  };
   readonly unresolvedExpressionTypes: readonly CareerExpressionType[];
   readonly mappedTypes: readonly CareerExpressionType[];
   readonly missingInputs: readonly string[];
@@ -321,7 +332,10 @@ export type CareerProfessionAnalysisDiagnostic =
   | 'PROFESSION_INPUTS_MISSING'
   | 'NO_PROFESSION_RULE_MATCHED'
   | 'NO_PROFESSION_CANDIDATES_AVAILABLE'
-  | 'PROFESSION_RANKING_REJECTED_BY_D1_GATE';
+  | 'PROFESSION_RANKING_REJECTED_BY_D1_GATE'
+  | 'PROFESSION_D10_CANDIDATES_REMOVED'
+  | 'PROFESSION_ZERO_EVIDENCE_CANDIDATES'
+  | 'PROFESSION_PARTIAL_LINKAGE_CANDIDATES';
 
 /**
  * Career profession provenance.

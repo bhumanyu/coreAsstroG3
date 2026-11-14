@@ -51,6 +51,15 @@ describe('Career Profession Engine (P2-10A)', () => {
       expect(result.candidates).toHaveLength(1);
       expect(result.candidates[0].domain).toBe('LEADERSHIP');
       expect(result.candidates[0].family).toBe('EXECUTIVE_MANAGEMENT');
+      expect(result.candidates[0].linkageCoverage).toBe('FULL');
+      expect(result.stageCounts).toEqual({
+        inputExpressions: 1,
+        matchedRules: 1,
+        generatedCandidates: 1,
+        d10QualifiedCandidates: 1,
+        rankingEligibleCandidates: 0,
+        rankedCandidates: 0
+      });
     });
 
     it('should not emit candidates for expression types with no matching rule', () => {
@@ -89,6 +98,42 @@ describe('Career Profession Engine (P2-10A)', () => {
       expect(result.candidates).toHaveLength(1);
       expect(result.diagnostics).toContain('PROFESSION_RANKING_REJECTED_BY_D1_GATE');
       expect(result.ranking?.diagnostics).toContain('D1_NATAL_PROMISE_MIXED_CONTESTED');
+    });
+
+    it('marks existing candidates PARTIAL when ranking is unavailable despite complete inputs', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const result = buildCareerProfessionAnalysis({
+        expressions: createMockExpressionAnalysisResult([
+          createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
+        ]),
+        mechanisms: [authorityMechanism],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation(),
+        careerD10CanonicalAnalysis: {
+          availability: 'AVAILABLE',
+          natalDirection: 'STRONG' as any,
+          natalStrength: 'STRONG' as any,
+          d10Effect: 'REINFORCES',
+          d10Direction: 'SUPPORT',
+          d10Strength: 'STRONG',
+          qualifiedDirection: 'SUPPORT',
+          qualifiedStrength: 'STRONG',
+          natalPromisePreserved: true,
+          relationship: 'REINFORCES',
+          evidence: [],
+          conflicts: [],
+          expressionQualifications: [],
+          rootEvidenceIds: [],
+          statement: 'D10 analysis'
+        },
+        domainEvidence: [],
+        natalPromiseDirection: 'MIXED'
+      });
+
+      expect(result.candidates).toHaveLength(1);
+      expect(result.missingInputs).toEqual([]);
+      expect(result.ranking?.status).toBe('UNAVAILABLE');
+      expect(result.status).toBe('PARTIAL');
     });
   });
 
@@ -184,7 +229,7 @@ describe('Career Profession Engine (P2-10A)', () => {
       const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
 
       // Expression that references both mechanisms (required for STRONG source-linkage contract)
-      const compositeExpression = createMockExpressionCandidate(
+      const compositeExpression = createMockQualifiedExpressionCandidate(
         'INNOVATION_WORK',
         'PATTERN_1',
         [innovationMechanism.candidateId, authorityMechanism.candidateId]
@@ -645,7 +690,7 @@ describe('Career Profession Engine (P2-10A)', () => {
       const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
 
       // Expression that references BOTH mechanisms (shared source linkage)
-      const compositeExpression = createMockExpressionCandidate(
+      const compositeExpression = createMockQualifiedExpressionCandidate(
         'INNOVATION_WORK',
         'PATTERN_1',
         [innovationMechanism.candidateId, authorityMechanism.candidateId]
@@ -674,6 +719,26 @@ describe('Career Profession Engine (P2-10A)', () => {
       expect(technicalLeadershipCandidate).toBeDefined();
       expect(technicalLeadershipCandidate!.domain).toBe('TECHNOLOGY');
       expect(technicalLeadershipCandidate!.family).toBe('TECHNICAL_LEADERSHIP');
+    });
+
+    it('CAR-010: rejects co-occurring mechanisms without a qualified canonical relationship', () => {
+      const innovationMechanism = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const unqualifiedExpression = createMockExpressionCandidate(
+        'INNOVATION_WORK',
+        'PATTERN_1',
+        [innovationMechanism.candidateId, authorityMechanism.candidateId]
+      );
+      const result = buildCareerProfessionAnalysis({
+        expressions: createMockExpressionAnalysisResult([unqualifiedExpression]),
+        mechanisms: [innovationMechanism, authorityMechanism],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      });
+
+      expect(result.candidates.some(
+        candidate => candidate.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+      )).toBe(false);
     });
 
     it('should accept expression with partial source resolution (at least one sourceMechanismId resolves)', () => {
@@ -880,13 +945,13 @@ describe('Career Profession Engine (P2-10A)', () => {
   });
 
   describe('Spec P2: Status semantics', () => {
-    it('should not report INSUFFICIENT_DATA for mechanism-only match that emits candidates', () => {
+    it('should report PARTIAL for mechanism-only candidates when ranking is unavailable', () => {
       // Mechanisms with shared source linkage via expression
       const innovationMechanism = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
       const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
 
       // Expression that references both mechanisms (required for STRONG source-linkage contract)
-      const compositeExpression = createMockExpressionCandidate(
+      const compositeExpression = createMockQualifiedExpressionCandidate(
         'INNOVATION_WORK',
         'PATTERN_1',
         [innovationMechanism.candidateId, authorityMechanism.candidateId]
@@ -922,7 +987,7 @@ describe('Career Profession Engine (P2-10A)', () => {
         career10HFoundation: createMock10HFoundation(),
         career10LFoundation: createMock10LFoundation(),
         careerD10CanonicalAnalysis: mockD10Analysis,
-        domainEvidence: [] // Empty domainEvidence is sufficient for COMPLETE status
+        domainEvidence: []
       };
 
       const result = buildCareerProfessionAnalysis(input);
@@ -930,9 +995,8 @@ describe('Career Profession Engine (P2-10A)', () => {
       // Should emit technical-leadership composite candidate from mechanisms
       expect(result.candidates.length).toBeGreaterThanOrEqual(1);
 
-      // Status should not be INSUFFICIENT_DATA since candidates were established
-      expect(result.status).not.toBe('INSUFFICIENT_DATA');
-      expect(result.status).toBe('COMPLETE');
+      expect(result.ranking?.status).toBe('UNAVAILABLE');
+      expect(result.status).toBe('PARTIAL');
     });
   });
 
@@ -1055,7 +1119,7 @@ describe('Career Profession Engine (P2-10A)', () => {
       const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
 
       // Qualifying expression references only one INNOVATION + the AUTHORITY
-      const compositeExpression = createMockExpressionCandidate(
+      const compositeExpression = createMockQualifiedExpressionCandidate(
         'INNOVATION_WORK',
         'PATTERN_1',
         [innovationMechanism1.candidateId, authorityMechanism.candidateId]
@@ -1163,6 +1227,7 @@ describe('Career Profession Engine (P2-10A)', () => {
       expect(expressionEvidence!.linkage).toBe('PARTIAL');
       expect(expressionEvidence!.resolvedMechanismIds).toContain(authorityMechanism.candidateId);
       expect(expressionEvidence!.unresolvedMechanismIds).toContain('NON_EXISTENT_MECH_ID');
+      expect(authorityCandidate!.linkageCoverage).toBe('PARTIAL');
     });
   });
 });
@@ -1214,6 +1279,17 @@ function createMockExpressionCandidate(
     pathway: 'PATTERN' as any,
     evidence: [],
     provenance
+  };
+}
+
+function createMockQualifiedExpressionCandidate(
+  expressionType: string,
+  patternId: string,
+  sourceMechanismIds: string[]
+): CareerExpressionCandidate & { readonly qualificationStatus: 'QUALIFIED' } {
+  return {
+    ...createMockExpressionCandidate(expressionType, patternId, sourceMechanismIds),
+    qualificationStatus: 'QUALIFIED'
   };
 }
 

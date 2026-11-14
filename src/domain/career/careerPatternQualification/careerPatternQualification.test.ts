@@ -30,7 +30,12 @@ import type {
   CareerPlanetaryConditionResult
 } from '../careerPlanetaryCondition';
 import { Planet } from '../../../types';
-import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
+import type {
+  CareerNetworkTopology,
+  CareerNetworkDirection,
+  CareerHouseNetwork
+} from '../careerGraph/careerHouseNetworkTypes';
+import type { CareerGraphEdge } from '../careerGraph/careerAstroGraphTypes';
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import { buildCareerStructuralReasoning } from '../careerStructuralReasoningIntegration';
@@ -84,6 +89,39 @@ function makePattern(
       supportingRelationshipIds: []
     }),
     ...overrides
+  });
+}
+
+function makeDirectedServiceProfessionNetwork(): CareerHouseNetwork {
+  const edge = (
+    edgeId: string,
+    type: CareerGraphEdge['type'],
+    sourceNodeId: string,
+    targetNodeId: string
+  ): CareerGraphEdge => Object.freeze({
+    edgeId,
+    type,
+    sourceNodeId,
+    targetNodeId,
+    identityKey: edgeId,
+    provenance: Object.freeze({ sourceIds: [], ruleIds: [], parentIds: [] })
+  });
+
+  return Object.freeze({
+    networkId: 'network-1',
+    identityKey: 'network-identity-1',
+    houses: [6, 10, 11],
+    lords: [Planet.MERCURY, Planet.SATURN],
+    relationships: Object.freeze([
+      edge('LORD:6', 'LORD_OF', 'PLANET:MERCURY', 'HOUSE:6'),
+      edge('OCCUPIES:6-10', 'OCCUPIES', 'PLANET:MERCURY', 'HOUSE:10'),
+      edge('LORD:10', 'LORD_OF', 'PLANET:SATURN', 'HOUSE:10'),
+      edge('OCCUPIES:10-11', 'OCCUPIES', 'PLANET:SATURN', 'HOUSE:11')
+    ]),
+    topology: 'CHAIN',
+    direction: 'FORWARD',
+    provenance: Object.freeze({ sourceIds: [], ruleIds: [], parentIds: [] }),
+    evidenceIds: []
   });
 }
 
@@ -1356,6 +1394,81 @@ describe('Career Pattern Qualification', () => {
     });
 
     describe('Service-to-Profession-to-Gains Policy', () => {
+      it('uses directed canonical network edges instead of relationship ID strings', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: [],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: [],
+            supportingRelationshipIds: []
+          })
+        });
+        const network = makeDirectedServiceProfessionNetwork();
+        const result = qualifyCareerPatterns({
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          networks: [network]
+        });
+
+        expect(result.qualifiedPatterns[0].policyEvidence[0].explanation).toContain(
+          'has both required establishing relationships'
+        );
+        expect(result.diagnostics).toEqual([]);
+      });
+
+      it('does not use legacy relationship IDs when canonical networks are present', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+        const result = qualifyCareerPatterns({
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          networks: [{
+            ...makeDirectedServiceProfessionNetwork(),
+            relationships: []
+          }]
+        });
+
+        expect(result.qualifiedPatterns[0].status).toBe('UNQUALIFIED');
+        expect(result.qualifiedPatterns[0].policyEvidence[0].explanation).toContain(
+          'Neither found.'
+        );
+      });
+
+      it('reports the legacy ID fallback when network context is omitted', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+        const result = qualifyCareerPatterns({
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        });
+
+        expect(result.diagnostics).toContainEqual({
+          patternId: 'pattern-1',
+          code: 'LEGACY_RELATIONSHIP_ID_FALLBACK'
+        });
+      });
+
       it('returns UNQUALIFIED when both 6→10 and 10→11 relationships are absent', () => {
         const pattern = makePattern({
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',

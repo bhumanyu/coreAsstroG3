@@ -113,3 +113,9 @@ Golden tests in `careerDashaActivation.test.ts`:
 
 - Renamed `relationshipIds` to `relatedPlanetIds` in `CareerDashaActivationEvidence` to accurately reflect that these are planet names, not relationship provenance IDs
 - Updated all references in activation logic and tests
+
+## Deferred Reliability Follow-ups
+
+- Current-period activation is distinct from hierarchy completeness. A future status must report whether the current MD/AD/PD context is activated separately from whether all three hierarchy levels were assessed; do not infer one from the other.
+- Richer Dasha modeling for target, role, and condition coverage remains deferred. Preserve the canonical C9 hierarchy and evidence gates until a separate contract defines those dimensions.
+- Transit modeling remains binary-polarity-only until a canonical producer and a versioned target/strength/role contract are available. Missing transit evidence stays UNAVAILABLE, not NEUTRAL.

@@ -10,15 +10,10 @@ const directionCases: ReadonlyArray<readonly [string, ProductDirection]> = [
   ['UNKNOWN', 'UNAVAILABLE'],
   ['INSUFFICIENT_DATA', 'UNAVAILABLE'],
   ['UNAVAILABLE', 'UNAVAILABLE'],
-  ['VERY_STRONG', 'SUPPORT'],
-  ['STRONG', 'SUPPORT'],
   ['STRONGLY_SUPPORTED', 'SUPPORT'],
   ['SUPPORTED', 'SUPPORT'],
   ['SUPPORT', 'SUPPORT'],
-  ['MODERATE', 'MIXED'],
   ['MIXED', 'MIXED'],
-  ['WEAK', 'CHALLENGE'],
-  ['VERY_WEAK', 'CHALLENGE'],
   ['CHALLENGED', 'CHALLENGE'],
   ['CHALLENGE', 'CHALLENGE'],
   ['NEUTRAL', 'NEUTRAL'],
@@ -48,7 +43,12 @@ describe('mapDirection', () => {
     'UNRECOGNIZED_EFFECT',
     'ACTIVATES_WITH_UNKNOWN_SUFFIX',
     'NOT_ACTIVATES',
-    'NOT_STRONG'
+    'NOT_STRONG',
+    'VERY_STRONG',
+    'STRONG',
+    'MODERATE',
+    'WEAK',
+    'VERY_WEAK'
   ])('fails closed for %s', (source) => {
     expect(mapDirection(source)).toBe('UNAVAILABLE');
   });

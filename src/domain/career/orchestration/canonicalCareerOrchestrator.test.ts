@@ -320,7 +320,8 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(ports.qualification.qualifyCareerPatterns).toHaveBeenCalledWith({
         patterns,
         relevance,
-        condition
+        condition,
+        networks: []
       });
     });
 

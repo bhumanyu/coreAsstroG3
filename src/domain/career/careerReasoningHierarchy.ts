@@ -40,7 +40,20 @@ import type {
 } from '../reasoning/reasoningTypes';
 
 import { CAREER_MANIFESTATION_RULES } from './careerReasoningRules';
-import { calculateManifestationConfidence } from './careerManifestations';
+import {
+  calculateManifestationConfidence,
+  groupEvidenceByIndependence
+} from './careerManifestations';
+
+export function deriveDashaTimingConfidence(
+  conditionAssessment: 'FULL' | 'PARTIAL' | 'UNAVAILABLE' | undefined,
+  contextResolved: boolean
+): number {
+  if (!contextResolved) return 0;
+  if (conditionAssessment === 'FULL') return 1;
+  if (conditionAssessment === 'PARTIAL') return 0.5;
+  return 0;
+}
 
 export interface CareerReasoningResult extends HierarchicalDomainResult {
   readonly reasoningTrace: ReasoningTrace;
@@ -58,25 +71,37 @@ export function deriveCareerReasoningManifestations(
 
   for (const [modeKey, rules] of Object.entries(CAREER_MANIFESTATION_RULES)) {
     const ruleSet = new Set(rules);
-    const supporting = evidence.filter((item) => {
-      if (item.polarity !== 'SUPPORTING') return false;
+    const matchesRules = (item: DomainEvidence): boolean => {
       if (item.ruleId) {
         const baseRule = item.ruleId.split(':')[0];
         if (ruleSet.has(item.ruleId) || ruleSet.has(baseRule)) return true;
       }
       return false;
-    });
+    };
+    const supporting = evidence.filter((item) =>
+      item.polarity === 'SUPPORTING' && matchesRules(item)
+    );
+    const challenging = evidence.filter((item) =>
+      item.polarity === 'CHALLENGING' && matchesRules(item)
+    );
 
     const rawConfidence = calculateManifestationConfidence(supporting);
-    const confidence = (
-      rawConfidence === 'VERY_HIGH' ||
-      rawConfidence === 'HIGH' ||
-      rawConfidence === 'MODERATE' ||
-      rawConfidence === 'LOW' ||
-      rawConfidence === 'VERY_LOW'
-    ) ? rawConfidence : 'LOW';
+    let confidence: DomainManifestation['confidence'];
+    switch (rawConfidence) {
+      case 'VERY_HIGH':
+      case 'HIGH':
+      case 'MODERATE':
+      case 'LOW':
+      case 'VERY_LOW':
+        confidence = rawConfidence;
+        break;
+      default: {
+        const exhaustive: never = rawConfidence;
+        throw new Error(`Unrecognized career manifestation confidence: ${String(exhaustive)}`);
+      }
+    }
     const mode = modeKey as ManifestationMode;
-    const status = resolveManifestationStatus(supporting);
+    const status = resolveManifestationStatus(supporting, challenging);
 
     let statement = '';
     if (supporting.length > 0) {
@@ -107,6 +132,14 @@ export function deriveCareerReasoningManifestations(
       }
     } else {
       statement = `Limited or insufficient structural evidence for ${modeKey.toLowerCase().replace(/_/g, ' ')} in available natal factors.`;
+    }
+
+    const independentSupportCount = groupEvidenceByIndependence(supporting).size;
+    if (independentSupportCount === 1) {
+      statement = `Limited independent corroboration: ${statement}`;
+    }
+    if (challenging.length > 0) {
+      statement = `Counter-evidence is present: ${statement}`;
     }
 
     manifestations.push(
@@ -195,8 +228,9 @@ export function evaluateCareerReasoningHierarchy(params: {
 
   // 5. Resolve Transit Trigger Direction
   // TODO(CW-01 Follow-up Issue #6): Implement rich transit target/strength/role modeling beyond binary polarity checks.
-  let transitDirection: ReasoningDirection = 'NEUTRAL';
+  let transitDirection: ReasoningDirection = 'UNAVAILABLE';
   if (transitEvidence.length > 0) {
+    transitDirection = 'NEUTRAL';
     const hasTransitChallenge = transitEvidence.some((e) => e.polarity === 'CHALLENGING');
     const hasTransitSupport = transitEvidence.some((e) => e.polarity === 'SUPPORTING');
     if (hasTransitChallenge && hasTransitSupport) {

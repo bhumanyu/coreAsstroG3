@@ -151,3 +151,7 @@ The test suite covers:
 - P2-06: Career graph networks and relationships
 - C5: Career Planetary Relevance
 - C6: Career Planetary Condition
+
+## Deferred Resolution-State Contract
+
+The current result intentionally contains only evidence-backed assignments; absence from `assignments` is not a negative role determination. A future participant-resolution model may distinguish resolved, unresolved, and unavailable states, but must not infer that an omitted participant was assessed or had no role. This is documentation only; the P2-07B output contract and gates remain unchanged.

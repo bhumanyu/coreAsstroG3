@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { DomainInterpretation } from '../../domain/interpretation';
+import { createDomainEvidence } from '../../domain/interpretation/DomainEvidence';
 import type {
   CareerFinalSynthesisResult,
   CareerFinalStatus,
@@ -113,7 +114,7 @@ describe('careerIntelligenceProjection', () => {
         reasoningVersion: 'C11',
         domain: 'CAREER'
         // Missing finalStatus, finalDirection, etc.
-      } as any;
+      } as unknown as DomainInterpretation;
       expect(isCareerFinalSynthesisResult(partial)).toBe(false);
     });
 
@@ -430,6 +431,193 @@ describe('careerIntelligenceProjection', () => {
   });
 
   describe('projectCanonicalCareerC11', () => {
+    it('CAR-014: does not upgrade unavailable D1, partial C9, unassessed sustainability, or unavailable ranking', () => {
+      const interpretation: DomainInterpretation = {
+        domain: 'CAREER',
+        conclusionData: {
+          canonicalCareerFinalSynthesis: {
+            reasoningVersion: 'C11',
+            domain: 'CAREER',
+            finalStatus: 'INSUFFICIENT_DATA' as CareerFinalStatus,
+            finalDirection: 'UNAVAILABLE' as CareerFinalDirection,
+            finalStrength: 'UNDETERMINED' as CareerFinalStrength,
+            confidence: 'LOW' as CareerFinalConfidence,
+            confidenceCoverage: {
+              status: 'PARTIAL',
+              quality: 'LOW',
+              layers: [],
+              missingRequiredLayers: ['NATAL_PROMISE'],
+              missingSupportingLayers: ['DASHA'],
+              missingOptionalLayers: [],
+              provenance: 'PARTIAL'
+            },
+            confidenceReasons: [],
+            natalDirection: 'UNAVAILABLE' as CareerFinalDirection,
+            natalStrength: 'UNDETERMINED' as CareerFinalStrength,
+            expressionStatus: 'UNAVAILABLE' as CareerFinalDirection,
+            d10Direction: 'SUPPORT' as CareerFinalDirection,
+            d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+            dashaEffect: 'INSUFFICIENT_DATA' as CareerDashaActivationEffect,
+            dashaDirection: 'UNAVAILABLE' as CareerFinalDirection,
+            timingStatus: 'UNKNOWN' as CareerFinalTimingStatus,
+            transitDirection: 'UNAVAILABLE' as CareerFinalDirection,
+            currentPressure: 'NONE',
+            expressions: [],
+            strongestExpressions: [],
+            challengedExpressions: [],
+            conflicts: [],
+            evidenceIds: [],
+            sourceIds: [],
+            ruleIds: [],
+            evidenceTrace: { evidenceIds: [], sourceIds: [], ruleIds: [] },
+            statement: 'Natal promise is unavailable; D10 provides no independent promise.'
+          },
+          canonicalDashaAnalysis: {
+            overallEffect: 'INSUFFICIENT_DATA',
+            overallDirection: 'UNAVAILABLE',
+            hierarchy: { conditionAssessment: 'PARTIAL' }
+          },
+          careerAnalyticalAxes: {
+            sustainability: {
+              status: 'UNAVAILABLE',
+              result: { assessment: 'NOT_ASSESSED' }
+            }
+          }
+        }
+      } as unknown as DomainInterpretation;
+
+      const projected = projectCanonicalCareerC11(interpretation);
+      const profession = projectCareerProfessionAnalysis({
+        candidates: [],
+        ranking: {
+          policyVersion: 'B04-PROFESSION-RANKING-v1',
+          status: 'UNAVAILABLE',
+          rankedCandidates: [],
+          diagnostics: ['D1_NATAL_PROMISE_NOT_ESTABLISHED']
+        },
+        status: 'PARTIAL',
+        diagnostics: [],
+        stageCounts: {
+          inputExpressions: 0,
+          matchedRules: 0,
+          generatedCandidates: 0,
+          d10QualifiedCandidates: 0,
+          rankingEligibleCandidates: 0,
+          rankedCandidates: 0
+        },
+        unresolvedExpressionTypes: [],
+        mappedTypes: [],
+        missingInputs: [],
+        provenance: {
+          expressionIds: [],
+          mechanismIds: [],
+          patternIds: [],
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        }
+      });
+
+      expect(projected?.d10Direction).toBe('SUPPORT');
+      expect(projected?.natalDirection).toBe('UNAVAILABLE');
+      expect(projected?.natalStrength).toBe('UNDETERMINED');
+      expect(projected?.finalDirection).toBe('UNAVAILABLE');
+      expect(projected?.finalStatus).toBe('INSUFFICIENT_DATA');
+      expect(projected?.dashaEffect).toBe('INSUFFICIENT_DATA');
+      expect(projected?.confidence).toBe('LOW');
+      expect(projected?.statement).toContain('no independent promise');
+      expect('sustainability' in (projected ?? {})).toBe(false);
+      expect(profession.status).toBe('PARTIAL');
+      expect(profession.candidates).toEqual([]);
+      expect('rankedCandidates' in profession).toBe(false);
+    });
+
+    it('CAR-011: canonical C11 wins identityKey collisions without importing occurrence evidence', () => {
+      const firstEvidence = createDomainEvidence({
+        id: 'occurrence-support',
+        identityKey: 'shared-semantic-identity',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Occurrence-specific supporting evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 90
+      });
+      const secondEvidence = createDomainEvidence({
+        id: 'occurrence-challenge',
+        identityKey: 'shared-semantic-identity',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Occurrence-specific challenging evidence',
+        polarity: 'CHALLENGING',
+        strength: 'STRONG',
+        priority: 90
+      });
+      const canonicalC11: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED' as CareerFinalStatus,
+        finalDirection: 'SUPPORT' as CareerFinalDirection,
+        finalStrength: 'STRONG' as CareerFinalStrength,
+        confidence: 'HIGH' as CareerFinalConfidence,
+        confidenceCoverage: {
+          status: 'COMPLETE',
+          quality: 'HIGH',
+          layers: [],
+          missingRequiredLayers: [],
+          missingSupportingLayers: [],
+          missingOptionalLayers: [],
+          provenance: 'COMPLETE'
+        },
+        confidenceReasons: [],
+        natalDirection: 'SUPPORT' as CareerFinalDirection,
+        natalStrength: 'STRONG' as CareerFinalStrength,
+        expressionStatus: 'SUPPORT' as CareerFinalDirection,
+        d10Direction: 'UNAVAILABLE' as CareerFinalDirection,
+        d10Effect: 'UNAVAILABLE' as CareerD10QualificationEffect,
+        dashaEffect: 'INSUFFICIENT_DATA' as CareerDashaActivationEffect,
+        dashaDirection: 'UNAVAILABLE' as CareerFinalDirection,
+        timingStatus: 'UNKNOWN' as CareerFinalTimingStatus,
+        transitDirection: 'UNAVAILABLE' as CareerFinalDirection,
+        currentPressure: 'NONE',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['shared-semantic-identity'],
+        sourceIds: ['canonical-source-winner'],
+        ruleIds: ['canonical-rule-winner'],
+        evidenceTrace: {
+          evidenceIds: ['shared-semantic-identity'],
+          sourceIds: ['canonical-source-winner'],
+          ruleIds: ['canonical-rule-winner']
+        },
+        statement: 'Canonical C11 identity winner',
+        contradictoryDashaEvidence: []
+      };
+      const toInterpretation = (evidence: readonly [typeof firstEvidence, typeof secondEvidence]) => ({
+        domain: 'CAREER',
+        evidence,
+        conclusionData: { canonicalCareerFinalSynthesis: canonicalC11 }
+      } as unknown as DomainInterpretation);
+
+      const projected = projectCanonicalCareerC11(toInterpretation([firstEvidence, secondEvidence]));
+      const permuted = projectCanonicalCareerC11(toInterpretation([secondEvidence, firstEvidence]));
+
+      expect(projected).toEqual(permuted);
+      expect(projected?.canonicalEvidenceIds).toEqual(['shared-semantic-identity']);
+      expect(projected?.canonicalSourceIds).toEqual(['canonical-source-winner']);
+      expect(projected?.canonicalRuleIds).toEqual(['canonical-rule-winner']);
+      expect(projected?.statement).toBe('Canonical C11 identity winner');
+      expect(projected?.statement).not.toContain('Occurrence-specific');
+    });
+
     it('should project valid canonical C11 result', () => {
       const interpretation: DomainInterpretation = {
         domain: 'CAREER',

@@ -97,6 +97,7 @@ The result is attached as a sibling downstream artifact to `CareerConclusionData
 - Natal-linked challenge with B01 risk/activation provenance is retained as generic only.
 - Missing canonical Dasha evidence suppresses a challenge window.
 - Overlapping source windows remain distinct.
+- Distinct source event IDs remain distinct even when their semantic evidence identity lists are equal; source event identity is not deduplicated by matching evidence alone.
 - All ten taxonomy entries remain unvalidated and no specific event candidate is emitted.
 - Observed B02 facts remain separate.
 - Deterministic output under event input permutation.

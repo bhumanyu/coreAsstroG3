@@ -101,7 +101,7 @@ export function buildCareerProfessionAnalysis(
   // Resolve candidates within each pattern scope
   const candidates: CareerProfessionCandidate[] = [];
   const allConsumedExpressionTypes = new Set<CareerExpressionType>();
-  let anyCandidateEstablished = false;
+  let matchedRuleCount = 0;
 
   for (const patternId of allPatternIds) {
     const patternExpressions = expressionsByPattern[patternId] || [];
@@ -116,6 +116,7 @@ export function buildCareerProfessionAnalysis(
       career10LFoundation,
       domainEvidence
     );
+    matchedRuleCount += patternResult.matchedRuleCount;
 
     // Track consumed expression types
     for (const candidate of patternResult.candidates) {
@@ -126,9 +127,6 @@ export function buildCareerProfessionAnalysis(
 
     candidates.push(...patternResult.candidates);
   }
-
-  // Track whether any candidate was established (for status determination)
-  anyCandidateEstablished = candidates.length > 0;
 
   // Apply D10 qualification to existing candidates only
   const d10QualifiedCandidates = applyD10Qualification(candidates, careerD10CanonicalAnalysis);
@@ -160,19 +158,6 @@ export function buildCareerProfessionAnalysis(
     missingInputs.push('domainEvidence');
   }
 
-  // Compute status based on minimum-input contract
-  // INSUFFICIENT_DATA: no profession candidates were established
-  // PARTIAL: candidates established but some tracked inputs are missing
-  // COMPLETE: candidates established and all optional inputs present
-  let status: CareerProfessionAnalysisStatus;
-  if (!anyCandidateEstablished) {
-    status = 'INSUFFICIENT_DATA';
-  } else if (missingInputs.length > 0) {
-    status = 'PARTIAL';
-  } else {
-    status = 'COMPLETE';
-  }
-
   // Build provenance from emitted candidates' evidence only
   const provenance = buildProvenance(d10QualifiedCandidates);
   const ranking = buildCareerProfessionRanking({
@@ -181,9 +166,34 @@ export function buildCareerProfessionAnalysis(
     natalPromiseDirection: input.natalPromiseDirection
   });
 
+  let status: CareerProfessionAnalysisStatus;
+  if (candidates.length === 0) {
+    status = 'INSUFFICIENT_DATA';
+  } else if (missingInputs.length > 0 || ranking.status !== 'AVAILABLE') {
+    status = 'PARTIAL';
+  } else {
+    status = 'COMPLETE';
+  }
+
   const diagnostics: CareerProfessionAnalysisDiagnostic[] = [];
+  const d10RemovedCandidateCount = candidates.length - d10QualifiedCandidates.length;
+  const zeroEvidenceCandidateCount = d10QualifiedCandidates.filter(
+    candidate => candidate.evidenceOccurrenceIds.length === 0
+  ).length;
+  const partialLinkageCandidateCount = d10QualifiedCandidates.filter(
+    candidate => candidate.linkageCoverage === 'PARTIAL'
+  ).length;
   if (missingInputs.length > 0) {
     diagnostics.push('PROFESSION_INPUTS_MISSING');
+  }
+  if (d10RemovedCandidateCount > 0) {
+    diagnostics.push('PROFESSION_D10_CANDIDATES_REMOVED');
+  }
+  if (zeroEvidenceCandidateCount > 0) {
+    diagnostics.push('PROFESSION_ZERO_EVIDENCE_CANDIDATES');
+  }
+  if (partialLinkageCandidateCount > 0) {
+    diagnostics.push('PROFESSION_PARTIAL_LINKAGE_CANDIDATES');
   }
   if (candidates.length === 0) {
     if (unresolvedExpressionTypes.length > 0 && mappedTypes.length === 0) {
@@ -208,6 +218,9 @@ export function buildCareerProfessionAnalysis(
   const sortedCandidates = canonicalSortProfessionCandidates(
     deduplicateProfessionCandidates(d10QualifiedCandidates)
   );
+  const rankingEligibleCandidateIds = new Set(
+    ranking.rankedCandidates.flatMap(candidate => candidate.supportingCandidateIds)
+  );
 
   // Freeze and return
   return freezeProfessionAnalysis({
@@ -215,6 +228,14 @@ export function buildCareerProfessionAnalysis(
     ranking,
     status: status as 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA',
     diagnostics,
+    stageCounts: {
+      inputExpressions: expressions.expressions.length,
+      matchedRules: matchedRuleCount,
+      generatedCandidates: candidates.length,
+      d10QualifiedCandidates: d10QualifiedCandidates.length,
+      rankingEligibleCandidates: rankingEligibleCandidateIds.size,
+      rankedCandidates: ranking.rankedCandidates.length
+    },
     unresolvedExpressionTypes,
     mappedTypes,
     missingInputs,
@@ -292,8 +313,9 @@ function resolveRulesInPattern(
   career10HFoundation?: Career10HFoundation,
   career10LFoundation?: Career10LFoundation,
   domainEvidence?: readonly DomainEvidence[]
-): { candidates: CareerProfessionCandidate[] } {
+): { candidates: CareerProfessionCandidate[]; matchedRuleCount: number } {
   const candidates: CareerProfessionCandidate[] = [];
+  let matchedRuleCount = 0;
 
   // Build mechanism ID set for source linkage verification
   const patternMechanismIds = new Set<string>();
@@ -317,7 +339,11 @@ function resolveRulesInPattern(
       mechanismTypes
     );
     if (match) {
+      matchedRuleCount += 1;
       const { satisfyingExpressions, satisfyingMechanisms } = match;
+      if (getLinkageCoverage(satisfyingExpressions, patternMechanismIds) === 'UNRESOLVED') {
+        continue;
+      }
       const candidate = buildCandidateFromRule(
         rule,
         patternId,
@@ -332,7 +358,19 @@ function resolveRulesInPattern(
     }
   }
 
-  return { candidates };
+  return { candidates, matchedRuleCount };
+}
+
+function getLinkageCoverage(
+  expressions: readonly CareerExpressionCandidate[],
+  patternMechanismIds: ReadonlySet<string>
+): 'FULL' | 'PARTIAL' | 'UNRESOLVED' {
+  const sourceMechanismIds = expressions.flatMap(expression => expression.sourceMechanismIds);
+  if (sourceMechanismIds.length === 0) return 'UNRESOLVED';
+
+  const resolvedCount = sourceMechanismIds.filter(id => patternMechanismIds.has(id)).length;
+  if (resolvedCount === 0) return 'UNRESOLVED';
+  return resolvedCount === sourceMechanismIds.length ? 'FULL' : 'PARTIAL';
 }
 
 /**
@@ -413,6 +451,9 @@ function evaluateRule(
       // Capture the exact mechanism instances referenced by qualifying expressions
       const referencedMechanismIds = new Set<string>();
       for (const expr of patternExpressions) {
+        if (!('qualificationStatus' in expr) || expr.qualificationStatus !== 'QUALIFIED') {
+          continue;
+        }
         const referencedMechanismTypes = new Set<CareerMechanismType>();
         const exprReferencedIds: string[] = [];
         for (const mechId of expr.sourceMechanismIds) {
@@ -425,6 +466,9 @@ function evaluateRule(
         // If this expression references all required mechanism types, capture its referenced IDs
         // (only the IDs that match required types, not all sourceMechanismIds)
         if (referencedMechanismTypes.size === rule.requiredMechanismTypes.length) {
+          if (!satisfyingExpressions.some(item => item.expressionId === expr.expressionId)) {
+            satisfyingExpressions.push(expr);
+          }
           for (const id of exprReferencedIds) {
             referencedMechanismIds.add(id);
           }
@@ -534,6 +578,10 @@ function buildCandidateFromRule(
     expressionTypes: Object.freeze(matchedExpressionTypes.sort(codePointCompare)),
     mechanismTypes: Object.freeze(matchedMechanismTypes.sort(codePointCompare)),
     patternIds: Object.freeze([patternId]),
+    linkageCoverage: getLinkageCoverage(
+      satisfyingExpressions,
+      patternMechanismIds ?? new Set<string>()
+    ),
     d10Status: 'NOT_PROVIDED', // Will be updated by applyD10Qualification
     evidenceOccurrenceIds: Object.freeze(evidenceOccurrenceIds),
     semanticIdentityKeys: Object.freeze(semanticIdentityKeys),

@@ -267,13 +267,15 @@ describe('B06 Career Event-Specific Timeline', () => {
     expect(result.genericWindows).toEqual([]);
   });
 
-  it('preserves overlapping source windows as distinct generic windows', () => {
+  it('C11 semantic identity: preserves distinct source windows sharing the same evidence identities', () => {
     const first = opportunityEvent('event-overlap-1');
     const second = { ...opportunityEvent('event-overlap-2'), timing: { type: 'DASHA_PERIOD_WINDOW' as const, start: '2027-06-01', end: '2028-03-01' } };
     const result = buildCareerEventTimeline(makeInput({ events: [first, second] }));
 
     expect(result.genericWindows).toHaveLength(2);
     expect(new Set(result.genericWindows.map(item => item.windowId)).size).toBe(2);
+    expect(result.genericWindows[0].evidence.semanticIdentityIds)
+      .toEqual(result.genericWindows[1].evidence.semanticIdentityIds);
     expect(result.genericWindows.map(item => item.timing.start)).toEqual(['2027-01-01', '2027-06-01']);
   });
 

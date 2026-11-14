@@ -50,7 +50,6 @@ import type {
   ProductCareerProfessionRanking,
   ProductConfidence,
   ActivationEffect,
-  PromiseStrength,
   ConclusionStatus,
   ProductSelectedPeriodSynthesis,
   ProductQualificationStatus,
@@ -168,16 +167,15 @@ export function deriveProductAnalysisStatus(
 }
 
 /**
- * Direction inputs are limited to ActivationEffect, PromiseStrength,
- * ConclusionStatus, and ProductDirection. TransitEffect-only literals
+ * Direction inputs are limited to ActivationEffect, ConclusionStatus,
+ * and ProductDirection. Strength values are not directions. TransitEffect-only literals
  * (TRIGGER, MODIFIER, and NO_MATERIAL_TRIGGER) are intentionally excluded and
  * fail closed to UNAVAILABLE.
  *
  * DOES_NOT_ACTIVATE maps to NEUTRAL because it explicitly reports
- * non-activation, not a neutral outcome. Mapping WEAK/VERY_WEAK to CHALLENGE
- * is an intentional, reviewed product policy.
+ * non-activation, not a neutral outcome.
  */
-type ProductDirectionSource = ActivationEffect | PromiseStrength | ConclusionStatus | ProductDirection;
+type ProductDirectionSource = ActivationEffect | ConclusionStatus | ProductDirection;
 
 const PRODUCT_DIRECTION_BY_SOURCE: Readonly<Record<ProductDirectionSource, ProductDirection>> = {
   ACTIVATES: 'SUPPORT',
@@ -190,11 +188,6 @@ const PRODUCT_DIRECTION_BY_SOURCE: Readonly<Record<ProductDirectionSource, Produ
   UNKNOWN: 'UNAVAILABLE',
   INSUFFICIENT_DATA: 'UNAVAILABLE',
   UNAVAILABLE: 'UNAVAILABLE',
-  VERY_STRONG: 'SUPPORT',
-  STRONG: 'SUPPORT',
-  MODERATE: 'MIXED',
-  WEAK: 'CHALLENGE',
-  VERY_WEAK: 'CHALLENGE',
   STRONGLY_SUPPORTED: 'SUPPORT',
   SUPPORTED: 'SUPPORT',
   MIXED: 'MIXED',
@@ -1349,7 +1342,7 @@ function mapReasoning(
       label: 'Career Natal Promise',
       domain: 'CAREER',
       type: 'PROMISE' as const,
-      direction: mapDirection(career.promise.strength),
+      direction: mapDirection(career.promise.status),
       statement: career.promise.statement || 'Career promise evaluated from 10th house, Lagna, and lord strength.'
     },
     {

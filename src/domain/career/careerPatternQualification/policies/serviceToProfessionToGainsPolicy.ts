@@ -48,19 +48,19 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
   readonly description = 'Service (6H) → Profession (10H) → Gains (11H) network qualification policy';
 
   evaluate(context: QualificationPolicyContext): PolicyEvaluationResult {
-    const { pattern, relevanceByPlanet, conditionByPlanet } = context;
+    const { pattern, relevanceByPlanet, conditionByPlanet, networks } = context;
     const establishingIds = getEstablishingRelationshipIds(pattern);
 
     const evidence: QualificationEvidence[] = [];
     const decisionBlockingReasons: DecisionBlockingReason[] = [];
     const deferredDimensions: CareerPatternDeferredDimension[] = [];
+    const diagnostics: Array<'LEGACY_RELATIONSHIP_ID_FALLBACK'> = [];
     let status: CareerPatternQualificationStatus = 'INSUFFICIENT_DATA';
 
     // Step 1: Check for required establishing relationships (structural prerequisites)
     // For SERVICE_TO_PROFESSION_TO_GAINS, we need both 6→10 and 10→11
-    // TODO(P2-07B): Replace ID-string check with canonical relationship resolution
-    const has6to10 = hasDirectedHouseRelationshipId(pattern, 6, 10);
-    const has10to11 = hasDirectedHouseRelationshipId(pattern, 10, 11);
+    const has6to10 = hasDirectedHouseRelationshipId(pattern, 6, 10, networks, diagnostics);
+    const has10to11 = hasDirectedHouseRelationshipId(pattern, 10, 11, networks, diagnostics);
 
     if (!has6to10 && !has10to11) {
       // Both prerequisites explicitly absent → UNQUALIFIED
@@ -185,7 +185,8 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       decisionBlockingReasons: Object.freeze(decisionBlockingReasons),
       deferredDimensions: Object.freeze(deferredDimensions),
       ruleId: this.policyId,
-      explanation
+      explanation,
+      diagnostics: Object.freeze([...new Set(diagnostics)])
     });
   }
 

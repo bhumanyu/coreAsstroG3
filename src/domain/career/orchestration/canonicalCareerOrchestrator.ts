@@ -114,6 +114,7 @@ export class CanonicalCareerOrchestrator {
       input.patterns,
       input.relevance,
       input.condition,
+      input.networks,
       patternCandidates,
       diagnostics
     );
@@ -304,6 +305,7 @@ export class CanonicalCareerOrchestrator {
     patterns: readonly import('../careerPattern/careerPatternTypes').CareerPattern[],
     relevance: readonly import('../careerPlanetaryRelevance').CareerPlanetaryRelevance[],
     condition: readonly import('../careerPlanetaryCondition').CareerPlanetaryConditionResult[],
+    networks: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[],
     patternCandidates: readonly PatternCandidate[],
     diagnostics: OrchestrationDiagnostic[]
   ): readonly PatternQualification[] {
@@ -311,8 +313,19 @@ export class CanonicalCareerOrchestrator {
       const result = this.ports.qualification.qualifyCareerPatterns({
         patterns,
         relevance,
-        condition
+        condition,
+        networks
       });
+      for (const diagnostic of result.diagnostics ?? []) {
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_${diagnostic.code}_${diagnostic.patternId}`,
+          severity: 'WARNING',
+          category: 'MISSING_DATA',
+          message: diagnostic.code,
+          relatedIds: [diagnostic.patternId],
+          stage: 'QUALIFICATION'
+        });
+      }
 
       const qualifications: PatternQualification[] = result.qualifiedPatterns.map((qp) => {
         // Convert qualification evidence to stage evidence
