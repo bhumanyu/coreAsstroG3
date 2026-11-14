@@ -3,12 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2026-11-14"
 
 [vars]
-ALLOWED_ORIGIN = "REPLACE_WITH_FRONTEND_ORIGIN,capacitor://localhost,https://localhost"
+ALLOWED_ORIGIN = "capacitor://localhost,https://localhost"
 
 [[kv_namespaces]]
 binding = "HOROSCOPE_CACHE"
-id = "00000000000000000000000000000000"
-preview_id = "00000000000000000000000000000000"
+id = "73b20196faec4401803e0f9b21986d2d"
+preview_id = "2f2da4d338b24a9daa703e382a1a8396"
 
 # Store the vendor key as a Worker secret, never as a [vars] entry:
 # npx wrangler secret put STARSAPI_KEY

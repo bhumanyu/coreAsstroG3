@@ -4,12 +4,30 @@ Standalone Cloudflare Worker for `GET /api/horoscopes`. It is intentionally outs
 
 ## Local development
 
+Run the Worker from this directory:
+
 ```sh
 npm install
 npm run dev
 ```
 
-Without `STARSAPI_KEY`, the Worker uses deterministic fixture content. Try:
+Use Node 22.20 or newer. `npm run dev` uses Wrangler's local simulator and local KV; it does not deploy or use the production KV namespace. With no local `STARSAPI_KEY`, the Worker uses deterministic fixture content. To use the vendor locally, add your key to the ignored `workers/horoscopes/.dev.vars` file:
+
+```dotenv
+STARSAPI_KEY=your_starsapi_key
+```
+
+Wrangler loads `.dev.vars` for local development. Do not commit the file or place this key in a `VITE_` variable. `wrangler secret put` configures a deployed Worker and is not needed for local development.
+
+The frontend is configured by the ignored root `.env.local`:
+
+```dotenv
+VITE_HOROSCOPE_API_BASE_URL=http://localhost:8787
+```
+
+Start the frontend separately from the repository root with `npm run dev`. The Home forecast card then calls the local Worker on port 8787.
+
+Try the endpoint directly:
 
 ```text
 http://localhost:8787/api/horoscopes?sign=aries&period=daily&subtype=general&language=en&timezone=UTC
@@ -27,7 +45,7 @@ The normalized response uses the vendor's plain-text forecast, date range, summa
 
 See the official [StarsAPI horoscope reference](https://starsapi.com/docs/v3/horoscope/) for endpoint details. The vendor may return sample content on free plans (`is_sample: true`); confirm that the selected plan returns the licensed live content before production use.
 
-## KV and deployment
+## KV and optional deployment
 
 Create a namespace and replace the placeholder IDs in `wrangler.toml` with the returned production namespace ID and preview ID:
 
@@ -37,13 +55,13 @@ npx wrangler kv namespace create HOROSCOPE_CACHE --preview
 npm run deploy
 ```
 
-Wrangler may require Cloudflare account authentication before namespace creation or deployment. KV stores successful normalized responses only. Current TTLs are daily: 6 hours, weekly: 24 hours, monthly: 7 days, yearly: 30 days. Adjust these only after confirming the vendor's license terms.
+Cloudflare authentication and remote KV namespaces are needed only for a deployment. Local `wrangler dev` uses local KV state under `.wrangler/state`. Remote KV stores successful normalized responses only. Current TTLs are daily: 6 hours, weekly: 24 hours, monthly: 7 days, yearly: 30 days. Adjust these only after confirming the vendor's license terms.
 
 ## Configuration and deployment
 
 - `HOROSCOPE_CACHE`: KV binding configured by Wrangler.
-- `ALLOWED_ORIGIN`: comma-separated allowed origins. `npm run dev` overrides it to `*` locally. Before production, replace `REPLACE_WITH_FRONTEND_ORIGIN` in `wrangler.toml` with the deployed frontend origin; the config already includes `capacitor://localhost` and `https://localhost`. Do not deploy the placeholder or a wildcard.
-- `STARSAPI_KEY`: Worker secret, never a frontend variable. Set it with `npx wrangler secret put STARSAPI_KEY`.
+- `ALLOWED_ORIGIN`: comma-separated allowed origins. `npm run dev` overrides it to `*` locally. The checked-in value allows the two Capacitor origins; add the deployed web frontend origin before production. Do not deploy a wildcard.
+- `STARSAPI_KEY`: For local dev, put it in the ignored `.dev.vars` file described above. For a deployed Worker only, set it with `npx wrangler secret put STARSAPI_KEY`.
 
 After deploying, set `VITE_HOROSCOPE_API_BASE_URL` in the frontend build environment to the Worker origin (for example `https://coreastro-horoscopes.<account>.workers.dev`, without `/api/horoscopes`). This public URL is required for Capacitor/Android builds; never put the vendor key in a `VITE_` variable.
 
