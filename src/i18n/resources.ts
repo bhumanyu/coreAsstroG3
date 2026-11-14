@@ -597,6 +597,12 @@ export const resources = {
           unknownPlanet: 'Unknown Planet',
           partialAssessment: 'Partially assessed',
           evidence: 'Canonical C9 evidence',
+          evidenceTally: {
+            supporting: '{{count}} supporting',
+            challenging: '{{count}} challenging',
+            neutral: '{{count}} neutral',
+            suffix: 'evidence factors'
+          },
           unavailableMessage: 'Vimshottari dasha timing calculations are currently unavailable for this career analysis.'
         },
         evidence: {
@@ -3176,6 +3182,12 @@ export const resources = {
           unknownPlanet: 'अज्ञात ग्रह',
           partialAssessment: 'आंशिक रूप से आकलित',
           evidence: 'कैनोनिकल C9 साक्ष्य',
+          evidenceTally: {
+            supporting: '{{count}} समर्थक',
+            challenging: '{{count}} चुनौतीपूर्ण',
+            neutral: '{{count}} तटस्थ',
+            suffix: 'साक्ष्य कारक'
+          },
           unavailableMessage: 'इस करियर विश्लेषण के लिए विंशोत्तरी दशा समय की गणना अभी उपलब्ध नहीं है।'
         },
         evidence: {

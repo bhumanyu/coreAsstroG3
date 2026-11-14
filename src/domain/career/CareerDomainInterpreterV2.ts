@@ -682,6 +682,12 @@ export function interpretCareerV2(
     statement: buildD10Statement(d10Evidence, d10Relationship)
   };
 
+  // CW-09 legacy career dasha synthesis. Retained deliberately: it feeds the
+  // canonical C11 timing input (careerTimingSynthesis), the AI explanation
+  // context (dashaSynthesisFact), and the reconciliation trace. The canonical
+  // C9 dasha analysis in internalArtifacts.canonicalDashaAnalysis is the
+  // authoritative source for dasha verdicts; CW-09 weighted scores
+  // (e.g. 6.25/1.50) must never be rendered in career dasha UI.
   const careerDashaSynthesis = buildCareerDashaSynthesis({
     dashaInterpretation: activeDashaReport,
     d10Context

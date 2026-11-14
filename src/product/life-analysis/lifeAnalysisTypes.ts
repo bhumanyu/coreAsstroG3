@@ -29,6 +29,7 @@ import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { CareerC8ExpressionCoverage, CareerInternalArtifacts } from '../../domain/career/careerTypes';
 import type { CareerPlanetaryConditionAssessment } from '../../domain/career/careerPlanetaryCondition';
+import type { DashaEvidenceTally } from '../analysis/productAnalysisTypes';
 import type { AiExplanationResult } from '../../ai/browser';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
@@ -124,6 +125,7 @@ export interface CareerPeriodTimingProduct {
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;
+  readonly evidenceTally?: DashaEvidenceTally;
 }
 
 export interface CareerTimingProduct {

@@ -49,8 +49,14 @@ const fillBirthForm = (fields: {
 
 function navigateToDesktopPage(group: string, page: string): void {
   const navigation = screen.getAllByRole('navigation', { name: 'Product Views' })[1];
-  fireEvent.click(within(navigation).getByText(group, { selector: 'summary' }));
-  fireEvent.click(within(navigation).getByRole('button', { name: page }));
+  fireEvent.click(within(navigation).getByRole('button', { name: group }));
+  // Multi-page groups (Chart, Insights) open a controlled menu whose items
+  // expose role="menuitem"; single-page groups (Home, Report) navigate
+  // directly on the group click, so no item click is needed.
+  const item = within(navigation).queryByRole('menuitem', { name: page });
+  if (item) {
+    fireEvent.click(item);
+  }
 }
 
 function enterBirthDetails(details: BirthDetails = DEFAULT_BIRTH_DETAILS): void {

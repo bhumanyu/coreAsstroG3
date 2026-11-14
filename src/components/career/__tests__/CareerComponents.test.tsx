@@ -543,6 +543,43 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       expect(screen.queryByText('STRONGLY_SUPPORTS')).not.toBeInTheDocument();
     });
 
+    it('renders the localized evidence tally line and omits zero-count buckets', () => {
+      const dasha: CareerDashaViewModel = {
+        status: 'AVAILABLE',
+        periods: [
+          {
+            level: 'MD',
+            planet: 'Jupiter',
+            role: 'PRIMARY',
+            direction: 'SUPPORT',
+            effect: 'ACTIVATES',
+            evidenceIds: [],
+            evidence: [],
+            evidenceTally: { supportingCount: 2, challengingCount: 3, neutralCount: 0 }
+          },
+          {
+            level: 'AD',
+            planet: 'Saturn',
+            role: 'MODIFIER',
+            direction: 'CHALLENGE',
+            effect: 'CHALLENGES',
+            evidenceIds: [],
+            evidence: [],
+            statement: 'No tally period.'
+          }
+        ]
+      };
+
+      render(<CareerDashaSection dasha={dasha} />);
+
+      expect(
+        screen.getByText('2 supporting · 3 challenging evidence factors')
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/neutral/)).not.toBeInTheDocument();
+      // The period without a tally renders no tally line.
+      expect(screen.getAllByText(/evidence factors/)).toHaveLength(1);
+    });
+
     it('renders clean unavailable state when dasha timing is unavailable', () => {
       const dasha: CareerDashaViewModel = {
         status: 'UNAVAILABLE',

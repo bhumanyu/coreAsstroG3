@@ -545,6 +545,9 @@ function mapDashaPeriods(
         : {}),
       ...('afflictionAssessed' in md && md.afflictionAssessed !== undefined
         ? { afflictionAssessed: md.afflictionAssessed }
+        : {}),
+      ...('evidenceTally' in md && md.evidenceTally !== undefined
+        ? { evidenceTally: md.evidenceTally }
         : {})
     });
   }
@@ -566,6 +569,9 @@ function mapDashaPeriods(
         : {}),
       ...('afflictionAssessed' in ad && ad.afflictionAssessed !== undefined
         ? { afflictionAssessed: ad.afflictionAssessed }
+        : {}),
+      ...('evidenceTally' in ad && ad.evidenceTally !== undefined
+        ? { evidenceTally: ad.evidenceTally }
         : {})
     });
   }
@@ -587,6 +593,9 @@ function mapDashaPeriods(
         : {}),
       ...('afflictionAssessed' in pd && pd.afflictionAssessed !== undefined
         ? { afflictionAssessed: pd.afflictionAssessed }
+        : {}),
+      ...('evidenceTally' in pd && pd.evidenceTally !== undefined
+        ? { evidenceTally: pd.evidenceTally }
         : {})
     });
   }

@@ -10,6 +10,9 @@ import type {
   TimingAvailabilityStatus,
   TraceabilityStatus
 } from '../../product/life-analysis/lifeAnalysisTypes';
+import type { DashaEvidenceTally } from '../../product/analysis/productAnalysisTypes';
+import type { CareerDashaCanonicalEvidence } from '../career/careerDasha/careerDashaCanonicalTypes';
+import { formatCanonicalDashaPeriodStatement } from '../career/careerDasha/careerDashaPeriodStatement';
 import { indexDashaPeriodActivations } from '../../product/life-analysis/dashaHierarchyUtils';
 import type { DomainEvidence } from './DomainEvidence';
 import { UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
@@ -156,10 +159,41 @@ export function buildNormalizedCareerTiming(
 
   const canonicalDasha = career.conclusionData?.internalArtifacts?.canonicalDashaAnalysis;
   if (canonicalDasha) {
+    // Display-only tally of canonical C9 evidence counts by direction.
+    // Counts evidence items — never weighted scores — and never feeds the
+    // predicate-driven period verdict. MIXED/UNAVAILABLE directions are not
+    // counted in any bucket; missing evidence is not negative evidence.
+    const tallyLevelEvidence = (
+      items: readonly CareerDashaCanonicalEvidence[]
+    ): DashaEvidenceTally | undefined => {
+      if (items.length === 0) {
+        return undefined;
+      }
+      const tally: { supportingCount: number; challengingCount: number; neutralCount: number } = {
+        supportingCount: 0,
+        challengingCount: 0,
+        neutralCount: 0
+      };
+      for (const item of items) {
+        if (item.direction === 'SUPPORT') {
+          tally.supportingCount += 1;
+        } else if (item.direction === 'CHALLENGE') {
+          tally.challengingCount += 1;
+        } else if (item.direction === 'NEUTRAL') {
+          tally.neutralCount += 1;
+        }
+      }
+      return tally;
+    };
+
     const mapCanonicalPeriod = (level: 'MD' | 'AD' | 'PD'): CareerPeriodTimingProduct => {
       const period =
         level === 'MD' ? canonicalDasha.md :
           level === 'AD' ? canonicalDasha.ad : canonicalDasha.pd;
+      const levelEvidence = canonicalDasha.evidence.filter(
+        (item: CareerDashaCanonicalEvidence) => item.level === level
+      );
+      const evidenceTally = tallyLevelEvidence(levelEvidence);
       const evidence = mapPeriodToCanonicalEvidenceIds(career, level, period.planet);
       return {
         period: level,
@@ -169,7 +203,8 @@ export function buildNormalizedCareerTiming(
         traceability: evidence.traceability,
         conditionAssessment: period.conditionAssessment,
         afflictionAssessed: period.afflictionAssessed,
-        statement: period.statement,
+        statement: formatCanonicalDashaPeriodStatement(period, levelEvidence.length),
+        ...(evidenceTally ? { evidenceTally } : {}),
         ...(period.start ? { start: period.start } : {}),
         ...(period.end ? { end: period.end } : {})
       };

@@ -56,7 +56,7 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
     const navigationMenus = screen.getAllByRole('navigation', { name: 'Product Views' });
     expect(within(navigationMenus[0]).getByRole('button', { name: 'Home' })).toBeInTheDocument();
     ['Home', 'Chart', 'Insights', 'Report'].forEach((group) => {
-      expect(within(navigationMenus[1]).getByText(group, { selector: 'summary' })).toBeInTheDocument();
+      expect(within(navigationMenus[1]).getByRole('button', { name: group })).toBeInTheDocument();
     });
   });
 

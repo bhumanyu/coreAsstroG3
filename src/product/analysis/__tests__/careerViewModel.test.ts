@@ -230,6 +230,41 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     });
   });
 
+  it('passes through the canonical C9 evidence tally on dasha period view models', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        activation: {
+          ...base.career.activation,
+          dasha: {
+            ...base.career.activation.dasha,
+            periods: base.career.activation.dasha.periods.map((period) =>
+              period.level === 'MD'
+                ? {
+                    ...period,
+                    evidenceTally: { supportingCount: 2, challengingCount: 1, neutralCount: 0 }
+                  }
+                : period
+            )
+          }
+        }
+      }
+    });
+
+    const vm = selectCareerViewModel(analysis);
+
+    expect(vm.dasha.md?.evidenceTally).toEqual({
+      supportingCount: 2,
+      challengingCount: 1,
+      neutralCount: 0
+    });
+    // Levels without a projected tally stay absent (persisted records
+    // without the new field render unchanged).
+    expect(vm.dasha.ad?.evidenceTally).toBeUndefined();
+    expect(vm.dasha.pd?.evidenceTally).toBeUndefined();
+  });
+
   it('surfaces B06 diagnostics through the career view model', () => {
     const base = createProductAnalysis();
     const analysis = createProductAnalysis({

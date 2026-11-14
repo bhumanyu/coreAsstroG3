@@ -190,6 +190,18 @@ export interface D10ProductResult {
   readonly statement?: string;
 }
 
+/**
+ * Per-level counts of canonical C9 dasha evidence items by direction.
+ * Display-only tally of evidence counts — NOT weighted scores. The period
+ * verdict (effect/direction) remains predicate-driven and authoritative;
+ * these counts may legitimately diverge from it.
+ */
+export interface DashaEvidenceTally {
+  readonly supportingCount: number;
+  readonly challengingCount: number;
+  readonly neutralCount: number;
+}
+
 export interface ProductDashaPeriod {
   readonly level: 'MD' | 'AD' | 'PD';
   readonly planet?: string;
@@ -202,6 +214,7 @@ export interface ProductDashaPeriod {
   readonly end?: string;
   readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   readonly afflictionAssessed?: boolean;
+  readonly evidenceTally?: DashaEvidenceTally;
 }
 
 /**

@@ -101,10 +101,28 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
         period.level === lifePeriod.level && period.planet === lifePeriod.planet
       );
       const canonicalPeriod = canonicalDasha![lifePeriod.level.toLowerCase() as 'md' | 'ad' | 'pd'];
+      const levelEvidence = canonicalDasha!.evidence.filter(
+        (item) => item.level === canonicalPeriod.level
+      );
+      const expectedTally = {
+        supportingCount: levelEvidence.filter((item) => item.direction === 'SUPPORT').length,
+        challengingCount: levelEvidence.filter((item) => item.direction === 'CHALLENGE').length,
+        neutralCount: levelEvidence.filter((item) => item.direction === 'NEUTRAL').length
+      };
 
       expect(careerPeriod?.effect).toBe(canonicalPeriod.effect);
       expect(activationCardPeriod?.effect).toBe(canonicalPeriod.effect);
       expect(lifePeriod.effect).toBe(canonicalPeriod.effect);
+      // Single verdict: the evidence tally is a display-only count projection
+      // and must match the canonical evidence array exactly.
+      if (levelEvidence.length === 0) {
+        expect(careerPeriod?.evidenceTally).toBeUndefined();
+      } else {
+        expect(careerPeriod?.evidenceTally).toEqual(expectedTally);
+      }
+      // Canonical activation statements are sanitized at the product boundary:
+      // no raw enum tokens may reach the product statement.
+      expect(lifePeriod.statement ?? '').not.toMatch(/[A-Z]+_[A-Z]+/);
     }
   });
 

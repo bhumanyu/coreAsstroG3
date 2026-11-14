@@ -15,7 +15,7 @@ import {
 import { Planet } from '../../types';
 import { resolveSemanticIdentity, tryResolveSemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
 import type { DomainEvidence } from './DomainEvidence';
-import type { CareerDashaCanonicalAnalysis, CareerDashaCanonicalPeriod } from '../career/careerDasha/careerDashaCanonicalTypes';
+import type { CareerDashaCanonicalAnalysis, CareerDashaCanonicalEvidence, CareerDashaCanonicalPeriod } from '../career/careerDasha/careerDashaCanonicalTypes';
 import type { CareerInternalArtifacts } from '../career/careerTypes';
 
 describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
@@ -300,11 +300,19 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     expect(timing?.antardasha?.traceability).toBe('RESOLVED');
     expect(timing?.pratyantardasha?.traceability).toBe('DEGRADED'); // No PD evidence
     expect(timing?.mahadasha?.effect).toBe('CHALLENGES');
-    expect(timing?.mahadasha?.statement).toBe('C9 MD challenges career.');
+    expect(timing?.mahadasha?.statement).toBe(
+      'MD period for planet Jupiter. Role: primary driver. Effect: challenges. ' +
+      'Direction: challenge. Strength: weak. Evidence count: 0. ' +
+      'Affliction was not assessed; no affliction-based challenge is inferred.'
+    );
     expect(timing?.mahadasha?.effect).not.toBe('ACTIVATES');
     expect(timing?.mahadasha).toMatchObject({ conditionAssessment: 'PARTIAL', afflictionAssessed: false });
     expect(timing?.antardasha).toMatchObject({ conditionAssessment: 'FULL', afflictionAssessed: true });
     expect(timing?.pratyantardasha).toMatchObject({ conditionAssessment: 'UNAVAILABLE', afflictionAssessed: false });
+    // Evidence array is empty for every level → no tally is projected.
+    expect(timing?.mahadasha?.evidenceTally).toBeUndefined();
+    expect(timing?.antardasha?.evidenceTally).toBeUndefined();
+    expect(timing?.pratyantardasha?.evidenceTally).toBeUndefined();
 
     const internalArtifacts = interpretation.conclusionData?.internalArtifacts ?? {};
     const { canonicalDashaAnalysis: _removed, ...internalArtifactsWithoutDasha } = internalArtifacts;
@@ -321,6 +329,87 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     expect(timingWithoutCanonicalDasha).not.toHaveProperty('mahadasha');
     expect(timingWithoutCanonicalDasha).not.toHaveProperty('antardasha');
     expect(timingWithoutCanonicalDasha).not.toHaveProperty('pratyantardasha');
+  });
+
+  it('buildNormalizedCareerTiming projects per-level evidence tally counts from canonical C9 evidence', () => {
+    const makePeriod = (level: 'MD' | 'AD' | 'PD'): CareerDashaCanonicalPeriod => ({
+      level,
+      planet: level === 'MD' ? Planet.JUPITER : level === 'AD' ? Planet.SATURN : Planet.MARS,
+      role: level === 'MD' ? 'PRIMARY_DRIVER' : level === 'AD' ? 'MODIFIER' : 'REFINEMENT',
+      effect: 'ACTIVATES',
+      direction: 'SUPPORT',
+      strength: 'STRONG',
+      statement: `${level} period.`,
+      afflictionAssessed: true
+    });
+    const makeEvidence = (
+      level: 'MD' | 'AD' | 'PD',
+      suffix: string,
+      direction: CareerDashaCanonicalEvidence['direction']
+    ): CareerDashaCanonicalEvidence => ({
+      identityKey: `CAREER_DASHA:${level}:${suffix}`,
+      id: `CAREER_DASHA:${level}:${suffix}`,
+      level,
+      role: 'PRIMARY_DRIVER',
+      effect: 'ACTIVATES',
+      direction,
+      strength: 'MODERATE',
+      statement: `${level} evidence ${suffix}.`,
+      sourceIds: [`src-${level}-${suffix}`],
+      provenance: {
+        source: 'C9_DASHA',
+        activationLevel: level,
+        ruleIds: [`rule-${level}-${suffix}`],
+        natalRootIds: [`root-${level}-${suffix}`]
+      }
+    });
+    const canonicalDashaAnalysis: CareerDashaCanonicalAnalysis = {
+      overallEffect: 'ACTIVATES',
+      overallDirection: 'SUPPORT',
+      overallStrength: 'STRONG',
+      dominantLevel: 'MD',
+      md: makePeriod('MD'),
+      ad: makePeriod('AD'),
+      pd: makePeriod('PD'),
+      evidence: [
+        makeEvidence('MD', 's1', 'SUPPORT'),
+        makeEvidence('MD', 's2', 'SUPPORT'),
+        makeEvidence('MD', 'c1', 'CHALLENGE'),
+        makeEvidence('MD', 'n1', 'NEUTRAL'),
+        makeEvidence('MD', 'm1', 'MIXED'),
+        makeEvidence('MD', 'u1', 'UNAVAILABLE')
+      ],
+      rootEvidenceIds: [],
+      statement: 'C9 career dasha analysis.'
+    };
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [],
+      conclusionData: {
+        internalArtifacts: {
+          canonicalDashaAnalysis
+        } as CareerInternalArtifacts
+      }
+    });
+
+    const timing = buildNormalizedCareerTiming(interpretation);
+
+    // MIXED/UNAVAILABLE evidence items are not counted in any bucket.
+    expect(timing?.mahadasha?.evidenceTally).toEqual({
+      supportingCount: 2,
+      challengingCount: 1,
+      neutralCount: 1
+    });
+    // Levels with zero canonical evidence items project no tally.
+    expect(timing?.antardasha?.evidenceTally).toBeUndefined();
+    expect(timing?.pratyantardasha?.evidenceTally).toBeUndefined();
+    // The tally never alters the predicate-driven period verdict.
+    expect(timing?.mahadasha?.effect).toBe('ACTIVATES');
+    expect(timing?.mahadasha?.statement).toContain('MD period for planet Jupiter');
   });
 
   it('buildNormalizedWealthTiming includes traceability status on each period', () => {

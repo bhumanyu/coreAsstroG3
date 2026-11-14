@@ -17,6 +17,19 @@ export type DashaInterpretationStatus = 'AVAILABLE' | 'UNAVAILABLE';
  
 export type DashaLevel = 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
 
+/**
+ * Product-level diagnostics emitted when canonical C9 career dasha data
+ * cannot be reconciled with the engine dasha interpretation for a period.
+ */
+export type DashaInterpretationDiagnosticCode = 'C9_PERIOD_PLANET_MISMATCH';
+
+export interface DashaInterpretationDiagnostic {
+  readonly code: DashaInterpretationDiagnosticCode;
+  readonly level: CareerDashaCanonicalLevel;
+  readonly activationPlanet?: Planet;
+  readonly canonicalPlanet?: Planet;
+}
+
 export interface DashaPlanetStrengthProduct {
   readonly availability: string;
   readonly totalRupa?: number;
@@ -84,4 +97,5 @@ export interface DashaInterpretationProduct {
   readonly evidence: readonly DashaInterpretationEvidence[];
   readonly confidence?: InterpretationConfidence;
   readonly at?: string;
+  readonly diagnostics?: readonly DashaInterpretationDiagnostic[];
 }

@@ -11,12 +11,15 @@ import type {
   DashaPlanetProduct,
   DashaPairProduct,
   DashaLevel,
-  CanonicalCareerActivationProduct
+  CanonicalCareerActivationProduct,
+  DashaInterpretationDiagnostic
 } from './dashaInterpretationProductTypes';
+import type { Planet } from '../../../types';
 import type {
   CareerDashaCanonicalAnalysis,
   CareerDashaCanonicalLevel
 } from '../../../domain/career/careerDasha/careerDashaCanonicalTypes';
+import { formatCanonicalDashaPeriodStatement } from '../../../domain/career/careerDasha/careerDashaPeriodStatement';
 
 function mapCanonicalCareerActivation(
   planet: DashaPlanetActivation['planet'],
@@ -50,7 +53,7 @@ function mapCanonicalCareerActivation(
     evidenceIds: evidence.map((item) => item.id).sort(),
     sourceIds: [...new Set(evidence.flatMap((item) => item.sourceIds))].sort(),
     ruleIds: [...new Set(evidence.flatMap((item) => item.provenance.ruleIds ?? []))].sort(),
-    statement: period.statement,
+    statement: formatCanonicalDashaPeriodStatement(period, evidence.length),
     ...(period.start ? { start: period.start } : {}),
     ...(period.end ? { end: period.end } : {})
   };
@@ -124,6 +127,47 @@ function mapDashaPair(pair: DashaPairInterpretation): DashaPairProduct {
   };
 }
 
+/**
+ * Emits C9_PERIOD_PLANET_MISMATCH diagnostics when the engine dasha
+ * interpretation and the canonical C9 career dasha analysis disagree on the
+ * ruling planet for a period. Previously mapCanonicalCareerActivation
+ * silently dropped the canonical activation in this case.
+ */
+function collectCanonicalMismatchDiagnostics(
+  current: ActiveDashaInterpretation,
+  canonicalDasha?: CareerDashaCanonicalAnalysis
+): readonly DashaInterpretationDiagnostic[] {
+  if (!canonicalDasha) {
+    return [];
+  }
+  const checks: ReadonlyArray<{
+    level: CareerDashaCanonicalLevel;
+    activationPlanet: Planet | undefined;
+  }> = [
+    { level: 'MD', activationPlanet: current.mahadasha?.natal?.planet },
+    { level: 'AD', activationPlanet: current.antardasha?.natal?.planet },
+    { level: 'PD', activationPlanet: current.pratyantardasha?.natal?.planet }
+  ];
+  const diagnostics: DashaInterpretationDiagnostic[] = [];
+  for (const { level, activationPlanet } of checks) {
+    if (activationPlanet === undefined) {
+      continue;
+    }
+    const canonicalPeriod = canonicalDasha[level.toLowerCase() as 'md' | 'ad' | 'pd'];
+    if (canonicalPeriod && canonicalPeriod.planet !== activationPlanet) {
+      diagnostics.push({
+        code: 'C9_PERIOD_PLANET_MISMATCH',
+        level,
+        activationPlanet,
+        ...(canonicalPeriod.planet !== undefined
+          ? { canonicalPlanet: canonicalPeriod.planet }
+          : {})
+      });
+    }
+  }
+  return diagnostics;
+}
+
 export function buildDashaInterpretationProduct(
   current?: ActiveDashaInterpretation,
   canonicalCareerDasha?: CareerDashaCanonicalAnalysis
@@ -134,6 +178,8 @@ export function buildDashaInterpretationProduct(
       evidence: []
     };
   }
+
+  const diagnostics = collectCanonicalMismatchDiagnostics(current, canonicalCareerDasha);
 
   return {
     status: 'AVAILABLE',
@@ -190,6 +236,7 @@ export function buildDashaInterpretationProduct(
       : undefined,
     evidence: current.evidence ?? [],
     confidence: current.confidence,
-    at: current.at
+    at: current.at,
+    ...(diagnostics.length > 0 ? { diagnostics } : {})
   };
 }

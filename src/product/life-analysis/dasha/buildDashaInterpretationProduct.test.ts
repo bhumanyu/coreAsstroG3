@@ -16,6 +16,7 @@ import type {
   CareerDashaCanonicalPeriod
 } from '../../../domain/career/careerDasha/careerDashaCanonicalTypes';
 import type { ReasoningDirection, DomainStrength } from '../../../domain/reasoning/reasoningTypes';
+import { Planet } from '../../../types';
 
 function makeCanonicalCareerDasha(
   current: ActiveDashaInterpretation
@@ -378,5 +379,69 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
     expect(product.mahadasha).toBeUndefined();
     expect(product.antardasha).toBeUndefined();
     expect(product.pratyantardasha).toBeUndefined();
+  });
+
+  it('emits C9_PERIOD_PLANET_MISMATCH diagnostic when canonical period planet differs from the activation planet', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const current = horoscope.dashaInterpretation?.current!;
+    const canonicalDasha = makeCanonicalCareerDasha(current);
+    const mismatchedCanonical: CareerDashaCanonicalAnalysis = {
+      ...canonicalDasha,
+      md: {
+        ...canonicalDasha.md,
+        planet: canonicalDasha.md.planet === Planet.JUPITER ? Planet.SATURN : Planet.JUPITER
+      }
+    };
+
+    const product = buildDashaInterpretationProduct(current, mismatchedCanonical);
+
+    expect(product.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'C9_PERIOD_PLANET_MISMATCH',
+        level: 'MD',
+        activationPlanet: current.mahadasha.natal.planet,
+        canonicalPlanet: mismatchedCanonical.md.planet
+      })
+    ]);
+    // The mismatched canonical activation is still withheld from the period product.
+    expect(product.mahadasha?.canonicalCareerActivation).toBeUndefined();
+    // Matching AD/PD levels produce no diagnostics.
+    expect(product.diagnostics).toHaveLength(1);
+  });
+
+  it('emits no diagnostics when canonical planets match the activation planets', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const current = horoscope.dashaInterpretation?.current!;
+    const canonicalDasha = makeCanonicalCareerDasha(current);
+
+    const product = buildDashaInterpretationProduct(current, canonicalDasha);
+
+    expect(product.diagnostics).toBeUndefined();
+  });
+
+  it('projects a sanitized canonical activation statement free of raw enum tokens', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const current = horoscope.dashaInterpretation?.current!;
+    const canonicalDasha = makeCanonicalCareerDasha(current);
+    // Simulate the domain-layer diagnostic prose that embeds enum tokens.
+    const enumLaden: CareerDashaCanonicalAnalysis = {
+      ...canonicalDasha,
+      md: {
+        ...canonicalDasha.md,
+        statement:
+          'MD period for planet JUPITER. Role: PRIMARY_DRIVER. Effect: ACTIVATES. ' +
+          'Direction: SUPPORT. Strength: STRONG. Evidence count: 5.'
+      }
+    };
+
+    const product = buildDashaInterpretationProduct(current, enumLaden);
+    const statement = product.mahadasha?.canonicalCareerActivation?.statement ?? '';
+
+    expect(statement).not.toMatch(/[A-Z]+_[A-Z]+/);
+    expect(statement).not.toContain('PRIMARY_DRIVER');
+    expect(statement).toContain('MD period for planet');
+    expect(statement).toContain('primary driver');
+    // The domain artifact itself is left untouched.
+    expect(enumLaden.md.statement).toContain('PRIMARY_DRIVER');
   });
 });

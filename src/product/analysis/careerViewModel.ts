@@ -22,7 +22,8 @@ import type {
   ProductCareerProfessionRanking,
   PromiseStrength,
   ActivationEffect,
-  TransitEffect
+  TransitEffect,
+  DashaEvidenceTally
 } from './productAnalysisTypes';
 import {
   getCareerProfessionStatusCopy,
@@ -91,6 +92,7 @@ export interface CareerDashaPeriodViewModel {
   readonly end?: string;
   readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   readonly afflictionAssessed?: boolean;
+  readonly evidenceTally?: DashaEvidenceTally;
 }
 
 export interface CareerDashaViewModel {
@@ -334,7 +336,8 @@ export function selectCareerViewModel(
     start: p.start,
     end: p.end,
     ...(p.conditionAssessment ? { conditionAssessment: p.conditionAssessment } : {}),
-    ...(p.afflictionAssessed !== undefined ? { afflictionAssessed: p.afflictionAssessed } : {})
+    ...(p.afflictionAssessed !== undefined ? { afflictionAssessed: p.afflictionAssessed } : {}),
+    ...(p.evidenceTally ? { evidenceTally: p.evidenceTally } : {})
   }));
 
   const dasha: CareerDashaViewModel = {

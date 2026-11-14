@@ -210,6 +210,13 @@ export interface CareerConclusionData {
   readonly headline: string;
   readonly supportingSourceIds: readonly string[];
   readonly challengingSourceIds: readonly string[];
+  /**
+   * Legacy CW-09 career dasha synthesis (weighted MD/AD/PD scoring).
+   * Retained as an internal diagnostic/reconciliation artifact and as input
+   * to canonical C11 timing and AI context — NOT the authoritative dasha
+   * verdict. Canonical C9 lives at
+   * conclusionData.internalArtifacts.canonicalDashaAnalysis.
+   */
   readonly careerDashaSynthesis?: CareerDashaSynthesis;
   readonly careerTimingSynthesis?: CareerTimingSynthesis;
   readonly careerManifestationSynthesis?: readonly CareerManifestationSynthesis[];

@@ -26,6 +26,20 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
     : activationEffectLabel;
   const directionClass = getDirectionBadgeClass(period.direction);
   const roleClass = getEvidenceRoleBadgeClass(period.role);
+  const tally = period.evidenceTally;
+  const tallyParts = tally
+    ? [
+        tally.supportingCount > 0
+          ? t('ui.dasha.evidenceTally.supporting', { count: tally.supportingCount })
+          : null,
+        tally.challengingCount > 0
+          ? t('ui.dasha.evidenceTally.challenging', { count: tally.challengingCount })
+          : null,
+        tally.neutralCount > 0
+          ? t('ui.dasha.evidenceTally.neutral', { count: tally.neutralCount })
+          : null
+      ].filter((part): part is string => part !== null)
+    : [];
 
   return (
     <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
@@ -61,6 +75,12 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
       {period.statement && (
         <p className="text-xs text-slate-300 leading-relaxed font-sans pt-1">
           {period.statement}
+        </p>
+      )}
+
+      {tallyParts.length > 0 && (
+        <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
+          {tallyParts.join(' · ')} {t('ui.dasha.evidenceTally.suffix')}
         </p>
       )}
 
