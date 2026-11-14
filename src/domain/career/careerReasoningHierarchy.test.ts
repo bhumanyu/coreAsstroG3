@@ -36,17 +36,31 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
 
   describe('Canonical Dasha confidence', () => {
     it('does not assign full confidence when planet context is unresolved', () => {
-      expect(deriveDashaTimingConfidence('FULL', false, ['evidence'], 'ACTIVATES')).toBe(0);
+      expect(deriveDashaTimingConfidence('FULL', false, [], [], 'ACTIVATES')).toBe(0);
     });
 
     it('does not assign full confidence without linked evidence or resolved effect', () => {
-      expect(deriveDashaTimingConfidence('FULL', true, [], 'ACTIVATES')).toBe(0);
-      expect(deriveDashaTimingConfidence('FULL', true, ['evidence'], 'INSUFFICIENT_DATA')).toBe(0);
-      expect(deriveDashaTimingConfidence('FULL', true, ['evidence'], 'UNKNOWN')).toBe(0);
+      const evidence = [{
+        id: 'dasha-evidence',
+        provenance: { natalRootIds: ['natal-root'] as const }
+      }];
+      const natalEvidence = [{ identityKey: 'natal-root' }];
+      expect(deriveDashaTimingConfidence('FULL', true, [], natalEvidence, 'ACTIVATES')).toBe(0);
+      expect(deriveDashaTimingConfidence('FULL', true, evidence, natalEvidence, 'INSUFFICIENT_DATA')).toBe(0);
+      expect(deriveDashaTimingConfidence('FULL', true, evidence, natalEvidence, 'UNKNOWN')).toBe(0);
     });
 
     it('allows full confidence for a fully assessed level with linked evidence and resolved effect', () => {
-      expect(deriveDashaTimingConfidence('FULL', true, ['evidence'], 'ACTIVATES')).toBe(1);
+      expect(deriveDashaTimingConfidence(
+        'FULL',
+        true,
+        [{
+          id: 'dasha-evidence',
+          provenance: { natalRootIds: ['natal-root'] as const }
+        }],
+        [{ identityKey: 'natal-root' }],
+        'ACTIVATES'
+      )).toBe(1);
     });
 
     describe('Transit availability', () => {
@@ -113,12 +127,33 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
       });
     });
 
-    it('uses lower confidence for a partial condition assessment', () => {
-      expect(deriveDashaTimingConfidence('PARTIAL', true, [], 'INSUFFICIENT_DATA')).toBe(0.5);
+    it('applies the evidence and effect gate to a partial condition assessment', () => {
+      const evidence = [{
+        id: 'dasha-evidence',
+        provenance: { natalRootIds: ['natal-root'] as const }
+      }];
+      const natalEvidence = [{ identityKey: 'natal-root' }];
+      expect(deriveDashaTimingConfidence('PARTIAL', true, [], natalEvidence, 'ACTIVATES')).toBe(0);
+      expect(deriveDashaTimingConfidence('PARTIAL', true, evidence, natalEvidence, 'INSUFFICIENT_DATA')).toBe(0);
+      expect(deriveDashaTimingConfidence('PARTIAL', true, evidence, natalEvidence, 'UNKNOWN')).toBe(0);
+      expect(deriveDashaTimingConfidence('PARTIAL', true, evidence, natalEvidence, 'ACTIVATES')).toBe(0.5);
+    });
+
+    it('rejects dasha evidence whose natal root identity does not resolve', () => {
+      expect(deriveDashaTimingConfidence(
+        'FULL',
+        true,
+        [{
+          id: 'dasha-evidence',
+          provenance: { natalRootIds: ['missing-root'] as const }
+        }],
+        [{ identityKey: 'natal-root' }],
+        'ACTIVATES'
+      )).toBe(0);
     });
 
     it('assigns no confidence when condition assessment is unavailable', () => {
-      expect(deriveDashaTimingConfidence('UNAVAILABLE', true, ['evidence'], 'ACTIVATES')).toBe(0);
+      expect(deriveDashaTimingConfidence('UNAVAILABLE', true, [], [], 'ACTIVATES')).toBe(0);
     });
   });
 

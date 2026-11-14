@@ -25,9 +25,8 @@ import type {
 import type {
   CareerD10CanonicalAnalysis
 } from '../careerD10/careerD10CanonicalTypes';
-import type {
-  DomainEvidence
-} from '../../interpretation/DomainEvidence';
+import type { DomainEvidence } from '../../interpretation/DomainEvidence';
+import { createDomainEvidence } from '../../interpretation/DomainEvidence';
 import {
   buildCareerProfessionAnalysis,
   resolveCareerProfessionAnalysisStatus
@@ -35,13 +34,13 @@ import {
 
 describe('Career Profession Engine (P2-10A)', () => {
   describe('C-21 D10 stage status', () => {
-    it('marks an empty D10-qualified set PARTIAL when candidates were generated', () => {
+    it('marks an empty D10-qualified set INSUFFICIENT_DATA when candidates were generated', () => {
       expect(resolveCareerProfessionAnalysisStatus({
         generatedCandidateCount: 2,
         d10QualifiedCandidateCount: 0,
         missingInputCount: 0,
         rankingStatus: 'UNAVAILABLE'
-      })).toBe('PARTIAL');
+      })).toBe('INSUFFICIENT_DATA');
     });
 
     it('allows surviving D10 candidates to complete only with complete inputs and available ranking', () => {
@@ -276,7 +275,8 @@ describe('Career Profession Engine (P2-10A)', () => {
         expressions,
         mechanisms,
         career10HFoundation: createMock10HFoundation(),
-        career10LFoundation: createMock10LFoundation()
+        career10LFoundation: createMock10LFoundation(),
+        domainEvidence: [createDomainEvidence({ id: 'EVID1', sourceType: 'STRUCTURAL' })]
       };
 
       const result = buildCareerProfessionAnalysis(input);
@@ -364,6 +364,42 @@ describe('Career Profession Engine (P2-10A)', () => {
         )).toBe(false);
       });
 
+      it('rejects qualification provenance that references a nonexistent mechanism', () => {
+        const innovation = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+        const authority = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+        const qualifiedExpression = createMockQualifiedExpressionCandidate(
+          'INNOVATION_WORK',
+          'PATTERN_1',
+          [innovation.candidateId, authority.candidateId]
+        );
+        const expression = {
+          ...qualifiedExpression,
+          qualification: {
+            ...qualifiedExpression.qualification,
+            provenance: {
+              ...qualifiedExpression.qualification.provenance,
+              sourceMechanismIds: [
+                innovation.candidateId,
+                authority.candidateId,
+                'MISSING_MECHANISM'
+              ]
+            }
+          }
+        };
+
+        const result = buildCareerProfessionAnalysis({
+          expressions: createMockExpressionAnalysisResult([expression]),
+          mechanisms: [innovation, authority],
+          career10HFoundation: createMock10HFoundation(),
+          career10LFoundation: createMock10LFoundation(),
+          domainEvidence: [createDomainEvidence({ id: 'EVID1', sourceType: 'STRUCTURAL' })]
+        });
+
+        expect(result.candidates.some(candidate =>
+          candidate.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+        )).toBe(false);
+      });
+
       it('does not combine qualified source coverage split across separate expressions', () => {
         const innovation = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
         const authority = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
@@ -390,7 +426,7 @@ describe('Career Profession Engine (P2-10A)', () => {
         )).toBe(false);
       });
 
-      it('keeps a composite with unresolved extra IDs visible but out of ranking', () => {
+      it('rejects a qualified composite whose provenance references unresolved mechanism IDs', () => {
         const innovation = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
         const authority = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
         const expression = createMockQualifiedExpressionCandidate(
@@ -403,14 +439,14 @@ describe('Career Profession Engine (P2-10A)', () => {
           mechanisms: [innovation, authority],
           career10HFoundation: createMock10HFoundation(),
           career10LFoundation: createMock10LFoundation(),
-          natalPromiseDirection: 'SUPPORT'
+          natalPromiseDirection: 'SUPPORT',
+          domainEvidence: [createDomainEvidence({ id: 'EVID1', sourceType: 'STRUCTURAL' })]
         });
 
         const composite = result.candidates.find(candidate =>
           candidate.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
         );
-        expect(composite?.linkageCoverage).toBe('PARTIAL');
-        expect(result.ranking?.rankedCandidates).not.toContain(composite);
+        expect(composite).toBeUndefined();
       });
     });
   });
@@ -860,7 +896,8 @@ describe('Career Profession Engine (P2-10A)', () => {
         expressions,
         mechanisms,
         career10HFoundation: createMock10HFoundation(),
-        career10LFoundation: createMock10LFoundation()
+        career10LFoundation: createMock10LFoundation(),
+        domainEvidence: [createDomainEvidence({ id: 'EVID1', sourceType: 'STRUCTURAL' })]
       };
 
       const result = buildCareerProfessionAnalysis(input);
@@ -1294,7 +1331,8 @@ describe('Career Profession Engine (P2-10A)', () => {
         expressions,
         mechanisms,
         career10HFoundation: createMock10HFoundation(),
-        career10LFoundation: createMock10LFoundation()
+        career10LFoundation: createMock10LFoundation(),
+        domainEvidence: [createDomainEvidence({ id: 'EVID1', sourceType: 'STRUCTURAL' })]
       };
 
       const result = buildCareerProfessionAnalysis(input);

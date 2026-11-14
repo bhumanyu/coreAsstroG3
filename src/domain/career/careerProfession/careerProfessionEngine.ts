@@ -246,6 +246,10 @@ export function buildCareerProfessionAnalysis(
   });
 }
 
+/**
+ * An empty D10-qualified set after candidates were generated is insufficient data:
+ * the generation succeeded, but D10 rejected every candidate.
+ */
 export function resolveCareerProfessionAnalysisStatus(input: {
   readonly generatedCandidateCount: number;
   readonly d10QualifiedCandidateCount: number;
@@ -254,7 +258,11 @@ export function resolveCareerProfessionAnalysisStatus(input: {
 }): CareerProfessionAnalysisStatus {
   if (input.generatedCandidateCount === 0) return 'INSUFFICIENT_DATA';
   if (
-    input.d10QualifiedCandidateCount === 0 ||
+    input.d10QualifiedCandidateCount === 0
+  ) {
+    return 'INSUFFICIENT_DATA';
+  }
+  if (
     input.missingInputCount > 0 ||
     input.rankingStatus !== 'AVAILABLE'
   ) {
@@ -356,7 +364,8 @@ function resolveRulesInPattern(
       patternExpressions,
       patternMechanisms,
       patternMechanismIds,
-      mechanismTypes
+      mechanismTypes,
+      domainEvidence ?? []
     );
     if (match) {
       matchedRuleCount += 1;
@@ -407,7 +416,8 @@ function evaluateRule(
   patternExpressions: readonly CareerExpressionCandidate[],
   patternMechanisms: readonly CareerMechanismCandidate[],
   patternMechanismIds: Set<string>,
-  mechanismTypes: Set<CareerMechanismType>
+  mechanismTypes: Set<CareerMechanismType>,
+  domainEvidence: readonly DomainEvidence[]
 ): { satisfyingExpressions: readonly CareerExpressionCandidate[]; satisfyingMechanisms: readonly CareerMechanismCandidate[] } | null {
   // At least one of requiredExpressionTypes or requiredMechanismTypes must be specified
   if (
@@ -471,7 +481,7 @@ function evaluateRule(
       // Capture the exact mechanism instances referenced by qualifying expressions
       const referencedMechanismIds = new Set<string>();
       for (const expr of patternExpressions) {
-        if (!hasCompleteExpressionQualification(expr)) {
+        if (!hasCompleteExpressionQualification(expr, patternMechanisms, domainEvidence)) {
           continue;
         }
         const referencedMechanismTypes = new Set<CareerMechanismType>();
@@ -524,7 +534,11 @@ function evaluateRule(
   return { satisfyingExpressions, satisfyingMechanisms };
 }
 
-function hasCompleteExpressionQualification(expression: CareerExpressionCandidate): boolean {
+function hasCompleteExpressionQualification(
+  expression: CareerExpressionCandidate,
+  mechanisms: readonly CareerMechanismCandidate[],
+  domainEvidence: readonly DomainEvidence[]
+): boolean {
   const canonicalExpression = expression as CareerExpressionCandidate & {
     readonly qualificationStatus?: unknown;
     readonly qualification?: unknown;
@@ -568,9 +582,13 @@ function hasCompleteExpressionQualification(expression: CareerExpressionCandidat
   const qualificationRuleIds = qualified.ruleIds;
   const provenanceRuleIds = provenance.ruleIds;
   const provenanceMechanismIds = provenance.sourceMechanismIds;
+  const mechanismIds = new Set(mechanisms.map(mechanism => mechanism.candidateId));
+  const evidenceIds = new Set(domainEvidence.map(item => item.id));
   return (
     qualificationRuleIds.every(ruleId => provenanceRuleIds.includes(ruleId)) &&
-    expression.sourceMechanismIds.every(id => provenanceMechanismIds.includes(id))
+    expression.sourceMechanismIds.every(id => provenanceMechanismIds.includes(id)) &&
+    provenanceMechanismIds.every(id => mechanismIds.has(id)) &&
+    provenance.sourceEvidenceIds.every(id => evidenceIds.has(id))
   );
 }
 

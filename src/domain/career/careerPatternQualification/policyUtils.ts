@@ -105,16 +105,27 @@ export function hasAllEstablishingRelationships(
   );
 }
 
-/** Uses only canonical network edges; relationship ID strings are never interpreted. */
+/**
+ * Uses only canonical network edges; relationship ID strings are never interpreted.
+ * Returns INSUFFICIENT_DATA until every referenced network is supplied.
+ */
 export function hasDirectedHouseRelationshipId(
   pattern: CareerPattern,
   fromHouse: number,
   toHouse: number,
   networks: readonly CareerHouseNetwork[]
-): boolean {
-  return networks
-    .filter(network => pattern.networkIds.includes(network.networkId))
-    .some(network => hasDirectedHouseRelationship(network, fromHouse, toHouse));
+): 'PRESENT' | 'ABSENT' | 'INSUFFICIENT_DATA' {
+  const matchedNetworks = networks.filter(network => pattern.networkIds.includes(network.networkId));
+  const matchedNetworkIds = new Set(matchedNetworks.map(network => network.networkId));
+  if (
+    pattern.networkIds.length === 0 ||
+    pattern.networkIds.some(networkId => !matchedNetworkIds.has(networkId))
+  ) {
+    return 'INSUFFICIENT_DATA';
+  }
+  return matchedNetworks.some(network => hasDirectedHouseRelationship(network, fromHouse, toHouse))
+    ? 'PRESENT'
+    : 'ABSENT';
 }
 
 /**

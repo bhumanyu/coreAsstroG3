@@ -42,6 +42,7 @@ import {
   resolveCurrentPressure,
   buildCareerDashaStatement,
   buildCareerTransitStatement,
+  mapC11Manifestations,
   mapC11EvidenceIdentityKeysToOccurrenceIds,
   mapCareerSource,
   mapCareerPhase,
@@ -846,6 +847,9 @@ describe('CareerDomainInterpreterV2', () => {
         const dashaSpy = vi.spyOn(dashaModule, 'buildCareerDashaAnalysis')
           .mockImplementation(input => {
             const canonical = originalDashaBuilder(input);
+            const natalRootIds = input.natal.evidence
+              .slice(0, 1)
+              .map(item => item.identityKey);
             const diagnosticTrace = canonical.hierarchy?.diagnosticTrace;
             if (!diagnosticTrace) {
               throw new Error('Expected canonical C9 diagnostic trace in interpreter test.');
@@ -881,7 +885,15 @@ describe('CareerDomainInterpreterV2', () => {
                     }
                   }
                 : {}),
-              evidence: linkedEvidence ? [mdEvidence] : [],
+              evidence: linkedEvidence
+                ? [{
+                    ...mdEvidence,
+                    provenance: {
+                      ...mdEvidence.provenance,
+                      natalRootIds
+                    }
+                  }]
+                : [],
               hierarchy: {
                 ...canonical.hierarchy!,
                 diagnosticTrace: {
@@ -1791,10 +1803,56 @@ describe('CareerDomainInterpreterV2', () => {
       createDomainEvidence({ id: 'unrelated', sourceType: 'STRUCTURAL', identityKey: 'C11:OTHER' })
     ];
 
-    expect(mapC11EvidenceIdentityKeysToOccurrenceIds(
+    const mapped = mapC11EvidenceIdentityKeysToOccurrenceIds(
       [sharedIdentityKey, sharedIdentityKey],
       evidence
-    )).toEqual(['occurrence-1', 'occurrence-2']);
+    );
+    expect(mapped.occurrenceIds).toEqual(['occurrence-1', 'occurrence-2']);
+    expect(mapped.unresolvedIdentityKeys).toEqual([]);
+    expect(mapped.diagnostics).toEqual([]);
+  });
+
+  it('C11 manifestation identity mapping diagnoses unresolved keys without changing resolved occurrences', () => {
+    const evidence = [
+      createDomainEvidence({ id: 'occurrence-1', sourceType: 'STRUCTURAL', identityKey: 'known-key' })
+    ];
+    const mapped = mapC11EvidenceIdentityKeysToOccurrenceIds(
+      ['known-key', 'unknown-key'],
+      evidence
+    );
+
+    expect(mapped.occurrenceIds).toEqual(['occurrence-1']);
+    expect(mapped.unresolvedIdentityKeys).toEqual(['unknown-key']);
+    expect(mapped.diagnostics).toContainEqual(expect.objectContaining({
+      code: 'C11_UNRESOLVED_EVIDENCE_IDENTITY_KEY',
+      relatedIds: ['unknown-key']
+    }));
+  });
+
+  it('C11 manifestation mapping reports duplicate modes and deterministically keeps the first', () => {
+    const interpretation = interpretCareerV2(horoscope, makeDomainOptions());
+    const compatibilityMode = interpretation.manifestations[0];
+    if (!compatibilityMode) throw new Error('Expected a compatibility manifestation mode.');
+    const duplicateCanonical = {
+      confidence: 'HIGH',
+      statement: 'Duplicate-mode test',
+      expressions: [
+        { mode: compatibilityMode.mode, direction: 'SUPPORT', evidenceIds: [] },
+        { mode: compatibilityMode.mode, direction: 'CHALLENGE', evidenceIds: [] }
+      ]
+    } as unknown as CareerFinalSynthesisResult;
+
+    const mapped = mapC11Manifestations(
+      duplicateCanonical,
+      [compatibilityMode!],
+      interpretation.evidence
+    );
+
+    expect(mapped.diagnostics).toContainEqual(expect.objectContaining({
+      code: 'C11_DUPLICATE_EXPRESSION_MODE',
+      severity: 'WARNING'
+    }));
+    expect(mapped.manifestations[0]?.status).toBe('SUPPORTED');
   });
 
   // End-to-end CW-05 Career Final Synthesis Pipeline Test

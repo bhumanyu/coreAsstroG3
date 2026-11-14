@@ -67,7 +67,12 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       const has6to10 = hasDirectedHouseRelationshipId(pattern, 6, 10, networks);
       const has10to11 = hasDirectedHouseRelationshipId(pattern, 10, 11, networks);
 
-      if (!has6to10 && !has10to11) {
+      if (has6to10 === 'INSUFFICIENT_DATA' || has10to11 === 'INSUFFICIENT_DATA') {
+        decisionBlockingReasons.push({
+          reason: 'one or more referenced canonical house networks are unavailable',
+          kind: 'MISSING_INPUT'
+        });
+      } else if (has6to10 === 'ABSENT' && has10to11 === 'ABSENT') {
         // Both prerequisites explicitly absent → UNQUALIFIED
         status = 'UNQUALIFIED';
         evidence.push(
@@ -80,10 +85,10 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
             'Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Neither found.'
           )
         );
-      } else if (!has6to10 || !has10to11) {
+      } else if (has6to10 === 'ABSENT' || has10to11 === 'ABSENT') {
         // One prerequisite absent, one present → UNQUALIFIED
         status = 'UNQUALIFIED';
-        const missing = !has6to10 ? '6→10' : '10→11';
+        const missing = has6to10 === 'ABSENT' ? '6→10' : '10→11';
         evidence.push(
           createQualificationEvidence(
             generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),

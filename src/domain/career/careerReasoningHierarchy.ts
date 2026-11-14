@@ -25,6 +25,8 @@ import {
   resolveDashaHierarchy,
   type DashaTimingEvidence
 } from '../reasoning/dashaHierarchy';
+import type { CareerDashaCanonicalEvidence } from './careerDasha/careerDashaCanonicalTypes';
+import type { WeightedReasoningEvidence } from '../reasoning/reasoningTypes';
 import {
   resolveReasoningConflicts,
   resolveFinalDomainStrength,
@@ -47,20 +49,30 @@ import {
 } from './careerManifestations';
 
 /**
- * FULL C9 confidence requires resolved planet context, linked evidence, and a resolved effect.
+ * C9 confidence requires resolved planet context, natal-linked evidence, and a resolved effect.
+ * FULL assessments receive 1; PARTIAL assessments receive 0.5.
  */
 export function deriveDashaTimingConfidence(
   conditionAssessment: 'FULL' | 'PARTIAL' | 'UNAVAILABLE' | undefined,
   contextResolved: boolean,
-  evidenceIds: readonly string[],
+  evidence: readonly (
+    Pick<CareerDashaCanonicalEvidence, 'id'> & {
+      readonly provenance: Pick<CareerDashaCanonicalEvidence['provenance'], 'natalRootIds'>;
+    }
+  )[],
+  natalEvidence: readonly Pick<WeightedReasoningEvidence, 'identityKey'>[],
   effect: TimingActivationEffect
 ): number {
   if (!contextResolved) return 0;
-  if (conditionAssessment === 'FULL') {
-    const hasLinkedEvidence = evidenceIds.some(id => id.trim().length > 0);
-    const hasResolvedEffect = effect !== 'INSUFFICIENT_DATA' && effect !== 'UNKNOWN';
-    return hasLinkedEvidence && hasResolvedEffect ? 1 : 0;
-  }
+  const natalIdentityKeys = new Set(natalEvidence.map(item => item.identityKey));
+  const hasLinkedEvidence = evidence.some(item =>
+    item.id.trim().length > 0 &&
+    item.provenance.natalRootIds.length > 0 &&
+    item.provenance.natalRootIds.every(rootId => natalIdentityKeys.has(rootId))
+  );
+  const hasResolvedEffect = effect !== 'INSUFFICIENT_DATA' && effect !== 'UNKNOWN';
+  if (!hasLinkedEvidence || !hasResolvedEffect) return 0;
+  if (conditionAssessment === 'FULL') return 1;
   if (conditionAssessment === 'PARTIAL') return 0.5;
   return 0;
 }

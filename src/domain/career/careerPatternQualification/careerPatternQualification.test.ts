@@ -1480,6 +1480,32 @@ describe('Career Pattern Qualification', () => {
         });
       });
 
+      it('returns INSUFFICIENT_DATA when the pattern references an unavailable network', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          networkIds: ['MISSING_NET'],
+          provenance: Object.freeze({
+            sourceNetworkIds: ['MISSING_NET'],
+            relationshipIds: [],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: [],
+            supportingRelationshipIds: []
+          })
+        });
+        const result = qualifyCareerPatterns({
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          networks: [makeDirectedServiceProfessionNetwork()]
+        });
+
+        expect(result.qualifiedPatterns[0].status).toBe('INSUFFICIENT_DATA');
+        expect(result.qualifiedPatterns[0].decisionBlockingReasons).toContainEqual({
+          reason: 'one or more referenced canonical house networks are unavailable',
+          kind: 'MISSING_INPUT'
+        });
+      });
+
       it('returns UNQUALIFIED when both 6→10 and 10→11 relationships are absent', () => {
         const pattern = makePattern({
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',

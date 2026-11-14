@@ -35,6 +35,7 @@ import type {
   TransitTrigger,
   VargaConfirmation
 } from '../interpretation';
+import type { DomainInterpretationDiagnostic } from '../interpretation/DomainInterpretation';
 import type {
   CareerManifestationMode,
   CareerManifestation,
@@ -642,7 +643,8 @@ export function interpretCareerV2(
         confidence: deriveDashaTimingConfidence(
           canonicalDashaAnalysis.md.conditionAssessment,
           canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'MD')?.contextResolved === true,
-          canonicalDashaAnalysis.evidence.filter(item => item.level === 'MD').map(item => item.id),
+          canonicalDashaAnalysis.evidence.filter(item => item.level === 'MD'),
+          canonicalNatalAnalysis.evidence,
           canonicalDashaAnalysis.md.effect
         )
       },
@@ -653,7 +655,8 @@ export function interpretCareerV2(
         confidence: deriveDashaTimingConfidence(
           canonicalDashaAnalysis.ad.conditionAssessment,
           canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'AD')?.contextResolved === true,
-          canonicalDashaAnalysis.evidence.filter(item => item.level === 'AD').map(item => item.id),
+          canonicalDashaAnalysis.evidence.filter(item => item.level === 'AD'),
+          canonicalNatalAnalysis.evidence,
           canonicalDashaAnalysis.ad.effect
         )
       },
@@ -664,7 +667,8 @@ export function interpretCareerV2(
         confidence: deriveDashaTimingConfidence(
           canonicalDashaAnalysis.pd.conditionAssessment,
           canonicalDashaAnalysis.hierarchy?.diagnosticTrace?.levels.find(level => level.level === 'PD')?.contextResolved === true,
-          canonicalDashaAnalysis.evidence.filter(item => item.level === 'PD').map(item => item.id),
+          canonicalDashaAnalysis.evidence.filter(item => item.level === 'PD'),
+          canonicalNatalAnalysis.evidence,
           canonicalDashaAnalysis.pd.effect
         )
       }
@@ -713,7 +717,7 @@ export function interpretCareerV2(
     // CW-01 supplies only the compatibility mode list; C11 supplies all displayed values.
     cw01Result.manifestations,
     evidence
-  );
+  ).manifestations;
   const conclusionData = buildCareerConclusionData(
     mapC11StrengthToDomain(preliminaryC11Result.natalStrength),
     d10Relationship,
@@ -789,12 +793,13 @@ export function interpretCareerV2(
   });
 
   const canonicalC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(finalCanonicalC11Input);
-  const canonicalManifestations = mapC11Manifestations(
+  const canonicalManifestationMapping = mapC11Manifestations(
     canonicalC11Result,
     // CW-01 supplies only the compatibility mode list; C11 supplies all displayed values.
     cw01Result.manifestations,
     evidence
   );
+  const canonicalManifestations = canonicalManifestationMapping.manifestations;
 
   // B01: Build orthogonal axis projections from the same canonical C4-C10 inputs.
   // Keep them beside (not inside) CareerFinalSynthesisResult so the frozen C11 contract
@@ -1254,6 +1259,7 @@ export function interpretCareerV2(
     vargaConfirmations,
     manifestations: canonicalManifestations,
     conflicts,
+    diagnostics: canonicalManifestationMapping.diagnostics,
     conclusion: c11AdaptedConclusion, // P2-08D: Use canonical C11 conclusion
     timingActivations,
     dataCompleteness,
@@ -1649,21 +1655,30 @@ function mapC11TimingStatusToActivation(
   }
 }
 
-function mapC11Manifestations(
+export function mapC11Manifestations(
   c11: CareerFinalSynthesisResult,
   compatibilityModes: readonly DomainManifestation[],
   domainEvidence: readonly DomainEvidence[]
-): readonly DomainManifestation[] {
+): {
+  readonly manifestations: readonly DomainManifestation[];
+  readonly diagnostics: readonly DomainInterpretationDiagnostic[];
+} {
   const expressionModes = c11.expressions.map(expression => expression.mode);
+  const diagnostics: DomainInterpretationDiagnostic[] = [];
   if (new Set(expressionModes).size !== expressionModes.length) {
-    throw new Error('C11 manifestation mapping requires at most one expression per mode.');
+    diagnostics.push({
+      code: 'C11_DUPLICATE_EXPRESSION_MODE',
+      severity: 'WARNING',
+      message: 'C11 supplied duplicate manifestation modes; the first expression for each mode was used.',
+      relatedIds: expressionModes
+    });
   }
 
   const confidence: DomainManifestation['confidence'] =
     c11.confidence === 'HIGH' ? 'HIGH'
       : c11.confidence === 'MEDIUM' ? 'MODERATE' : 'LOW';
 
-  return Object.freeze(compatibilityModes.map(compatibilityMode => {
+  const manifestations = compatibilityModes.map(compatibilityMode => {
     const expression = c11.expressions.find(item => item.mode === compatibilityMode.mode);
     const status: NonNullable<DomainManifestation['status']> = expression
       ? expression.direction === 'SUPPORT' ? 'SUPPORTED'
@@ -1672,29 +1687,52 @@ function mapC11Manifestations(
             : expression.direction === 'MIXED' ? 'MIXED' : 'INSUFFICIENT_DATA'
       : 'INSUFFICIENT_DATA';
 
+    const mappedEvidence = mapC11EvidenceIdentityKeysToOccurrenceIds(
+      expression?.evidenceIds ?? [],
+      domainEvidence
+    );
+    diagnostics.push(...mappedEvidence.diagnostics);
     return createDomainManifestation({
       mode: compatibilityMode.mode,
       confidence,
       status,
       statement: c11.statement,
-      evidenceIds: Object.freeze(mapC11EvidenceIdentityKeysToOccurrenceIds(
-        expression?.evidenceIds ?? [],
-        domainEvidence
-      ))
+      evidenceIds: Object.freeze(mappedEvidence.occurrenceIds)
     });
-  }));
+  });
+  return Object.freeze({
+    manifestations: Object.freeze(manifestations),
+    diagnostics: Object.freeze(diagnostics)
+  });
 }
 
 /** Retains every occurrence whose semantic identity is referenced by C11. */
 export function mapC11EvidenceIdentityKeysToOccurrenceIds(
   identityKeys: readonly string[],
   domainEvidence: readonly DomainEvidence[]
-): string[] {
-  return Array.from(new Set(
-    identityKeys.flatMap(identityKey =>
-      domainEvidence.filter(item => item.identityKey === identityKey).map(item => item.id)
-    )
-  ));
+): {
+  readonly occurrenceIds: readonly string[];
+  readonly unresolvedIdentityKeys: readonly string[];
+  readonly diagnostics: readonly DomainInterpretationDiagnostic[];
+} {
+  const resolvedByKey = new Map<string, string[]>();
+  for (const identityKey of identityKeys) {
+    const matches = domainEvidence
+      .filter(item => item.identityKey === identityKey)
+      .map(item => item.id);
+    if (matches.length > 0) resolvedByKey.set(identityKey, matches);
+  }
+  const unresolvedIdentityKeys = Array.from(new Set(identityKeys.filter(key => !resolvedByKey.has(key))));
+  return Object.freeze({
+    occurrenceIds: Object.freeze(Array.from(new Set(identityKeys.flatMap(key => resolvedByKey.get(key) ?? [])))),
+    unresolvedIdentityKeys: Object.freeze(unresolvedIdentityKeys),
+    diagnostics: Object.freeze(unresolvedIdentityKeys.length > 0 ? [{
+      code: 'C11_UNRESOLVED_EVIDENCE_IDENTITY_KEY',
+      severity: 'WARNING' as const,
+      message: 'C11 manifestation evidence identity keys could not be resolved to domain evidence occurrences.',
+      relatedIds: unresolvedIdentityKeys
+    }] : [])
+  });
 }
 
 // Re-exports from modular files for full backward compatibility

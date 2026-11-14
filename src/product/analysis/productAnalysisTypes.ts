@@ -24,7 +24,7 @@ import type { WealthDimension } from '../../domain/wealth/wealthTypes';
 export type ProductStatus = 'READY' | 'PARTIAL' | 'ERROR';
 export type ProductAnalysisStatus = ProductStatus;
 
-export type ProductConfidence = 'LOW' | 'MEDIUM' | 'HIGH';
+export type ProductConfidence = 'LOW' | 'MEDIUM' | 'HIGH' | 'UNAVAILABLE';
 
 /**
  * Temporal relation of a period relative to analysis.asOf.

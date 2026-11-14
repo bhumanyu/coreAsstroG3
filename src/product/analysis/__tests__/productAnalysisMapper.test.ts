@@ -342,6 +342,62 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysis.wealth.synthesis?.statement).toBe(sampleViewModel.wealthDetail?.promiseStatement);
   });
 
+  it('uses canonical C11 confidence instead of the legacy career summary confidence', () => {
+    const lifeAnalysisViewModel: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        canonicalFinalSynthesis: {
+          finalStatus: 'CHALLENGED',
+          finalDirection: 'CHALLENGE',
+          finalStrength: 'WEAK',
+          confidence: 'LOW',
+          natalDirection: 'CHALLENGE',
+          natalStrength: 'WEAK',
+          dashaDirection: 'UNAVAILABLE',
+          timingStatus: 'UNKNOWN'
+        } as NonNullable<LifeAnalysisViewModel['careerDetail']>['canonicalFinalSynthesis']
+      }
+    };
+
+    const analysis = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel,
+      context: sampleContext
+    });
+
+    expect(analysis.career.promise.confidence).toBe('LOW');
+    expect(analysis.career.promise.confidence).not.toBe('HIGH');
+  });
+
+  it('marks product career confidence unavailable when canonical C11 omits confidence', () => {
+    const lifeAnalysisViewModel: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        canonicalFinalSynthesis: {
+          finalStatus: 'MIXED',
+          finalDirection: 'MIXED',
+          finalStrength: 'MIXED',
+          natalDirection: 'MIXED',
+          natalStrength: 'MIXED',
+          dashaDirection: 'MIXED',
+          timingStatus: 'UNKNOWN'
+        } as NonNullable<LifeAnalysisViewModel['careerDetail']>['canonicalFinalSynthesis']
+      }
+    };
+
+    const analysis = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel,
+      context: sampleContext
+    });
+
+    expect(analysis.career.promise.confidence).toBe('UNAVAILABLE');
+  });
+
   it('1.1 projects canonical Career analytical axes into the product DTO without sharing mutable arrays', () => {
     const axes = {
       version: 'B01-AXIS-PROJECTION-v1',

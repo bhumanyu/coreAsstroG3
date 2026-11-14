@@ -994,7 +994,11 @@ function mapCareer(
         : detail?.natalPromise
           ? String(detail.natalPromise)
           : 'UNAVAILABLE',
-      confidence: mapConfidence(summary?.confidence),
+      confidence: detail?.canonicalFinalSynthesis
+        ? detail.canonicalFinalSynthesis.confidence
+          ? mapConfidence(detail.canonicalFinalSynthesis.confidence)
+          : 'UNAVAILABLE'
+        : mapConfidence(summary?.confidence),
       headline: detail?.canonicalFinalSynthesis?.statement ||
         detail?.promiseHeadline || detail?.headline || summary?.headline,
       statement: detail?.canonicalFinalSynthesis?.statement ||

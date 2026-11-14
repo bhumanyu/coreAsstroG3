@@ -1821,6 +1821,31 @@ describe('AI Context Factory', () => {
       });
     });
 
+    it('does not project legacy career strength or natal promise as canonical C11 values', () => {
+      const legacyCareer = createDomainInterpretation({
+        domain: 'CAREER',
+        natalPromise: createNatalPromise({ strength: 'STRONG' }),
+        dashaActivation: createDashaActivation({ effect: 'ACTIVATES' }),
+        transitTrigger: createTransitTrigger({ effect: 'TRIGGER' }),
+        conclusion: createDomainConclusion({
+          statement: 'Legacy career conclusion',
+          strength: 'STRONG',
+          confidence: 'HIGH'
+        }),
+        evidence: []
+      });
+
+      const context = buildAiContext(horoscope, {
+        domainInterpretations: [legacyCareer]
+      });
+
+      expect(context.career?.canonicalC11).toBeUndefined();
+      expect(context.career?.status).toBe('LIMITED_EVIDENCE');
+      expect(context.career?.natalPromise).toBe('UNAVAILABLE');
+      expect(context.career?.status).not.toBe('STRONG');
+      expect(context.career?.natalPromise).not.toBe('STRONG');
+    });
+
     it('should not throw conflicting evidence id when Pratyantardasha lord participates in multiple same-type yogas', () => {
       // Reproduce scenario where Pratyantardasha lord (e.g. SUN) participates in multiple same-type yogas (e.g. RAJA_YOGA)
       const canonicalYogaId1 = 'RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=1,5';

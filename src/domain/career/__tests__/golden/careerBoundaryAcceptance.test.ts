@@ -370,13 +370,13 @@ describe('Career production-boundary acceptance (CAR)', () => {
     expect(result.stageCounts?.rankingEligibleCandidates).toBe(0);
   });
 
-  it('C-21: all candidates removed by D10 remain a partial analysis with explicit stage counts', () => {
+  it('C-28: all candidates removed by D10 are insufficient while retaining generated stage counts', () => {
     expect(resolveCareerProfessionAnalysisStatus({
       generatedCandidateCount: 2,
       d10QualifiedCandidateCount: 0,
       missingInputCount: 0,
       rankingStatus: 'UNAVAILABLE'
-    })).toBe('PARTIAL');
+    })).toBe('INSUFFICIENT_DATA');
     expect({
       generatedCandidates: 2,
       d10QualifiedCandidates: 0,
@@ -423,8 +423,12 @@ describe('Career production-boundary acceptance (CAR)', () => {
     expect(result.dashaEffect).toBe('ACTIVATES');
     expect(result.dashaDirection).toBe('SUPPORT');
     expect(result.confidence).not.toBe('HIGH');
-    expect(deriveDashaTimingConfidence('PARTIAL', true, [], 'INSUFFICIENT_DATA')).toBe(0.5);
-    expect(deriveDashaTimingConfidence('UNAVAILABLE', false, ['evidence'], 'ACTIVATES')).toBe(0);
+    expect(deriveDashaTimingConfidence('PARTIAL', true, [], [], 'INSUFFICIENT_DATA')).toBe(0);
+    expect(deriveDashaTimingConfidence('PARTIAL', true, [{
+      id: 'dasha-evidence',
+      provenance: { natalRootIds: ['natal-root'] as const }
+    }], [{ identityKey: 'natal-root' }], 'ACTIVATES')).toBe(0.5);
+    expect(deriveDashaTimingConfidence('UNAVAILABLE', false, [], [], 'ACTIVATES')).toBe(0);
   });
 
   it('CAR-015: executed C8 with zero candidates remains EXECUTED_NO_CANDIDATES in the career view model', () => {
