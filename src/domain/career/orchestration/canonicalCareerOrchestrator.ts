@@ -109,6 +109,25 @@ export class CanonicalCareerOrchestrator {
     // Stage 1: Pattern candidates (C4/P2-03)
     const patternCandidates = this.buildPatternCandidates(input.patterns, diagnostics);
     const patternCandidateCount = patternCandidates.length;
+    const candidatesByPatternId = new Map<string, number>();
+    for (const candidate of patternCandidates) {
+      candidatesByPatternId.set(
+        candidate.patternId,
+        (candidatesByPatternId.get(candidate.patternId) ?? 0) + 1
+      );
+    }
+    for (const [patternId, count] of candidatesByPatternId) {
+      if (count > 1) {
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_DUPLICATE_PATTERN_CANDIDATE_${patternId}`,
+          severity: 'WARNING',
+          category: 'DUPLICATE_ID',
+          message: `Pattern candidate ID ${patternId} appears ${count} times.`,
+          relatedIds: [patternId],
+          stage: 'PATTERN'
+        });
+      }
+    }
 
     // Stage 2: Pattern qualification (P2-07A)
     const patternQualifications = this.buildPatternQualifications(
@@ -119,10 +138,37 @@ export class CanonicalCareerOrchestrator {
       patternCandidates,
       diagnostics
     );
-    const qualifiedPatternCount = patternQualifications.filter(
+    const qualificationsByPatternId = new Map<string, PatternQualification[]>();
+    for (const qualification of patternQualifications) {
+      const matches = qualificationsByPatternId.get(qualification.patternId) ?? [];
+      matches.push(qualification);
+      qualificationsByPatternId.set(qualification.patternId, matches);
+    }
+    const stagePatternQualifications: PatternQualification[] = [];
+    for (const [patternId, qualifications] of qualificationsByPatternId) {
+      if (qualifications.length > 1) {
+        const verdicts = new Set(qualifications.map(qualification => qualification.status));
+        const conflictingVerdicts = verdicts.size > 1;
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_DUPLICATE_PATTERN_QUALIFICATION_${patternId}`,
+          severity: conflictingVerdicts ? 'ERROR' : 'WARNING',
+          category: 'DUPLICATE_ID',
+          message: conflictingVerdicts
+            ? `Pattern ${patternId} has conflicting qualification verdicts: ${[...verdicts].sort().join(', ')}.`
+            : `Pattern ${patternId} has ${qualifications.length} duplicate qualification results with the same verdict.`,
+          relatedIds: [patternId],
+          stage: 'QUALIFICATION'
+        });
+        if (conflictingVerdicts) {
+          continue;
+        }
+      }
+      stagePatternQualifications.push(qualifications[0]);
+    }
+    const qualifiedPatternCount = stagePatternQualifications.filter(
       qualification => qualification.status === 'QUALIFIED'
     ).length;
-    const eligiblePatternCount = patternQualifications.filter(
+    const eligiblePatternCount = stagePatternQualifications.filter(
       qualification => qualification.status !== 'UNQUALIFIED'
     ).length;
     const requiredNetworkIds = new Set(
@@ -140,14 +186,18 @@ export class CanonicalCareerOrchestrator {
     const missingNetworkIds = [...requiredNetworkIds].filter(
       networkId => !availableNetworkIds.has(networkId)
     );
-    const qualifiedPatternIds = new Set(patternQualifications.map(
+    const candidatePatternIds = new Set(patternCandidates.map(candidate => candidate.patternId));
+    const qualifiedPatternIds = new Set(stagePatternQualifications.map(
       qualification => qualification.patternId
     ));
-    const qualificationResultMissingCount = patternCandidates.filter(
-      candidate => !qualifiedPatternIds.has(candidate.patternId)
+    const qualificationResultMissingCount = [...candidatePatternIds].filter(
+      patternId => !qualifiedPatternIds.has(patternId)
     ).length;
     const qualificationIncomplete =
-      diagnostics.some(diagnostic => diagnostic.stage === 'QUALIFICATION') ||
+      diagnostics.some(diagnostic =>
+        diagnostic.stage === 'QUALIFICATION' &&
+        !(diagnostic.category === 'DUPLICATE_ID' && diagnostic.severity === 'WARNING')
+      ) ||
       qualificationResultMissingCount > 0;
     const networkResolutionStatus = requiredNetworkIds.size === 0
       ? 'NOT_REQUIRED' as const
@@ -162,7 +212,7 @@ export class CanonicalCareerOrchestrator {
     const skippedRoleAssignmentPatternIds = new Set<string>();
     const participantRoleAssignments = this.buildParticipantRoleAssignments(
       patternCandidates,
-      patternQualifications,
+      stagePatternQualifications,
       input.networks,
       input.condition,
       input.relevance,
@@ -191,7 +241,7 @@ export class CanonicalCareerOrchestrator {
     // Stage 4: Mechanism resolution (P2-07D)
     const resolvedMechanisms = this.buildResolvedMechanisms(
       patternCandidates,
-      patternQualifications,
+      stagePatternQualifications,
       participantRoleAssignments,
       input.networks,
       diagnostics

@@ -39,7 +39,8 @@ import type {
  * - MODERATE → MODERATE
  * - NEUTRAL → MODERATE (conservative: neutral dignity does not imply weak condition)
  * - WEAK → WEAK
- * - AFFLICTED → WEAK
+ * - AFFLICTED → WEAK (intentional equivalence: both are the same C7 disqualifier;
+ *   C7 does not currently preserve a distinct AFFLICTED qualification dimension)
  * - PARTIAL assessment → preserve the resolved condition; qualification policies
  *   receive the partial-assessment flag and must not treat WEAK as a disqualifier
  * - UNAVAILABLE assessment, missing assessment metadata, or missing result → UNAVAILABLE
@@ -60,6 +61,7 @@ export function mapPlanetaryCondition(
       return 'MODERATE';
     case 'WEAK':
       return 'WEAK';
+    // Intentional C7 equivalence: when fully assessed, both use the same disqualifier policy.
     case 'AFFLICTED':
       return 'WEAK';
     case 'UNAVAILABLE':

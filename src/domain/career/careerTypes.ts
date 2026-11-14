@@ -42,11 +42,11 @@ import type {
 
 /**
  * C8 stage attribution is valid only when every field is present. Precedence:
- * missing networks, missing qualification results, incomplete network/qualification
+ * missing networks, missing unique qualification results, incomplete network/qualification
  * evaluation, no discovered patterns, no eligible patterns (all were UNQUALIFIED),
  * role-assignment errors, skipped role assignments, then mechanism resolution for
- * eligible patterns. Missing qualification results must not be inferred as explicit
- * UNQUALIFIED results.
+ * eligible patterns. A missing or conflicting qualification result must not be
+ * inferred as an explicit UNQUALIFIED result.
  * Skipped patterns are distinct from ERROR-severity role-assignment failures.
  */
 export interface CareerC8ExpressionCoverage {

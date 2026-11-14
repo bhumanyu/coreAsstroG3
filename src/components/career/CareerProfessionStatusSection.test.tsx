@@ -2,6 +2,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CareerProfessionStatusSection } from './CareerProfessionStatusSection';
+import { CareerExpressionSection } from './CareerExpressionSection';
 import { getCareerProfessionStatusCopy, type CareerProfessionStatus } from '../../product/analysis/careerQualificationPresentation';
 import { selectCareerViewModel } from '../../product/analysis/careerViewModel';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
@@ -135,6 +136,44 @@ describe('CareerProfessionStatusSection', () => {
     expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
     expect(screen.queryByText(/No resolved career mechanisms/)).not.toBeInTheDocument();
     expect(screen.getByText(/This status alone is not a negative career prediction/)).toBeInTheDocument();
+  });
+
+  it('renders generic explanations for persisted analyses with legacy partial C8 coverage', () => {
+    const base = createProductAnalysis();
+    const legacyAnalysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        expression: {
+          analysisStatus: 'EXECUTED',
+          candidates: [],
+          coverageSummary: {
+            mechanismCandidateCount: 0,
+            expressionCount: 0,
+            expressionsWithEvidenceCount: 0,
+            evidenceCount: 0,
+            evidenceWithPlanetAttributionCount: 0
+          }
+        }
+      }
+    });
+    const viewModel = selectCareerViewModel(legacyAnalysis);
+    const profession = {
+      ...viewModel.profession,
+      status: 'INSUFFICIENT_DATA' as const,
+      statusCopy: getCareerProfessionStatusCopy('INSUFFICIENT_DATA')
+    };
+
+    render(
+      <>
+        <CareerExpressionSection expression={viewModel.expression} />
+        <CareerProfessionStatusSection profession={profession} />
+      </>
+    );
+
+    expect(screen.getByText('The expression analysis completed without producing candidates.')).toBeInTheDocument();
+    expect(screen.queryByText('No career patterns were discovered.')).not.toBeInTheDocument();
+    expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
+    expect(screen.queryByText(/No resolved career mechanisms/)).not.toBeInTheDocument();
   });
 
   it('renders labels for each known missing input and preserves the generic explanation', () => {
