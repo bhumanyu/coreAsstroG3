@@ -18,6 +18,7 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
     coverage.patternCandidateCount !== undefined &&
     coverage.qualifiedPatternCount !== undefined &&
     coverage.invalidRolePatternCount !== undefined &&
+    coverage.roleAssignmentSkippedPatternCount !== undefined &&
     coverage.resolvedMechanismCount !== undefined &&
     coverage.networkResolutionStatus !== undefined
   ) {
@@ -31,6 +32,8 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
             ? 'noPatternsQualified'
             : coverage.invalidRolePatternCount > 0
               ? 'participantRoleAssignmentFailed'
+              : coverage.roleAssignmentSkippedPatternCount > 0
+                ? 'participantRoleAssignmentSkipped'
               : coverage.resolvedMechanismCount === 0
                 ? 'mechanismsNotResolved'
                 : undefined;

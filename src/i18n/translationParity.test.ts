@@ -158,6 +158,7 @@ describe('English/Hindi localization resource parity', () => {
       'ui.expression.noPatternsDiscovered',
       'ui.expression.noPatternsQualified',
       'ui.expression.participantRoleAssignmentFailed',
+      'ui.expression.participantRoleAssignmentSkipped',
       'ui.expression.missingNetworkEvidence',
       'ui.expression.incompleteNetworkEvidence',
       'ui.expression.mechanismsNotResolved',

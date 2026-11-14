@@ -85,6 +85,29 @@ describe('Career Section Components Suite (P-UI-04)', () => {
   });
 
   describe('CareerExpressionSection', () => {
+    it('does not attribute a stage when C8 diagnostics are partial', () => {
+      render(<CareerExpressionSection expression={{
+        available: false,
+        status: 'EXECUTED_NO_CANDIDATES',
+        coverageSummary: {
+          mechanismCandidateCount: 0,
+          patternCandidateCount: 2,
+          qualifiedPatternCount: 1,
+          invalidRolePatternCount: 0,
+          resolvedMechanismCount: 0,
+          networkResolutionStatus: 'RESOLVED',
+          expressionCount: 0,
+          expressionsWithEvidenceCount: 0,
+          evidenceCount: 0,
+          evidenceWithPlanetAttributionCount: 0
+        },
+        candidates: []
+      }} />);
+
+      expect(screen.getByText('No canonical career expression candidates are available for this profile.')).toBeInTheDocument();
+      expect(screen.queryByText('Career mechanisms could not be resolved from the qualified patterns.')).not.toBeInTheDocument();
+    });
+
     it.each([
       [
         'no discovered patterns',
@@ -92,6 +115,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
           patternCandidateCount: 0,
           qualifiedPatternCount: 0,
           invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
           networkResolutionStatus: 'NOT_REQUIRED' as const
         },
@@ -103,6 +127,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
           patternCandidateCount: 2,
           qualifiedPatternCount: 0,
           invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
           networkResolutionStatus: 'RESOLVED' as const
         },
@@ -114,6 +139,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
           patternCandidateCount: 2,
           qualifiedPatternCount: 2,
           invalidRolePatternCount: 1,
+          roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
           networkResolutionStatus: 'RESOLVED' as const
         },
@@ -125,6 +151,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
           patternCandidateCount: 2,
           qualifiedPatternCount: 2,
           invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
           networkResolutionStatus: 'MISSING' as const
         },
@@ -136,10 +163,35 @@ describe('Career Section Components Suite (P-UI-04)', () => {
           patternCandidateCount: 2,
           qualifiedPatternCount: 2,
           invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
           networkResolutionStatus: 'INCOMPLETE' as const
         },
-        'Some referenced career network evidence could not be resolved.'
+        'Career network or qualification evaluation was incomplete.'
+      ],
+      [
+        'mechanism resolver',
+        {
+          patternCandidateCount: 2,
+          qualifiedPatternCount: 2,
+          invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 0,
+          resolvedMechanismCount: 0,
+          networkResolutionStatus: 'RESOLVED' as const
+        },
+        'Career mechanisms could not be resolved from the qualified patterns.'
+      ],
+      [
+        'skipped role assignment',
+        {
+          patternCandidateCount: 2,
+          qualifiedPatternCount: 1,
+          invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 1,
+          resolvedMechanismCount: 0,
+          networkResolutionStatus: 'RESOLVED' as const
+        },
+        'Some career patterns were skipped during participant-role assignment because qualification was unavailable.'
       ]
     ])('attributes zero candidates to %s', (_name, diagnostics, expectedMessage) => {
       render(<CareerExpressionSection expression={{

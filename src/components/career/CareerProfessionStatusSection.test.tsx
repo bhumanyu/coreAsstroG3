@@ -69,15 +69,17 @@ describe('CareerProfessionStatusSection', () => {
     expect(screen.queryByText(/mixed|neutral/i)).not.toBeInTheDocument();
   });
 
-  it('shows only the generic explanation when there are no missing inputs', () => {
+  it('uses the generic non-negative explanation when C8 coverage is absent', () => {
     const profession = {
       ...selectCareerViewModel(createProductAnalysis()).profession,
+      coverageSummary: undefined,
       missingInputs: [],
       statusCopy: getCareerProfessionStatusCopy('INSUFFICIENT_DATA')
     };
     render(<CareerProfessionStatusSection profession={profession} />);
 
     expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
+    expect(screen.queryByText(/No resolved career mechanisms/)).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Missing profession analysis inputs' })).not.toBeInTheDocument();
     expect(screen.queryByText('Missing inputs')).not.toBeInTheDocument();
   });
@@ -91,6 +93,7 @@ describe('CareerProfessionStatusSection', () => {
         patternCandidateCount: 2,
         qualifiedPatternCount: 1,
         invalidRolePatternCount: 0,
+        roleAssignmentSkippedPatternCount: 0,
         resolvedMechanismCount: 0,
         networkResolutionStatus: 'RESOLVED' as const,
         expressionCount: 0,

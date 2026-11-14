@@ -127,32 +127,45 @@ export class CanonicalCareerOrchestrator {
     );
     const resolvedNetworkIds = new Set(
       input.networks
-        .filter(network => requiredNetworkIds.has(network.networkId))
+        .filter(network =>
+          requiredNetworkIds.has(network.networkId) &&
+          network.relationships.length > 0
+        )
         .map(network => network.networkId)
     );
-    const qualificationFailed = diagnostics.some(
-      diagnostic => diagnostic.stage === 'QUALIFICATION' && diagnostic.severity === 'ERROR'
+    const availableNetworkIds = new Set(input.networks.map(network => network.networkId));
+    const missingNetworkIds = [...requiredNetworkIds].filter(
+      networkId => !availableNetworkIds.has(networkId)
     );
+    const qualifiedPatternIds = new Set(patternQualifications.map(
+      qualification => qualification.patternId
+    ));
+    const qualificationIncomplete =
+      diagnostics.some(diagnostic => diagnostic.stage === 'QUALIFICATION') ||
+      patternCandidates.some(candidate => !qualifiedPatternIds.has(candidate.patternId));
     const networkResolutionStatus = requiredNetworkIds.size === 0
       ? 'NOT_REQUIRED' as const
-      : resolvedNetworkIds.size === 0
+      : missingNetworkIds.length > 0
         ? 'MISSING' as const
-        : resolvedNetworkIds.size < requiredNetworkIds.size || qualificationFailed
+        : resolvedNetworkIds.size < requiredNetworkIds.size || qualificationIncomplete
           ? 'INCOMPLETE' as const
           : 'RESOLVED' as const;
 
     // Stage 3: Participant roles (P2-07B)
     const participantRoleDiagnosticsStart = diagnostics.length;
+    const skippedRoleAssignmentPatternIds = new Set<string>();
     const participantRoleAssignments = this.buildParticipantRoleAssignments(
       patternCandidates,
       patternQualifications,
       input.networks,
       input.condition,
       input.relevance,
-      diagnostics
+      diagnostics,
+      skippedRoleAssignmentPatternIds
     );
     const roleAssignmentValidation = validateParticipantRoleAssignments(participantRoleAssignments);
     diagnostics.push(...roleAssignmentValidation.diagnostics);
+    const knownPatternIds = new Set(patternCandidates.map(candidate => candidate.patternId));
     const invalidRolePatternIds = new Set(
       [
         ...roleAssignmentValidation.diagnostics,
@@ -162,10 +175,12 @@ export class CanonicalCareerOrchestrator {
           diagnostic.stage === 'PARTICIPANT_ROLES' &&
           diagnostic.severity === 'ERROR'
         )
-        .map(diagnostic => diagnostic.relatedIds[0])
-        .filter(patternId => patternId !== undefined && patternId.length > 0)
+        .flatMap(diagnostic => diagnostic.relatedIds.filter(patternId =>
+          knownPatternIds.has(patternId)
+        ))
     );
     const invalidRolePatternCount = invalidRolePatternIds.size;
+    const roleAssignmentSkippedPatternCount = skippedRoleAssignmentPatternIds.size;
 
     // Stage 4: Mechanism resolution (P2-07D)
     const resolvedMechanisms = this.buildResolvedMechanisms(
@@ -180,6 +195,7 @@ export class CanonicalCareerOrchestrator {
       patternCandidateCount,
       qualifiedPatternCount,
       invalidRolePatternCount,
+      roleAssignmentSkippedPatternCount,
       resolvedMechanismCount,
       networkResolutionStatus
     });
@@ -416,7 +432,8 @@ export class CanonicalCareerOrchestrator {
     networks: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[],
     condition: readonly import('../careerPlanetaryCondition').CareerPlanetaryConditionResult[],
     relevance: readonly import('../careerPlanetaryRelevance').CareerPlanetaryRelevance[],
-    diagnostics: OrchestrationDiagnostic[]
+    diagnostics: OrchestrationDiagnostic[],
+    skippedPatternIds: Set<string>
   ): readonly ParticipantRoleAssignment[] {
     const allAssignments: ParticipantRoleAssignment[] = [];
 
@@ -429,6 +446,7 @@ export class CanonicalCareerOrchestrator {
       const qualification = qualMap.get(pattern.patternId);
       if (!qualification) {
         // Pattern has no qualification - skip role assignment
+        skippedPatternIds.add(pattern.patternId);
         diagnostics.push({
           diagnosticId: `ORCHESTRATION_MISSING_QUALIFICATION_${pattern.patternId}`,
           severity: 'WARNING',

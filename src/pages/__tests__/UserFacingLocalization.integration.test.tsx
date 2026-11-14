@@ -65,6 +65,7 @@ describe('user-facing assessment localization at page boundaries', () => {
           patternCandidateCount: 0,
           qualifiedPatternCount: 0,
           invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 0,
           resolvedMechanismCount: 0,
           networkResolutionStatus: 'NOT_REQUIRED',
           expressionCount: 0,

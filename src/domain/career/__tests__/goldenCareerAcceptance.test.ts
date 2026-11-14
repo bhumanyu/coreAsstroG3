@@ -435,6 +435,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           "patternCandidateCount": 1,
           "qualifiedPatternCount": 0,
           "resolvedMechanismCount": 0,
+          "roleAssignmentSkippedPatternCount": 0,
         },
         "c9ExpressionTrace": {
           "evidenceCount": 0,

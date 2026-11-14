@@ -157,6 +157,7 @@ export interface ProductCareerExpressionCoverageSummary {
   readonly patternCandidateCount?: number;
   readonly qualifiedPatternCount?: number;
   readonly invalidRolePatternCount?: number;
+  readonly roleAssignmentSkippedPatternCount?: number;
   readonly resolvedMechanismCount?: number;
   readonly networkResolutionStatus?: 'RESOLVED' | 'MISSING' | 'INCOMPLETE' | 'NOT_REQUIRED';
   readonly expressionCount: number;

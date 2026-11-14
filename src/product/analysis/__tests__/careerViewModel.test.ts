@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { selectCareerViewModel } from '../careerViewModel';
 import { createProductAnalysis } from './testHelpers';
 import type { ProductDashaPeriod } from '../productAnalysisTypes';
-import { ENGLISH_USER_FACING_COPY } from '../../life-analysis/userFacingInterpretation';
+import {
+  ENGLISH_USER_FACING_COPY,
+  HINDI_USER_FACING_COPY
+} from '../../life-analysis/userFacingInterpretation';
 
 describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
   it('1. natal promise preserves strength and confidence while formatting its statement', () => {
@@ -89,6 +92,7 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
       patternCandidateCount: 0,
       qualifiedPatternCount: 0,
       invalidRolePatternCount: 0,
+      roleAssignmentSkippedPatternCount: 0,
       resolvedMechanismCount: 0,
       networkResolutionStatus: 'NOT_REQUIRED' as const,
       expressionCount: 0,
@@ -166,6 +170,27 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     expect(statement).toContain('Dasha support: Not assessed');
     expect(statement).toContain('Evidence confidence: Not assessed');
     expect(statement).not.toMatch(/\. Not assessed\. Not assessed/);
+  });
+
+  it('sanitizes enum-like legacy headlines with the active locale fallback', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        promise: {
+          ...base.career.promise,
+          headline: 'MIXED / NOT_ACTIVE'
+        },
+        synthesis: {
+          ...base.career.synthesis,
+          finalStatus: undefined
+        }
+      }
+    });
+
+    expect(selectCareerViewModel(analysis).promise.headline).toBe('Not assessed');
+    expect(selectCareerViewModel(analysis, HINDI_USER_FACING_COPY).promise.headline)
+      .toBe('आकलन नहीं किया गया');
   });
 
   it('preserves condition assessment metadata on Dasha period view models', () => {

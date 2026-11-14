@@ -40,11 +40,19 @@ import type {
   CareerFinalSynthesisResult
 } from './careerFinalSynthesis/careerFinalSynthesisTypes';
 
+/**
+ * C8 stage attribution is valid only when every field is present. Precedence:
+ * missing networks, incomplete network/qualification evaluation, no discovered
+ * patterns, no qualified patterns, role-assignment errors, skipped role
+ * assignments, then mechanism resolution. Skipped patterns are distinct from
+ * ERROR-severity role-assignment failures.
+ */
 export interface CareerC8ExpressionCoverage {
   readonly mechanismCandidateCount: number;
   readonly patternCandidateCount: number;
   readonly qualifiedPatternCount: number;
   readonly invalidRolePatternCount: number;
+  readonly roleAssignmentSkippedPatternCount: number;
   readonly resolvedMechanismCount: number;
   readonly networkResolutionStatus: 'RESOLVED' | 'MISSING' | 'INCOMPLETE' | 'NOT_REQUIRED';
   readonly expressionCount: number;

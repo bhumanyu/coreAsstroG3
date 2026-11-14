@@ -18,9 +18,25 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     INSUFFICIENT_DATA: 'insufficient'
   };
   const statusCopyKey = statusCopyKeyByStatus[profession.status];
+  const coverage = profession.coverageSummary;
+  const hasCompleteCoverage = Boolean(
+    coverage &&
+    coverage.mechanismCandidateCount !== undefined &&
+    coverage.patternCandidateCount !== undefined &&
+    coverage.qualifiedPatternCount !== undefined &&
+    coverage.invalidRolePatternCount !== undefined &&
+    coverage.roleAssignmentSkippedPatternCount !== undefined &&
+    coverage.resolvedMechanismCount !== undefined &&
+    coverage.networkResolutionStatus !== undefined &&
+    coverage.expressionCount !== undefined &&
+    coverage.expressionsWithEvidenceCount !== undefined &&
+    coverage.evidenceCount !== undefined &&
+    coverage.evidenceWithPlanetAttributionCount !== undefined
+  );
   const hasNoResolvedMechanisms =
     profession.status === 'INSUFFICIENT_DATA' &&
-    profession.coverageSummary?.resolvedMechanismCount === 0;
+    hasCompleteCoverage &&
+    coverage?.resolvedMechanismCount === 0;
   const statusExplanation = hasNoResolvedMechanisms
     ? t('ui.profession.noResolvedMechanismsExplanation')
     : t(`ui.profession.${statusCopyKey}Explanation`);

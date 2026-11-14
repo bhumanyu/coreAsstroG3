@@ -252,12 +252,17 @@ export function selectCareerViewModel(
     confidence: career.promise.confidence,
     copy
   });
+  const promiseHeadline = career.synthesis?.finalStatus
+    ? promiseAssessment.outcomeLabel
+    : career.promise.headline &&
+        /\b(MIXED|STRONG|WEAK|CHALLENGE|SUPPORT|UNAVAILABLE|INSUFFICIENT_DATA|NOT_ACTIVE|CHALLENGED)\b/
+          .test(career.promise.headline)
+      ? copy.notAssessed
+      : career.promise.headline;
   const promise: CareerPromiseViewModel = {
     strength: career.promise.strength,
     confidence: career.promise.confidence,
-    headline: career.synthesis?.finalStatus
-      ? promiseAssessment.outcomeLabel
-      : career.promise.headline,
+    headline: promiseHeadline,
     statement: [
       `${copy.titles['CAREER OUTCOME']}: ${promiseAssessment.outcomeLabel}`,
       `${copy.titles.FOUNDATION}: ${promiseAssessment.foundation.label}`,
