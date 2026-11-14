@@ -9,8 +9,13 @@ import type {
   ProductAnalysisService
 } from '../product/analysis';
 import type { DashaTimingViewModel } from '../product/dasha-timing';
-import { INITIAL_APP_STATE } from '../app/AppState';
+import { DEFAULT_BIRTH_DETAILS, INITIAL_APP_STATE as EMPTY_INITIAL_APP_STATE } from '../app/AppState';
 import { createAppControllerAcceptanceAdapter } from './appControllerAcceptanceAdapter';
+
+const INITIAL_APP_STATE = {
+  ...EMPTY_INITIAL_APP_STATE,
+  birthDetails: DEFAULT_BIRTH_DETAILS
+};
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

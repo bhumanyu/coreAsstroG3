@@ -44,11 +44,15 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
   }, [controller, t]);
 
   useEffect(() => {
-    void runAnalysisSafely(state.birthDetails);
+    if (state.birthDetails) {
+      void runAnalysisSafely(state.birthDetails);
+    }
   }, [runAnalysisSafely, state.birthDetails]);
 
   const handleLifeAnalysisRetry = useCallback(() => {
-    void runAnalysisSafely(state.birthDetails);
+    if (state.birthDetails) {
+      void runAnalysisSafely(state.birthDetails);
+    }
   }, [runAnalysisSafely, state.birthDetails]);
 
   const handleSaveBirthDetails = (newDetails: BirthDetails) => {
@@ -67,7 +71,7 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
   };
 
   // Derive presentational birth context for Header using shared mapper
-  const birthContext: BirthContext = useMemo(() => {
+  const birthContext: BirthContext | undefined = useMemo(() => {
     return buildBirthContext(state.birthDetails);
   }, [state.birthDetails]);
 

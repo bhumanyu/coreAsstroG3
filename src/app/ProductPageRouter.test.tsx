@@ -22,6 +22,7 @@ function renderResearchPage(
   const state: AppState = {
     ...INITIAL_APP_STATE,
     activePage,
+    birthDetails: CANONICAL_BIRTH_DETAILS,
     horoscope: readyHoroscope,
     productAnalysis: { status: 'READY', horoscope: readyHoroscope },
     lifeAnalysisState: { status: 'READY' }
@@ -41,6 +42,25 @@ function renderResearchPage(
 }
 
 describe('ProductPageRouter lazy research pages', () => {
+  it('prompts for birth details on a chart-dependent page when no chart exists', () => {
+    const onOpenBirthForm = vi.fn();
+    const state: AppState = {
+      ...INITIAL_APP_STATE,
+      activePage: 'overview'
+    };
+    render(
+      <ProductPageRouter
+        state={state}
+        onNavigate={() => undefined}
+        onOpenBirthForm={onOpenBirthForm}
+        onRetry={() => undefined}
+      />
+    );
+    expect(screen.getByText('Enter your birth details to calculate your horoscope')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Enter Birth Details' }));
+    expect(onOpenBirthForm).toHaveBeenCalledOnce();
+  });
+
   it('renders the home dashboard and wires daily sign navigation and birth editing', () => {
     const onNavigate = vi.fn();
     const onOpenBirthForm = vi.fn();

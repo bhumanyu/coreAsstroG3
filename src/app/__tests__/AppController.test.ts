@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createAppController } from '../AppController';
-import { INITIAL_APP_STATE, INITIAL_PRODUCT_ANALYSIS_STATE, AppState } from '../AppState';
+import { DEFAULT_BIRTH_DETAILS, INITIAL_APP_STATE as EMPTY_INITIAL_APP_STATE, INITIAL_PRODUCT_ANALYSIS_STATE, AppState } from '../AppState';
 import type { Dispatch, SetStateAction } from 'react';
 import type { ProductAnalysis } from '../../product/analysis/productAnalysisTypes';
 import type {
@@ -8,7 +8,7 @@ import type {
   ProductAnalysisRunSnapshot,
   ProductAnalysisService
 } from '../../product/analysis';
-import type { Horoscope } from '../../types';
+import type { BirthDetails, Horoscope } from '../../types';
 import type { LifeAnalysisProductState } from '../../product/life-analysis/lifeAnalysisTypes';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 
@@ -97,12 +97,16 @@ const mockErrorAnalysis: ProductAnalysis = {
   ]
 };
 
-const mockHoroscope = { birthDetails: INITIAL_APP_STATE.birthDetails } as Horoscope;
+const INITIAL_APP_STATE: AppState & { readonly birthDetails: BirthDetails } = {
+  ...EMPTY_INITIAL_APP_STATE,
+  birthDetails: DEFAULT_BIRTH_DETAILS
+};
+const mockHoroscope = { birthDetails: DEFAULT_BIRTH_DETAILS } as Horoscope;
 const mockPipelineState: LifeAnalysisProductState = { status: 'READY' };
 
 function makeRun(
   analysis: ProductAnalysis = mockProductAnalysis,
-  birthDetails = INITIAL_APP_STATE.birthDetails,
+  birthDetails = DEFAULT_BIRTH_DETAILS,
   horoscope: Horoscope = mockHoroscope,
   pipelineState: LifeAnalysisProductState = mockPipelineState
 ): ProductAnalysisRun {

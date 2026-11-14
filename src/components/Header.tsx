@@ -166,16 +166,17 @@ export const Header: React.FC<HeaderProps> = ({ activePage: propActivePage, onNa
     if (!birthDetails) return undefined;
     return buildBirthContext(birthDetails);
   }, [propBirthContext, birthDetails]);
+  const birthDetailsLabel = resolvedBirthContext ? t('editBirthDetails') : t('enterBirthDetails');
 
   return <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top)] backdrop-blur-xl bg-slate-950/85 dark:bg-slate-950/85 light:bg-white/90 border-b border-indigo-500/15 dark:border-indigo-500/15 light:border-slate-200/90 shadow-sm transition-colors duration-200">
     <div className="max-w-7xl mx-auto space-y-3 px-4 py-3 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Brand />
         <div className="flex max-w-full flex-wrap items-center gap-2 sm:gap-2.5">
-        <BirthContextButton birthContext={resolvedBirthContext} onOpenBirthForm={onOpenBirthForm} />
+        {resolvedBirthContext && <BirthContextButton birthContext={resolvedBirthContext} onOpenBirthForm={onOpenBirthForm} />}
         <LanguageSwitcher className="hidden lg:inline-flex" />
         <div className="hidden lg:block"><ThemeToggle /></div>
-        {onOpenBirthForm && <button type="button" onClick={onOpenBirthForm} className="flex shrink-0 items-center space-x-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"><Sparkles className="w-3.5 h-3.5" aria-hidden="true" /><span>{t('editBirthDetails')}</span></button>}
+        {onOpenBirthForm && <button type="button" onClick={onOpenBirthForm} className="flex shrink-0 items-center space-x-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"><Sparkles className="w-3.5 h-3.5" aria-hidden="true" /><span>{birthDetailsLabel}</span></button>}
         </div>
       </div>
       <MobileProductNavigation isOpen={isMobileMenuOpen} onToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} activePage={resolvedActivePage} onNavigate={handleNavigate} />

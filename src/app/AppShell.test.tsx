@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { Dispatch, SetStateAction } from 'react';
 import { AppShellContent } from './AppShell';
 import { createAppController, type AppController } from './AppController';
-import { INITIAL_APP_STATE, type AppState } from './AppState';
+import { DEFAULT_BIRTH_DETAILS, INITIAL_APP_STATE, type AppState } from './AppState';
 import { ProductAnalysisService, type ProductAnalysisRun } from '../product/analysis';
 import { createProductAnalysis } from '../product/analysis/__tests__/testHelpers';
 import { ChartProfileService } from '../features/chart-profiles/chartProfileService';
@@ -51,7 +51,7 @@ const successRun: ProductAnalysisRun = {
   analysis: successAnalysis,
   snapshot: {
     birthDetails: {
-      ...INITIAL_APP_STATE.birthDetails,
+      ...DEFAULT_BIRTH_DETAILS,
       name: 'Retry Test'
     },
     context: {
@@ -71,7 +71,7 @@ describe('AppShellContent analysis safety wrapper', () => {
   it('restores a saved profile through the birth form modal and reruns analysis', async () => {
     window.localStorage.clear();
     const restoredBirth = {
-      ...INITIAL_APP_STATE.birthDetails,
+      ...DEFAULT_BIRTH_DETAILS,
       name: 'Restored chart',
       dateTimeStr: '2001-02-03T04:05:00Z',
       latitude: 35,
@@ -90,7 +90,9 @@ describe('AppShellContent analysis safety wrapper', () => {
       };
     };
     render(<AppShellContent controllerFactory={controllerFactory} />);
-    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(1));
+    expect(analyze).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry analysis' }));
+    expect(analyze).not.toHaveBeenCalled();
 
     act(() => {
       setStateRef?.((prev) => ({ ...prev, isBirthFormOpen: true }));
@@ -98,8 +100,8 @@ describe('AppShellContent analysis safety wrapper', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Restored' }));
     fireEvent.click(screen.getByRole('button', { name: /calculate chart/i }));
 
-    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(2));
-    const restoredCall = analyze.mock.calls[1][0];
+    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(1));
+    const restoredCall = analyze.mock.calls[0][0];
     expect(restoredCall).toEqual(expect.objectContaining({
       name: 'Restored chart',
       placeOfBirth: restoredBirth.placeOfBirth,
@@ -113,7 +115,7 @@ describe('AppShellContent analysis safety wrapper', () => {
 
   it('offers a valid share fragment and loads it through the existing birth-details seam', async () => {
     const restoredBirth = {
-      ...INITIAL_APP_STATE.birthDetails,
+      ...DEFAULT_BIRTH_DETAILS,
       name: 'Shared chart',
       dateTimeStr: '2001-02-03T04:05:00Z',
       latitude: 35,
@@ -129,13 +131,14 @@ describe('AppShellContent analysis safety wrapper', () => {
       return createController(analyze);
     };
     render(<AppShellContent controllerFactory={controllerFactory} />);
+    expect(analyze).not.toHaveBeenCalled();
     act(() => {
       setStateRef?.((prev) => ({ ...prev, activePage: 'overview' }));
     });
-    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole('button', { name: 'Load shared chart inputs' })).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Load shared chart inputs' }));
-    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(2));
-    expect(analyze.mock.calls[1][0]).toEqual({
+    await waitFor(() => expect(analyze).toHaveBeenCalledTimes(1));
+    expect(analyze.mock.calls[0][0]).toEqual({
       dateTimeStr: restoredBirth.dateTimeStr,
       timeZone: restoredBirth.timeZone,
       latitude: restoredBirth.latitude,
@@ -148,7 +151,7 @@ describe('AppShellContent analysis safety wrapper', () => {
   it('renders chart utility controls on the overview page only', async () => {
     window.localStorage.clear();
     const sharedBirth = {
-      ...INITIAL_APP_STATE.birthDetails,
+      ...DEFAULT_BIRTH_DETAILS,
       name: 'Shared chart',
       dateTimeStr: '2001-02-03T04:05:00Z',
       latitude: 35,
@@ -193,8 +196,15 @@ describe('AppShellContent analysis safety wrapper', () => {
 
   it('handles an unexpected initial rejection without an unhandled rejection or duplicate error', async () => {
     const controller = createController(vi.fn().mockRejectedValue(new Error('unexpected failure')));
-    const controllerFactory = () => controller;
+    let setStateRef: Dispatch<SetStateAction<AppState>> | undefined;
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
+      setStateRef = setState;
+      return controller;
+    };
     render(<AppShellContent controllerFactory={controllerFactory} />);
+    act(() => {
+      setStateRef?.((previous) => ({ ...previous, birthDetails: DEFAULT_BIRTH_DETAILS }));
+    });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('unexpected failure');
     expect(screen.getAllByRole('alert')).toHaveLength(1);
@@ -230,6 +240,9 @@ describe('AppShellContent analysis safety wrapper', () => {
     };
 
     render(<AppShellContent controllerFactory={controllerFactory} />);
+    act(() => {
+      setStateRef?.((previous) => ({ ...previous, birthDetails: DEFAULT_BIRTH_DETAILS }));
+    });
     await screen.findByRole('alert');
     fireEvent.click(screen.getByRole('button', { name: 'Retry analysis' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Loading analysis');
@@ -247,10 +260,16 @@ describe('AppShellContent analysis safety wrapper', () => {
     const analyzeRun = vi.spyOn(service, 'analyzeRun')
       .mockRejectedValueOnce(new Error('initial analysis failure'))
       .mockReturnValueOnce(retryRun.promise);
-    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) =>
-      createAppController(setState, service);
+    let setStateRef: Dispatch<SetStateAction<AppState>> | undefined;
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
+      setStateRef = setState;
+      return createAppController(setState, service);
+    };
 
     render(<AppShellContent controllerFactory={controllerFactory} />);
+    act(() => {
+      setStateRef?.((previous) => ({ ...previous, birthDetails: DEFAULT_BIRTH_DETAILS }));
+    });
     expect(await screen.findByRole('alert')).toHaveTextContent('initial analysis failure');
     expect(screen.getByTestId('analysis-status')).toHaveTextContent('ERROR');
 
@@ -287,6 +306,9 @@ describe('AppShellContent analysis safety wrapper', () => {
     };
 
     render(<AppShellContent controllerFactory={controllerFactory} />);
+    act(() => {
+      setStateRef?.((previous) => ({ ...previous, birthDetails: DEFAULT_BIRTH_DETAILS }));
+    });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('handled failure');
     expect(screen.getAllByRole('alert')).toHaveLength(1);

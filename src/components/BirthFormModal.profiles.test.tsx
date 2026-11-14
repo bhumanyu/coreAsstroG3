@@ -28,6 +28,24 @@ afterEach(() => {
 });
 
 describe('BirthFormModal saved chart profiles', () => {
+  it('starts with blank birth fields and Lahiri ayanamsa when no chart is selected', () => {
+    render(
+      <BirthFormModal
+        isOpen
+        onClose={() => undefined}
+        onSave={() => undefined}
+      />
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(screen.getByPlaceholderText('e.g. CoreAstro Test Vector 1')).toHaveValue('');
+    expect(screen.getByPlaceholderText('e.g. Ujjain, Muzaffarpur, London...')).toHaveValue('');
+    expect(screen.getByLabelText('Birth date and time')).toHaveValue('');
+    expect(screen.getByPlaceholderText('Enter IANA timezone, e.g. Asia/Kolkata')).toHaveValue('');
+    expect(screen.getByPlaceholderText('e.g. 23.1793')).toHaveValue(null);
+    expect(screen.getByPlaceholderText('e.g. 75.7849')).toHaveValue(null);
+    expect(dialog.querySelector('select')).toHaveValue(AyanamsaType.LAHIRI);
+  });
+
   it('lists saved profiles, populates the form on click, and deletes them', async () => {
     const service = new ChartProfileService(window.localStorage, () => new Date(), () => 'profile-1');
     const savedBirth: BirthDetails = {

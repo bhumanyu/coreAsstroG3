@@ -2414,6 +2414,44 @@ export const resources = {
     },
     home: {
       editBirthDetails: 'Edit Birth Details',
+      noChart: {
+        message: 'Enter your birth details to calculate your horoscope',
+        enterBirthDetails: 'Enter Birth Details'
+      },
+      festivals: {
+        eyebrow: 'Coming up',
+        title: 'Festivals & Holidays',
+        tabs: {
+          festival: 'Festivals',
+          holiday: 'Holidays'
+        },
+        empty: 'No upcoming entries for this year.',
+        names: {
+          'Republic Day': 'Republic Day',
+          'Makar Sankranti': 'Makar Sankranti',
+          'Vasant Panchami': 'Vasant Panchami',
+          'Maha Shivaratri': 'Maha Shivaratri',
+          'Holika Dahan': 'Holika Dahan',
+          'Holi': 'Holi',
+          'Rama Navami': 'Rama Navami',
+          'Akshaya Tritiya': 'Akshaya Tritiya',
+          'Independence Day': 'Independence Day',
+          'Raksha Bandhan': 'Raksha Bandhan',
+          'Janmashtami': 'Janmashtami',
+          'Ganesh Chaturthi': 'Ganesh Chaturthi',
+          'Navratri Begins': 'Navratri Begins',
+          'Gandhi Jayanti': 'Gandhi Jayanti',
+          'Dussehra': 'Dussehra',
+          'Karva Chauth': 'Karva Chauth',
+          'Dhanteras': 'Dhanteras',
+          'Diwali': 'Diwali',
+          'Govardhan Puja': 'Govardhan Puja',
+          'Bhai Dooj': 'Bhai Dooj',
+          'Chhath Puja': 'Chhath Puja',
+          'Guru Nanak Jayanti': 'Guru Nanak Jayanti',
+          'Christmas Day': 'Christmas Day'
+        }
+      },
       analysis: {
         loading: 'Your chart analysis is being prepared.',
         error: 'Chart analysis could not be completed. You can still explore the daily snapshot.'
@@ -2499,7 +2537,8 @@ export const resources = {
     },
     settings: {
       newChart: 'New Chart',
-      editBirthDetails: 'Edit Birth Details & Ayanamsa'
+      editBirthDetails: 'Edit Birth Details & Ayanamsa',
+      enterBirthDetails: 'Enter Birth Details'
     }
   },
   hi: {
@@ -4915,6 +4954,44 @@ export const resources = {
     },
     home: {
       editBirthDetails: 'जन्म विवरण बदलें',
+      noChart: {
+        message: 'अपनी कुंडली की गणना के लिए जन्म विवरण दर्ज करें',
+        enterBirthDetails: 'जन्म विवरण दर्ज करें'
+      },
+      festivals: {
+        eyebrow: 'आगामी पर्व',
+        title: 'त्योहार और छुट्टियाँ',
+        tabs: {
+          festival: 'त्योहार',
+          holiday: 'छुट्टियाँ'
+        },
+        empty: 'इस वर्ष के लिए कोई आगामी तिथि नहीं है।',
+        names: {
+          'Republic Day': 'गणतंत्र दिवस',
+          'Makar Sankranti': 'मकर संक्रांति',
+          'Vasant Panchami': 'वसंत पंचमी',
+          'Maha Shivaratri': 'महाशिवरात्रि',
+          'Holika Dahan': 'होलिका दहन',
+          'Holi': 'होली',
+          'Rama Navami': 'राम नवमी',
+          'Akshaya Tritiya': 'अक्षय तृतीया',
+          'Independence Day': 'स्वतंत्रता दिवस',
+          'Raksha Bandhan': 'रक्षा बंधन',
+          'Janmashtami': 'जन्माष्टमी',
+          'Ganesh Chaturthi': 'गणेश चतुर्थी',
+          'Navratri Begins': 'नवरात्रि आरंभ',
+          'Gandhi Jayanti': 'गांधी जयंती',
+          'Dussehra': 'दशहरा',
+          'Karva Chauth': 'करवा चौथ',
+          'Dhanteras': 'धनतेरस',
+          'Diwali': 'दीवाली',
+          'Govardhan Puja': 'गोवर्धन पूजा',
+          'Bhai Dooj': 'भाई दूज',
+          'Chhath Puja': 'छठ पूजा',
+          'Guru Nanak Jayanti': 'गुरु नानक जयंती',
+          'Christmas Day': 'क्रिसमस'
+        }
+      },
       analysis: {
         loading: 'आपकी कुंडली का विश्लेषण तैयार हो रहा है।',
         error: 'कुंडली का विश्लेषण पूरा नहीं हो सका। आप आज का सारांश फिर भी देख सकते हैं।'
@@ -5000,7 +5077,8 @@ export const resources = {
     },
     settings: {
       newChart: 'नई कुंडली',
-      editBirthDetails: 'जन्म विवरण और अयनांश बदलें'
+      editBirthDetails: 'जन्म विवरण और अयनांश बदलें',
+      enterBirthDetails: 'जन्म विवरण दर्ज करें'
     }
   }
 } as const satisfies Record<AppLanguage, Record<string, Record<string, unknown>>>;

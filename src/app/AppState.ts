@@ -40,7 +40,7 @@ export const INITIAL_DASHA_TIMING_PROJECTION_STATE: DashaTimingProjectionState =
 
 export interface AppState {
   readonly activePage: AppPage;
-  readonly birthDetails: BirthDetails;
+  readonly birthDetails?: BirthDetails;
   readonly isBirthFormOpen: boolean;
   /** Canonical aggregate state for product views (P-UI-02). */
   readonly productAnalysis: ProductAnalysisState;
@@ -69,7 +69,6 @@ export const DEFAULT_BIRTH_DETAILS: BirthDetails = {
 
 export const INITIAL_APP_STATE: AppState = {
   activePage: 'home',
-  birthDetails: DEFAULT_BIRTH_DETAILS,
   isBirthFormOpen: false,
   productAnalysis: INITIAL_PRODUCT_ANALYSIS_STATE,
   lifeAnalysisState: { status: 'LOADING' },

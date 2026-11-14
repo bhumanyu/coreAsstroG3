@@ -15,7 +15,7 @@ import { LanguageSwitcher } from './language/LanguageSwitcher';
 interface BirthFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentDetails: BirthDetails;
+  currentDetails?: BirthDetails;
   onSave: (details: BirthDetails) => void;
   service?: ChartProfileService;
 }
@@ -68,18 +68,18 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     () => suppliedService ?? new ChartProfileService(),
     [suppliedService]
   );
-  const [name, setName] = useState(currentDetails.name || 'Custom Horoscope');
-  const [placeOfBirth, setPlaceOfBirth] = useState(currentDetails.placeOfBirth || 'Ujjain, India');
-  const [timeZone, setTimeZone] = useState(currentDetails.timeZone || '');
+  const [name, setName] = useState(currentDetails?.name ?? '');
+  const [placeOfBirth, setPlaceOfBirth] = useState(currentDetails?.placeOfBirth ?? '');
+  const [timeZone, setTimeZone] = useState(currentDetails?.timeZone ?? '');
   const [dateTimeStr, setDateTimeStr] = useState(() =>
     utcISOToZonedWallClock(
-      currentDetails.dateTimeStr,
-      currentDetails.timeZone || ''
+      currentDetails?.dateTimeStr ?? '',
+      currentDetails?.timeZone ?? ''
     )
   );
-  const [latitude, setLatitude] = useState(currentDetails.latitude.toString());
-  const [longitude, setLongitude] = useState(currentDetails.longitude.toString());
-  const [ayanamsa, setAyanamsa] = useState<AyanamsaType>(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
+  const [latitude, setLatitude] = useState(currentDetails?.latitude.toString() ?? '');
+  const [longitude, setLongitude] = useState(currentDetails?.longitude.toString() ?? '');
+  const [ayanamsa, setAyanamsa] = useState<AyanamsaType>(currentDetails?.ayanamsa ?? AyanamsaType.LAHIRI);
   const [validationErrors, setValidationErrors] = useState<readonly BirthValidationError[]>([]);
   const [selectedAmbiguousInstant, setSelectedAmbiguousInstant] = useState('');
   const [timeZoneSource, setTimeZoneSource] = useState<'PROVIDER' | 'USER'>('PROVIDER');
@@ -147,20 +147,20 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setName(currentDetails.name || 'Custom Horoscope');
-      setPlaceOfBirth(currentDetails.placeOfBirth || 'Ujjain, India');
-      const tz = currentDetails.timeZone || '';
+      setName(currentDetails?.name ?? '');
+      setPlaceOfBirth(currentDetails?.placeOfBirth ?? '');
+      const tz = currentDetails?.timeZone ?? '';
       setTimeZone(tz);
       setTimeZoneSource('PROVIDER');
       setDateTimeStr(
         utcISOToZonedWallClock(
-          currentDetails.dateTimeStr,
+          currentDetails?.dateTimeStr ?? '',
           tz
         )
       );
-      setLatitude(currentDetails.latitude.toString());
-      setLongitude(currentDetails.longitude.toString());
-      setAyanamsa(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
+      setLatitude(currentDetails?.latitude.toString() ?? '');
+      setLongitude(currentDetails?.longitude.toString() ?? '');
+      setAyanamsa(currentDetails?.ayanamsa ?? AyanamsaType.LAHIRI);
       setValidationErrors([]); // Clear errors when modal opens
       setSelectedAmbiguousInstant('');
       setSaveAsProfile(false);

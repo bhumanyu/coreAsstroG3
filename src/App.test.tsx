@@ -53,6 +53,20 @@ function navigateToDesktopPage(group: string, page: string): void {
   fireEvent.click(within(navigation).getByRole('button', { name: page }));
 }
 
+function enterBirthDetails(details: BirthDetails = DEFAULT_BIRTH_DETAILS): void {
+  fireEvent.click(screen.getAllByRole('button', { name: 'Enter Birth Details' })[0]);
+  fillBirthForm({
+    name: details.name,
+    placeOfBirth: details.placeOfBirth,
+    dateTime: details.dateTimeStr.slice(0, 16),
+    timeZone: details.timeZone,
+    latitude: String(details.latitude),
+    longitude: String(details.longitude),
+    ayanamsa: details.ayanamsa
+  });
+  fireEvent.click(screen.getByRole('button', { name: /calculate chart/i }));
+}
+
 describe('App - Life Analysis UI Integration & Navigation', () => {
   const sampleSynthesis = buildLifeAnalysis([STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]);
   const sampleViewModel: LifeAnalysisViewModel = buildLifeAnalysisViewModel(
@@ -126,17 +140,20 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       );
   });
 
-  it('1. Default landing: renders the state-driven home dashboard', async () => {
+  it('1. Default landing: renders the state-driven home dashboard without a default chart', async () => {
     render(<App />);
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();
-    });
+    expect(screen.getByText('Enter your birth details to calculate your horoscope')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Enter Birth Details' })).toHaveLength(2);
+    expect(mockAnalyze).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Festivals & Holidays' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Explore Your Chart' })).toBeInTheDocument();
   });
 
   it('2. Grouped navigation reaches Overview and Detailed Analysis without a standalone AI button', async () => {
     render(<App />);
+    enterBirthDetails();
+    await waitFor(() => expect(mockAnalyze).toHaveBeenCalledTimes(1));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();
@@ -153,8 +170,10 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.queryByRole('button', { name: 'AI Explanation' })).not.toBeInTheDocument();
   });
 
-  it('3. Invocations: ProductAnalysisService.analyzeRun is called on mount with birth details', async () => {
+  it('3. Invocations: ProductAnalysisService.analyzeRun is called after birth details are saved', async () => {
     render(<App />);
+    expect(mockAnalyze).not.toHaveBeenCalled();
+    enterBirthDetails();
 
     await waitFor(() => {
       expect(mockAnalyze).toHaveBeenCalledWith(
@@ -168,6 +187,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
 
   it('4. Chart change: changing birth details recalculates and invokes ProductAnalysisService.analyzeRun with new birth details', async () => {
     render(<App />);
+    enterBirthDetails();
 
     await waitFor(() => {
       expect(mockAnalyze).toHaveBeenCalledTimes(1);
@@ -241,6 +261,8 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     );
 
     render(<App />);
+    enterBirthDetails();
+    await waitFor(() => expect(mockAnalyze).toHaveBeenCalledTimes(1));
     navigateToDesktopPage('Insights', 'Overview');
 
     // Trigger second chart request via modal
@@ -312,6 +334,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
 
     render(<App />);
+    enterBirthDetails();
     navigateToDesktopPage('Insights', 'Overview');
 
     await waitFor(() => {
@@ -356,6 +379,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
 
     render(<App />);
+    enterBirthDetails();
     navigateToDesktopPage('Insights', 'Overview');
 
     await waitFor(() => {
@@ -450,6 +474,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
 
   it('8. Tab routing: navigating to Product and Research pages renders cleanly and consumes aggregate', async () => {
     render(<App />);
+    enterBirthDetails();
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();

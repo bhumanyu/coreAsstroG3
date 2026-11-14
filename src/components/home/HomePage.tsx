@@ -6,7 +6,8 @@ import {
   Compass,
   MapPin,
   Sunrise,
-  Sunset
+  Sunset,
+  Sparkles
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { BirthContext } from '../../app/birthContext';
@@ -16,9 +17,10 @@ import { SIGNS_METADATA, SIGNS_ORDER } from '../../data/astroData';
 import { computePanchang } from '../../engine/panchang';
 import type { ProductAnalysisState } from '../../app/AppState';
 import { FEATURE_TILES } from './featureTiles';
+import { FestivalsCard } from './FestivalsCard';
 
 export interface HomePageProps {
-  readonly birthContext: BirthContext;
+  readonly birthContext?: BirthContext;
   readonly onNavigate: (page: AppPage) => void;
   readonly onOpenBirthForm: () => void;
   readonly analysisStatus: ProductAnalysisState['status'];
@@ -49,6 +51,23 @@ const BirthContextStrip: React.FC<{
         className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 transition-colors hover:border-indigo-500/50 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
       >
         {t('editBirthDetails')}
+      </button>
+    </section>
+  );
+};
+
+const BirthDetailsEmptyState: React.FC<{ onOpenBirthForm: () => void }> = ({ onOpenBirthForm }) => {
+  const { t } = useTranslation('home');
+  return (
+    <section className="flex flex-col items-center gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 px-5 py-7 text-center">
+      <Sparkles className="h-6 w-6 text-indigo-300" aria-hidden="true" />
+      <p className="text-sm font-medium text-slate-200">{t('noChart.message')}</p>
+      <button
+        type="button"
+        onClick={onOpenBirthForm}
+        className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+      >
+        {t('noChart.enterBirthDetails')}
       </button>
     </section>
   );
@@ -125,7 +144,11 @@ const DailyHoroscopeGrid: React.FC<{ onNavigate: (page: AppPage) => void }> = ({
   );
 };
 
-const ExploreYourChartGrid: React.FC<{ onNavigate: (page: AppPage) => void }> = ({ onNavigate }) => {
+const ExploreYourChartGrid: React.FC<{
+  onNavigate: (page: AppPage) => void;
+  onOpenBirthForm: () => void;
+  hasBirthDetails: boolean;
+}> = ({ onNavigate, onOpenBirthForm, hasBirthDetails }) => {
   const { t } = useTranslation('home');
   return (
     <section>
@@ -139,7 +162,7 @@ const ExploreYourChartGrid: React.FC<{ onNavigate: (page: AppPage) => void }> = 
           <button
             key={title}
             type="button"
-            onClick={() => onNavigate(target)}
+            onClick={() => hasBirthDetails ? onNavigate(target) : onOpenBirthForm()}
             className="group min-h-32 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-indigo-500/40 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             <Icon className="h-5 w-5 text-indigo-300 transition-transform group-hover:scale-110" aria-hidden="true" />
@@ -159,11 +182,14 @@ export const HomePage: React.FC<HomePageProps> = ({
   analysisStatus
 }) => {
   const { t } = useTranslation('home');
+  const hasBirthDetails = Boolean(birthContext);
   return (
     <div className="space-y-8">
-      <BirthContextStrip birthContext={birthContext} onOpenBirthForm={onOpenBirthForm} />
-      {analysisStatus === 'LOADING' && <p role="status" className="text-xs text-slate-400">{t('analysis.loading')}</p>}
-      {analysisStatus === 'ERROR' && <p role="status" className="text-xs text-amber-300">{t('analysis.error')}</p>}
+      {birthContext
+        ? <BirthContextStrip birthContext={birthContext} onOpenBirthForm={onOpenBirthForm} />
+        : <BirthDetailsEmptyState onOpenBirthForm={onOpenBirthForm} />}
+      {hasBirthDetails && analysisStatus === 'LOADING' && <p role="status" className="text-xs text-slate-400">{t('analysis.loading')}</p>}
+      {hasBirthDetails && analysisStatus === 'ERROR' && <p role="status" className="text-xs text-amber-300">{t('analysis.error')}</p>}
       <section>
         <div className="mb-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-300">{t('dailySnapshot.eyebrow')}</p>
@@ -172,9 +198,14 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="grid gap-4 lg:grid-cols-2">
           <PanchangCard />
           <DailyHoroscopeGrid onNavigate={onNavigate} />
+          <FestivalsCard />
         </div>
       </section>
-      <ExploreYourChartGrid onNavigate={onNavigate} />
+      <ExploreYourChartGrid
+        onNavigate={onNavigate}
+        onOpenBirthForm={onOpenBirthForm}
+        hasBirthDetails={hasBirthDetails}
+      />
       <div className="flex justify-center">
         <button
           type="button"

@@ -30,6 +30,22 @@ import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnal
 import { useTranslation } from 'react-i18next';
 import { HomePage } from '../components/home/HomePage';
 import { buildBirthContext } from './birthContext';
+import { NoChartEmptyState } from '../components/NoChartEmptyState';
+
+const CHART_DEPENDENT_PAGES: ReadonlySet<AppPage> = new Set([
+  'overview',
+  'career',
+  'wealth',
+  'dasha',
+  'reasoning',
+  'detailed',
+  'horoscope',
+  'planets',
+  'transit',
+  'divisional',
+  'ai',
+  'ai-explanation'
+]);
 
 const DivisionalChartsView = lazy(() =>
   import('../components/DivisionalChartsView').then((module) => ({ default: module.DivisionalChartsView }))
@@ -132,6 +148,10 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
   const { t: tAstrology } = useTranslation('astrology');
   const effectiveLifeAnalysisState: LifeAnalysisProductState =
     lifeAnalysisState ?? state.lifeAnalysisState ?? { status: 'LOADING' };
+
+  if (!state.birthDetails && CHART_DEPENDENT_PAGES.has(state.activePage)) {
+    return <NoChartEmptyState onOpenBirthForm={onOpenBirthForm} />;
+  }
 
   switch (state.activePage) {
     case 'home':
@@ -326,7 +346,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
               <KundaliChart
                 chart={horoscope.rasiChart}
                 title={tAstrology('rasiBirthChart')}
-                subtitle={tAstrology('computedAyanamsa', { ayanamsa: state.birthDetails.ayanamsa })}
+                subtitle={tAstrology('computedAyanamsa', { ayanamsa: state.birthDetails?.ayanamsa })}
               />
             </div>
             <div className="lg:col-span-6">
