@@ -1008,6 +1008,18 @@ function mapCareer(
     eventTimeline: detail?.careerEventTimeline
       ? mapCareerEventTimeline(detail.careerEventTimeline)
       : undefined,
+    ...(detail?.careerOrchestrationQuarantineRecords
+      ? {
+          quarantineRecords: detail.careerOrchestrationQuarantineRecords.map(record => ({
+            patternId: record.patternId,
+            stage: record.stage,
+            reason: record.reason,
+            rejectedRecordCount: record.rejectedRecordCount,
+            differingFields: [...record.differingFields],
+            relatedIds: [...record.relatedIds]
+          }))
+        }
+      : {}),
     promise: {
       status: careerStatus,
       strength: detail?.canonicalFinalSynthesis?.natalStrength

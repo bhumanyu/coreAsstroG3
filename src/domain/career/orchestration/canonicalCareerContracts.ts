@@ -397,10 +397,14 @@ export interface CanonicalCareerFoundation {
     readonly patternCandidateRecordCount: number;
     /** Distinct patternIds across all raw candidate records. */
     readonly distinctCandidateIdCount: number;
-    /** Distinct IDs quarantined for conflicting candidate payloads. */
+    /**
+     * Distinct IDs quarantined for conflicting candidate payloads. This and
+     * conflictedQualificationCount are independent namespaces: one patternId may count in both.
+     */
     readonly conflictedCandidateCount: number;
     /** Distinct IDs quarantined for conflicting qualification verdicts. */
     readonly conflictedQualificationCount: number;
+    /** Candidate IDs with no qualification result; quarantined IDs are excluded. */
     readonly qualificationResultMissingCount: number;
     readonly qualifiedPatternCount: number;
     readonly eligiblePatternCount: number;

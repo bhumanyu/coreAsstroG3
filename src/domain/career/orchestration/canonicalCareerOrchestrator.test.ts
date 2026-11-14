@@ -445,6 +445,97 @@ describe('CanonicalCareerOrchestrator', () => {
       }));
     });
 
+    it('quarantines duplicate candidates that differ only by planetary participants', () => {
+      const ports = createStubPorts();
+      const candidateA = createStubPattern('PATTERN_1');
+      const candidateB = {
+        ...createStubPattern('PATTERN_1'),
+        planets: [Planet.JUPITER]
+      };
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: []
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [candidateA, candidateB],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.c8StageDiagnostics.conflictedCandidateCount).toBe(1);
+      expect(foundation.patternCandidates).toEqual([]);
+      expect(foundation.quarantineRecords).toContainEqual(expect.objectContaining({
+        patternId: 'PATTERN_1',
+        differingFields: ['planets']
+      }));
+      expect(ports.qualification.qualifyCareerPatterns).toHaveBeenCalledWith(
+        expect.objectContaining({ patterns: [] })
+      );
+    });
+
+    it('excludes candidate conflicts before qualification and preserves valid network coverage', () => {
+      const ports = createStubPorts();
+      const validPattern = {
+        ...createStubPattern('VALID_PATTERN'),
+        networkIds: ['NETWORK_1']
+      };
+      const conflictA = {
+        ...createStubPattern('CONFLICTED_PATTERN'),
+        networkIds: ['NETWORK_1']
+      };
+      const conflictB = {
+        ...createStubPattern('CONFLICTED_PATTERN'),
+        networkIds: ['NETWORK_1'],
+        name: 'Conflicting candidate'
+      };
+      (ports.qualification.qualifyCareerPatterns as any).mockImplementation(
+        ({ patterns }: { patterns: readonly CareerPattern[] }) => ({
+          qualifiedPatterns: patterns.map(pattern =>
+            createStubQualifiedPattern(pattern.patternId, 'QUALIFIED')
+          ),
+          diagnostics: patterns.some(pattern => pattern.patternId === 'CONFLICTED_PATTERN')
+            ? [{ patternId: 'CONFLICTED_PATTERN', code: 'QUARANTINED_INPUT_WARNING' }]
+            : []
+        })
+      );
+      const network = {
+        networkId: 'NETWORK_1',
+        identityKey: 'IDENTITY_NETWORK_1',
+        houses: [],
+        lords: [],
+        relationships: [{ relationshipId: 'EDGE_NETWORK_1' }],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD',
+        provenance: { sourceIds: [], ruleIds: [] },
+        evidenceIds: []
+      } as unknown as CareerHouseNetwork;
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [validPattern, conflictA, conflictB],
+        relevance: [],
+        condition: [],
+        networks: [network]
+      });
+
+      expect(ports.qualification.qualifyCareerPatterns).toHaveBeenCalledWith(
+        expect.objectContaining({
+          patterns: [validPattern]
+        })
+      );
+      expect(foundation.c8StageDiagnostics.networkResolutionStatus).toBe('RESOLVED');
+      expect(foundation.c8StageDiagnostics.qualificationResultMissingCount).toBe(0);
+      expect(foundation.diagnostics.filter(diagnostic =>
+        diagnostic.stage === 'QUALIFICATION' &&
+        diagnostic.relatedIds.includes('CONFLICTED_PATTERN')
+      )).toEqual([]);
+      expect(foundation.quarantineRecords).toContainEqual(expect.objectContaining({
+        patternId: 'CONFLICTED_PATTERN',
+        stage: 'PATTERN',
+        reason: 'CONFLICTING_CANDIDATE_PAYLOAD'
+      }));
+    });
+
     it('keeps valid candidates flowing while fully quarantining a conflicting candidate ID', () => {
       const ports = createStubPorts();
       const conflictingA = createStubPattern('PATTERN_2');

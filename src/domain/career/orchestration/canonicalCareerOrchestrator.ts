@@ -60,12 +60,24 @@ function candidatePayload(candidate: PatternCandidate) {
     level: candidate.level,
     classification: candidate.classification,
     name: candidate.name,
+    planets: [...candidate.sourcePattern.planets].sort(),
+    houses: [...candidate.sourcePattern.houses].sort((a, b) => a - b),
     networkIds: [...candidate.sourcePattern.networkIds].sort(),
-    evidenceIds: candidate.sourcePattern.evidence.map(evidence => evidence.evidenceId).sort()
+    evidenceIds: candidate.sourcePattern.evidence.map(evidence => evidence.evidenceId).sort(),
+    provenance: {
+      sourceNetworkIds: [...candidate.sourcePattern.provenance.sourceNetworkIds].sort(),
+      relationshipIds: [...candidate.sourcePattern.provenance.relationshipIds].sort(),
+      ruleIds: [...candidate.sourcePattern.provenance.ruleIds].sort(),
+      establishingRelationshipIds: [...candidate.sourcePattern.provenance.establishingRelationshipIds].sort(),
+      supportingRelationshipIds: [...candidate.sourcePattern.provenance.supportingRelationshipIds].sort()
+    }
   };
 }
 
 function candidatePayloadDifferences(candidates: readonly PatternCandidate[]): string[] {
+  if (candidates.length === 0) {
+    return [];
+  }
   const fields = Object.keys(candidatePayload(candidates[0])) as (keyof ReturnType<typeof candidatePayload>)[];
   return fields.filter(field =>
     new Set(candidates.map(candidate => stableSerialize(candidatePayload(candidate)[field]))).size > 1
@@ -216,12 +228,13 @@ export class CanonicalCareerOrchestrator {
     const patternCandidateCount = patternCandidates.length;
 
     // Stage 2: Pattern qualification (P2-07A)
+    const acceptedPatternSources = patternCandidates.map(candidate => candidate.sourcePattern);
     const rawQualifications = this.buildPatternQualifications(
-      orderedPatterns,
+      acceptedPatternSources,
       orderedRelevance,
       orderedCondition,
       orderedNetworks,
-      rawPatternCandidates,
+      patternCandidates,
       diagnostics
     );
     const qualificationsByPatternId = new Map<string, PatternQualification[]>();
@@ -281,7 +294,9 @@ export class CanonicalCareerOrchestrator {
     const rawQualificationPatternIds = new Set(rawQualifications.map(q => q.patternId));
     const candidatePatternIds = new Set([...candidatesByPatternId.keys()]);
     const qualificationResultMissingCount = [...candidatePatternIds].filter(
-      patternId => !rawQualificationPatternIds.has(patternId)
+      patternId =>
+        !quarantinedCandidateIds.has(patternId) &&
+        !rawQualificationPatternIds.has(patternId)
     ).length;
     const conflictedCandidateCount = quarantinedCandidateIds.size;
     const conflictedQualificationCount = conflictedQualificationIds.size;
