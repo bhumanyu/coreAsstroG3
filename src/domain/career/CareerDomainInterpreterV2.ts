@@ -1235,6 +1235,8 @@ export function interpretCareerV2(
     canonicalDashaAnalysis,
     cw01DashaTimingHierarchy: cw01Result.timingHierarchy,
     careerDashaEvidence: canonicalDashaAnalysis.evidence,
+    careerOrchestrationDiagnostics: foundationWithAdapterDiagnostics.diagnostics,
+    careerOrchestrationQuarantineRecords: canonicalCareerFoundation.quarantineRecords,
     careerAvailabilityDiagnosticTrace: Object.freeze({
       c8ExpressionCoverage: Object.freeze({
         mechanismCandidateCount: careerMechanismCandidates.length,

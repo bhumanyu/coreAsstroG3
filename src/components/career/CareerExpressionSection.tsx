@@ -16,6 +16,10 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
   if (
     coverage &&
     coverage.patternCandidateCount !== undefined &&
+    coverage.patternCandidateRecordCount !== undefined &&
+    coverage.distinctCandidateIdCount !== undefined &&
+    coverage.conflictedCandidateCount !== undefined &&
+    coverage.conflictedQualificationCount !== undefined &&
     coverage.qualificationResultMissingCount !== undefined &&
     coverage.qualifiedPatternCount !== undefined &&
     coverage.eligiblePatternCount !== undefined &&
@@ -24,7 +28,10 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
     coverage.resolvedMechanismCount !== undefined &&
     coverage.networkResolutionStatus !== undefined
   ) {
-    stageAttributionKey = coverage.networkResolutionStatus === 'MISSING'
+    stageAttributionKey = coverage.conflictedCandidateCount > 0 ||
+      coverage.conflictedQualificationCount > 0
+      ? undefined
+      : coverage.networkResolutionStatus === 'MISSING'
       ? 'missingNetworkEvidence'
       : coverage.qualificationResultMissingCount > 0
         ? 'qualificationResultsMissing'

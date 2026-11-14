@@ -92,6 +92,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         coverageSummary: {
           mechanismCandidateCount: 0,
           patternCandidateCount: 2,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 2,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 1,
           eligiblePatternCount: 1,
@@ -110,11 +114,46 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       expect(screen.queryByText('Career mechanisms could not be resolved from the qualified patterns.')).not.toBeInTheDocument();
     });
 
+    it('does not infer a failing stage when candidate or qualification records were quarantined', () => {
+      render(<CareerExpressionSection expression={{
+        available: false,
+        status: 'EXECUTED_NO_CANDIDATES',
+        coverageSummary: {
+          mechanismCandidateCount: 0,
+          patternCandidateCount: 0,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 1,
+          conflictedCandidateCount: 1,
+          conflictedQualificationCount: 0,
+          qualificationResultMissingCount: 0,
+          qualifiedPatternCount: 0,
+          eligiblePatternCount: 0,
+          invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 1,
+          resolvedMechanismCount: 0,
+          networkResolutionStatus: 'NOT_REQUIRED',
+          expressionCount: 0,
+          expressionsWithEvidenceCount: 0,
+          evidenceCount: 0,
+          evidenceWithPlanetAttributionCount: 0
+        },
+        candidates: []
+      }} />);
+
+      expect(screen.getByText('The expression analysis completed without producing candidates.')).toBeInTheDocument();
+      expect(screen.queryByText('No career patterns were discovered.')).not.toBeInTheDocument();
+      expect(screen.queryByText(/none passed qualification/)).not.toBeInTheDocument();
+    });
+
     it.each([
       [
         'no discovered patterns',
         {
           patternCandidateCount: 0,
+          patternCandidateRecordCount: 0,
+          distinctCandidateIdCount: 0,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 0,
@@ -129,6 +168,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'failed qualification',
         {
           patternCandidateCount: 2,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 2,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 0,
@@ -143,6 +186,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'participant role errors',
         {
           patternCandidateCount: 2,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 2,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 2,
           eligiblePatternCount: 2,
@@ -157,6 +204,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'missing network evidence',
         {
           patternCandidateCount: 2,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 2,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 2,
           eligiblePatternCount: 2,
@@ -171,6 +222,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'incomplete network evidence',
         {
           patternCandidateCount: 2,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 2,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 2,
           eligiblePatternCount: 2,
@@ -185,6 +240,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'mechanism resolver',
         {
           patternCandidateCount: 2,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 2,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 2,
           eligiblePatternCount: 2,
@@ -199,6 +258,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'skipped role assignment',
         {
           patternCandidateCount: 2,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 2,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 1,
           eligiblePatternCount: 2,
@@ -235,6 +298,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         coverageSummary: {
           mechanismCandidateCount: 0,
           patternCandidateCount: 1,
+          patternCandidateRecordCount: 1,
+          distinctCandidateIdCount: 1,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 1,
@@ -261,6 +328,10 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         coverageSummary: {
           mechanismCandidateCount: 0,
           patternCandidateCount: 2,
+          patternCandidateRecordCount: 2,
+          distinctCandidateIdCount: 2,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 1,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 0,

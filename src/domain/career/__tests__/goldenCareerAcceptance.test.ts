@@ -425,6 +425,9 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     expect(trace).toMatchInlineSnapshot(`
       {
         "c8ExpressionCoverage": {
+          "conflictedCandidateCount": 0,
+          "conflictedQualificationCount": 0,
+          "distinctCandidateIdCount": 1,
           "eligiblePatternCount": 1,
           "evidenceCount": 0,
           "evidenceWithPlanetAttributionCount": 0,
@@ -434,6 +437,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           "mechanismCandidateCount": 0,
           "networkResolutionStatus": "RESOLVED",
           "patternCandidateCount": 1,
+          "patternCandidateRecordCount": 1,
           "qualificationResultMissingCount": 0,
           "qualifiedPatternCount": 0,
           "resolvedMechanismCount": 0,

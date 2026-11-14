@@ -41,17 +41,21 @@ import type {
 } from './careerFinalSynthesis/careerFinalSynthesisTypes';
 
 /**
- * C8 stage attribution is valid only when every field is present. Precedence:
- * missing networks, missing unique qualification results, incomplete network/qualification
- * evaluation, no discovered patterns, no eligible patterns (all were UNQUALIFIED),
- * role-assignment errors, skipped role assignments, then mechanism resolution for
- * eligible patterns. A missing or conflicting qualification result must not be
- * inferred as an explicit UNQUALIFIED result.
+ * C8 stage attribution is valid only when every field is present and neither candidate nor
+ * qualification conflicts were quarantined. Otherwise presentation stays generic.
+ * Precedence: missing networks, missing unique qualification results, incomplete
+ * network/qualification evaluation, no discovered patterns, no eligible patterns (all were
+ * UNQUALIFIED), role-assignment errors, skipped role assignments, then mechanism resolution.
+ * Missing or conflicting results are never inferred as explicit UNQUALIFIED outcomes.
  * Skipped patterns are distinct from ERROR-severity role-assignment failures.
  */
 export interface CareerC8ExpressionCoverage {
   readonly mechanismCandidateCount: number;
   readonly patternCandidateCount: number;
+  readonly patternCandidateRecordCount?: number;
+  readonly distinctCandidateIdCount?: number;
+  readonly conflictedCandidateCount?: number;
+  readonly conflictedQualificationCount?: number;
   readonly qualificationResultMissingCount: number;
   readonly qualifiedPatternCount: number;
   readonly eligiblePatternCount: number;
@@ -193,6 +197,8 @@ export interface CareerInternalArtifacts {
   readonly cw01DashaTimingHierarchy?: import('../reasoning/reasoningTypes').TimingHierarchyResult;
   readonly careerDashaEvidence: readonly DomainEvidence[];
   readonly careerAvailabilityDiagnosticTrace?: CareerAvailabilityDiagnosticTrace;
+  readonly careerOrchestrationDiagnostics?: readonly import('./orchestration/canonicalCareerContracts').OrchestrationDiagnostic[];
+  readonly careerOrchestrationQuarantineRecords?: readonly import('./orchestration/canonicalCareerContracts').OrchestrationQuarantineRecord[];
 }
 
 export interface CareerConclusionData {

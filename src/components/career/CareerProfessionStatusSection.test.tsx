@@ -92,6 +92,10 @@ describe('CareerProfessionStatusSection', () => {
       coverageSummary: {
         mechanismCandidateCount: 0,
         patternCandidateCount: 2,
+        patternCandidateRecordCount: 2,
+        distinctCandidateIdCount: 2,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
         qualificationResultMissingCount: 0,
         qualifiedPatternCount: 1,
         eligiblePatternCount: 1,
@@ -119,6 +123,33 @@ describe('CareerProfessionStatusSection', () => {
       coverageSummary: {
         mechanismCandidateCount: 0,
         patternCandidateCount: 2,
+        qualifiedPatternCount: 1,
+        eligiblePatternCount: 1,
+        invalidRolePatternCount: 0,
+        roleAssignmentSkippedPatternCount: 0,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'RESOLVED' as const,
+        expressionCount: 0,
+        expressionsWithEvidenceCount: 0,
+        evidenceCount: 0,
+        evidenceWithPlanetAttributionCount: 0
+      }
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
+    expect(screen.queryByText(/No resolved career mechanisms/)).not.toBeInTheDocument();
+    expect(screen.getByText(/This status alone is not a negative career prediction/)).toBeInTheDocument();
+  });
+
+  it('uses the generic explanation for persisted coverage without quarantine counters', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      status: 'INSUFFICIENT_DATA' as const,
+      coverageSummary: {
+        mechanismCandidateCount: 0,
+        patternCandidateCount: 2,
+        qualificationResultMissingCount: 0,
         qualifiedPatternCount: 1,
         eligiblePatternCount: 1,
         invalidRolePatternCount: 0,

@@ -332,6 +332,15 @@ export interface OrchestrationDiagnostic {
   readonly stage?: string;
 }
 
+export interface OrchestrationQuarantineRecord {
+  readonly patternId: string;
+  readonly stage: 'PATTERN' | 'QUALIFICATION';
+  readonly reason: 'CONFLICTING_CANDIDATE_PAYLOAD' | 'CONFLICTING_QUALIFICATION_VERDICTS';
+  readonly rejectedRecordCount: number;
+  readonly differingFields: readonly string[];
+  readonly relatedIds: readonly string[];
+}
+
 /**
  * Canonical career foundation.
  * The immutable, deterministic composition of all career domain outputs.
@@ -377,9 +386,21 @@ export interface CanonicalCareerFoundation {
   // Diagnostics
   readonly diagnostics: readonly OrchestrationDiagnostic[];
 
+  // Rejected conflicting stage records, retained for auditability.
+  readonly quarantineRecords: readonly OrchestrationQuarantineRecord[];
+
   // Stage-level C8 coverage captured as each stage completes.
   readonly c8StageDiagnostics: {
+    /** Unique candidate records retained after candidate-payload quarantine. */
     readonly patternCandidateCount: number;
+    /** Raw pattern-candidate records, including duplicates. */
+    readonly patternCandidateRecordCount: number;
+    /** Distinct patternIds across all raw candidate records. */
+    readonly distinctCandidateIdCount: number;
+    /** Distinct IDs quarantined for conflicting candidate payloads. */
+    readonly conflictedCandidateCount: number;
+    /** Distinct IDs quarantined for conflicting qualification verdicts. */
+    readonly conflictedQualificationCount: number;
     readonly qualificationResultMissingCount: number;
     readonly qualifiedPatternCount: number;
     readonly eligiblePatternCount: number;

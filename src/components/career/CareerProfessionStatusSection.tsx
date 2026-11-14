@@ -23,6 +23,10 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     coverage &&
     coverage.mechanismCandidateCount !== undefined &&
     coverage.patternCandidateCount !== undefined &&
+    coverage.patternCandidateRecordCount !== undefined &&
+    coverage.distinctCandidateIdCount !== undefined &&
+    coverage.conflictedCandidateCount !== undefined &&
+    coverage.conflictedQualificationCount !== undefined &&
     coverage.qualificationResultMissingCount !== undefined &&
     coverage.qualifiedPatternCount !== undefined &&
     coverage.eligiblePatternCount !== undefined &&
@@ -38,6 +42,8 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
   const hasNoResolvedMechanisms =
     profession.status === 'INSUFFICIENT_DATA' &&
     hasCompleteCoverage &&
+    coverage?.conflictedCandidateCount === 0 &&
+    coverage?.conflictedQualificationCount === 0 &&
     coverage?.qualificationResultMissingCount === 0 &&
     coverage?.resolvedMechanismCount === 0;
   const statusExplanation = hasNoResolvedMechanisms

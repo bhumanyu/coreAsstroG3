@@ -17,7 +17,8 @@ import type {
   RuleId,
   OccurrenceId,
   StageEvidence,
-  EstablishingMechanismEvidence
+  EstablishingMechanismEvidence,
+  OrchestrationQuarantineRecord
 } from './canonicalCareerContracts';
 import { participantRoleAssignmentReferenceId } from './canonicalCareerContracts';
 import type {
@@ -37,6 +38,38 @@ import { collectRelevantDispositorContexts } from '../careerMechanism/dispositor
 
 function hasSemanticIdentityKey(value: unknown): value is EvidenceIdentityKey {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function stableSerialize(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'undefined';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableSerialize).join(',')}]`;
+  }
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().map(key =>
+    `${JSON.stringify(key)}:${stableSerialize(record[key])}`
+  ).join(',')}}`;
+}
+
+function candidatePayload(candidate: PatternCandidate) {
+  return {
+    identityKey: candidate.identityKey,
+    family: candidate.family,
+    level: candidate.level,
+    classification: candidate.classification,
+    name: candidate.name,
+    networkIds: [...candidate.sourcePattern.networkIds].sort(),
+    evidenceIds: candidate.sourcePattern.evidence.map(evidence => evidence.evidenceId).sort()
+  };
+}
+
+function candidatePayloadDifferences(candidates: readonly PatternCandidate[]): string[] {
+  const fields = Object.keys(candidatePayload(candidates[0])) as (keyof ReturnType<typeof candidatePayload>)[];
+  return fields.filter(field =>
+    new Set(candidates.map(candidate => stableSerialize(candidatePayload(candidate)[field]))).size > 1
+  );
 }
 
 /**
@@ -105,66 +138,153 @@ export class CanonicalCareerOrchestrator {
     const foundationId = this.generateDeterministicFoundationId(input);
     const timestamp = 'DETERMINISTIC_TIMESTAMP';
     const diagnostics: OrchestrationDiagnostic[] = [];
+    const quarantineRecords: OrchestrationQuarantineRecord[] = [];
+    const orderedPatterns = [...input.patterns].sort((a, b) =>
+      a.patternId.localeCompare(b.patternId) || stableSerialize(a).localeCompare(stableSerialize(b))
+    );
+    const orderedRelevance = [...input.relevance].sort((a, b) =>
+      a.planet.localeCompare(b.planet) || stableSerialize(a).localeCompare(stableSerialize(b))
+    );
+    const orderedCondition = [...input.condition].sort((a, b) =>
+      a.planet.localeCompare(b.planet) || stableSerialize(a).localeCompare(stableSerialize(b))
+    );
+    const orderedNetworks = [...input.networks].sort((a, b) =>
+      a.networkId.localeCompare(b.networkId) || stableSerialize(a).localeCompare(stableSerialize(b))
+    );
 
     // Stage 1: Pattern candidates (C4/P2-03)
-    const patternCandidates = this.buildPatternCandidates(input.patterns, diagnostics);
-    const patternCandidateCount = patternCandidates.length;
-    const candidatesByPatternId = new Map<string, number>();
-    for (const candidate of patternCandidates) {
-      candidatesByPatternId.set(
-        candidate.patternId,
-        (candidatesByPatternId.get(candidate.patternId) ?? 0) + 1
-      );
+    const rawPatternCandidates = this.buildPatternCandidates(orderedPatterns, diagnostics);
+    const patternCandidateRecordCount = rawPatternCandidates.length;
+    const candidatesByPatternId = new Map<string, PatternCandidate[]>();
+    for (const candidate of rawPatternCandidates) {
+      const candidates = candidatesByPatternId.get(candidate.patternId) ?? [];
+      candidates.push(candidate);
+      candidatesByPatternId.set(candidate.patternId, candidates);
     }
-    for (const [patternId, count] of candidatesByPatternId) {
-      if (count > 1) {
+    const quarantinedCandidateIds = new Set<string>();
+    const patternCandidates: PatternCandidate[] = [];
+    for (const patternId of [...candidatesByPatternId.keys()].sort()) {
+      const candidates = candidatesByPatternId.get(patternId)!;
+      const orderedCandidates = [...candidates].sort((a, b) =>
+        stableSerialize(a).localeCompare(stableSerialize(b))
+      );
+      if (orderedCandidates.length === 1) {
+        patternCandidates.push(orderedCandidates[0]);
+        continue;
+      }
+
+      const differingFields = candidatePayloadDifferences(orderedCandidates);
+      const relatedIds = [...new Set([
+        patternId,
+        ...orderedCandidates.flatMap(candidate =>
+          candidate.sourcePattern.evidence.map(evidence => evidence.evidenceId)
+        )
+      ])].sort();
+      if (differingFields.length === 0) {
+        patternCandidates.push(orderedCandidates[0]);
         diagnostics.push({
           diagnosticId: `ORCHESTRATION_DUPLICATE_PATTERN_CANDIDATE_${patternId}`,
           severity: 'WARNING',
           category: 'DUPLICATE_ID',
-          message: `Pattern candidate ID ${patternId} appears ${count} times.`,
-          relatedIds: [patternId],
+          message: `Pattern candidate ID ${patternId} appears ${orderedCandidates.length} times with identical payloads; the first candidate in canonical order was retained.`,
+          relatedIds,
           stage: 'PATTERN'
         });
+        continue;
       }
+
+      quarantinedCandidateIds.add(patternId);
+      diagnostics.push({
+        diagnosticId: `ORCHESTRATION_CONFLICTING_PATTERN_CANDIDATE_${patternId}`,
+        severity: 'ERROR',
+        category: 'DUPLICATE_ID',
+        message: `Pattern candidate ID ${patternId} has conflicting payload fields: ${differingFields.join(', ')}; all records were quarantined.`,
+        relatedIds,
+        stage: 'PATTERN'
+      });
+      quarantineRecords.push({
+        patternId,
+        stage: 'PATTERN',
+        reason: 'CONFLICTING_CANDIDATE_PAYLOAD',
+        rejectedRecordCount: orderedCandidates.length,
+        differingFields,
+        relatedIds
+      });
     }
+    patternCandidates.sort((a, b) => a.patternId.localeCompare(b.patternId));
+    const distinctCandidateIdCount = candidatesByPatternId.size;
+    const patternCandidateCount = patternCandidates.length;
 
     // Stage 2: Pattern qualification (P2-07A)
-    const patternQualifications = this.buildPatternQualifications(
-      input.patterns,
-      input.relevance,
-      input.condition,
-      input.networks,
-      patternCandidates,
+    const rawQualifications = this.buildPatternQualifications(
+      orderedPatterns,
+      orderedRelevance,
+      orderedCondition,
+      orderedNetworks,
+      rawPatternCandidates,
       diagnostics
     );
     const qualificationsByPatternId = new Map<string, PatternQualification[]>();
-    for (const qualification of patternQualifications) {
+    for (const qualification of rawQualifications) {
       const matches = qualificationsByPatternId.get(qualification.patternId) ?? [];
       matches.push(qualification);
       qualificationsByPatternId.set(qualification.patternId, matches);
     }
-    const stagePatternQualifications: PatternQualification[] = [];
-    for (const [patternId, qualifications] of qualificationsByPatternId) {
+    const conflictedQualificationIds = new Set<string>();
+    const acceptedQualifications: PatternQualification[] = [];
+    for (const patternId of [...qualificationsByPatternId.keys()].sort()) {
+      const qualifications = [...qualificationsByPatternId.get(patternId)!].sort((a, b) =>
+        stableSerialize(a).localeCompare(stableSerialize(b))
+      );
       if (qualifications.length > 1) {
         const verdicts = new Set(qualifications.map(qualification => qualification.status));
         const conflictingVerdicts = verdicts.size > 1;
+        const relatedIds = [...new Set([
+          patternId,
+          ...qualifications.flatMap(qualification =>
+            qualification.stageEvidence.map(evidence => evidence.evidenceId)
+          )
+        ])].sort();
         diagnostics.push({
           diagnosticId: `ORCHESTRATION_DUPLICATE_PATTERN_QUALIFICATION_${patternId}`,
           severity: conflictingVerdicts ? 'ERROR' : 'WARNING',
           category: 'DUPLICATE_ID',
           message: conflictingVerdicts
-            ? `Pattern ${patternId} has conflicting qualification verdicts: ${[...verdicts].sort().join(', ')}.`
-            : `Pattern ${patternId} has ${qualifications.length} duplicate qualification results with the same verdict.`,
-          relatedIds: [patternId],
+            ? `Pattern ${patternId} has conflicting qualification verdicts: ${[...verdicts].sort().join(', ')}; all results were quarantined.`
+            : `Pattern ${patternId} has ${qualifications.length} duplicate qualification results with the same verdict; the first result in canonical order was retained.`,
+          relatedIds,
           stage: 'QUALIFICATION'
         });
         if (conflictingVerdicts) {
+          conflictedQualificationIds.add(patternId);
+          quarantineRecords.push({
+            patternId,
+            stage: 'QUALIFICATION',
+            reason: 'CONFLICTING_QUALIFICATION_VERDICTS',
+            rejectedRecordCount: qualifications.length,
+            differingFields: ['status'],
+            relatedIds
+          });
           continue;
         }
       }
-      stagePatternQualifications.push(qualifications[0]);
+      acceptedQualifications.push(qualifications[0]);
     }
+    const quarantinedPatternIds = new Set([
+      ...quarantinedCandidateIds,
+      ...conflictedQualificationIds
+    ]);
+    const patternQualifications = acceptedQualifications.filter(
+      qualification => !quarantinedPatternIds.has(qualification.patternId)
+    );
+    const stagePatternQualifications = patternQualifications;
+    const rawQualificationPatternIds = new Set(rawQualifications.map(q => q.patternId));
+    const candidatePatternIds = new Set([...candidatesByPatternId.keys()]);
+    const qualificationResultMissingCount = [...candidatePatternIds].filter(
+      patternId => !rawQualificationPatternIds.has(patternId)
+    ).length;
+    const conflictedCandidateCount = quarantinedCandidateIds.size;
+    const conflictedQualificationCount = conflictedQualificationIds.size;
     const qualifiedPatternCount = stagePatternQualifications.filter(
       qualification => qualification.status === 'QUALIFIED'
     ).length;
@@ -175,29 +295,19 @@ export class CanonicalCareerOrchestrator {
       patternCandidates.flatMap(candidate => candidate.sourcePattern.networkIds)
     );
     const resolvedNetworkIds = new Set(
-      input.networks
+      orderedNetworks
         .filter(network =>
           requiredNetworkIds.has(network.networkId) &&
           network.relationships.length > 0
         )
         .map(network => network.networkId)
     );
-    const availableNetworkIds = new Set(input.networks.map(network => network.networkId));
+    const availableNetworkIds = new Set(orderedNetworks.map(network => network.networkId));
     const missingNetworkIds = [...requiredNetworkIds].filter(
       networkId => !availableNetworkIds.has(networkId)
     );
-    const candidatePatternIds = new Set(patternCandidates.map(candidate => candidate.patternId));
-    const qualifiedPatternIds = new Set(stagePatternQualifications.map(
-      qualification => qualification.patternId
-    ));
-    const qualificationResultMissingCount = [...candidatePatternIds].filter(
-      patternId => !qualifiedPatternIds.has(patternId)
-    ).length;
     const qualificationIncomplete =
-      diagnostics.some(diagnostic =>
-        diagnostic.stage === 'QUALIFICATION' &&
-        !(diagnostic.category === 'DUPLICATE_ID' && diagnostic.severity === 'WARNING')
-      ) ||
+      diagnostics.some(diagnostic => diagnostic.stage === 'QUALIFICATION') ||
       qualificationResultMissingCount > 0;
     const networkResolutionStatus = requiredNetworkIds.size === 0
       ? 'NOT_REQUIRED' as const
@@ -213,11 +323,12 @@ export class CanonicalCareerOrchestrator {
     const participantRoleAssignments = this.buildParticipantRoleAssignments(
       patternCandidates,
       stagePatternQualifications,
-      input.networks,
-      input.condition,
-      input.relevance,
+      orderedNetworks,
+      orderedCondition,
+      orderedRelevance,
       diagnostics,
-      skippedRoleAssignmentPatternIds
+      skippedRoleAssignmentPatternIds,
+      quarantinedPatternIds
     );
     const roleAssignmentValidation = validateParticipantRoleAssignments(participantRoleAssignments);
     diagnostics.push(...roleAssignmentValidation.diagnostics);
@@ -243,12 +354,17 @@ export class CanonicalCareerOrchestrator {
       patternCandidates,
       stagePatternQualifications,
       participantRoleAssignments,
-      input.networks,
-      diagnostics
+      orderedNetworks,
+      diagnostics,
+      quarantinedPatternIds
     );
     const resolvedMechanismCount = resolvedMechanisms.length;
     const c8StageDiagnostics = Object.freeze({
       patternCandidateCount,
+      patternCandidateRecordCount,
+      distinctCandidateIdCount,
+      conflictedCandidateCount,
+      conflictedQualificationCount,
       qualificationResultMissingCount,
       qualifiedPatternCount,
       eligiblePatternCount,
@@ -279,7 +395,8 @@ export class CanonicalCareerOrchestrator {
     const identityMappings = this.buildIdentityMappings(
       patternCandidates,
       patternQualifications,
-      diagnostics
+      diagnostics,
+      quarantinedPatternIds
     );
 
     // Stage 8: Relationship mappings
@@ -290,7 +407,8 @@ export class CanonicalCareerOrchestrator {
       resolvedMechanisms,
       mechanismRefinements,
       participantRoleAssignments,
-      diagnostics
+      diagnostics,
+      quarantinedPatternIds
     );
 
     // Stage 9: Stage references
@@ -300,12 +418,16 @@ export class CanonicalCareerOrchestrator {
       resolvedMechanisms,
       mechanismRefinements,
       careerFoundationSupplements,
-      participantRoleAssignments
+      participantRoleAssignments,
+      quarantinedPatternIds
     );
 
     // Stage 10: Validation
+    const validationPatternCandidates = patternCandidates.filter(
+      candidate => !quarantinedPatternIds.has(candidate.patternId)
+    );
     const validationResult = validateCanonicalCareerFoundation(
-      patternCandidates,
+      validationPatternCandidates,
       patternQualifications,
       resolvedMechanisms,
       mechanismRefinements,
@@ -341,6 +463,7 @@ export class CanonicalCareerOrchestrator {
       relationshipMappings,
       stageReferences,
       diagnostics: Object.freeze(diagnostics),
+      quarantineRecords: Object.freeze(quarantineRecords),
       c8StageDiagnostics,
       metadata
     });
@@ -406,8 +529,10 @@ export class CanonicalCareerOrchestrator {
       candidates.push(candidate);
     }
 
-    // Sort deterministically by patternId
-    candidates.sort((a, b) => a.patternId.localeCompare(b.patternId));
+    // Sort deterministically by ID and stable payload for duplicate IDs.
+    candidates.sort((a, b) =>
+      a.patternId.localeCompare(b.patternId) || stableSerialize(a).localeCompare(stableSerialize(b))
+    );
 
     return Object.freeze(candidates);
   }
@@ -430,7 +555,9 @@ export class CanonicalCareerOrchestrator {
         condition,
         networks
       });
-      for (const diagnostic of result.diagnostics ?? []) {
+      for (const diagnostic of [...(result.diagnostics ?? [])].sort((a, b) =>
+        a.patternId.localeCompare(b.patternId) || a.code.localeCompare(b.code)
+      )) {
         diagnostics.push({
           diagnosticId: `ORCHESTRATION_${diagnostic.code}_${diagnostic.patternId}`,
           severity: 'WARNING',
@@ -463,8 +590,10 @@ export class CanonicalCareerOrchestrator {
         };
       });
 
-      // Sort deterministically by patternId
-      qualifications.sort((a, b) => a.patternId.localeCompare(b.patternId));
+      // Sort deterministically by ID and stable payload for duplicate IDs.
+      qualifications.sort((a, b) =>
+        a.patternId.localeCompare(b.patternId) || stableSerialize(a).localeCompare(stableSerialize(b))
+      );
 
       return Object.freeze(qualifications);
     } catch (error) {
@@ -491,7 +620,8 @@ export class CanonicalCareerOrchestrator {
     condition: readonly import('../careerPlanetaryCondition').CareerPlanetaryConditionResult[],
     relevance: readonly import('../careerPlanetaryRelevance').CareerPlanetaryRelevance[],
     diagnostics: OrchestrationDiagnostic[],
-    skippedPatternIds: Set<string>
+    skippedPatternIds: Set<string>,
+    quarantinedPatternIds: ReadonlySet<string>
   ): readonly ParticipantRoleAssignment[] {
     const allAssignments: ParticipantRoleAssignment[] = [];
 
@@ -500,7 +630,22 @@ export class CanonicalCareerOrchestrator {
       patternQualifications.map((q) => [q.patternId, q])
     );
 
+    for (const patternId of [...quarantinedPatternIds].sort()) {
+      skippedPatternIds.add(patternId);
+      diagnostics.push({
+        diagnosticId: `ORCHESTRATION_QUARANTINED_PATTERN_${patternId}_PARTICIPANT_ROLES`,
+        severity: 'INFO',
+        category: 'QUARANTINE',
+        message: `Pattern ${patternId} was quarantined before participant-role assignment.`,
+        relatedIds: [patternId],
+        stage: 'PARTICIPANT_ROLES'
+      });
+    }
+
     for (const pattern of patternCandidates) {
+      if (quarantinedPatternIds.has(pattern.patternId)) {
+        continue;
+      }
       const qualification = qualMap.get(pattern.patternId);
       if (!qualification) {
         // Pattern has no qualification - skip role assignment
@@ -571,7 +716,8 @@ export class CanonicalCareerOrchestrator {
     patternQualifications: readonly PatternQualification[],
     participantRoleAssignments: readonly ParticipantRoleAssignment[],
     networks: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[],
-    diagnostics: OrchestrationDiagnostic[]
+    diagnostics: OrchestrationDiagnostic[],
+    quarantinedPatternIds: ReadonlySet<string>
   ): readonly ResolvedMechanism[] {
     try {
       // Build qualification and role maps for lookup
@@ -598,7 +744,21 @@ export class CanonicalCareerOrchestrator {
       // Track establishing evidence per pattern for post-resolution status determination
       const establishingEvidenceByPattern = new Map<string, readonly PatternLevelEstablishingEvidence[]>();
 
+      for (const patternId of [...quarantinedPatternIds].sort()) {
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_QUARANTINED_PATTERN_${patternId}_MECHANISM`,
+          severity: 'INFO',
+          category: 'QUARANTINE',
+          message: `Pattern ${patternId} was quarantined before mechanism resolution.`,
+          relatedIds: [patternId],
+          stage: 'MECHANISM'
+        });
+      }
+
       for (const pattern of patternCandidates) {
+        if (quarantinedPatternIds.has(pattern.patternId)) {
+          continue;
+        }
         const qualification = qualMap.get(pattern.patternId);
         if (!qualification) {
           continue; // No qualification - skip
@@ -1202,14 +1362,14 @@ export class CanonicalCareerOrchestrator {
    * When a source/target semantic identity is genuinely missing, no mapping is emitted
    * and an unresolved-mapping diagnostic is recorded.
    *
-   * CARDINALITY HANDLING:
-   * If multiple qualifications share the same patternId, all legitimate identity mappings
-   * are emitted (grouped into arrays). Cardinality diagnostics are emitted in buildRelationshipMappings.
+   * Qualification duplicates are normalized before this stage: same-verdict duplicates retain
+   * one canonical result, while conflicting verdicts are quarantined.
    */
   private buildIdentityMappings(
     patternCandidates: readonly PatternCandidate[],
     patternQualifications: readonly PatternQualification[],
-    diagnostics: OrchestrationDiagnostic[]
+    diagnostics: OrchestrationDiagnostic[],
+    quarantinedPatternIds: ReadonlySet<string>
   ): readonly IdentityMapping[] {
     const mappings: IdentityMapping[] = [];
     let mappingIndex = 0;
@@ -1223,7 +1383,9 @@ export class CanonicalCareerOrchestrator {
 
     // Pattern → Qualification mappings (via patternId)
     // Both pattern and qualification expose real identityKey fields
-    for (const pattern of [...patternCandidates].sort((a, b) => a.patternId.localeCompare(b.patternId))) {
+    for (const pattern of [...patternCandidates]
+      .filter(candidate => !quarantinedPatternIds.has(candidate.patternId))
+      .sort((a, b) => a.patternId.localeCompare(b.patternId))) {
       const qualifications = qualMap.get(pattern.patternId);
       if (qualifications && qualifications.length > 0) {
         for (const qualification of [...qualifications].sort((a, b) => a.identityKey.localeCompare(b.identityKey))) {
@@ -1271,13 +1433,9 @@ export class CanonicalCareerOrchestrator {
    * Builds relationship mappings using structural IDs (patternId, candidateId, mechanismId).
    * These are NOT identity equivalences - they represent structural derivation/containment.
    *
-   * CARDINALITY HANDLING:
-   * - Pattern → Qualification: One-to-one (one patternId maps to one qualification)
-   * - Qualification → Mechanism: One-to-many (one patternId can map to multiple mechanisms)
-   * - Mechanism → Refinement: One-to-one (one candidateId maps to one refinement)
-   *
-   * If multiple qualifications share the same patternId (cardinality violation),
-   * all legitimate relationships are emitted (grouped into arrays) and a diagnostic is recorded.
+   * Qualification duplicates are normalized before this stage, so pattern-to-qualification
+   * mappings remain one-to-one. Mechanism and refinement relationships retain their producer
+   * cardinality.
    */
   private buildRelationshipMappings(
     patternCandidates: readonly PatternCandidate[],
@@ -1285,38 +1443,31 @@ export class CanonicalCareerOrchestrator {
     resolvedMechanisms: readonly ResolvedMechanism[],
     mechanismRefinements: readonly MechanismRefinement[],
     participantRoleAssignments: readonly ParticipantRoleAssignment[],
-    diagnostics: OrchestrationDiagnostic[]
+    diagnostics: OrchestrationDiagnostic[],
+    quarantinedPatternIds: ReadonlySet<string>
   ): readonly RelationshipMapping[] {
     const mappings: RelationshipMapping[] = [];
     let mappingIndex = 0;
+    const activePatternCandidates = patternCandidates.filter(
+      candidate => !quarantinedPatternIds.has(candidate.patternId)
+    );
+    const activeQualifications = patternQualifications.filter(
+      qualification => !quarantinedPatternIds.has(qualification.patternId)
+    );
 
     // Build qualification map for lookup - group into arrays to handle cardinality violations
     const qualMap = new Map<string, PatternQualification[]>();
-    for (const qualification of patternQualifications) {
+    for (const qualification of activeQualifications) {
       const existing = qualMap.get(qualification.patternId) ?? [];
       qualMap.set(qualification.patternId, [...existing, qualification]);
     }
 
-    // Detect cardinality violation: multiple qualifications for same patternId
-    for (const [patternId, qualifications] of qualMap.entries()) {
-      if (qualifications.length > 1) {
-        diagnostics.push({
-          diagnosticId: `ORCHESTRATION_QUALIFICATION_CARDINALITY_VIOLATION_${patternId}`,
-          severity: 'ERROR',
-          category: 'CONTRACT_VIOLATION',
-          message: `Multiple qualifications (${qualifications.length}) detected for patternId ${patternId} - cardinality contract violated (expected 1:1). All relationships will be emitted.`,
-          relatedIds: [patternId],
-          stage: 'QUALIFICATION'
-        });
-      }
-    }
-
     // Pattern → Qualification mappings (via patternId)
     // Represents: qualification is derived from pattern
-    for (const pattern of patternCandidates) {
+    for (const pattern of activePatternCandidates) {
       const qualifications = qualMap.get(pattern.patternId);
       if (qualifications && qualifications.length > 0) {
-        // Emit relationships for all qualifications (even if cardinality violation)
+        // The qualification quarantine stage leaves at most one accepted result per pattern.
         for (const qualification of qualifications) {
           mappings.push({
             mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
@@ -1332,7 +1483,7 @@ export class CanonicalCareerOrchestrator {
 
     // Qualification → Mechanism mappings (via patternId)
     // Represents: mechanism candidates are derived from qualification (via pattern)
-    for (const qualification of patternQualifications) {
+    for (const qualification of activeQualifications) {
       const mechanisms = resolvedMechanisms.filter(m => m.patternId === qualification.patternId);
       for (const mechanism of mechanisms) {
         mappings.push({
@@ -1362,7 +1513,7 @@ export class CanonicalCareerOrchestrator {
       }
     }
 
-    const qualifiedPatternIds = new Set(patternQualifications.map(qualification => qualification.patternId));
+    const qualifiedPatternIds = new Set(activeQualifications.map(qualification => qualification.patternId));
     const rolePairs = new Map<string, { patternId: string; participantRoleReferenceId: string }>();
     for (const roleAssignment of participantRoleAssignments) {
       const { patternId, assignment } = roleAssignment;
@@ -1414,22 +1565,29 @@ export class CanonicalCareerOrchestrator {
     resolvedMechanisms: readonly ResolvedMechanism[],
     mechanismRefinements: readonly MechanismRefinement[],
     careerFoundationSupplements: readonly CareerFoundationSupplement[],
-    participantRoleAssignments: readonly ParticipantRoleAssignment[]
+    participantRoleAssignments: readonly ParticipantRoleAssignment[],
+    quarantinedPatternIds: ReadonlySet<string>
   ): readonly StageReference[] {
     const references: StageReference[] = [];
+    const activePatternCandidates = patternCandidates.filter(
+      candidate => !quarantinedPatternIds.has(candidate.patternId)
+    );
+    const activeQualifications = patternQualifications.filter(
+      qualification => !quarantinedPatternIds.has(qualification.patternId)
+    );
 
     // Pattern stage
     references.push({
       stageId: 'PATTERN',
       stageName: 'Pattern Classification (C4/P2-03)',
-      evidenceIds: patternCandidates.map((p) => p.patternId)
+      evidenceIds: activePatternCandidates.map((p) => p.patternId)
     });
 
     // Qualification stage
     references.push({
       stageId: 'QUALIFICATION',
       stageName: 'Pattern Qualification (P2-07A)',
-      evidenceIds: patternQualifications.map((q) => q.patternId)
+      evidenceIds: activeQualifications.map((q) => q.patternId)
     });
 
     references.push({

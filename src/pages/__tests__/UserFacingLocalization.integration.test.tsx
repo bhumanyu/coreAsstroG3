@@ -65,6 +65,10 @@ describe('user-facing assessment localization at page boundaries', () => {
         coverageSummary: {
           mechanismCandidateCount: 0,
           patternCandidateCount: 0,
+          patternCandidateRecordCount: 0,
+          distinctCandidateIdCount: 0,
+          conflictedCandidateCount: 0,
+          conflictedQualificationCount: 0,
           qualificationResultMissingCount: 0,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 0,
@@ -119,6 +123,10 @@ describe('user-facing assessment localization at page boundaries', () => {
       coverageSummary: {
         mechanismCandidateCount: 0,
         patternCandidateCount: 1,
+        patternCandidateRecordCount: 1,
+        distinctCandidateIdCount: 1,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
         qualificationResultMissingCount: 0,
         qualifiedPatternCount: 0,
         eligiblePatternCount: 1,
@@ -147,6 +155,10 @@ describe('user-facing assessment localization at page boundaries', () => {
       coverageSummary: {
         mechanismCandidateCount: 0,
         patternCandidateCount: 2,
+        patternCandidateRecordCount: 2,
+        distinctCandidateIdCount: 2,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
         qualificationResultMissingCount: 1,
         qualifiedPatternCount: 0,
         eligiblePatternCount: 0,

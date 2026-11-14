@@ -279,6 +279,10 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(foundation.diagnostics).toEqual(expect.any(Array));
       expect(foundation.c8StageDiagnostics).toEqual({
         patternCandidateCount: 0,
+        patternCandidateRecordCount: 0,
+        distinctCandidateIdCount: 0,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
         qualificationResultMissingCount: 0,
         qualifiedPatternCount: 0,
         eligiblePatternCount: 0,
@@ -320,6 +324,10 @@ describe('CanonicalCareerOrchestrator', () => {
 
       expect(foundation.c8StageDiagnostics).toEqual({
         patternCandidateCount: 1,
+        patternCandidateRecordCount: 1,
+        distinctCandidateIdCount: 1,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
         qualificationResultMissingCount: 0,
         qualifiedPatternCount: 1,
         eligiblePatternCount: 1,
@@ -348,7 +356,11 @@ describe('CanonicalCareerOrchestrator', () => {
       });
 
       expect(foundation.c8StageDiagnostics).toMatchObject({
-        patternCandidateCount: 3,
+        patternCandidateCount: 2,
+        patternCandidateRecordCount: 3,
+        distinctCandidateIdCount: 2,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
         qualificationResultMissingCount: 1
       });
       expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
@@ -356,6 +368,161 @@ describe('CanonicalCareerOrchestrator', () => {
         severity: 'WARNING',
         stage: 'PATTERN'
       }));
+      expect(foundation.patternCandidates.map(candidate => candidate.patternId)).toEqual([
+        'PATTERN_1',
+        'PATTERN_2'
+      ]);
+      expect(ports.participantRoles.assignParticipantRoles).toHaveBeenCalledTimes(1);
+      expect(ports.mechanismResolver.resolveAll).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({
+          pattern: expect.objectContaining({ patternId: 'PATTERN_1' })
+        })])
+      );
+      expect((ports.mechanismResolver.resolveAll as any).mock.calls[0][0]).toHaveLength(1);
+    });
+
+    it('quarantines every candidate when duplicate IDs have conflicting payloads', () => {
+      const ports = createStubPorts();
+      const candidateA = createStubPattern('PATTERN_1');
+      const candidateB = {
+        ...createStubPattern('PATTERN_1'),
+        identityKey: 'IDENTITY_CONFLICTING' as EvidenceIdentityKey,
+        name: 'Conflicting candidate'
+      };
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [candidateA, candidateB],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_CONFLICTING_PATTERN_CANDIDATE_PATTERN_1',
+        severity: 'ERROR',
+        stage: 'PATTERN',
+        message: expect.stringContaining('identityKey, name')
+      }));
+      expect(foundation.quarantineRecords).toContainEqual(expect.objectContaining({
+        patternId: 'PATTERN_1',
+        reason: 'CONFLICTING_CANDIDATE_PAYLOAD',
+        rejectedRecordCount: 2,
+        differingFields: ['identityKey', 'name']
+      }));
+      expect(foundation.patternCandidates).toEqual([]);
+      expect(foundation.patternQualifications).toEqual([]);
+      expect(foundation.participantRoleAssignments).toEqual([]);
+      expect(foundation.resolvedMechanisms).toEqual([]);
+      expect(foundation.identityMappings).toEqual([]);
+      expect(foundation.relationshipMappings.filter(mapping =>
+        mapping.sourceId === 'PATTERN_1' || mapping.targetId === 'PATTERN_1'
+      )).toEqual([]);
+      expect(foundation.stageReferences.every(reference =>
+        !reference.evidenceIds.includes('PATTERN_1')
+      )).toBe(true);
+      expect(foundation.c8StageDiagnostics).toMatchObject({
+        patternCandidateCount: 0,
+        patternCandidateRecordCount: 2,
+        distinctCandidateIdCount: 1,
+        conflictedCandidateCount: 1,
+        conflictedQualificationCount: 0,
+        qualificationResultMissingCount: 0
+      });
+      expect(ports.participantRoles.assignParticipantRoles).not.toHaveBeenCalled();
+      expect(ports.mechanismResolver.resolveAll).not.toHaveBeenCalled();
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_QUARANTINED_PATTERN_PATTERN_1_PARTICIPANT_ROLES',
+        severity: 'INFO',
+        stage: 'PARTICIPANT_ROLES'
+      }));
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_QUARANTINED_PATTERN_PATTERN_1_MECHANISM',
+        severity: 'INFO',
+        stage: 'MECHANISM'
+      }));
+    });
+
+    it('keeps valid candidates flowing while fully quarantining a conflicting candidate ID', () => {
+      const ports = createStubPorts();
+      const conflictingA = createStubPattern('PATTERN_2');
+      const conflictingB = {
+        ...createStubPattern('PATTERN_2'),
+        classification: 'CONFLICTING_CLASSIFICATION' as CareerPatternClassification
+      };
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED'),
+          createStubQualifiedPattern('PATTERN_2', 'QUALIFIED')
+        ]
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1'), conflictingA, conflictingB],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.patternCandidates.map(candidate => candidate.patternId)).toEqual(['PATTERN_1']);
+      expect(foundation.patternQualifications.map(qualification => qualification.patternId)).toEqual([
+        'PATTERN_1'
+      ]);
+      expect(ports.participantRoles.assignParticipantRoles).toHaveBeenCalledTimes(1);
+      expect((ports.mechanismResolver.resolveAll as any).mock.calls[0][0]).toHaveLength(1);
+      expect(foundation.relationshipMappings.every(mapping =>
+        mapping.sourceId !== 'PATTERN_2' && mapping.targetId !== 'PATTERN_2'
+      )).toBe(true);
+      expect(foundation.c8StageDiagnostics).toMatchObject({
+        patternCandidateCount: 1,
+        patternCandidateRecordCount: 3,
+        distinctCandidateIdCount: 2,
+        conflictedCandidateCount: 1,
+        conflictedQualificationCount: 0,
+        qualificationResultMissingCount: 0
+      });
+    });
+
+    it('produces identical foundations when candidate and qualification input order changes', () => {
+      const firstPorts = createStubPorts();
+      const secondPorts = createStubPorts();
+      const qualified = createStubQualifiedPattern('PATTERN_1', 'QUALIFIED');
+      const conflictingQualification = createStubQualifiedPattern('PATTERN_3', 'UNQUALIFIED');
+      const qualifiedConflict = createStubQualifiedPattern('PATTERN_3', 'QUALIFIED');
+      (firstPorts.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [qualified, qualifiedConflict, conflictingQualification]
+      });
+      (secondPorts.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [conflictingQualification, qualifiedConflict, qualified]
+      });
+      const candidateA = createStubPattern('PATTERN_2');
+      const candidateB = {
+        ...createStubPattern('PATTERN_2'),
+        name: 'Conflicting pattern'
+      };
+      const patterns = [
+        createStubPattern('PATTERN_1'),
+        candidateA,
+        candidateB,
+        createStubPattern('PATTERN_3')
+      ];
+
+      const first = new CanonicalCareerOrchestrator(firstPorts).orchestrate({
+        patterns,
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+      const second = new CanonicalCareerOrchestrator(secondPorts).orchestrate({
+        patterns: [...patterns].reverse(),
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(first).toEqual(second);
     });
 
     it('warns when duplicate qualification results have the same verdict', () => {
@@ -380,6 +547,89 @@ describe('CanonicalCareerOrchestrator', () => {
         stage: 'QUALIFICATION'
       }));
       expect(foundation.c8StageDiagnostics.qualificationResultMissingCount).toBe(0);
+      expect(foundation.patternQualifications).toHaveLength(1);
+      expect(foundation.diagnostics.some(diagnostic =>
+        diagnostic.stage === 'QUALIFICATION' &&
+        diagnostic.relatedIds.includes('PATTERN_1') &&
+        diagnostic.severity === 'ERROR'
+      )).toBe(false);
+    });
+
+    it('does not report resolved network coverage when qualification emitted a warning', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED'),
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')
+        ]
+      });
+      const network = {
+        networkId: 'NETWORK_1',
+        identityKey: 'IDENTITY_NETWORK_1',
+        houses: [],
+        lords: [],
+        relationships: [{ relationshipId: 'EDGE_NETWORK_1' }],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD',
+        provenance: { sourceIds: [], ruleIds: [] },
+        evidenceIds: []
+      } as unknown as CareerHouseNetwork;
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [{ ...createStubPattern('PATTERN_1'), networkIds: ['NETWORK_1'] }],
+        relevance: [],
+        condition: [],
+        networks: [network]
+      });
+
+      expect(foundation.c8StageDiagnostics.networkResolutionStatus).toBe('INCOMPLETE');
+    });
+
+    it('keeps missing, explicitly unqualified, and conflicted results distinct in coverage', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [
+          createStubQualifiedPattern('UNQUALIFIED_PATTERN', 'UNQUALIFIED'),
+          createStubQualifiedPattern('CONFLICTED_PATTERN', 'QUALIFIED'),
+          createStubQualifiedPattern('CONFLICTED_PATTERN', 'UNQUALIFIED')
+        ]
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [
+          createStubPattern('MISSING_PATTERN'),
+          createStubPattern('UNQUALIFIED_PATTERN'),
+          createStubPattern('CONFLICTED_PATTERN')
+        ],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.c8StageDiagnostics).toMatchObject({
+        patternCandidateCount: 3,
+        patternCandidateRecordCount: 3,
+        distinctCandidateIdCount: 3,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 1,
+        qualificationResultMissingCount: 1,
+        qualifiedPatternCount: 0,
+        eligiblePatternCount: 0,
+        roleAssignmentSkippedPatternCount: 2,
+        networkResolutionStatus: 'NOT_REQUIRED'
+      });
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_MISSING_QUALIFICATION_MISSING_PATTERN',
+        severity: 'WARNING'
+      }));
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_UNQUALIFIED_PATTERN_MECHANISM_UNQUALIFIED_PATTERN',
+        severity: 'INFO'
+      }));
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_QUARANTINED_PATTERN_CONFLICTED_PATTERN_MECHANISM',
+        severity: 'INFO'
+      }));
     });
 
     it('rejects conflicting duplicate qualification verdicts instead of selecting the last result', () => {
@@ -404,7 +654,23 @@ describe('CanonicalCareerOrchestrator', () => {
         stage: 'QUALIFICATION',
         message: expect.stringContaining('conflicting qualification verdicts')
       }));
-      expect(foundation.c8StageDiagnostics.qualificationResultMissingCount).toBe(1);
+      expect(foundation.c8StageDiagnostics.qualificationResultMissingCount).toBe(0);
+      expect(foundation.c8StageDiagnostics.conflictedQualificationCount).toBe(1);
+      expect(foundation.patternQualifications).toEqual([]);
+      expect(foundation.identityMappings).toEqual([]);
+      expect(foundation.relationshipMappings.filter(mapping =>
+        mapping.sourceId === 'PATTERN_1' || mapping.targetId === 'PATTERN_1'
+      )).toEqual([]);
+      expect(foundation.stageReferences.find(reference => reference.stageId === 'PATTERN')?.evidenceIds)
+        .toEqual([]);
+      expect(foundation.stageReferences.find(reference => reference.stageId === 'QUALIFICATION')?.evidenceIds)
+        .toEqual([]);
+      expect(foundation.quarantineRecords).toContainEqual(expect.objectContaining({
+        patternId: 'PATTERN_1',
+        stage: 'QUALIFICATION',
+        rejectedRecordCount: 2,
+        reason: 'CONFLICTING_QUALIFICATION_VERDICTS'
+      }));
       expect(foundation.participantRoleAssignments).toEqual([]);
       expect(ports.participantRoles.assignParticipantRoles).not.toHaveBeenCalled();
       expect(foundation.resolvedMechanisms).toEqual([]);
@@ -531,6 +797,10 @@ describe('CanonicalCareerOrchestrator', () => {
 
       expect(foundation.c8StageDiagnostics).toEqual({
         patternCandidateCount: 1,
+        patternCandidateRecordCount: 1,
+        distinctCandidateIdCount: 1,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
         qualificationResultMissingCount: 0,
         qualifiedPatternCount: 1,
         eligiblePatternCount: 1,
@@ -1154,8 +1424,8 @@ describe('CanonicalCareerOrchestrator', () => {
     });
   });
 
-  describe('Qualification cardinality', () => {
-    it('should detect qualification cardinality violation (multiple qualifications per patternId)', () => {
+  describe('Same-verdict qualification duplicates', () => {
+    it('keeps one canonical qualification and emits only a warning', () => {
       const ports = createStubPorts();
       // Manually inject duplicate qualifications with same patternId to test violation path
       // This simulates a producer contract violation
@@ -1175,14 +1445,15 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      // Verify cardinality violation diagnostic is emitted
-      const cardinalityDiagnostic = foundation.diagnostics.find(
-        d => d.diagnosticId === 'ORCHESTRATION_QUALIFICATION_CARDINALITY_VIOLATION_PATTERN_1'
+      const duplicateDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_DUPLICATE_PATTERN_QUALIFICATION_PATTERN_1'
       );
-      expect(cardinalityDiagnostic).toBeDefined();
-      expect(cardinalityDiagnostic?.severity).toBe('ERROR');
-      expect(cardinalityDiagnostic?.category).toBe('CONTRACT_VIOLATION');
-      expect(cardinalityDiagnostic?.message).toContain('Multiple qualifications');
+      expect(duplicateDiagnostic).toBeDefined();
+      expect(duplicateDiagnostic?.severity).toBe('WARNING');
+      expect(foundation.patternQualifications).toHaveLength(1);
+      expect(foundation.diagnostics.some(diagnostic =>
+        diagnostic.diagnosticId.includes('CARDINALITY_VIOLATION')
+      )).toBe(false);
     });
   });
 
@@ -2974,7 +3245,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(validationErrors).toHaveLength(0);
     });
 
-    it('preserves all relationships when multiple qualifications share patternId (cardinality violation)', () => {
+    it('keeps one relationship for same-verdict duplicate qualifications', () => {
       const ports: CareerOrchestrationPorts = {
         qualification: {
           qualifyCareerPatterns: vi.fn(() => ({
@@ -3022,18 +3293,15 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      // Should emit cardinality violation diagnostic
       const cardinalityErrors = foundation.diagnostics.filter(
         d => d.diagnosticId.includes('CARDINALITY_VIOLATION')
       );
-      expect(cardinalityErrors.length).toBeGreaterThan(0);
+      expect(cardinalityErrors).toHaveLength(0);
 
-      // Should still emit relationships for both qualifications
       const patternToQualRelationships = foundation.relationshipMappings.filter(
         m => m.sourceStage === 'PATTERN' && m.targetStage === 'QUALIFICATION' && m.sourceId === 'PATTERN_1'
       );
-      // Both qualifications should have relationships emitted
-      expect(patternToQualRelationships.length).toBe(2);
+      expect(patternToQualRelationships).toHaveLength(1);
     });
 
     it('records producer-only evidence identity and omits whitespace-only keys', () => {

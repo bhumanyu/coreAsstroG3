@@ -155,6 +155,10 @@ export interface CareerExpressionProduct {
 export interface ProductCareerExpressionCoverageSummary {
   readonly mechanismCandidateCount: number;
   readonly patternCandidateCount?: number;
+  readonly patternCandidateRecordCount?: number;
+  readonly distinctCandidateIdCount?: number;
+  readonly conflictedCandidateCount?: number;
+  readonly conflictedQualificationCount?: number;
   readonly qualificationResultMissingCount?: number;
   readonly qualifiedPatternCount?: number;
   readonly eligiblePatternCount?: number;
