@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import type { BirthDetails, Horoscope } from '../../../types';
 import { AyanamsaType, Planet, Sign } from '../../../types';
+import { calculateHoroscope } from '../../../engine/astroEngine';
+import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
+import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import {
   mapProductAnalysis,
   createAnalysisId,
@@ -18,8 +21,17 @@ import {
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import { listSelectableMdAdPeriods } from '../../../core/analysis/selectedMdAdPeriod';
 import { createUnavailableWealthFinancialDataSet, createUserReportedFinancialDatum, createConnectedFinancialDatum } from '../../../domain/wealth/wealthFinancialData';
-import { createDomainInterpretation, createDomainEvidence, createNatalPromise } from '../../../domain/interpretation';
+import {
+  createDomainInterpretation,
+  createDomainEvidence,
+  createNatalPromise,
+  buildNormalizedCareerTiming,
+  getCareerConclusionData
+} from '../../../domain/interpretation';
+import { interpretCareerV2 } from '../../../domain/career/CareerDomainInterpreterV2';
 import type { ProductTemporalRelation } from '../productAnalysisTypes';
+import { buildDashaInterpretationProduct } from '../../life-analysis/dasha/buildDashaInterpretationProduct';
+import { selectDashaViewModel } from '../dashaViewModel';
 import {
   selectCareer,
   selectWealth,
@@ -41,6 +53,61 @@ import type { CareerOrchestrationPorts } from '../../../domain/career/orchestrat
 import type { CareerPattern } from '../../../domain/career/careerPattern/careerPatternTypes';
 
 describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
+  it('keeps Career Activation and Life Analysis effects equal to C9 for the same chart periods', () => {
+    const asOf = '2026-11-14T00:00:00.000Z';
+    const context = createAnalysisContext({
+      asOf,
+      methodology: mapMethodology(CANONICAL_BIRTH_DETAILS)
+    });
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf });
+    const temporalState = resolveAnalysisTemporalState(horoscope, context);
+    const careerInterpretation = interpretCareerV2(horoscope, { context, temporalState });
+    const canonicalDasha = getCareerConclusionData(careerInterpretation)
+      ?.internalArtifacts?.canonicalDashaAnalysis;
+    const activeDasha = temporalState.dashaInterpretation?.current;
+
+    expect(canonicalDasha).toBeDefined();
+    expect(activeDasha).toBeDefined();
+
+    const lifeAnalysisViewModel: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        timing: buildNormalizedCareerTiming(careerInterpretation, asOf)
+      }
+    };
+    const product = mapProductAnalysis({
+      birthDetails: CANONICAL_BIRTH_DETAILS,
+      horoscope,
+      lifeAnalysisViewModel,
+      context,
+      temporalState
+    });
+    const dashaViewModel = selectDashaViewModel(product);
+    const lifeDasha = buildDashaInterpretationProduct(activeDasha, canonicalDasha);
+    const lifePeriods = [
+      lifeDasha.mahadasha?.canonicalCareerActivation,
+      lifeDasha.antardasha?.canonicalCareerActivation,
+      lifeDasha.pratyantardasha?.canonicalCareerActivation
+    ].filter((period): period is NonNullable<typeof period> => period !== undefined);
+    const careerPeriods = product.career.activation.dasha.periods;
+
+    expect(lifePeriods).toHaveLength(3);
+    for (const lifePeriod of lifePeriods) {
+      const careerPeriod = careerPeriods.find((period) =>
+        period.level === lifePeriod.level && period.planet === lifePeriod.planet
+      );
+      const activationCardPeriod = dashaViewModel.careerActivation.periods.find((period) =>
+        period.level === lifePeriod.level && period.planet === lifePeriod.planet
+      );
+      const canonicalPeriod = canonicalDasha![lifePeriod.level.toLowerCase() as 'md' | 'ad' | 'pd'];
+
+      expect(careerPeriod?.effect).toBe(canonicalPeriod.effect);
+      expect(activationCardPeriod?.effect).toBe(canonicalPeriod.effect);
+      expect(lifePeriod.effect).toBe(canonicalPeriod.effect);
+    }
+  });
+
   it('maps evidence direction and derivation from C4 polarity and provenance, not role', () => {
     const evidence = createDomainEvidence({
       id: 'CAREER_STRUCTURAL_TEST',

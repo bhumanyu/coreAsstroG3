@@ -59,9 +59,13 @@ export function buildLifeAnalysisViewModel(
   activeDasha?: ActiveDashaInterpretation
 ): LifeAnalysisViewModel {
   const status = mapProductStatus(analysis.dataCompleteness.overall);
+  const careerConclusionData = getCareerConclusionData(career);
 
   const mappedActiveDasha = activeDasha
-    ? buildDashaInterpretationProduct(activeDasha)
+    ? buildDashaInterpretationProduct(
+        activeDasha,
+        careerConclusionData?.internalArtifacts?.canonicalDashaAnalysis
+      )
     : undefined;
 
   const overall: LifeAnalysisOverallViewModel = {
@@ -119,7 +123,6 @@ export function buildLifeAnalysisViewModel(
   };
 
   // Extract typed Career conclusion data
-  const careerConclusionData = getCareerConclusionData(career);
   const careerD10Varga = career.vargaConfirmations.find((v) => v.varga === 'D10');
   const careerTiming = buildNormalizedCareerTiming(career, activeDasha?.at ?? career.asOf ?? career.generatedAt);
   const careerActivations = getCareerTimingActivations(career);

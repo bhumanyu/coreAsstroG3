@@ -10,8 +10,51 @@ import type {
   DashaInterpretationProduct,
   DashaPlanetProduct,
   DashaPairProduct,
-  DashaLevel
+  DashaLevel,
+  CanonicalCareerActivationProduct
 } from './dashaInterpretationProductTypes';
+import type {
+  CareerDashaCanonicalAnalysis,
+  CareerDashaCanonicalLevel
+} from '../../../domain/career/careerDasha/careerDashaCanonicalTypes';
+
+function mapCanonicalCareerActivation(
+  planet: DashaPlanetActivation['planet'],
+  level: CareerDashaCanonicalLevel,
+  canonicalDasha?: CareerDashaCanonicalAnalysis
+): CanonicalCareerActivationProduct | undefined {
+  if (!canonicalDasha) {
+    return undefined;
+  }
+
+  const period = canonicalDasha[level.toLowerCase() as 'md' | 'ad' | 'pd'];
+  if (!period || period.planet !== planet) {
+    return undefined;
+  }
+
+  const evidence = canonicalDasha.evidence.filter((item) => item.level === level);
+  return {
+    level,
+    planet: period.planet,
+    effect: period.effect,
+    direction: period.direction,
+    ...(period.conditionAssessment !== undefined
+      ? { conditionAssessment: period.conditionAssessment }
+      : {}),
+    ...(period.afflictionAssessed !== undefined
+      ? { afflictionAssessed: period.afflictionAssessed }
+      : {}),
+    ...(period.expressionEvidenceCount !== undefined
+      ? { expressionEvidenceCount: period.expressionEvidenceCount }
+      : {}),
+    evidenceIds: evidence.map((item) => item.id).sort(),
+    sourceIds: [...new Set(evidence.flatMap((item) => item.sourceIds))].sort(),
+    ruleIds: [...new Set(evidence.flatMap((item) => item.provenance.ruleIds ?? []))].sort(),
+    statement: period.statement,
+    ...(period.start ? { start: period.start } : {}),
+    ...(period.end ? { end: period.end } : {})
+  };
+}
 
 function mapDashaPlanet(
   activation: DashaPlanetActivation | undefined,
@@ -20,7 +63,8 @@ function mapDashaPlanet(
   end: string,
   confidence: InterpretationConfidence,
   planetarySynthesis?: DashaDirectionalSynthesis,
-  domainSynthesis?: readonly DashaDomainSynthesis[]
+  domainSynthesis?: readonly DashaDomainSynthesis[],
+  canonicalCareerActivation?: CanonicalCareerActivationProduct
 ): DashaPlanetProduct | undefined {
   if (!activation) {
     return undefined;
@@ -63,7 +107,10 @@ function mapDashaPlanet(
     evidence: activation.evidence ?? [],
     confidence,
     planetarySynthesis,
-    domainSynthesis
+    ...(canonicalCareerActivation ? { canonicalCareerActivation } : {}),
+    ...(domainSynthesis
+      ? { domainSynthesis: domainSynthesis.filter((item) => item.domain !== 'CAREER') }
+      : {})
   };
 }
 
@@ -78,7 +125,8 @@ function mapDashaPair(pair: DashaPairInterpretation): DashaPairProduct {
 }
 
 export function buildDashaInterpretationProduct(
-  current?: ActiveDashaInterpretation
+  current?: ActiveDashaInterpretation,
+  canonicalCareerDasha?: CareerDashaCanonicalAnalysis
 ): DashaInterpretationProduct {
   if (!current) {
     return {
@@ -97,7 +145,12 @@ export function buildDashaInterpretationProduct(
           current.mahadasha.end,
           current.mahadasha.confidence,
           current.mahadasha.planetarySynthesis,
-          current.mahadasha.domainSynthesis
+          current.mahadasha.domainSynthesis,
+          mapCanonicalCareerActivation(
+            current.mahadasha.natal?.planet,
+            'MD',
+            canonicalCareerDasha
+          )
         )
       : undefined,
     antardasha: current.antardasha
@@ -108,7 +161,12 @@ export function buildDashaInterpretationProduct(
           current.antardasha.end,
           current.antardasha.confidence,
           current.antardasha.planetarySynthesis,
-          current.antardasha.domainSynthesis
+          current.antardasha.domainSynthesis,
+          mapCanonicalCareerActivation(
+            current.antardasha.natal?.planet,
+            'AD',
+            canonicalCareerDasha
+          )
         )
       : undefined,
     pratyantardasha: current.pratyantardasha
@@ -119,7 +177,12 @@ export function buildDashaInterpretationProduct(
           current.pratyantardasha.end,
           current.pratyantardasha.confidence,
           current.pratyantardasha.planetarySynthesis,
-          current.pratyantardasha.domainSynthesis
+          current.pratyantardasha.domainSynthesis,
+          mapCanonicalCareerActivation(
+            current.pratyantardasha.natal?.planet,
+            'PD',
+            canonicalCareerDasha
+          )
         )
       : undefined,
     pair: current.antardasha?.pairInterpretation 

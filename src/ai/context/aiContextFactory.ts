@@ -639,6 +639,31 @@ function mapDashaPlanetProductToPeriodFacts(
         }
       }
       : {}),
+    ...(product.canonicalCareerActivation
+      ? {
+        canonicalCareerActivation: {
+          level: product.canonicalCareerActivation.level,
+          ...(product.canonicalCareerActivation.planet
+            ? { planet: product.canonicalCareerActivation.planet }
+            : {}),
+          effect: product.canonicalCareerActivation.effect,
+          direction: product.canonicalCareerActivation.direction,
+          ...(product.canonicalCareerActivation.conditionAssessment
+            ? { conditionAssessment: product.canonicalCareerActivation.conditionAssessment }
+            : {}),
+          ...(product.canonicalCareerActivation.afflictionAssessed !== undefined
+            ? { afflictionAssessed: product.canonicalCareerActivation.afflictionAssessed }
+            : {}),
+          ...(product.canonicalCareerActivation.expressionEvidenceCount !== undefined
+            ? { expressionEvidenceCount: product.canonicalCareerActivation.expressionEvidenceCount }
+            : {}),
+          evidenceIds: [...product.canonicalCareerActivation.evidenceIds],
+          sourceIds: [...product.canonicalCareerActivation.sourceIds],
+          ruleIds: [...product.canonicalCareerActivation.ruleIds],
+          statement: product.canonicalCareerActivation.statement
+        }
+      }
+      : {}),
     ...(product.domainSynthesis
       ? {
         domainSynthesis: product.domainSynthesis.map((ds) => ({

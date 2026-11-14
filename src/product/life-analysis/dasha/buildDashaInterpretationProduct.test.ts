@@ -9,6 +9,78 @@ import { createAnalysisContext } from '../../../core/analysis/analysisContextFac
 import { STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH } from '../../../integration/stage1/stage1GoldenFixture';
 import { buildLifeAnalysis } from '../../../domain/synthesis';
 import type { ActiveDashaInterpretation } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
+import type {
+  CareerDashaCanonicalAnalysis,
+  CareerDashaCanonicalEffect,
+  CareerDashaCanonicalLevel,
+  CareerDashaCanonicalPeriod
+} from '../../../domain/career/careerDasha/careerDashaCanonicalTypes';
+import type { ReasoningDirection, DomainStrength } from '../../../domain/reasoning/reasoningTypes';
+
+function makeCanonicalCareerDasha(
+  current: ActiveDashaInterpretation
+): CareerDashaCanonicalAnalysis {
+  const periodInputs = [
+    { level: 'MD' as const, source: current.mahadasha, role: 'PRIMARY_DRIVER' as const, effect: 'CHALLENGES' as const, direction: 'CHALLENGE' as const },
+    { level: 'AD' as const, source: current.antardasha, role: 'MODIFIER' as const, effect: 'DOES_NOT_ACTIVATE' as const, direction: 'NEUTRAL' as const },
+    { level: 'PD' as const, source: current.pratyantardasha, role: 'REFINEMENT' as const, effect: 'ACTIVATES' as const, direction: 'SUPPORT' as const }
+  ];
+  const periods = periodInputs.map(({ level, source, role, effect, direction }) => ({
+    level,
+    planet: source.planet,
+    role,
+    effect,
+    direction,
+    strength: 'MODERATE' as const,
+    statement: `${level} canonical career activation.`,
+    conditionAssessment: 'PARTIAL' as const,
+    afflictionAssessed: false
+  }));
+  const [md, ad, pd] = periods as [
+    CareerDashaCanonicalPeriod,
+    CareerDashaCanonicalPeriod,
+    CareerDashaCanonicalPeriod
+  ];
+  const levels: readonly CareerDashaCanonicalLevel[] = ['MD', 'AD', 'PD'];
+  const effects: readonly CareerDashaCanonicalEffect[] = [
+    'CHALLENGES',
+    'DOES_NOT_ACTIVATE',
+    'ACTIVATES'
+  ];
+  const directions: readonly ReasoningDirection[] = ['CHALLENGE', 'NEUTRAL', 'SUPPORT'];
+  const evidence = levels.map((level, index) => ({
+    identityKey: `CAREER_DASHA:${level}:${periodInputs[index].source.planet}`,
+    id: `CAREER_DASHA:${level}:${periodInputs[index].source.planet}:${effects[index]}`,
+    level,
+    planet: periodInputs[index].source.planet,
+    role: periodInputs[index].role,
+    effect: effects[index],
+    direction: directions[index],
+    strength: 'MODERATE' as DomainStrength,
+    statement: `${level} canonical career activation.`,
+    sourceIds: [`source-${level}`],
+    provenance: {
+      source: 'C9_DASHA' as const,
+      activationLevel: level,
+      ruleIds: [`rule-${level}`],
+      natalRootIds: [`root-${level}`]
+    },
+    conditionAssessment: 'PARTIAL' as const
+  }));
+
+  return {
+    overallEffect: 'CHALLENGES',
+    overallDirection: 'CHALLENGE',
+    overallStrength: 'MODERATE',
+    dominantLevel: 'MD',
+    md,
+    ad,
+    pd,
+    evidence,
+    rootEvidenceIds: ['root-MD', 'root-AD', 'root-PD'],
+    statement: 'Canonical career Dasha analysis.'
+  };
+}
 
 describe('D03 — Life Analysis Active Dasha Product Layer', () => {
   const fixedAsOf = '2024-06-01T00:00:00.000Z';
@@ -151,6 +223,55 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
     expect(product.evidence).toEqual(current.evidence);
     expect(product.confidence).toBe(current.confidence);
     expect(product.at).toBe(current.at);
+  });
+
+  it('projects canonical C9 per-level activations and omits the legacy Career domain verdict', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const current = horoscope.dashaInterpretation?.current!;
+    const canonicalDasha = makeCanonicalCareerDasha(current);
+    const legacyCareer = {
+      domain: 'CAREER',
+      effect: 'SUPPORT' as const,
+      confidence: 1,
+      supportingEvidenceIds: ['legacy-support'],
+      challengingEvidenceIds: [],
+      neutralEvidenceIds: [],
+      activatedHouses: [10],
+      summary: 'Legacy career verdict must not be forwarded.'
+    };
+    const currentWithLegacyCareer = {
+      ...current,
+      mahadasha: {
+        ...current.mahadasha,
+        domainSynthesis: [...(current.mahadasha.domainSynthesis ?? []), legacyCareer]
+      }
+    };
+
+    const product = buildDashaInterpretationProduct(currentWithLegacyCareer, canonicalDasha);
+
+    expect(product.mahadasha?.canonicalCareerActivation).toMatchObject({
+      level: 'MD',
+      planet: current.mahadasha.planet,
+      effect: 'CHALLENGES',
+      direction: 'CHALLENGE',
+      conditionAssessment: 'PARTIAL',
+      evidenceIds: [canonicalDasha.evidence[0].id],
+      sourceIds: ['source-MD'],
+      ruleIds: ['rule-MD']
+    });
+    expect(product.mahadasha?.domainSynthesis?.some((item) => item.domain === 'CAREER')).toBe(false);
+    expect(product.mahadasha?.domainSynthesis?.some((item) => item.domain === 'WEALTH')).toBe(true);
+    expect(product.antardasha?.canonicalCareerActivation?.effect).toBe('DOES_NOT_ACTIVATE');
+    expect(product.pratyantardasha?.canonicalCareerActivation?.effect).toBe('ACTIVATES');
+  });
+
+  it('does not fallback to legacy Career domain synthesis without canonical C9 data', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const current = horoscope.dashaInterpretation?.current!;
+    const product = buildDashaInterpretationProduct(current);
+
+    expect(product.mahadasha?.canonicalCareerActivation).toBeUndefined();
+    expect(product.mahadasha?.domainSynthesis?.some((item) => item.domain === 'CAREER')).toBe(false);
   });
 
   it('Test 9: wires activeDasha into buildLifeAnalysisViewModel with status AVAILABLE when current dasha is present', () => {

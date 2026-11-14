@@ -6,6 +6,12 @@ import type {
   DashaDirectionalSynthesis,
   DashaDomainSynthesis
 } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
+import type {
+  CareerDashaCanonicalEffect,
+  CareerDashaCanonicalLevel
+} from '../../../domain/career/careerDasha/careerDashaCanonicalTypes';
+import type { ReasoningDirection } from '../../../domain/reasoning/reasoningTypes';
+import type { CareerPlanetaryConditionAssessment } from '../../../domain/career/careerPlanetaryCondition';
  
 export type DashaInterpretationStatus = 'AVAILABLE' | 'UNAVAILABLE';
  
@@ -18,6 +24,22 @@ export interface DashaPlanetStrengthProduct {
   readonly percentageOfMinimum?: number;
   readonly meetsMinimum?: boolean;
   readonly shadbalaStatus?: string;
+}
+
+export interface CanonicalCareerActivationProduct {
+  readonly level: CareerDashaCanonicalLevel;
+  readonly planet?: Planet;
+  readonly effect: CareerDashaCanonicalEffect;
+  readonly direction: ReasoningDirection;
+  readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+  readonly afflictionAssessed?: boolean;
+  readonly expressionEvidenceCount?: number;
+  readonly evidenceIds: readonly string[];
+  readonly sourceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly statement: string;
+  readonly start?: string;
+  readonly end?: string;
 }
  
 export interface DashaPlanetProduct {
@@ -41,6 +63,7 @@ export interface DashaPlanetProduct {
   readonly evidence: readonly DashaInterpretationEvidence[];
   readonly confidence: InterpretationConfidence;
   readonly planetarySynthesis?: DashaDirectionalSynthesis;
+  readonly canonicalCareerActivation?: CanonicalCareerActivationProduct;
   readonly domainSynthesis?: readonly DashaDomainSynthesis[];
 }
  

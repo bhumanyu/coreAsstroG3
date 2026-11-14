@@ -3,7 +3,12 @@ import type { DashaYogaReference } from '../../engine/dashaInterpretation/dashaI
 import type { TimingActivationEffect } from '../../domain/interpretation/DomainInterpretationTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { CareerFactorCategory } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
-import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
+import type {
+  CareerDashaCanonicalEffect,
+  CareerDashaCanonicalLevel
+} from '../../domain/career/careerDasha/careerDashaCanonicalTypes';
+import type { CareerPlanetaryConditionAssessment } from '../../domain/career/careerPlanetaryCondition';
+import type { DomainStrength, ReasoningDirection } from '../../domain/reasoning/reasoningTypes';
 import type { TimingEffect, TimingSourceCategory } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationMode } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
 import type { CareerConfidenceCoverage, CareerConfidenceReason } from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
@@ -210,6 +215,20 @@ export interface DashaDomainSynthesisFacts {
   readonly summary: string;
 }
 
+export interface CanonicalCareerActivationFacts {
+  readonly level: CareerDashaCanonicalLevel;
+  readonly planet?: Planet;
+  readonly effect: CareerDashaCanonicalEffect;
+  readonly direction: ReasoningDirection;
+  readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
+  readonly afflictionAssessed?: boolean;
+  readonly expressionEvidenceCount?: number;
+  readonly evidenceIds: readonly string[];
+  readonly sourceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly statement: string;
+}
+
 export interface DashaPeriodFacts {
   readonly level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly planet: Planet;
@@ -231,6 +250,7 @@ export interface DashaPeriodFacts {
   readonly evidenceIds: readonly string[];
   readonly confidence?: AiConfidence;
   readonly planetarySynthesis?: DashaPeriodSynthesisFacts;
+  readonly canonicalCareerActivation?: CanonicalCareerActivationFacts;
   readonly domainSynthesis?: readonly DashaDomainSynthesisFacts[];
 }
 
