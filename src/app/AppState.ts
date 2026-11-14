@@ -68,7 +68,7 @@ export const DEFAULT_BIRTH_DETAILS: BirthDetails = {
 };
 
 export const INITIAL_APP_STATE: AppState = {
-  activePage: 'overview',
+  activePage: 'home',
   birthDetails: DEFAULT_BIRTH_DETAILS,
   isBirthFormOpen: false,
   productAnalysis: INITIAL_PRODUCT_ANALYSIS_STATE,

@@ -227,6 +227,19 @@ function computeTropicalPositions(jd: number): Record<Planet, { long: number; ra
   };
 }
 
+export function calculateSiderealLuminaries(
+  date: Date,
+  ayanamsa: AyanamsaType = AyanamsaType.LAHIRI
+): { sunLongitude: number; moonLongitude: number } {
+  const jd = calculateJulianDay(date);
+  const positions = computeTropicalPositions(jd);
+  const ayanamsaShift = getAyanamsaOffset(ayanamsa, date);
+  return {
+    sunLongitude: normalizeDegree(positions[Planet.SUN].long - ayanamsaShift),
+    moonLongitude: normalizeDegree(positions[Planet.MOON].long - ayanamsaShift)
+  };
+}
+
 /**
  * Generates astronomical positions for the 9 Vedic planets based on birth details.
  */

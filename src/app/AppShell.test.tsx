@@ -123,8 +123,15 @@ describe('AppShellContent analysis safety wrapper', () => {
     if (!encoded.ok) throw new Error(encoded.error);
     window.history.replaceState(null, '', `/#chart=${encoded.value}`);
     const analyze = vi.fn<AppController['analyze']>().mockResolvedValue(undefined);
-    const controllerFactory = () => createController(analyze);
+    let setStateRef: Dispatch<SetStateAction<AppState>> | undefined;
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
+      setStateRef = setState;
+      return createController(analyze);
+    };
     render(<AppShellContent controllerFactory={controllerFactory} />);
+    act(() => {
+      setStateRef?.((prev) => ({ ...prev, activePage: 'overview' }));
+    });
     await waitFor(() => expect(analyze).toHaveBeenCalledTimes(1));
     fireEvent.click(await screen.findByRole('button', { name: 'Load shared chart inputs' }));
     await waitFor(() => expect(analyze).toHaveBeenCalledTimes(2));
@@ -165,7 +172,13 @@ describe('AppShellContent analysis safety wrapper', () => {
 
     render(<AppShellContent controllerFactory={controllerFactory} />);
 
-    // A #chart= fragment on initial load still surfaces the load prompt on overview.
+    expect(INITIAL_APP_STATE.activePage).toBe('home');
+    expect(screen.queryByRole('button', { name: 'Load shared chart inputs' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export chart and report JSON' })).not.toBeInTheDocument();
+
+    act(() => {
+      setStateRef?.((prev) => ({ ...prev, activePage: 'overview' }));
+    });
     expect(await screen.findByRole('button', { name: 'Load shared chart inputs' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export chart and report JSON' })).toBeInTheDocument();
 

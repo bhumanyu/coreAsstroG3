@@ -99,6 +99,7 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
           dashaTimingViewModel={state.dashaTimingViewModel}
           lifeAnalysisState={state.lifeAnalysisState}
           onNavigate={controller.navigate}
+          onOpenBirthForm={controller.openBirthForm}
           onRetry={handleLifeAnalysisRetry}
           onRetryDashaTiming={controller.retryDashaTiming}
           onSelectPeriod={controller.selectPeriod}

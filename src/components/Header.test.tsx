@@ -1,11 +1,11 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { Header } from './Header';
 import { CANONICAL_BIRTH_DETAILS } from '../test/fixtures/canonicalChart';
 
 describe('Header Component', () => {
-  it('renders all expected product navigation tabs with Overview first and Detailed Analysis present', () => {
+  it('renders grouped desktop navigation and the reduced mobile navigation', () => {
     const handleNavigate = vi.fn();
     const handleOpenModal = vi.fn();
 
@@ -17,18 +17,15 @@ describe('Header Component', () => {
       />
     );
 
-    const expectedProductTabs = [
-      'Overview',
-      'Career',
-      'Wealth',
-      'Dasha & Timing',
-      'Why This Result?',
-      'Detailed Analysis'
-    ];
-
-    expectedProductTabs.forEach((tab) => {
-      expect(screen.getByRole('button', { name: tab })).toBeInTheDocument();
-    });
+    const navigationMenus = screen.getAllByRole('navigation', { name: 'Product Views' });
+    expect(navigationMenus).toHaveLength(2);
+    expect(within(navigationMenus[0]).getByRole('button', { name: 'Home' })).toBeInTheDocument();
+    expect(within(navigationMenus[0]).getByRole('button', { name: 'Kundli' })).toBeInTheDocument();
+    expect(within(navigationMenus[1]).getByText('Home', { selector: 'summary' })).toBeInTheDocument();
+    expect(within(navigationMenus[1]).getByText('Chart')).toBeInTheDocument();
+    expect(within(navigationMenus[1]).getByText('Insights')).toBeInTheDocument();
+    expect(within(navigationMenus[1]).getByText('Report')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Birth Details & Ayanamsa' })).toBeInTheDocument();
 
     // Ensure Brand shows CoreAstro and Vedic Astrology
     expect(screen.getByText('CoreAstro')).toBeInTheDocument();
@@ -53,13 +50,17 @@ describe('Header Component', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Detailed Analysis' }));
+    const desktopNavigation = screen.getAllByRole('navigation', { name: 'Product Views' })[1];
+    fireEvent.click(within(desktopNavigation).getByText('Report'));
+    fireEvent.click(within(desktopNavigation).getByRole('button', { name: 'Detailed Analysis' }));
     expect(handleNavigate).toHaveBeenCalledWith('detailed');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Career' }));
+    fireEvent.click(within(desktopNavigation).getByText('Insights'));
+    fireEvent.click(within(desktopNavigation).getByRole('button', { name: 'Career' }));
     expect(handleNavigate).toHaveBeenCalledWith('career');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Wealth' }));
+    fireEvent.click(within(desktopNavigation).getByText('Insights'));
+    fireEvent.click(within(desktopNavigation).getByRole('button', { name: 'Wealth' }));
     expect(handleNavigate).toHaveBeenCalledWith('wealth');
   });
 
@@ -76,15 +77,19 @@ describe('Header Component', () => {
     );
 
     expect(screen.getByText('Birth Chart')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Detailed Analysis' }));
+    const desktopNavigation = screen.getAllByRole('navigation', { name: 'Product Views' })[1];
+    fireEvent.click(within(desktopNavigation).getByText('Report'));
+    fireEvent.click(within(desktopNavigation).getByRole('button', { name: 'Detailed Analysis' }));
     expect(handleTabChange).toHaveBeenCalledWith('report');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Overview' }));
+    fireEvent.click(within(desktopNavigation).getByText('Insights'));
+    fireEvent.click(within(desktopNavigation).getByRole('button', { name: 'Overview' }));
     expect(handleTabChange).toHaveBeenCalledWith('life-analysis');
 
     handleTabChange.mockClear();
     // Clicking a product-only page without legacy equivalent should not invoke legacy setActiveTab
-    fireEvent.click(screen.getByRole('button', { name: 'Career' }));
+    fireEvent.click(within(desktopNavigation).getByText('Insights'));
+    fireEvent.click(within(desktopNavigation).getByRole('button', { name: 'Career' }));
     expect(handleTabChange).not.toHaveBeenCalled();
   });
 });

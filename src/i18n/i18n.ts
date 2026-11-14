@@ -27,6 +27,7 @@ export const registeredNamespaces = [
   'validation',
   'profiles',
   'dashboard',
+  'home',
   'astrology',
   'dasha',
   'career',

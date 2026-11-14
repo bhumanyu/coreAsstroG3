@@ -28,6 +28,8 @@ import type { calculateHoroscope } from '../engine/astroEngine';
 import type { buildDashaTimingViewModel } from '../product/dasha-timing';
 import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
 import { useTranslation } from 'react-i18next';
+import { HomePage } from '../components/home/HomePage';
+import { buildBirthContext } from './birthContext';
 
 const DivisionalChartsView = lazy(() =>
   import('../components/DivisionalChartsView').then((module) => ({ default: module.DivisionalChartsView }))
@@ -51,6 +53,7 @@ export interface ProductPageRouterProps {
   readonly dashaTimingViewModel?: ReturnType<typeof buildDashaTimingViewModel>;
   readonly lifeAnalysisState?: LifeAnalysisProductState;
   readonly onNavigate: (page: AppPage) => void;
+  readonly onOpenBirthForm: () => void;
   readonly onRetry: () => void;
   readonly onRetryDashaTiming?: () => Promise<void>;
   readonly onSelectPeriod?: (mahadashaId: string, antardashaId: string) => Promise<void>;
@@ -120,6 +123,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
   dashaTimingViewModel,
   lifeAnalysisState,
   onNavigate,
+  onOpenBirthForm,
   onRetry,
   onRetryDashaTiming,
   onSelectPeriod
@@ -130,6 +134,16 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
     lifeAnalysisState ?? state.lifeAnalysisState ?? { status: 'LOADING' };
 
   switch (state.activePage) {
+    case 'home':
+      return (
+        <HomePage
+          birthContext={buildBirthContext(state.birthDetails)}
+          onNavigate={onNavigate}
+          onOpenBirthForm={onOpenBirthForm}
+          analysisStatus={state.productAnalysis.status}
+        />
+      );
+
     case 'overview':
       return (
         <OverviewPage

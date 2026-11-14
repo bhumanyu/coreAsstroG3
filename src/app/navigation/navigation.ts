@@ -104,6 +104,8 @@ export function mapLegacyPageToAppPage(legacy: LegacyPage | string): AppPage {
       return 'dasha';
     case 'report':
       return 'detailed';
+    case 'home':
+      return 'home';
     case 'horoscope':
     case 'planets':
     case 'transit':
@@ -120,7 +122,7 @@ export function mapLegacyPageToAppPage(legacy: LegacyPage | string): AppPage {
     case 'detailed':
       return legacy;
     default:
-      return 'overview';
+      return 'home';
   }
 }
 
@@ -143,6 +145,7 @@ export function mapAppPageToLegacyTab(page: AppPage): AppTab | undefined {
     case 'career':
     case 'wealth':
     case 'reasoning':
+    case 'home':
     default:
       return undefined;
   }

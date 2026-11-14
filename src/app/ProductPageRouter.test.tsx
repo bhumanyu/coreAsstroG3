@@ -29,6 +29,7 @@ function renderResearchPage(activePage: AppPage) {
       dashaTimingViewModel={undefined}
       lifeAnalysisState={state.lifeAnalysisState}
       onNavigate={() => undefined}
+      onOpenBirthForm={() => undefined}
       onRetry={() => undefined}
       onSelectPeriod={async () => undefined}
     />
@@ -36,6 +37,12 @@ function renderResearchPage(activePage: AppPage) {
 }
 
 describe('ProductPageRouter lazy research pages', () => {
+  it('renders the state-driven home dashboard', () => {
+    renderResearchPage('home');
+    expect(screen.getByRole('heading', { name: 'Daily Snapshot' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Explore Your Chart' })).toBeInTheDocument();
+  });
+
   it('loads Nakshatra Explorer on direct navigation', async () => {
     renderResearchPage('nakshatras');
     expect(await screen.findByText('Calculate Nakshatra & Pada by Longitude')).toBeInTheDocument();

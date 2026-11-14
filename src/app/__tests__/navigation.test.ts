@@ -115,17 +115,19 @@ describe('Navigation Configuration', () => {
     expect(mapLegacyPageToAppPage('validator')).toBe('validator');
 
     // Idempotent for current AppPage IDs
+    expect(mapLegacyPageToAppPage('home')).toBe('home');
     expect(mapLegacyPageToAppPage('overview')).toBe('overview');
     expect(mapLegacyPageToAppPage('career')).toBe('career');
     expect(mapLegacyPageToAppPage('wealth')).toBe('wealth');
 
     // Fallback for unknown
-    expect(mapLegacyPageToAppPage('unknown-invalid')).toBe('overview');
+    expect(mapLegacyPageToAppPage('unknown-invalid')).toBe('home');
   });
 
   it('maps AppPage to legacy AppTab correctly with mapAppPageToLegacyTab', () => {
     // Product pages with legacy mappings
     expect(mapAppPageToLegacyTab('overview')).toBe('life-analysis');
+    expect(mapAppPageToLegacyTab('home')).toBeUndefined();
     expect(mapAppPageToLegacyTab('dasha')).toBe('dasha-timing');
     expect(mapAppPageToLegacyTab('detailed')).toBe('report');
 

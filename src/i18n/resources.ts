@@ -2372,6 +2372,7 @@ export const resources = {
     navigation: {
       productViews: 'Product Views',
       researchTools: 'Research & Developer Tools',
+      home: 'Home',
       overview: 'Overview',
       career: 'Career',
       wealth: 'Wealth',
@@ -2385,9 +2386,17 @@ export const resources = {
       nakshatras: 'Nakshatra Explorer',
       relationships: 'Natural Relationships',
       validator: 'Golden Vector Test Suite',
+      groupHome: 'Home',
+      groupChart: 'Chart',
+      groupInsights: 'Insights',
+      groupReport: 'Report',
+      kundliShort: 'Kundli',
+      insightsShort: 'Insights',
+      more: 'More',
       closeMenu: 'Close navigation menu',
       openMenu: 'Open navigation menu',
       descriptions: {
+        home: 'Personalized daily astrology and chart exploration',
         overview: 'Unified life domain synthesis & key themes',
         career: 'Professional trajectory, status & vocation',
         wealth: 'Financial prosperity, assets & accumulation',
@@ -2401,6 +2410,91 @@ export const resources = {
         nakshatras: '27 lunar mansions & planetary padas',
         relationships: 'Planetary friendship and enmity matrix',
         validator: 'Canonical astronomical calculation verification'
+      }
+    },
+    home: {
+      editBirthDetails: 'Edit Birth Details',
+      analysis: {
+        loading: 'Your chart analysis is being prepared.',
+        error: 'Chart analysis could not be completed. You can still explore the daily snapshot.'
+      },
+      dailySnapshot: {
+        eyebrow: 'Today at a glance',
+        title: 'Daily Snapshot'
+      },
+      panchang: {
+        eyebrow: 'Local Vedic calendar',
+        title: 'Today’s Panchang',
+        location: 'New Delhi · Lahiri sidereal system',
+        tithi: 'Tithi',
+        nakshatra: 'Nakshatra',
+        pada: 'Pada {{number}}',
+        paksha: {
+          shukla: 'Shukla',
+          krishna: 'Krishna'
+        },
+        yoga: 'Yoga',
+        karana: 'Karana',
+        vaar: 'Vaar',
+        weekdays: {
+          sunday: 'Sunday',
+          monday: 'Monday',
+          tuesday: 'Tuesday',
+          wednesday: 'Wednesday',
+          thursday: 'Thursday',
+          friday: 'Friday',
+          saturday: 'Saturday'
+        },
+        sunrise: 'Sunrise',
+        sunset: 'Sunset'
+      },
+      dailyHoroscope: {
+        eyebrow: 'Explore the signs',
+        title: 'Daily Horoscope',
+        description: 'Choose a sign to explore transit analysis. Daily predictions are coming later.',
+        openSign: 'Explore {{sign}} transit analysis'
+      },
+      explore: {
+        eyebrow: 'Your chart, made approachable',
+        title: 'Explore Your Chart',
+        description: 'Open a focused view of the themes and calculations in your birth chart.'
+      },
+      tiles: {
+        kundli: 'Kundli',
+        kundliSubtitle: 'See your birth chart and its key placements.',
+        planetStrengths: 'Planet Strengths',
+        planetStrengthsSubtitle: 'Explore planetary placements, dignity, and strength.',
+        yogaFormation: 'Yoga Formation',
+        yogaFormationSubtitle: 'Review notable combinations in your chart.',
+        d10Interpretation: 'D10 Interpretation',
+        d10InterpretationSubtitle: 'Explore the divisional charts, including D10.',
+        dashaTimeline: 'Dasha Timeline',
+        dashaTimelineSubtitle: 'See planetary periods and timing windows.',
+        career: 'Career',
+        careerSubtitle: 'Explore vocation, work, and professional themes.',
+        wealth: 'Wealth',
+        wealthSubtitle: 'Review financial themes and accumulation indicators.',
+        nakshatras: 'Nakshatras',
+        nakshatrasSubtitle: 'Explore lunar mansions and planetary padas.'
+      },
+      fullSummary: 'View full chart summary',
+      research: {
+        title: 'Research Tools',
+        description: 'Explore additional chart and calculation tools.'
+      },
+      signs: {
+        Aries: 'Aries',
+        Taurus: 'Taurus',
+        Gemini: 'Gemini',
+        Cancer: 'Cancer',
+        Leo: 'Leo',
+        Virgo: 'Virgo',
+        Libra: 'Libra',
+        Scorpio: 'Scorpio',
+        Sagittarius: 'Sagittarius',
+        Capricorn: 'Capricorn',
+        Aquarius: 'Aquarius',
+        Pisces: 'Pisces'
       }
     },
     settings: {
@@ -4779,6 +4873,7 @@ export const resources = {
     navigation: {
       productViews: 'विश्लेषण',
       researchTools: 'अनुसंधान और डेवलपर टूल',
+      home: 'होम',
       overview: 'सारांश',
       career: 'करियर',
       wealth: 'धन और संपत्ति',
@@ -4792,9 +4887,17 @@ export const resources = {
       nakshatras: 'नक्षत्र परिचय',
       relationships: 'ग्रहों के प्राकृतिक संबंध',
       validator: 'गणना सत्यापन',
+      groupHome: 'होम',
+      groupChart: 'कुंडली',
+      groupInsights: 'जानकारियाँ',
+      groupReport: 'रिपोर्ट',
+      kundliShort: 'कुंडली',
+      insightsShort: 'जानकारियाँ',
+      more: 'और',
       closeMenu: 'नेविगेशन मेनू बंद करें',
       openMenu: 'नेविगेशन मेनू खोलें',
       descriptions: {
+        home: 'दैनिक ज्योतिष और कुंडली का व्यक्तिगत अवलोकन',
         overview: 'जीवन के प्रमुख क्षेत्रों का संयुक्त सारांश',
         career: 'व्यावसायिक दिशा, स्थिति और कार्यक्षेत्र',
         wealth: 'धन, संपत्ति और संचय',
@@ -4808,6 +4911,91 @@ export const resources = {
         nakshatras: '27 नक्षत्र और उनके चरण',
         relationships: 'ग्रहों की मैत्री और शत्रुता',
         validator: 'खगोलीय गणनाओं का सत्यापन'
+      }
+    },
+    home: {
+      editBirthDetails: 'जन्म विवरण बदलें',
+      analysis: {
+        loading: 'आपकी कुंडली का विश्लेषण तैयार हो रहा है।',
+        error: 'कुंडली का विश्लेषण पूरा नहीं हो सका। आप आज का सारांश फिर भी देख सकते हैं।'
+      },
+      dailySnapshot: {
+        eyebrow: 'आज की झलक',
+        title: 'आज का सारांश'
+      },
+      panchang: {
+        eyebrow: 'स्थानीय वैदिक पंचांग',
+        title: 'आज का पंचांग',
+        location: 'नई दिल्ली · लाहिड़ी निरयन पद्धति',
+        tithi: 'तिथि',
+        nakshatra: 'नक्षत्र',
+        pada: 'चरण {{number}}',
+        paksha: {
+          shukla: 'शुक्ल पक्ष',
+          krishna: 'कृष्ण पक्ष'
+        },
+        yoga: 'योग',
+        karana: 'करण',
+        vaar: 'वार',
+        weekdays: {
+          sunday: 'रविवार',
+          monday: 'सोमवार',
+          tuesday: 'मंगलवार',
+          wednesday: 'बुधवार',
+          thursday: 'गुरुवार',
+          friday: 'शुक्रवार',
+          saturday: 'शनिवार'
+        },
+        sunrise: 'सूर्योदय',
+        sunset: 'सूर्यास्त'
+      },
+      dailyHoroscope: {
+        eyebrow: 'राशियाँ देखें',
+        title: 'दैनिक राशिफल',
+        description: 'गोचर विश्लेषण देखने के लिए राशि चुनें। दैनिक भविष्यवाणी बाद में उपलब्ध होगी।',
+        openSign: '{{sign}} गोचर विश्लेषण देखें'
+      },
+      explore: {
+        eyebrow: 'आपकी कुंडली, सरल रूप में',
+        title: 'अपनी कुंडली जानें',
+        description: 'जन्म कुंडली के विषयों और गणनाओं का केंद्रित विवरण खोलें।'
+      },
+      tiles: {
+        kundli: 'कुंडली',
+        kundliSubtitle: 'अपनी जन्म कुंडली और मुख्य ग्रह स्थितियाँ देखें।',
+        planetStrengths: 'ग्रह बल',
+        planetStrengthsSubtitle: 'ग्रह स्थिति, गरिमा और बल का अध्ययन करें।',
+        yogaFormation: 'योग निर्माण',
+        yogaFormationSubtitle: 'कुंडली के प्रमुख ग्रह योगों को देखें।',
+        d10Interpretation: 'दशमांश विश्लेषण',
+        d10InterpretationSubtitle: 'दशमांश सहित वर्ग कुंडलियों का अध्ययन करें।',
+        dashaTimeline: 'दशा क्रम',
+        dashaTimelineSubtitle: 'ग्रह दशाओं और समय अवधियों को देखें।',
+        career: 'करियर',
+        careerSubtitle: 'कार्य, व्यवसाय और पेशेवर जीवन के संकेत देखें।',
+        wealth: 'धन',
+        wealthSubtitle: 'धन और संचय से जुड़े संकेतों को समझें।',
+        nakshatras: 'नक्षत्र',
+        nakshatrasSubtitle: 'नक्षत्रों और ग्रहों के चरणों का अध्ययन करें।'
+      },
+      fullSummary: 'कुंडली का पूरा सारांश देखें',
+      research: {
+        title: 'अनुसंधान टूल',
+        description: 'कुंडली और गणना के अतिरिक्त टूल देखें।'
+      },
+      signs: {
+        Aries: 'मेष',
+        Taurus: 'वृषभ',
+        Gemini: 'मिथुन',
+        Cancer: 'कर्क',
+        Leo: 'सिंह',
+        Virgo: 'कन्या',
+        Libra: 'तुला',
+        Scorpio: 'वृश्चिक',
+        Sagittarius: 'धनु',
+        Capricorn: 'मकर',
+        Aquarius: 'कुंभ',
+        Pisces: 'मीन'
       }
     },
     settings: {
