@@ -122,6 +122,7 @@ describe('English/Hindi localization resource parity', () => {
       `ui.profession.${status}Explanation`
     ]);
     const professionMissingKeys = [
+      'ui.profession.noResolvedMechanismsExplanation',
       'ui.profession.missingInputs',
       'ui.profession.missingInputsAria',
       'ui.profession.missingCareer10H',
@@ -154,6 +155,12 @@ describe('English/Hindi localization resource parity', () => {
       'ui.expression.executedNoCandidatesDescription',
       'ui.expression.executedNoCandidatesMessage',
       'ui.expression.noMechanismCandidates',
+      'ui.expression.noPatternsDiscovered',
+      'ui.expression.noPatternsQualified',
+      'ui.expression.participantRoleAssignmentFailed',
+      'ui.expression.missingNetworkEvidence',
+      'ui.expression.incompleteNetworkEvidence',
+      'ui.expression.mechanismsNotResolved',
       'ui.dasha.partialAssessment',
       ...careerJourneyStateKeys,
       ...dashaLevelKeys

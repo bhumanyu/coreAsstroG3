@@ -277,7 +277,99 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(foundation.identityMappings).toEqual([]);
       expect(foundation.relationshipMappings).toEqual([]);
       expect(foundation.diagnostics).toEqual(expect.any(Array));
+      expect(foundation.c8StageDiagnostics).toEqual({
+        patternCandidateCount: 0,
+        qualifiedPatternCount: 0,
+        invalidRolePatternCount: 0,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'NOT_REQUIRED'
+      });
       expect(foundation.metadata).toBeDefined();
+    });
+
+    it('captures stage counts and distinguishes role errors from missing networks', () => {
+      const ports = createStubPorts();
+      const pattern = { ...createStubPattern('PATTERN_1'), networkIds: ['NETWORK_1'] };
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.participantRoles.assignParticipantRoles as any).mockImplementation(() => {
+        throw new Error('role assignment failed');
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.c8StageDiagnostics).toEqual({
+        patternCandidateCount: 1,
+        qualifiedPatternCount: 1,
+        invalidRolePatternCount: 1,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'MISSING'
+      });
+    });
+
+    it.each([
+      ['MISSING', []],
+      ['INCOMPLETE', ['NETWORK_1']],
+      ['RESOLVED', ['NETWORK_1', 'NETWORK_2']]
+    ] as const)('reports %s network coverage only from referenced network evidence', (status, availableNetworkIds) => {
+      const ports = createStubPorts();
+      const pattern = {
+        ...createStubPattern('PATTERN_1'),
+        networkIds: ['NETWORK_1', 'NETWORK_2']
+      };
+      const networks = availableNetworkIds.map(networkId => ({
+        networkId,
+        identityKey: `IDENTITY_${networkId}`,
+        houses: [],
+        lords: [],
+        relationships: [],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD',
+        provenance: { sourceIds: [], ruleIds: [] },
+        evidenceIds: []
+      })) as unknown as CareerHouseNetwork[];
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks
+      });
+
+      expect(foundation.c8StageDiagnostics.networkResolutionStatus).toBe(status);
+    });
+
+    it('does not report resolved network evidence when qualification edge evaluation fails', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockImplementation(() => {
+        throw new Error('qualification failed');
+      });
+      const network = {
+        networkId: 'NETWORK_1',
+        identityKey: 'IDENTITY_NETWORK_1',
+        houses: [],
+        lords: [],
+        relationships: [],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD',
+        provenance: { sourceIds: [], ruleIds: [] },
+        evidenceIds: []
+      } as unknown as CareerHouseNetwork;
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [{ ...createStubPattern('PATTERN_1'), networkIds: ['NETWORK_1'] }],
+        relevance: [],
+        condition: [],
+        networks: [network]
+      });
+
+      expect(foundation.c8StageDiagnostics.networkResolutionStatus).toBe('INCOMPLETE');
     });
 
     it('should orchestrate with single pattern', () => {

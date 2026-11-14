@@ -18,8 +18,12 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     INSUFFICIENT_DATA: 'insufficient'
   };
   const statusCopyKey = statusCopyKeyByStatus[profession.status];
-  const statusLabel = t(`ui.profession.${statusCopyKey}Label`);
-  const statusExplanation = t(`ui.profession.${statusCopyKey}Explanation`);
+  const hasNoResolvedMechanisms =
+    profession.status === 'INSUFFICIENT_DATA' &&
+    profession.coverageSummary?.resolvedMechanismCount === 0;
+  const statusExplanation = hasNoResolvedMechanisms
+    ? t('ui.profession.noResolvedMechanismsExplanation')
+    : t(`ui.profession.${statusCopyKey}Explanation`);
   const missingInputKeys: Record<string, string> = {
     career10HFoundation: 'missingCareer10H',
     career10LFoundation: 'missingCareer10L',
@@ -39,7 +43,6 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
         {enumLabel(tEnum, 'professionStatus', profession.status)}
       </span>
     </div>
-    <p className="text-sm text-slate-200">{statusLabel}</p>
     <p className="text-xs leading-relaxed text-slate-400">{statusExplanation}</p>
     {profession.missingInputs.length > 0 && (
       <div className="space-y-1 pt-1">

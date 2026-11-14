@@ -5,12 +5,15 @@ import i18n from '../../i18n/i18n';
 import { CareerPage } from '../CareerPage';
 import { CareerJourney } from '../../components/career/CareerJourney';
 import { CareerExpressionSection } from '../../components/career/CareerExpressionSection';
+import { CareerPromiseSection } from '../../components/career/CareerPromiseSection';
 import { CareerDashaSection } from '../../components/career/CareerDashaSection';
 import { CareerAnalyticalAxesSection } from '../../components/career/CareerAnalyticalAxesSection';
 import { OverviewPage } from '../OverviewPage';
 import { ReasoningPage } from '../ReasoningPage';
 import { WealthPage } from '../WealthPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
+import { selectCareerViewModel } from '../../product/analysis/careerViewModel';
+import { resolveUserFacingCopy } from '../../product/life-analysis/userFacingInterpretation';
 import type { ProductCareerAnalyticalAxes } from '../../product/analysis/productAnalysisTypes';
 
 const baseAnalysis = createProductAnalysis();
@@ -20,6 +23,7 @@ const assessmentAnalysis = createProductAnalysis({
     synthesis: {
       ...baseAnalysis.career.synthesis,
       finalStatus: 'MIXED',
+      statement: 'MIXED CHALLENGE SUPPORT INSUFFICIENT_DATA NOT_ACTIVE',
       finalDirection: 'MIXED',
       natalDirection: 'MIXED',
       natalStrength: 'STRONG',
@@ -58,6 +62,11 @@ describe('user-facing assessment localization at page boundaries', () => {
         status: 'EXECUTED_NO_CANDIDATES',
         coverageSummary: {
           mechanismCandidateCount: 0,
+          patternCandidateCount: 0,
+          qualifiedPatternCount: 0,
+          invalidRolePatternCount: 0,
+          resolvedMechanismCount: 0,
+          networkResolutionStatus: 'NOT_REQUIRED',
           expressionCount: 0,
           expressionsWithEvidenceCount: 0,
           evidenceCount: 0,
@@ -69,8 +78,47 @@ describe('user-facing assessment localization at page boundaries', () => {
 
     expect(screen.getByText('अभिव्यक्ति विश्लेषण पूरा हुआ, लेकिन कोई उम्मीदवार नहीं मिला।')).toBeInTheDocument();
     expect(screen.getByText('इस प्रोफ़ाइल के लिए कोई प्रामाणिक करियर अभिव्यक्ति उम्मीदवार उपलब्ध नहीं हैं।')).toBeInTheDocument();
-    expect(screen.getByText('अभिव्यक्ति विश्लेषक को कोई तंत्र उम्मीदवार नहीं दिया गया।')).toBeInTheDocument();
+    expect(screen.getByText('कोई करियर पैटर्न नहीं मिला।')).toBeInTheDocument();
     expect(screen.queryByText('ui.expression.executedNoCandidatesTitle')).not.toBeInTheDocument();
+  });
+
+  it('does not infer a C8 failing stage when stage diagnostics are absent', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+    render(<CareerExpressionSection expression={{
+      available: false,
+      status: 'EXECUTED_NO_CANDIDATES',
+      coverageSummary: {
+        mechanismCandidateCount: 0,
+        expressionCount: 0,
+        expressionsWithEvidenceCount: 0,
+        evidenceCount: 0,
+        evidenceWithPlanetAttributionCount: 0
+      },
+      candidates: []
+    }} />);
+
+    expect(screen.getByText('The expression analysis completed without producing candidates.')).toBeInTheDocument();
+    expect(screen.queryByText('No career patterns were discovered.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Career patterns were identified, but none passed qualification.')).not.toBeInTheDocument();
+  });
+
+  it('localizes each labeled promise dimension in Hindi', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    const promise = selectCareerViewModel(
+      assessmentAnalysis,
+      resolveUserFacingCopy(i18n.language)
+    ).promise;
+    render(<CareerPromiseSection promise={promise} />);
+
+    expect(screen.getByText(/करियर संकेत: मिश्रित संकेत/)).toBeInTheDocument();
+    expect(screen.getByText(/आधार:/)).toBeInTheDocument();
+    expect(screen.getByText(/दशा का समर्थन:/)).toBeInTheDocument();
+    expect(screen.getByText(/साक्ष्य पर विश्वास:/)).toBeInTheDocument();
+    expect(screen.queryByText(/\b(MIXED|CHALLENGE|SUPPORT|INSUFFICIENT_DATA|NOT_ACTIVE)\b/)).not.toBeInTheDocument();
   });
 
   it('renders the partially assessed Dasha badge in Hindi', async () => {
@@ -219,6 +267,7 @@ describe('user-facing assessment localization at page boundaries', () => {
 
     expect(screen.getAllByText(/Strong foundation with mixed indications/).length).toBeGreaterThan(0);
     expect(screen.queryByText('High vocational promise across 10th lord and Lagna.')).not.toBeInTheDocument();
+    expect(screen.queryByText('MIXED CHALLENGE SUPPORT INSUFFICIENT_DATA NOT_ACTIVE')).not.toBeInTheDocument();
 
     await act(async () => {
       await i18n.changeLanguage('hi');

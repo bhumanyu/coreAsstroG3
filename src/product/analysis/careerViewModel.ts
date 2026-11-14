@@ -32,6 +32,7 @@ import {
 import { selectUnifiedConfidenceProjection } from './confidenceCompletenessProjection';
 import {
   buildUserFacingAssessment,
+  formatFoundationDirection,
   ENGLISH_USER_FACING_COPY,
   type UserFacingCopyProvider
 } from '../life-analysis/userFacingInterpretation';
@@ -186,6 +187,7 @@ export interface CareerProfessionViewModel {
   readonly missingInputs: readonly string[];
   readonly diagnostics: readonly string[];
   readonly d10Status: string;
+  readonly coverageSummary?: ProductCareerExpressionCoverageSummary;
   readonly ranking: ProductCareerProfessionRanking;
 }
 
@@ -241,18 +243,27 @@ export function selectCareerViewModel(
     warnings: analysis.warnings
   };
 
+  const promiseAssessment = buildUserFacingAssessment({
+    outcome: career.synthesis?.finalStatus ?? career.promise.status,
+    natalDirection: career.synthesis?.natalDirection,
+    natalStrength: career.synthesis?.natalStrength ?? career.promise.strength,
+    natalPromiseStatus: career.promise.status,
+    dashaDirection: career.synthesis?.dashaDirection,
+    confidence: career.promise.confidence,
+    copy
+  });
   const promise: CareerPromiseViewModel = {
     strength: career.promise.strength,
     confidence: career.promise.confidence,
-    headline: career.promise.headline,
-    statement: buildUserFacingAssessment({
-      outcome: career.promise.status,
-      natalDirection: career.synthesis?.natalDirection,
-      natalStrength: career.synthesis?.natalStrength ?? career.promise.strength,
-      natalPromiseStatus: career.promise.status,
-      confidence: career.promise.confidence,
-      copy
-    }).summary,
+    headline: career.synthesis?.finalStatus
+      ? promiseAssessment.outcomeLabel
+      : career.promise.headline,
+    statement: [
+      `${copy.titles['CAREER OUTCOME']}: ${promiseAssessment.outcomeLabel}`,
+      `${copy.titles.FOUNDATION}: ${promiseAssessment.foundation.label}`,
+      `${copy.titles['DASHA SUPPORT']}: ${formatFoundationDirection(career.synthesis?.dashaDirection, copy)}`,
+      `${copy.titles['EVIDENCE CONFIDENCE']}: ${promiseAssessment.confidence.label}`
+    ].join('. ') + '.',
     manifestations: career.promise.dominantManifestations ?? []
   };
 
@@ -380,6 +391,9 @@ export function selectCareerViewModel(
         missingInputs: [],
         diagnostics: ['PROFESSION_ANALYSIS_NOT_PROVIDED'],
         d10Status: 'NOT_PROVIDED',
+        ...(career.expression?.coverageSummary
+          ? { coverageSummary: career.expression.coverageSummary }
+          : {}),
         ranking: {
           policyVersion: 'B04-PROFESSION-RANKING-v1',
           status: 'UNAVAILABLE',
@@ -427,6 +441,9 @@ export function selectCareerViewModel(
       missingInputs: professionData.missingInputs,
       diagnostics: professionData.diagnostics ?? [],
       d10Status: professionData.d10Status,
+      ...(career.expression?.coverageSummary
+        ? { coverageSummary: career.expression.coverageSummary }
+        : {}),
       ranking: professionData.ranking
     };
   })();

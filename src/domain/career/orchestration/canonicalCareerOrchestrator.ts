@@ -108,6 +108,7 @@ export class CanonicalCareerOrchestrator {
 
     // Stage 1: Pattern candidates (C4/P2-03)
     const patternCandidates = this.buildPatternCandidates(input.patterns, diagnostics);
+    const patternCandidateCount = patternCandidates.length;
 
     // Stage 2: Pattern qualification (P2-07A)
     const patternQualifications = this.buildPatternQualifications(
@@ -118,8 +119,30 @@ export class CanonicalCareerOrchestrator {
       patternCandidates,
       diagnostics
     );
+    const qualifiedPatternCount = patternQualifications.filter(
+      qualification => qualification.status === 'QUALIFIED'
+    ).length;
+    const requiredNetworkIds = new Set(
+      patternCandidates.flatMap(candidate => candidate.sourcePattern.networkIds)
+    );
+    const resolvedNetworkIds = new Set(
+      input.networks
+        .filter(network => requiredNetworkIds.has(network.networkId))
+        .map(network => network.networkId)
+    );
+    const qualificationFailed = diagnostics.some(
+      diagnostic => diagnostic.stage === 'QUALIFICATION' && diagnostic.severity === 'ERROR'
+    );
+    const networkResolutionStatus = requiredNetworkIds.size === 0
+      ? 'NOT_REQUIRED' as const
+      : resolvedNetworkIds.size === 0
+        ? 'MISSING' as const
+        : resolvedNetworkIds.size < requiredNetworkIds.size || qualificationFailed
+          ? 'INCOMPLETE' as const
+          : 'RESOLVED' as const;
 
     // Stage 3: Participant roles (P2-07B)
+    const participantRoleDiagnosticsStart = diagnostics.length;
     const participantRoleAssignments = this.buildParticipantRoleAssignments(
       patternCandidates,
       patternQualifications,
@@ -131,10 +154,18 @@ export class CanonicalCareerOrchestrator {
     const roleAssignmentValidation = validateParticipantRoleAssignments(participantRoleAssignments);
     diagnostics.push(...roleAssignmentValidation.diagnostics);
     const invalidRolePatternIds = new Set(
-      roleAssignmentValidation.diagnostics
-        .filter(diagnostic => diagnostic.severity === 'ERROR')
+      [
+        ...roleAssignmentValidation.diagnostics,
+        ...diagnostics.slice(participantRoleDiagnosticsStart)
+      ]
+        .filter(diagnostic =>
+          diagnostic.stage === 'PARTICIPANT_ROLES' &&
+          diagnostic.severity === 'ERROR'
+        )
         .map(diagnostic => diagnostic.relatedIds[0])
+        .filter(patternId => patternId !== undefined && patternId.length > 0)
     );
+    const invalidRolePatternCount = invalidRolePatternIds.size;
 
     // Stage 4: Mechanism resolution (P2-07D)
     const resolvedMechanisms = this.buildResolvedMechanisms(
@@ -144,6 +175,14 @@ export class CanonicalCareerOrchestrator {
       input.networks,
       diagnostics
     );
+    const resolvedMechanismCount = resolvedMechanisms.length;
+    const c8StageDiagnostics = Object.freeze({
+      patternCandidateCount,
+      qualifiedPatternCount,
+      invalidRolePatternCount,
+      resolvedMechanismCount,
+      networkResolutionStatus
+    });
 
     // Stage 5: Mechanism refinement (P2-07E)
     const mechanismRefinements = this.buildMechanismRefinements(
@@ -228,6 +267,7 @@ export class CanonicalCareerOrchestrator {
       relationshipMappings,
       stageReferences,
       diagnostics: Object.freeze(diagnostics),
+      c8StageDiagnostics,
       metadata
     });
   }

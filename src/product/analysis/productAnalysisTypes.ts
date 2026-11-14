@@ -154,6 +154,11 @@ export interface CareerExpressionProduct {
 
 export interface ProductCareerExpressionCoverageSummary {
   readonly mechanismCandidateCount: number;
+  readonly patternCandidateCount?: number;
+  readonly qualifiedPatternCount?: number;
+  readonly invalidRolePatternCount?: number;
+  readonly resolvedMechanismCount?: number;
+  readonly networkResolutionStatus?: 'RESOLVED' | 'MISSING' | 'INCOMPLETE' | 'NOT_REQUIRED';
   readonly expressionCount: number;
   readonly expressionsWithEvidenceCount: number;
   readonly evidenceCount: number;
@@ -600,6 +605,7 @@ export interface CareerProductAnalysis {
     readonly headline?: string;
     /** Diagnostic-only engine prose; must never be rendered as user-facing copy. */
     readonly statement?: string;
+    readonly canonicalTraceStatement?: string;
     readonly finalStatus?: CareerFinalStatus;
     readonly finalDirection?: CareerFinalDirection;
     readonly finalStrength?: CareerFinalStrength;

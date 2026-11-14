@@ -240,6 +240,7 @@ type DetailLabelKey =
   | 'INTEGRATED DIRECTION'
   | 'INTEGRATED STRENGTH';
 type TitleKey =
+  | 'CAREER OUTCOME'
   | 'FOUNDATION'
   | 'DASHA SUPPORT'
   | 'TIMING'
@@ -362,6 +363,7 @@ const englishUserFacingCopy: UserFacingCopyProvider = {
     SPECULATION: 'Speculation'
   } satisfies Record<DetailLabelKey, string>),
   titles: Object.freeze({
+    'CAREER OUTCOME': 'Career outcome',
     FOUNDATION: 'Foundation',
     'DASHA SUPPORT': 'Dasha support',
     TIMING: 'Timing',
@@ -604,6 +606,13 @@ export function formatOutcome(
   copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
 ): string {
   return lookupCopyValue(copy.outcomes, normalize(value)) ?? copy.notAssessed;
+}
+
+export function formatFoundationDirection(
+  value?: string | null,
+  copy: UserFacingCopyProvider = ENGLISH_USER_FACING_COPY
+): string {
+  return lookupCopyValue(copy.directionLabels, normalize(value)) ?? copy.notAssessed;
 }
 
 /** Confidence describes evidence completeness, not astrological strength. */

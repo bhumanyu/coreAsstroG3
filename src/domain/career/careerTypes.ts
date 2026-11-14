@@ -42,6 +42,11 @@ import type {
 
 export interface CareerC8ExpressionCoverage {
   readonly mechanismCandidateCount: number;
+  readonly patternCandidateCount: number;
+  readonly qualifiedPatternCount: number;
+  readonly invalidRolePatternCount: number;
+  readonly resolvedMechanismCount: number;
+  readonly networkResolutionStatus: 'RESOLVED' | 'MISSING' | 'INCOMPLETE' | 'NOT_REQUIRED';
   readonly expressionCount: number;
   readonly expressionsWithEvidenceCount: number;
   readonly evidenceCount: number;

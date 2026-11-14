@@ -386,7 +386,42 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       timingStatus: 'INSUFFICIENT_DATA'
     });
     expect(analysis.career.synthesis?.statement).toBe(sampleViewModel.careerDetail?.promiseStatement);
+    expect(analysis.career.synthesis?.canonicalTraceStatement).toBeUndefined();
     expect(analysis.wealth.synthesis?.statement).toBe(sampleViewModel.wealthDetail?.promiseStatement);
+  });
+
+  it('keeps a canonical C11 trace statement out of promise presentation fields', () => {
+    const traceStatement = 'MIXED CHALLENGE SUPPORT INSUFFICIENT_DATA NOT_ACTIVE';
+    const lifeAnalysisViewModel: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        canonicalFinalSynthesis: {
+          finalStatus: 'MIXED',
+          finalDirection: 'MIXED',
+          finalStrength: 'MIXED',
+          confidence: 'MEDIUM',
+          natalDirection: 'MIXED',
+          natalStrength: 'STRONG',
+          dashaDirection: 'SUPPORT',
+          timingStatus: 'NOT_ACTIVE',
+          statement: traceStatement
+        } as NonNullable<LifeAnalysisViewModel['careerDetail']>['canonicalFinalSynthesis']
+      }
+    };
+
+    const career = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel,
+      context: sampleContext
+    }).career;
+
+    expect(career.promise.headline).not.toBe(traceStatement);
+    expect(career.promise.statement).not.toBe(traceStatement);
+    expect(career.promise.headline).not.toMatch(/\b(MIXED|CHALLENGE|SUPPORT|INSUFFICIENT_DATA|NOT_ACTIVE)\b/);
+    expect(career.promise.statement).not.toMatch(/\b(MIXED|CHALLENGE|SUPPORT|INSUFFICIENT_DATA|NOT_ACTIVE)\b/);
+    expect(career.synthesis?.canonicalTraceStatement).toBe(traceStatement);
   });
 
   it('uses canonical C11 confidence instead of the legacy career summary confidence', () => {

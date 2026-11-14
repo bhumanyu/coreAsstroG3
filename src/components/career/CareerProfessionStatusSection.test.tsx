@@ -33,7 +33,7 @@ describe('CareerProfessionStatusSection', () => {
       PARTIAL: 'Partial analysis',
       INSUFFICIENT_DATA: 'Insufficient data'
     }[status];
-    expect(screen.getAllByText(expectedLabel)).toHaveLength(2);
+    expect(screen.getByText(expectedLabel)).toBeInTheDocument();
     expect(screen.queryByText(status)).not.toBeInTheDocument();
     expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
   });
@@ -65,7 +65,7 @@ describe('CareerProfessionStatusSection', () => {
     render(<CareerProfessionStatusSection profession={profession} />);
 
     expect(screen.queryByText('PARTIAL')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Partial analysis')).toHaveLength(2);
+    expect(screen.getByText('Partial analysis')).toBeInTheDocument();
     expect(screen.queryByText(/mixed|neutral/i)).not.toBeInTheDocument();
   });
 
@@ -80,6 +80,30 @@ describe('CareerProfessionStatusSection', () => {
     expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Missing profession analysis inputs' })).not.toBeInTheDocument();
     expect(screen.queryByText('Missing inputs')).not.toBeInTheDocument();
+  });
+
+  it('attributes insufficient profession data to zero resolved mechanisms without a negative prediction', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      status: 'INSUFFICIENT_DATA' as const,
+      coverageSummary: {
+        mechanismCandidateCount: 0,
+        patternCandidateCount: 2,
+        qualifiedPatternCount: 1,
+        invalidRolePatternCount: 0,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'RESOLVED' as const,
+        expressionCount: 0,
+        expressionsWithEvidenceCount: 0,
+        evidenceCount: 0,
+        evidenceWithPlanetAttributionCount: 0
+      }
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText(/No resolved career mechanisms were available to derive profession candidates/)).toBeInTheDocument();
+    expect(screen.getByText(/This is not a negative career prediction/)).toBeInTheDocument();
+    expect(screen.getByText('Insufficient data')).toBeInTheDocument();
   });
 
   it('renders labels for each known missing input and preserves the generic explanation', () => {
@@ -127,7 +151,7 @@ describe('CareerProfessionStatusSection', () => {
     };
     render(<CareerProfessionStatusSection profession={profession} />);
 
-    expect(screen.getAllByText('Partial analysis')).toHaveLength(2);
+    expect(screen.getByText('Partial analysis')).toBeInTheDocument();
     expect(screen.queryByText('Analysis complete')).not.toBeInTheDocument();
   });
 

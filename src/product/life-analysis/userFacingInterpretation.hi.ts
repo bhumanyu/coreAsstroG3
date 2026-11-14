@@ -149,6 +149,7 @@ const hindiUserFacingCopy: UserFacingCopyProvider = {
     SPECULATION: 'सट्टा-संबंधी संकेत'
   }),
   titles: Object.freeze({
+    'CAREER OUTCOME': 'करियर संकेत',
     FOUNDATION: 'आधार',
     'DASHA SUPPORT': 'दशा का समर्थन',
     TIMING: 'समय',

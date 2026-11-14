@@ -1002,10 +1002,8 @@ function mapCareer(
           ? mapConfidence(detail.canonicalFinalSynthesis.confidence)
           : 'UNAVAILABLE'
         : mapConfidence(summary?.confidence),
-      headline: detail?.canonicalFinalSynthesis?.statement ||
-        detail?.promiseHeadline || detail?.headline || summary?.headline,
-      statement: detail?.canonicalFinalSynthesis?.statement ||
-        detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
+      headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
+      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
       dominantManifestations: detail?.dominantManifestations
         ? [...detail.dominantManifestations]
         : detail?.manifestations
@@ -1090,10 +1088,11 @@ function mapCareer(
     qualifications: mapQualifications(detail?.qualifications),
     evidence,
     synthesis: {
-      headline: detail?.canonicalFinalSynthesis?.statement ||
-        detail?.promiseHeadline || detail?.headline || summary?.headline,
-      statement: detail?.canonicalFinalSynthesis?.statement ||
-        detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
+      headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
+      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
+      ...(detail?.canonicalFinalSynthesis?.statement
+        ? { canonicalTraceStatement: detail.canonicalFinalSynthesis.statement }
+        : {}),
       ...(detail?.canonicalFinalSynthesis ? {
         finalStatus: detail.canonicalFinalSynthesis.finalStatus,
         finalDirection: detail.canonicalFinalSynthesis.finalDirection,

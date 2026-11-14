@@ -1238,6 +1238,7 @@ export function interpretCareerV2(
     careerAvailabilityDiagnosticTrace: Object.freeze({
       c8ExpressionCoverage: Object.freeze({
         mechanismCandidateCount: careerMechanismCandidates.length,
+        ...canonicalCareerFoundation.c8StageDiagnostics,
         expressionCount: mechanismExpressionResult.expressions.length,
         expressionsWithEvidenceCount: c8ExpressionsWithEvidence,
         evidenceCount: c8Evidence.length,

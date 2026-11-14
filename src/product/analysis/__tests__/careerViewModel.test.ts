@@ -11,8 +11,10 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
 
     expect(vm.promise.strength).toBe('STRONG');
     expect(vm.promise.confidence).toBe('HIGH');
-    expect(vm.promise.headline).toBe('Executive Trajectory');
+    expect(vm.promise.headline).toBe('Supportive outlook');
     expect(vm.promise.statement).toContain('Strong');
+    expect(vm.promise.statement).toContain('Career outcome: Supportive outlook');
+    expect(vm.promise.statement).toContain('Dasha support: supportive indications');
     expect(vm.promise.statement).not.toContain('SUPPORTED');
     expect(vm.promise.statement).not.toContain('SUPPORT');
   });
@@ -84,6 +86,11 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     const base = createProductAnalysis();
     const coverageSummary = {
       mechanismCandidateCount: 0,
+      patternCandidateCount: 0,
+      qualifiedPatternCount: 0,
+      invalidRolePatternCount: 0,
+      resolvedMechanismCount: 0,
+      networkResolutionStatus: 'NOT_REQUIRED' as const,
       expressionCount: 0,
       expressionsWithEvidenceCount: 0,
       evidenceCount: 0,
@@ -97,6 +104,68 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     });
 
     expect(selectCareerViewModel(analysis).expression.coverageSummary).toEqual(coverageSummary);
+  });
+
+  it('keeps canonical promise fields localized and excludes enum tokens from headline and statement', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        promise: {
+          ...base.career.promise,
+          status: 'MIXED',
+          headline: 'MIXED / CHALLENGE',
+          statement: 'INSUFFICIENT_DATA / NOT_ACTIVE'
+        },
+        synthesis: {
+          ...base.career.synthesis,
+          finalStatus: 'MIXED',
+          natalDirection: 'MIXED',
+          natalStrength: 'STRONG',
+          dashaDirection: 'CHALLENGE',
+          confidence: 'MEDIUM'
+        }
+      }
+    });
+
+    const promise = selectCareerViewModel(analysis).promise;
+
+    expect(promise.headline).toBe('Mixed outlook');
+    expect(promise.statement).toContain('Career outcome: Mixed outlook');
+    expect(promise.statement).toContain('Dasha support: challenging indications');
+    expect(promise.headline).not.toMatch(/\b(MIXED|CHALLENGE|SUPPORT|INSUFFICIENT_DATA|NOT_ACTIVE)\b/);
+    expect(promise.statement).not.toMatch(/\b(MIXED|CHALLENGE|SUPPORT|INSUFFICIENT_DATA|NOT_ACTIVE)\b/);
+  });
+
+  it('labels each unassessed promise dimension separately', () => {
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        promise: {
+          ...base.career.promise,
+          status: undefined,
+          strength: 'UNAVAILABLE',
+          confidence: 'UNAVAILABLE'
+        },
+        synthesis: {
+          ...base.career.synthesis,
+          finalStatus: undefined,
+          natalDirection: undefined,
+          natalStrength: undefined,
+          dashaDirection: undefined,
+          confidence: undefined
+        }
+      }
+    });
+
+    const statement = selectCareerViewModel(analysis).promise.statement ?? '';
+
+    expect(statement).toContain('Career outcome: Not assessed');
+    expect(statement).toContain('Foundation: Not assessed');
+    expect(statement).toContain('Dasha support: Not assessed');
+    expect(statement).toContain('Evidence confidence: Not assessed');
+    expect(statement).not.toMatch(/\. Not assessed\. Not assessed/);
   });
 
   it('preserves condition assessment metadata on Dasha period view models', () => {

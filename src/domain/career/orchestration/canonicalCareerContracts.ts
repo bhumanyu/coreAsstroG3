@@ -377,6 +377,15 @@ export interface CanonicalCareerFoundation {
   // Diagnostics
   readonly diagnostics: readonly OrchestrationDiagnostic[];
 
+  // Stage-level C8 coverage captured as each stage completes.
+  readonly c8StageDiagnostics: {
+    readonly patternCandidateCount: number;
+    readonly qualifiedPatternCount: number;
+    readonly invalidRolePatternCount: number;
+    readonly resolvedMechanismCount: number;
+    readonly networkResolutionStatus: 'RESOLVED' | 'MISSING' | 'INCOMPLETE' | 'NOT_REQUIRED';
+  };
+
   // Metadata
   readonly metadata: {
     readonly totalPatterns: number;

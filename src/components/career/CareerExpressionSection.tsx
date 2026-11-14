@@ -11,6 +11,30 @@ export interface CareerExpressionSectionProps {
 export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = ({ expression }) => {
   const { t } = useTranslation('career');
   const { t: tEnum } = useTranslation('enums');
+  const coverage = expression.coverageSummary;
+  let stageAttributionKey: string | undefined;
+  if (
+    coverage &&
+    coverage.patternCandidateCount !== undefined &&
+    coverage.qualifiedPatternCount !== undefined &&
+    coverage.invalidRolePatternCount !== undefined &&
+    coverage.resolvedMechanismCount !== undefined &&
+    coverage.networkResolutionStatus !== undefined
+  ) {
+    stageAttributionKey = coverage.networkResolutionStatus === 'MISSING'
+      ? 'missingNetworkEvidence'
+      : coverage.networkResolutionStatus === 'INCOMPLETE'
+        ? 'incompleteNetworkEvidence'
+        : coverage.patternCandidateCount === 0
+          ? 'noPatternsDiscovered'
+          : coverage.qualifiedPatternCount === 0
+            ? 'noPatternsQualified'
+            : coverage.invalidRolePatternCount > 0
+              ? 'participantRoleAssignmentFailed'
+              : coverage.resolvedMechanismCount === 0
+                ? 'mechanismsNotResolved'
+                : undefined;
+  }
   if (expression.status === 'EXECUTED_NO_CANDIDATES') {
     return (
       <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 space-y-3">
@@ -24,8 +48,8 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
           </div>
         </div>
         <p className="text-xs text-slate-400 italic">{t('ui.expression.executedNoCandidatesMessage')}</p>
-        {expression.coverageSummary?.mechanismCandidateCount === 0 && (
-          <p className="text-xs text-slate-400">{t('ui.expression.noMechanismCandidates')}</p>
+        {coverage?.mechanismCandidateCount === 0 && stageAttributionKey && (
+          <p className="text-xs text-slate-400">{t(`ui.expression.${stageAttributionKey}`)}</p>
         )}
       </div>
     );
