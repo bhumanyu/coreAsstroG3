@@ -156,8 +156,12 @@ export async function fetchRashiForecast(
       let serverCode: string | undefined;
       try {
         const errorBody: unknown = await response.json();
-        if (isRecord(errorBody) && isRecord(errorBody.error) && typeof errorBody.error.code === 'string') {
-          serverCode = errorBody.error.code;
+        if (isRecord(errorBody)) {
+          if (typeof errorBody.code === 'string') {
+            serverCode = errorBody.code;
+          } else if (isRecord(errorBody.error) && typeof errorBody.error.code === 'string') {
+            serverCode = errorBody.error.code;
+          }
         }
       } catch {
         serverCode = undefined;

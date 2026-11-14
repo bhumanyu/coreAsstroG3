@@ -20,6 +20,15 @@ See [PLAYBOOK.md](./PLAYBOOK.md) for the comprehensive guide on planning and saf
 ## Place search
 Place autocomplete uses the Open-Meteo geocoding service from the browser. A failed search is not proof that a place does not exist; users can enter latitude, longitude, and time zone manually. Searches do not automatically retry.
 
+## Horoscope forecast API
+The Home Rashi forecast uses `GET /api/horoscopes`. For web deployments, configure `VITE_HOROSCOPE_API_BASE_URL` as the API origin (without the `/api/horoscopes` path). For example:
+
+```env
+VITE_HOROSCOPE_API_BASE_URL=https://coreastro-horoscopes.<account>.workers.dev
+```
+
+This value is public configuration, not a secret. It must be set at build time for Capacitor/Android builds: a relative API URL resolves against `capacitor://localhost` or `https://localhost` instead of your deployed Worker. See [the horoscope Worker README](./workers/horoscopes/README.md) for deployment and CORS configuration.
+
 ## Vimshottari Dasha Engine (PR-041)
 - **Year Length Convention**: 1 Vimshottari year = 365.25 days; this materially affects MD/AD/PD boundaries and must match the chosen reference software/source (`VIMSHOTTARI_YEAR_DAYS`).
 - **Date Arithmetic**: Fractional years added via deterministic date arithmetic (`addFractionalYears`).

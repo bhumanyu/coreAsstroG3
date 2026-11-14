@@ -1,0 +1,14 @@
+name = "coreastro-horoscopes"
+main = "src/index.ts"
+compatibility_date = "2026-11-14"
+
+[vars]
+ALLOWED_ORIGIN = "*"
+
+[[kv_namespaces]]
+binding = "HOROSCOPE_CACHE"
+id = "00000000000000000000000000000000"
+preview_id = "00000000000000000000000000000000"
+
+# Add the vendor key only as a Worker secret after the licensing gate is cleared:
+# npx wrangler secret put STARSAPI_KEY
