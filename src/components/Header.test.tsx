@@ -25,7 +25,7 @@ describe('Header Component', () => {
     expect(within(navigationMenus[1]).getByText('Chart')).toBeInTheDocument();
     expect(within(navigationMenus[1]).getByText('Insights')).toBeInTheDocument();
     expect(within(navigationMenus[1]).getByText('Report')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit Birth Details & Ayanamsa' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enter Birth Details' })).toBeInTheDocument();
 
     // Ensure Brand shows CoreAstro and Vedic Astrology
     expect(screen.getByText('CoreAstro')).toBeInTheDocument();
@@ -77,6 +77,7 @@ describe('Header Component', () => {
     );
 
     expect(screen.getByText('Birth Chart')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Birth Details & Ayanamsa' })).toBeInTheDocument();
     const desktopNavigation = screen.getAllByRole('navigation', { name: 'Product Views' })[1];
     fireEvent.click(within(desktopNavigation).getByText('Report'));
     fireEvent.click(within(desktopNavigation).getByRole('button', { name: 'Detailed Analysis' }));

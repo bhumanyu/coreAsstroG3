@@ -127,7 +127,8 @@ describe('CareerPage (P-UI-04)', () => {
 
     // D03 evidence, confidence and diagnostic experience
     expect(screen.getByRole('heading', { name: 'Evidence, confidence & limitations' })).toBeInTheDocument();
-    expect(screen.getByText(/Evidence confidence/)).toBeInTheDocument();
+    const evidenceSection = screen.getByRole('region', { name: 'Evidence, confidence & limitations' });
+    expect(within(evidenceSection).getByText(/Evidence confidence/)).toBeInTheDocument();
     expect(screen.getByText('D10 divisional confirmation')).toBeInTheDocument();
 
     // Hero
@@ -137,7 +138,7 @@ describe('CareerPage (P-UI-04)', () => {
 
     // Natal Promise
     expect(screen.getByText('Natal Vocational Promise')).toBeInTheDocument();
-    expect(screen.getByText('Executive Trajectory')).toBeInTheDocument();
+    expect(screen.getByText('Supportive outlook')).toBeInTheDocument();
     expect(
       screen.queryByText('High vocational promise across 10th lord and Lagna.')
     ).not.toBeInTheDocument();
