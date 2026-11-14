@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Compass, Sparkles, Calendar, MapPin, Menu, X, ChevronDown } from 'lucide-react';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import {
@@ -65,38 +65,93 @@ export const BirthContextButton: React.FC<BirthContextButtonProps> = ({ birthCon
 export interface ProductNavigationProps { activePage: AppPage; onNavigate: (page: AppPage) => void; }
 export const ProductNavigation: React.FC<ProductNavigationProps> = ({ activePage, onNavigate }) => {
   const { t } = useTranslation('navigation');
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const groupButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const groups: { label: string; pages: AppPage[] }[] = [
     { label: 'groupHome', pages: ['home'] },
     { label: 'groupChart', pages: ['horoscope', 'planets', 'divisional', 'nakshatras'] },
     { label: 'groupInsights', pages: ['overview', 'career', 'wealth', 'dasha', 'reasoning'] },
     { label: 'groupReport', pages: ['detailed'] }
   ];
+
+  useEffect(() => {
+    setOpenGroup(null);
+  }, [activePage]);
+
+  useEffect(() => {
+    if (openGroup === null) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setOpenGroup(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenGroup(null);
+        groupButtonRefs.current[openGroup]?.focus();
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openGroup]);
+
+  const groupButtonClass = (active: boolean) =>
+    `flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${active ? 'border-indigo-500/20 bg-indigo-500/15 text-indigo-300' : 'border-transparent text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}`;
+
   return (
-    <nav aria-label={t('productViews')} className="hidden lg:flex items-center gap-2 py-2">
+    <nav ref={navRef} aria-label={t('productViews')} className="hidden lg:flex items-center gap-2 py-2">
       {groups.map((group) => {
         const active = group.pages.includes(activePage);
+        if (group.pages.length === 1) {
+          return (
+            <button
+              key={group.label}
+              type="button"
+              onClick={() => onNavigate(group.pages[0])}
+              className={groupButtonClass(active)}
+            >
+              {t(group.label)}
+            </button>
+          );
+        }
+        const isOpen = openGroup === group.label;
         return (
-          <details key={group.label} className="group relative">
-            <summary className={`flex list-none cursor-pointer items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${active ? 'border-indigo-500/20 bg-indigo-500/15 text-indigo-300' : 'border-transparent text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}`}>
-              {t(group.label)} <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />
-            </summary>
-            <div className="absolute left-0 top-full z-50 mt-2 min-w-48 rounded-xl border border-slate-700 bg-slate-900 p-1.5 shadow-2xl">
-              {group.pages.map((page) => (
-                <button
-                  key={page}
-                  type="button"
-                  onClick={(event) => {
-                    onNavigate(page);
-                    event.currentTarget.closest('details')?.removeAttribute('open');
-                  }}
-                  title={t(`descriptions.${page}`, { defaultValue: '' })}
-                  className={`block w-full rounded-lg px-3 py-2 text-left text-xs transition-colors ${activePage === page ? 'bg-indigo-500/15 font-semibold text-indigo-300' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
-                >
-                  {t(page)}
-                </button>
-              ))}
-            </div>
-          </details>
+          <div key={group.label} className="relative">
+            <button
+              type="button"
+              ref={(element) => { groupButtonRefs.current[group.label] = element; }}
+              aria-expanded={isOpen}
+              aria-haspopup="menu"
+              onClick={() => setOpenGroup(isOpen ? null : group.label)}
+              className={groupButtonClass(active)}
+            >
+              {t(group.label)} <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+            {isOpen && (
+              <div role="menu" className="absolute left-0 top-full z-50 mt-2 min-w-48 rounded-xl border border-slate-700 bg-slate-900 p-1.5 shadow-2xl">
+                {group.pages.map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      onNavigate(page);
+                      setOpenGroup(null);
+                    }}
+                    title={t(`descriptions.${page}`, { defaultValue: '' })}
+                    className={`block w-full rounded-lg px-3 py-2 text-left text-xs transition-colors ${activePage === page ? 'bg-indigo-500/15 font-semibold text-indigo-300' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                  >
+                    {t(page)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         );
       })}
     </nav>
