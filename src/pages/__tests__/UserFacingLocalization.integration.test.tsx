@@ -65,6 +65,7 @@ describe('user-facing assessment localization at page boundaries', () => {
         coverageSummary: {
           mechanismCandidateCount: 0,
           patternCandidateCount: 0,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 0,
           invalidRolePatternCount: 0,
@@ -118,6 +119,7 @@ describe('user-facing assessment localization at page boundaries', () => {
       coverageSummary: {
         mechanismCandidateCount: 0,
         patternCandidateCount: 1,
+        qualificationResultMissingCount: 0,
         qualifiedPatternCount: 0,
         eligiblePatternCount: 1,
         invalidRolePatternCount: 0,
@@ -133,6 +135,34 @@ describe('user-facing assessment localization at page boundaries', () => {
     }} />);
 
     expect(screen.getByText('पात्र करियर पैटर्न के लिए कोई तंत्र नियम मेल नहीं खाया।')).toBeInTheDocument();
+  });
+
+  it('renders missing-qualification attribution in Hindi', async () => {
+    await act(async () => {
+      await i18n.changeLanguage('hi');
+    });
+    render(<CareerExpressionSection expression={{
+      available: false,
+      status: 'EXECUTED_NO_CANDIDATES',
+      coverageSummary: {
+        mechanismCandidateCount: 0,
+        patternCandidateCount: 2,
+        qualificationResultMissingCount: 1,
+        qualifiedPatternCount: 0,
+        eligiblePatternCount: 0,
+        invalidRolePatternCount: 0,
+        roleAssignmentSkippedPatternCount: 0,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'INCOMPLETE',
+        expressionCount: 0,
+        expressionsWithEvidenceCount: 0,
+        evidenceCount: 0,
+        evidenceWithPlanetAttributionCount: 0
+      },
+      candidates: []
+    }} />);
+
+    expect(screen.getByText('कुछ पहचाने गए करियर पैटर्न के लिए पुष्टि-योग्यता परिणाम उपलब्ध नहीं है, इसलिए उनकी पात्रता निर्धारित नहीं की जा सकती।')).toBeInTheDocument();
   });
 
   it('localizes each labeled promise dimension in Hindi', async () => {

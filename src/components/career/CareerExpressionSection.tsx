@@ -16,6 +16,7 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
   if (
     coverage &&
     coverage.patternCandidateCount !== undefined &&
+    coverage.qualificationResultMissingCount !== undefined &&
     coverage.qualifiedPatternCount !== undefined &&
     coverage.eligiblePatternCount !== undefined &&
     coverage.invalidRolePatternCount !== undefined &&
@@ -25,7 +26,9 @@ export const CareerExpressionSection: React.FC<CareerExpressionSectionProps> = (
   ) {
     stageAttributionKey = coverage.networkResolutionStatus === 'MISSING'
       ? 'missingNetworkEvidence'
-      : coverage.networkResolutionStatus === 'INCOMPLETE'
+      : coverage.qualificationResultMissingCount > 0
+        ? 'qualificationResultsMissing'
+        : coverage.networkResolutionStatus === 'INCOMPLETE'
         ? 'incompleteNetworkEvidence'
         : coverage.patternCandidateCount === 0
           ? 'noPatternsDiscovered'

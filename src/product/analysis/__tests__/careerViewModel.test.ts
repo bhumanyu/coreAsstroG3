@@ -90,6 +90,7 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     const coverageSummary = {
       mechanismCandidateCount: 0,
       patternCandidateCount: 0,
+      qualificationResultMissingCount: 0,
       qualifiedPatternCount: 0,
       eligiblePatternCount: 0,
       invalidRolePatternCount: 0,

@@ -23,6 +23,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     coverage &&
     coverage.mechanismCandidateCount !== undefined &&
     coverage.patternCandidateCount !== undefined &&
+    coverage.qualificationResultMissingCount !== undefined &&
     coverage.qualifiedPatternCount !== undefined &&
     coverage.eligiblePatternCount !== undefined &&
     coverage.invalidRolePatternCount !== undefined &&
@@ -37,6 +38,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
   const hasNoResolvedMechanisms =
     profession.status === 'INSUFFICIENT_DATA' &&
     hasCompleteCoverage &&
+    coverage?.qualificationResultMissingCount === 0 &&
     coverage?.resolvedMechanismCount === 0;
   const statusExplanation = hasNoResolvedMechanisms
     ? t('ui.profession.noResolvedMechanismsExplanation')

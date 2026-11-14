@@ -807,6 +807,11 @@ describe('AI Context Factory', () => {
 
     // Assert traceability is RESOLVED because all three periods have canonical evidence
     expect(ctxWithHierarchy.career!.timing!.hierarchy!.traceability).toBe('RESOLVED');
+    expect(ctxWithHierarchy.career!.timing!.hierarchy!.evidenceIds).toEqual(expect.arrayContaining([
+      'CAREER_DASHA:MD_JUPITER',
+      'CAREER_DASHA:AD_VENUS',
+      'CAREER_DASHA:PD_MARS'
+    ]));
   });
 
   it('should expose DEGRADED hierarchy-level traceability when PD lacks canonical evidence (Finding 2)', () => {
@@ -886,6 +891,50 @@ describe('AI Context Factory', () => {
 
     // Assert traceability is DEGRADED because PD lacks canonical evidence
     expect(ctxWithMixedHierarchy.career!.timing!.hierarchy!.traceability).toBe('DEGRADED');
+    expect(ctxWithMixedHierarchy.career!.timing!.mahadasha?.evidenceIds).toEqual(['CAREER_DASHA:MD_JUPITER']);
+    expect(ctxWithMixedHierarchy.career!.timing!.antardasha?.evidenceIds).toEqual(['CAREER_DASHA:AD_VENUS']);
+    expect(ctxWithMixedHierarchy.career!.timing!.pratyantardasha?.evidenceIds).toEqual([]);
+    expect(ctxWithMixedHierarchy.career!.timing!.hierarchy!.evidenceIds).toEqual(expect.arrayContaining([
+      'CAREER_DASHA:MD_JUPITER',
+      'CAREER_DASHA:AD_VENUS'
+    ]));
+  });
+
+  it('preserves per-period partial availability in the career hierarchy', () => {
+    const baseDasha = makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.VENUS, Planet.MARS);
+    const careerWithPartialAvailability = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      conclusionData: {
+        internalArtifacts: {
+          canonicalDashaAnalysis: {
+            ...baseDasha,
+            md: { ...baseDasha.md, effect: 'ACTIVATES' },
+            ad: { ...baseDasha.ad, effect: 'UNKNOWN' },
+            pd: { ...baseDasha.pd, effect: 'INSUFFICIENT_DATA' }
+          }
+        } as CareerInternalArtifacts
+      },
+      evidence: []
+    });
+
+    const contextWithPartialAvailability = buildAiContext(horoscope, {
+      domainInterpretations: [careerWithPartialAvailability]
+    });
+    const timing = contextWithPartialAvailability.career?.timing;
+
+    expect(timing?.status).toBe('AVAILABLE');
+    expect(timing?.hierarchy?.primary.effect).toBe('ACTIVATES');
+    expect(timing?.hierarchy?.modifier.effect).toBe('UNKNOWN');
+    expect(timing?.hierarchy?.trigger.effect).toBe('INSUFFICIENT_DATA');
+    expect(new Set([
+      timing?.hierarchy?.primary.effect,
+      timing?.hierarchy?.modifier.effect,
+      timing?.hierarchy?.trigger.effect
+    ]).size).toBe(3);
   });
 
   it('should throw an error on conflicting evidence ID with different payload', () => {

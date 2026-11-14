@@ -91,6 +91,7 @@ describe('CareerProfessionStatusSection', () => {
       coverageSummary: {
         mechanismCandidateCount: 0,
         patternCandidateCount: 2,
+        qualificationResultMissingCount: 0,
         qualifiedPatternCount: 1,
         eligiblePatternCount: 1,
         invalidRolePatternCount: 0,
@@ -108,6 +109,32 @@ describe('CareerProfessionStatusSection', () => {
     expect(screen.getByText(/No resolved career mechanisms were available to derive profession candidates/)).toBeInTheDocument();
     expect(screen.getByText(/This is not a negative career prediction/)).toBeInTheDocument();
     expect(screen.getByText('Insufficient data')).toBeInTheDocument();
+  });
+
+  it('uses the generic non-negative explanation when qualification-result diagnostics are incomplete', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      status: 'INSUFFICIENT_DATA' as const,
+      coverageSummary: {
+        mechanismCandidateCount: 0,
+        patternCandidateCount: 2,
+        qualifiedPatternCount: 1,
+        eligiblePatternCount: 1,
+        invalidRolePatternCount: 0,
+        roleAssignmentSkippedPatternCount: 0,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'RESOLVED' as const,
+        expressionCount: 0,
+        expressionsWithEvidenceCount: 0,
+        evidenceCount: 0,
+        evidenceWithPlanetAttributionCount: 0
+      }
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
+    expect(screen.queryByText(/No resolved career mechanisms/)).not.toBeInTheDocument();
+    expect(screen.getByText(/This status alone is not a negative career prediction/)).toBeInTheDocument();
   });
 
   it('renders labels for each known missing input and preserves the generic explanation', () => {

@@ -380,6 +380,7 @@ export interface CanonicalCareerFoundation {
   // Stage-level C8 coverage captured as each stage completes.
   readonly c8StageDiagnostics: {
     readonly patternCandidateCount: number;
+    readonly qualificationResultMissingCount: number;
     readonly qualifiedPatternCount: number;
     readonly eligiblePatternCount: number;
     readonly invalidRolePatternCount: number;

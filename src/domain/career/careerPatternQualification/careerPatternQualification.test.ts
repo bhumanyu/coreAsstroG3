@@ -1694,6 +1694,84 @@ describe('Career Pattern Qualification', () => {
         });
       });
 
+      it('keeps partial WEAK and unavailable participant conditions visible when another participant is strong', () => {
+        const pattern = makePattern({
+          planets: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER],
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [
+            makeRelevance(Planet.SATURN, 'PRIMARY'),
+            makeRelevance(Planet.MERCURY, 'PRIMARY'),
+            makeRelevance(Planet.JUPITER, 'PRIMARY')
+          ],
+          condition: [
+            makeCondition(Planet.SATURN, 'WEAK', { assessment: 'PARTIAL' }),
+            makeCondition(Planet.MERCURY, 'UNAVAILABLE', { assessment: 'UNAVAILABLE' }),
+            makeCondition(Planet.JUPITER, 'STRONG', { assessment: 'FULL' })
+          ],
+          networks: [makeDirectedServiceProfessionNetwork()]
+        };
+
+        const qualified = qualifyCareerPatterns(input).qualifiedPatterns[0];
+
+        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        expect(qualified.decisionBlockingReasons).toContainEqual({
+          reason: 'planetary condition is only partially assessed',
+          kind: 'MISSING_INPUT'
+        });
+        expect(qualified.decisionBlockingReasons).toContainEqual({
+          reason: 'planetary condition data unavailable',
+          kind: 'MISSING_INPUT'
+        });
+        expect(qualified.participants.find(participant => participant.planet === Planet.SATURN)?.conditionSource)
+          .toMatchObject({ condition: 'WEAK', assessment: 'PARTIAL' });
+        expect(qualified.participants.find(participant => participant.planet === Planet.MERCURY)?.conditionSource)
+          .toMatchObject({ condition: 'UNAVAILABLE', assessment: 'UNAVAILABLE' });
+      });
+
+      it('lets a fully assessed WEAK participant disqualify despite another unavailable participant', () => {
+        const pattern = makePattern({
+          planets: [Planet.SATURN, Planet.MERCURY],
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [
+            makeRelevance(Planet.SATURN, 'PRIMARY'),
+            makeRelevance(Planet.MERCURY, 'PRIMARY')
+          ],
+          condition: [
+            makeCondition(Planet.SATURN, 'WEAK', { assessment: 'FULL' }),
+            makeCondition(Planet.MERCURY, 'UNAVAILABLE', { assessment: 'UNAVAILABLE' })
+          ],
+          networks: [makeDirectedServiceProfessionNetwork()]
+        };
+
+        const qualified = qualifyCareerPatterns(input).qualifiedPatterns[0];
+
+        expect(qualified.status).toBe('UNQUALIFIED');
+        expect(qualified.participants.find(participant => participant.planet === Planet.SATURN)?.conditionSource)
+          .toMatchObject({ condition: 'WEAK', assessment: 'FULL' });
+        expect(qualified.participants.find(participant => participant.planet === Planet.MERCURY)?.conditionSource)
+          .toMatchObject({ condition: 'UNAVAILABLE', assessment: 'UNAVAILABLE' });
+      });
+
       it('returns UNQUALIFIED when career relevance is NEUTRAL (negative beats missing data)', () => {
         const pattern = makePattern({
           planets: [Planet.SATURN], // Only Saturn to avoid UNAVAILABLE from missing planets

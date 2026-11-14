@@ -42,14 +42,17 @@ import type {
 
 /**
  * C8 stage attribution is valid only when every field is present. Precedence:
- * missing networks, incomplete network/qualification evaluation, no discovered
- * patterns, no eligible patterns (all were UNQUALIFIED), role-assignment errors,
- * skipped role assignments, then mechanism resolution for eligible patterns.
+ * missing networks, missing qualification results, incomplete network/qualification
+ * evaluation, no discovered patterns, no eligible patterns (all were UNQUALIFIED),
+ * role-assignment errors, skipped role assignments, then mechanism resolution for
+ * eligible patterns. Missing qualification results must not be inferred as explicit
+ * UNQUALIFIED results.
  * Skipped patterns are distinct from ERROR-severity role-assignment failures.
  */
 export interface CareerC8ExpressionCoverage {
   readonly mechanismCandidateCount: number;
   readonly patternCandidateCount: number;
+  readonly qualificationResultMissingCount: number;
   readonly qualifiedPatternCount: number;
   readonly eligiblePatternCount: number;
   readonly invalidRolePatternCount: number;
@@ -95,6 +98,7 @@ export interface CareerHousePortfolio {
   readonly primary: readonly number[];
   readonly supporting: readonly number[];
   readonly challenging: readonly number[];
+  /** Engine-specific product policy for contextual pattern evidence; not a general astrological classification. */
   readonly secondary?: readonly number[];
 }
 

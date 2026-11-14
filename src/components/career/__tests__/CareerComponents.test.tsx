@@ -92,6 +92,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         coverageSummary: {
           mechanismCandidateCount: 0,
           patternCandidateCount: 2,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 1,
           eligiblePatternCount: 1,
           invalidRolePatternCount: 0,
@@ -114,6 +115,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'no discovered patterns',
         {
           patternCandidateCount: 0,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 0,
           invalidRolePatternCount: 0,
@@ -127,6 +129,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'failed qualification',
         {
           patternCandidateCount: 2,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 0,
           invalidRolePatternCount: 0,
@@ -140,6 +143,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'participant role errors',
         {
           patternCandidateCount: 2,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 2,
           eligiblePatternCount: 2,
           invalidRolePatternCount: 1,
@@ -153,6 +157,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'missing network evidence',
         {
           patternCandidateCount: 2,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 2,
           eligiblePatternCount: 2,
           invalidRolePatternCount: 0,
@@ -166,6 +171,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'incomplete network evidence',
         {
           patternCandidateCount: 2,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 2,
           eligiblePatternCount: 2,
           invalidRolePatternCount: 0,
@@ -179,6 +185,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'mechanism resolver',
         {
           patternCandidateCount: 2,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 2,
           eligiblePatternCount: 2,
           invalidRolePatternCount: 0,
@@ -192,6 +199,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         'skipped role assignment',
         {
           patternCandidateCount: 2,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 1,
           eligiblePatternCount: 2,
           invalidRolePatternCount: 0,
@@ -227,6 +235,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         coverageSummary: {
           mechanismCandidateCount: 0,
           patternCandidateCount: 1,
+          qualificationResultMissingCount: 0,
           qualifiedPatternCount: 0,
           eligiblePatternCount: 1,
           invalidRolePatternCount: 0,
@@ -242,6 +251,32 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       }} />);
 
       expect(screen.getByText('No mechanism rule matched the eligible career patterns.')).toBeInTheDocument();
+      expect(screen.queryByText('Career patterns were identified, but none passed qualification.')).not.toBeInTheDocument();
+    });
+
+    it('attributes missing qualification results without inferring that patterns failed qualification', () => {
+      render(<CareerExpressionSection expression={{
+        available: false,
+        status: 'EXECUTED_NO_CANDIDATES',
+        coverageSummary: {
+          mechanismCandidateCount: 0,
+          patternCandidateCount: 2,
+          qualificationResultMissingCount: 1,
+          qualifiedPatternCount: 0,
+          eligiblePatternCount: 0,
+          invalidRolePatternCount: 0,
+          roleAssignmentSkippedPatternCount: 0,
+          resolvedMechanismCount: 0,
+          networkResolutionStatus: 'INCOMPLETE',
+          expressionCount: 0,
+          expressionsWithEvidenceCount: 0,
+          evidenceCount: 0,
+          evidenceWithPlanetAttributionCount: 0
+        },
+        candidates: []
+      }} />);
+
+      expect(screen.getByText('Some identified career patterns have no qualification result, so their eligibility cannot be determined.')).toBeInTheDocument();
       expect(screen.queryByText('Career patterns were identified, but none passed qualification.')).not.toBeInTheDocument();
     });
 

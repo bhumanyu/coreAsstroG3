@@ -143,9 +143,12 @@ export class CanonicalCareerOrchestrator {
     const qualifiedPatternIds = new Set(patternQualifications.map(
       qualification => qualification.patternId
     ));
+    const qualificationResultMissingCount = patternCandidates.filter(
+      candidate => !qualifiedPatternIds.has(candidate.patternId)
+    ).length;
     const qualificationIncomplete =
       diagnostics.some(diagnostic => diagnostic.stage === 'QUALIFICATION') ||
-      patternCandidates.some(candidate => !qualifiedPatternIds.has(candidate.patternId));
+      qualificationResultMissingCount > 0;
     const networkResolutionStatus = requiredNetworkIds.size === 0
       ? 'NOT_REQUIRED' as const
       : missingNetworkIds.length > 0
@@ -196,6 +199,7 @@ export class CanonicalCareerOrchestrator {
     const resolvedMechanismCount = resolvedMechanisms.length;
     const c8StageDiagnostics = Object.freeze({
       patternCandidateCount,
+      qualificationResultMissingCount,
       qualifiedPatternCount,
       eligiblePatternCount,
       invalidRolePatternCount,

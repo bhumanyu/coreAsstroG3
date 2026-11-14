@@ -71,6 +71,100 @@ describe('CareerStructuralReasoning', () => {
     expect(result.evidence[0].weight).toBe(2);
   });
 
+  it('retains aspect relationships from distinct lord pairs on the same house pair', () => {
+    const firstAspect = semantic({
+      relationship: relationship({
+        type: 'LORD_ASPECT',
+        lordA: 'MARS' as Planet,
+        lordB: 'VENUS' as Planet
+      })
+    });
+    const secondAspect = semantic({
+      relationship: relationship({
+        type: 'LORD_ASPECT',
+        lordA: 'SATURN' as Planet,
+        lordB: 'JUPITER' as Planet
+      })
+    });
+
+    const result = resolveCareerStructuralReasoning([firstAspect, secondAspect]);
+
+    expect(result.evidence).toHaveLength(2);
+    expect(result.evidence.map(item => [item.relationship.lordA, item.relationship.lordB]))
+      .toEqual(expect.arrayContaining([
+        ['MARS', 'VENUS'],
+        ['SATURN', 'JUPITER']
+      ]));
+  });
+
+  it('preserves conflicting conjunction and aspect effects instead of merging them', () => {
+    const conjunct = semantic({
+      relationship: relationship({ type: 'LORD_CONJUNCTION' }),
+      relevance: 'PRIMARY',
+      effect: 'SUPPORT'
+    });
+    const aspect = semantic({
+      relationship: relationship({ type: 'LORD_ASPECT' }),
+      relevance: 'PRIMARY',
+      effect: 'CHALLENGE'
+    });
+
+    const result = resolveCareerStructuralReasoning([conjunct, aspect]);
+
+    expect(result.evidence).toHaveLength(2);
+    expect(result.direction).toBe('MIXED');
+    expect(result.conflicts).toHaveLength(1);
+  });
+
+  it('does not merge the same pair and placements when relevance or effect differs', () => {
+    const primarySupport = semantic({
+      relationship: relationship({ type: 'LORD_CONJUNCTION' }),
+      relevance: 'PRIMARY',
+      effect: 'SUPPORT'
+    });
+    const supportingChallenge = semantic({
+      relationship: relationship({ type: 'LORD_CONJUNCTION' }),
+      relevance: 'SUPPORTING',
+      effect: 'CHALLENGE'
+    });
+
+    const result = resolveCareerStructuralReasoning([primarySupport, supportingChallenge]);
+
+    expect(result.evidence).toHaveLength(2);
+    expect(result.evidence.map(item => [item.semantic.relevance, item.semantic.effect]))
+      .toEqual(expect.arrayContaining([
+        ['PRIMARY', 'SUPPORT'],
+        ['SUPPORTING', 'CHALLENGE']
+      ]));
+  });
+
+  it('does not collapse a third-planet house aspect into a conjunct lord pair', () => {
+    const conjunct = semantic({
+      relationship: relationship({
+        type: 'LORD_CONJUNCTION',
+        lordA: 'MARS' as Planet,
+        lordB: 'VENUS' as Planet
+      })
+    });
+    const thirdPlanetAspect = semantic({
+      relationship: relationship({
+        type: 'LORD_ASPECT',
+        houseA: 11,
+        houseB: 10,
+        lordA: 'SATURN' as Planet,
+        lordB: 'MARS' as Planet,
+        lordAHouse: 4,
+        lordBHouse: 8
+      })
+    });
+
+    const result = resolveCareerStructuralReasoning([conjunct, thirdPlanetAspect]);
+
+    expect(result.evidence).toHaveLength(2);
+    expect(result.evidence.map(item => item.relationship.type))
+      .toEqual(expect.arrayContaining(['LORD_CONJUNCTION', 'LORD_ASPECT']));
+  });
+
   it('preserves primary supporting structure', () => {
     const result =
       resolveCareerStructuralReasoning([

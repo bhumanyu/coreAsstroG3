@@ -147,8 +147,8 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
         deferredDimensions.push('DIVISIONAL_CONFIRMATION');
       }
 
-      // Check for known disqualifiers (explicit negatives beat missing data)
-      if (dimensions.planetaryCondition === 'WEAK' && hasFullyAssessedWeakCondition) {
+      // A fully assessed participant-level disqualifier takes precedence over unavailable peers.
+      if (hasFullyAssessedWeakCondition) {
         status = 'UNQUALIFIED';
         // Disqualifier: kept in evidence only, not in decisionBlockingReasons
       } else if (dimensions.careerRelevance === 'NEUTRAL') {
