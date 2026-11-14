@@ -95,6 +95,19 @@ describe('fetchRashiForecast', () => {
     });
   });
 
+  it('reads the Worker error code from a root-level error body', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(
+      { code: 'FORECAST_UNAVAILABLE', message: 'Forecast is temporarily unavailable.' },
+      502
+    )));
+
+    await expect(fetchRashiForecast(request)).rejects.toMatchObject({
+      code: 'HTTP_ERROR',
+      statusCode: 502,
+      serverCode: 'FORECAST_UNAVAILABLE'
+    });
+  });
+
   it('classifies malformed JSON and schema mismatches as INVALID_RESPONSE', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(
       undefined,
