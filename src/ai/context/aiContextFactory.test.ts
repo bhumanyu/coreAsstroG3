@@ -16,7 +16,11 @@ import {
 } from './aiContextFactory';
 import type { CareerFinalSynthesisResult } from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
-import type { CareerDashaCanonicalAnalysis } from '../../domain/career/careerDasha/careerDashaCanonicalTypes';
+import type {
+  CareerDashaCanonicalAnalysis,
+  CareerDashaCanonicalEvidence
+} from '../../domain/career/careerDasha/careerDashaCanonicalTypes';
+import { formatCanonicalDashaPeriodStatement } from '../../domain/career/careerDasha/careerDashaPeriodStatement';
 import type { CareerInternalArtifacts } from '../../domain/career/careerTypes';
 import {
   DomainInterpretation,
@@ -900,6 +904,156 @@ describe('AI Context Factory', () => {
     ]));
   });
 
+  it('projects canonical C9 period facts to career timing without CW-09 verdict data', () => {
+    const baseDasha = makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.VENUS, Planet.MARS);
+    const canonicalEvidence: CareerDashaCanonicalEvidence[] = [
+      {
+        identityKey: 'CAREER_DASHA:MD:JUPITER',
+        id: 'CAREER_DASHA:MD:JUPITER:SUPPORT',
+        level: 'MD',
+        planet: Planet.JUPITER,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Raw diagnostic MD prose: PRIMARY_DRIVER ACTIVATES.',
+        sourceIds: ['source-md'],
+        provenance: {
+          source: 'C9_DASHA',
+          activationLevel: 'MD',
+          ruleIds: ['rule-md'],
+          natalRootIds: ['root-md']
+        },
+        conditionAssessment: 'FULL'
+      }
+    ];
+    const canonicalDasha: CareerDashaCanonicalAnalysis = {
+      ...baseDasha,
+      md: {
+        ...baseDasha.md,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT',
+        conditionAssessment: 'FULL'
+      },
+      evidence: canonicalEvidence
+    };
+    const careerInterpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Career timing available.', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:MD:JUPITER:SUPPORT',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Canonical MD evidence'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: { level: 'MD', planet: Planet.JUPITER }
+        } as any
+      ],
+      conclusionData: {
+        internalArtifacts: { canonicalDashaAnalysis: canonicalDasha } as CareerInternalArtifacts,
+        careerDashaSynthesis: {
+          md: {
+            planet: Planet.SATURN,
+            effect: 'SUPPORTS',
+            factors: [{
+              id: 'CW09_ONLY',
+              period: 'MD',
+              planet: Planet.SATURN,
+              category: 'HOUSE_OWNERSHIP',
+              direction: 'SUPPORT',
+              weight: 4.2,
+              statement: '4.2 support vs 1.0 challenge'
+            }]
+          },
+          ad: { planet: Planet.VENUS, effect: 'NEUTRAL', factors: [] },
+          pd: { planet: Planet.MARS, effect: 'NEUTRAL', factors: [] },
+          combined: {
+            md: {
+              planet: Planet.SATURN,
+              effect: 'SUPPORTS',
+              factors: [{
+                id: 'CW09_ONLY',
+                period: 'MD',
+                planet: Planet.SATURN,
+                category: 'HOUSE_OWNERSHIP',
+                direction: 'SUPPORT',
+                weight: 4.2,
+                statement: '4.2 support vs 1.0 challenge'
+              }]
+            },
+            ad: { planet: Planet.VENUS, effect: 'NEUTRAL', factors: [] },
+            pd: { planet: Planet.MARS, effect: 'NEUTRAL', factors: [] },
+            hierarchy: {
+              mdRole: 'PRIMARY_DRIVER',
+              adRole: 'MODIFIER',
+              pdRole: 'TRIGGER',
+              combinedEffect: 'SUPPORTS'
+            }
+          },
+          factors: [],
+          summary: 'CW-09 reconciliation-only summary'
+        }
+      }
+    });
+
+    const aiContext = buildAiContext(horoscope, {
+      domainInterpretations: [careerInterpretation]
+    });
+    const career = aiContext.career!;
+    const md = career.timing?.mahadasha;
+    const careerDashaPeriods = [
+      career.timing?.mahadasha,
+      career.timing?.antardasha,
+      career.timing?.pratyantardasha
+    ].filter((period) => period !== undefined);
+
+    expect(md).toMatchObject({
+      effect: 'ACTIVATES',
+      direction: 'SUPPORT',
+      conditionAssessment: 'FULL',
+      evidenceIds: ['CAREER_DASHA:MD:JUPITER:SUPPORT']
+    });
+    expect(md?.statement).toBe(
+      formatCanonicalDashaPeriodStatement(canonicalDasha.md, canonicalEvidence.length)
+    );
+    expect(md?.statement).not.toMatch(/PRIMARY_DRIVER|DOES_NOT_ACTIVATE|ACTIVATES|CHALLENGES/);
+    expect(career).not.toHaveProperty('dashaSynthesis');
+    expect(career.timing).not.toHaveProperty('dashaSynthesis');
+    for (const period of careerDashaPeriods) {
+      expect(period).not.toHaveProperty('weight');
+    }
+    expect(JSON.stringify(careerDashaPeriods)).not.toMatch(/\d+\.\d+ support|vs \d+\.\d+ challenge/);
+
+    const collectUserFacingProse = (value: unknown, key = ''): string[] => {
+      if (typeof value === 'string') {
+        return /^(statement|summary|reason|description)$/i.test(key) || /Factors$/.test(key)
+          ? [value]
+          : [];
+      }
+      if (Array.isArray(value)) {
+        return value.flatMap((item) => collectUserFacingProse(item, key));
+      }
+      if (value && typeof value === 'object') {
+        return Object.entries(value).flatMap(([childKey, childValue]) =>
+          collectUserFacingProse(childValue, childKey)
+        );
+      }
+      return [];
+    };
+    const prose = collectUserFacingProse(career).join(' ');
+    expect(prose).not.toMatch(/PRIMARY_DRIVER|DOES_NOT_ACTIVATE|ACTIVATES|CHALLENGES/);
+    expect(prose).not.toMatch(/\d+\.\d+ support|vs \d+\.\d+ challenge/);
+  });
+
   it('preserves MD/AD/PD evidence across a mixed-availability career hierarchy', () => {
     const baseDasha = makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.VENUS, Planet.MARS);
     const careerWithPartialAvailability = createDomainInterpretation({
@@ -1541,138 +1695,6 @@ describe('AI Context Factory', () => {
       expect(partialContext.dasha.interpretation?.antardasha).toBeUndefined();
       expect(partialContext.dasha.interpretation?.pratyantardasha).toBeUndefined();
       expect(partialContext.dasha.interpretation?.pair).toBeUndefined();
-    });
-
-    it('never reinterprets factor direction or category when mapping CareerDashaSynthesisFactorFact', () => {
-      const customCareerInterpretation = createDomainInterpretation({
-        domain: 'CAREER',
-        natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
-        dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
-        transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
-        conclusion: createDomainConclusion({ statement: 'Career active', confidence: 'HIGH' }),
-        evidence: [
-          createDomainEvidence({
-            id: 'F_SUPPORT_1',
-            sourceType: 'HOUSE',
-            polarity: 'SUPPORTING',
-            strength: 'STRONG',
-            statement: 'Owns 10th house'
-          }),
-          createDomainEvidence({
-            id: 'F_CHALLENGE_1',
-            sourceType: 'PLANET',
-            polarity: 'CHALLENGING',
-            strength: 'MODERATE',
-            statement: 'Malefic functional nature'
-          })
-        ],
-        conclusionData: {
-          internalArtifacts: {
-            canonicalDashaAnalysis: makeCanonicalDashaAnalysis(Planet.JUPITER, Planet.SATURN, Planet.MARS)
-          } as CareerInternalArtifacts,
-          careerDashaSynthesis: {
-            md: {
-              planet: Planet.SATURN,
-              effect: 'SUPPORTS',
-              factors: [
-                {
-                  id: 'F_SUPPORT_1',
-                  period: 'MD',
-                  planet: Planet.SATURN,
-                  category: 'HOUSE_OWNERSHIP',
-                  direction: 'SUPPORT',
-                  weight: 2.5,
-                  statement: 'Owns 10th house',
-                  houses: [10]
-                },
-                {
-                  id: 'F_CHALLENGE_1',
-                  period: 'MD',
-                  planet: Planet.SATURN,
-                  category: 'FUNCTIONAL_NATURE',
-                  direction: 'CHALLENGE',
-                  weight: 0.5,
-                  statement: 'Malefic functional nature',
-                  houses: []
-                }
-              ]
-            },
-            ad: {
-              planet: Planet.MERCURY,
-              effect: 'NEUTRAL',
-              factors: []
-            },
-            pd: {
-              planet: Planet.VENUS,
-              effect: 'NEUTRAL',
-              factors: []
-            },
-            combined: {
-              md: {
-                planet: Planet.SATURN,
-                effect: 'SUPPORTS',
-                factors: [
-                  {
-                    id: 'F_SUPPORT_1',
-                    period: 'MD',
-                    planet: Planet.SATURN,
-                    category: 'HOUSE_OWNERSHIP',
-                    direction: 'SUPPORT',
-                    weight: 2.5,
-                    statement: 'Owns 10th house',
-                    houses: [10]
-                  },
-                  {
-                    id: 'F_CHALLENGE_1',
-                    period: 'MD',
-                    planet: Planet.SATURN,
-                    category: 'FUNCTIONAL_NATURE',
-                    direction: 'CHALLENGE',
-                    weight: 0.5,
-                    statement: 'Malefic functional nature',
-                    houses: []
-                  }
-                ]
-              },
-              ad: {
-                planet: Planet.MERCURY,
-                effect: 'NEUTRAL',
-                factors: []
-              },
-              pd: {
-                planet: Planet.VENUS,
-                effect: 'NEUTRAL',
-                factors: []
-              },
-              hierarchy: {
-                mdRole: 'PRIMARY_DRIVER',
-                adRole: 'MODIFIER',
-                pdRole: 'TRIGGER',
-                combinedEffect: 'SUPPORTS'
-              }
-            },
-            factors: [],
-            summary: 'Career synthesis summary'
-          }
-        }
-      });
-
-      const aiContext = buildAiContext(horoscope, {
-        domainInterpretations: [customCareerInterpretation]
-      });
-
-      const synFact = aiContext.career?.dashaSynthesis;
-      expect(synFact).toBeDefined();
-      expect(synFact?.md.factors).toHaveLength(2);
-
-      const supportFactor = synFact?.md.factors.find((f) => f.id === 'F_SUPPORT_1');
-      const challengeFactor = synFact?.md.factors.find((f) => f.id === 'F_CHALLENGE_1');
-
-      expect(supportFactor?.direction).toBe('SUPPORT');
-      expect(supportFactor?.category).toBe('HOUSE_OWNERSHIP');
-
-      expect(challengeFactor?.direction).toBe('CHALLENGE');
-      expect(challengeFactor?.category).toBe('FUNCTIONAL_NATURE');
     });
 
     it('should map Career CW-04 manifestationSynthesis with full fidelity as passthrough', () => {

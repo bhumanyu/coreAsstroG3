@@ -377,7 +377,9 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
         makeEvidence('MD', 'c1', 'CHALLENGE'),
         makeEvidence('MD', 'n1', 'NEUTRAL'),
         makeEvidence('MD', 'm1', 'MIXED'),
-        makeEvidence('MD', 'u1', 'UNAVAILABLE')
+        makeEvidence('MD', 'u1', 'UNAVAILABLE'),
+        makeEvidence('AD', 'm1', 'MIXED'),
+        makeEvidence('AD', 'u1', 'UNAVAILABLE')
       ],
       rootEvidenceIds: [],
       statement: 'C9 career dasha analysis.'
@@ -404,7 +406,7 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
       challengingCount: 1,
       neutralCount: 1
     });
-    // Levels with zero canonical evidence items project no tally.
+    // MIXED/UNAVAILABLE-only evidence and zero records both project no tally.
     expect(timing?.antardasha?.evidenceTally).toBeUndefined();
     expect(timing?.pratyantardasha?.evidenceTally).toBeUndefined();
     // The tally never alters the predicate-driven period verdict.

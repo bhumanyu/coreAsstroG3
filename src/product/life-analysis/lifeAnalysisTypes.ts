@@ -29,6 +29,7 @@ import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { CareerC8ExpressionCoverage, CareerInternalArtifacts } from '../../domain/career/careerTypes';
 import type { CareerPlanetaryConditionAssessment } from '../../domain/career/careerPlanetaryCondition';
+import type { ReasoningDirection } from '../../domain/reasoning/reasoningTypes';
 import type { DashaEvidenceTally } from '../analysis/productAnalysisTypes';
 import type { AiExplanationResult } from '../../ai/browser';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
@@ -118,6 +119,7 @@ export interface CareerPeriodTimingProduct {
   readonly period?: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
   readonly effect: TimingActivationEffect;
+  readonly direction?: ReasoningDirection;
   readonly evidenceIds: readonly string[];
   readonly traceability?: TraceabilityStatus;
   readonly conditionAssessment?: CareerPlanetaryConditionAssessment;

@@ -580,6 +580,26 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       expect(screen.getAllByText(/evidence factors/)).toHaveLength(1);
     });
 
+    it('does not render a tally when every evidence direction is non-directional', () => {
+      const dasha: CareerDashaViewModel = {
+        status: 'AVAILABLE',
+        periods: [{
+          level: 'MD',
+          planet: 'Jupiter',
+          role: 'PRIMARY',
+          direction: 'NEUTRAL',
+          effect: 'INSUFFICIENT_DATA',
+          evidenceIds: [],
+          evidence: [],
+          evidenceTally: { supportingCount: 0, challengingCount: 0, neutralCount: 0 }
+        }]
+      };
+
+      render(<CareerDashaSection dasha={dasha} />);
+
+      expect(screen.queryByText(/evidence factors/)).not.toBeInTheDocument();
+    });
+
     it('renders clean unavailable state when dasha timing is unavailable', () => {
       const dasha: CareerDashaViewModel = {
         status: 'UNAVAILABLE',

@@ -409,6 +409,48 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
     expect(product.diagnostics).toHaveLength(1);
   });
 
+  it('emits C9_PERIOD_MISSING when an engine period has no canonical C9 period', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const current = horoscope.dashaInterpretation?.current!;
+    const canonicalDasha = makeCanonicalCareerDasha(current);
+    const missingCanonicalMd = {
+      ...canonicalDasha,
+      md: undefined
+    } as unknown as CareerDashaCanonicalAnalysis;
+
+    const product = buildDashaInterpretationProduct(current, missingCanonicalMd);
+
+    expect(product.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'C9_PERIOD_MISSING',
+        level: 'MD',
+        activationPlanet: current.mahadasha.natal.planet
+      })
+    ]);
+    expect(product.mahadasha?.canonicalCareerActivation).toBeUndefined();
+  });
+
+  it('emits ENGINE_PERIOD_MISSING when a canonical C9 period has no engine period', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const current = horoscope.dashaInterpretation?.current!;
+    const canonicalDasha = makeCanonicalCareerDasha(current);
+    const missingEngineMd = {
+      ...current,
+      mahadasha: undefined
+    } as unknown as ActiveDashaInterpretation;
+
+    const product = buildDashaInterpretationProduct(missingEngineMd, canonicalDasha);
+
+    expect(product.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'ENGINE_PERIOD_MISSING',
+        level: 'MD',
+        canonicalPlanet: canonicalDasha.md.planet
+      })
+    ]);
+    expect(product.mahadasha).toBeUndefined();
+  });
+
   it('emits no diagnostics when canonical planets match the activation planets', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
     const current = horoscope.dashaInterpretation?.current!;

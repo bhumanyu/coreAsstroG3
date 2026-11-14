@@ -128,10 +128,8 @@ function mapDashaPair(pair: DashaPairInterpretation): DashaPairProduct {
 }
 
 /**
- * Emits C9_PERIOD_PLANET_MISMATCH diagnostics when the engine dasha
- * interpretation and the canonical C9 career dasha analysis disagree on the
- * ruling planet for a period. Previously mapCanonicalCareerActivation
- * silently dropped the canonical activation in this case.
+ * Emits diagnostics when engine periods and canonical C9 periods cannot be
+ * reconciled, including missing levels and differing ruling planets.
  */
 function collectCanonicalMismatchDiagnostics(
   current: ActiveDashaInterpretation,
@@ -142,19 +140,45 @@ function collectCanonicalMismatchDiagnostics(
   }
   const checks: ReadonlyArray<{
     level: CareerDashaCanonicalLevel;
+    enginePeriodPresent: boolean;
     activationPlanet: Planet | undefined;
   }> = [
-    { level: 'MD', activationPlanet: current.mahadasha?.natal?.planet },
-    { level: 'AD', activationPlanet: current.antardasha?.natal?.planet },
-    { level: 'PD', activationPlanet: current.pratyantardasha?.natal?.planet }
+    {
+      level: 'MD',
+      enginePeriodPresent: current.mahadasha !== undefined,
+      activationPlanet: current.mahadasha?.natal?.planet
+    },
+    {
+      level: 'AD',
+      enginePeriodPresent: current.antardasha !== undefined,
+      activationPlanet: current.antardasha?.natal?.planet
+    },
+    {
+      level: 'PD',
+      enginePeriodPresent: current.pratyantardasha !== undefined,
+      activationPlanet: current.pratyantardasha?.natal?.planet
+    }
   ];
   const diagnostics: DashaInterpretationDiagnostic[] = [];
-  for (const { level, activationPlanet } of checks) {
-    if (activationPlanet === undefined) {
+  for (const { level, enginePeriodPresent, activationPlanet } of checks) {
+    const canonicalPeriod = canonicalDasha[level.toLowerCase() as 'md' | 'ad' | 'pd'];
+    if (enginePeriodPresent && !canonicalPeriod) {
+      diagnostics.push({
+        code: 'C9_PERIOD_MISSING',
+        level,
+        ...(activationPlanet !== undefined ? { activationPlanet } : {})
+      });
       continue;
     }
-    const canonicalPeriod = canonicalDasha[level.toLowerCase() as 'md' | 'ad' | 'pd'];
-    if (canonicalPeriod && canonicalPeriod.planet !== activationPlanet) {
+    if (!enginePeriodPresent && canonicalPeriod) {
+      diagnostics.push({
+        code: 'ENGINE_PERIOD_MISSING',
+        level,
+        ...(canonicalPeriod.planet !== undefined ? { canonicalPlanet: canonicalPeriod.planet } : {})
+      });
+      continue;
+    }
+    if (canonicalPeriod && activationPlanet !== undefined && canonicalPeriod.planet !== activationPlanet) {
       diagnostics.push({
         code: 'C9_PERIOD_PLANET_MISMATCH',
         level,

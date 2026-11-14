@@ -28,8 +28,6 @@ import {
   CareerHierarchyFact,
   CareerTimingFact,
   CareerPeriodTimingFact,
-  CareerDashaSynthesisFact,
-  CareerDashaSynthesisFactorFact,
   CareerTimingSynthesisFact,
   CareerTimingFactorFact,
   CareerManifestationSynthesisFact,
@@ -59,7 +57,6 @@ import {
   TimingActivationEffect
 } from '../types/aiContextTypes';
 import type { CareerTimingFactor, WealthTimingFactor, WealthDimensionTimingSynthesis } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
-import type { CareerDashaFactor } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { CareerManifestationSynthesis, CareerManifestationFactor } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
 import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor, WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { CareerWealthFinalSynthesis, WealthDimensionFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
@@ -820,49 +817,6 @@ function buildCareerFact(
   const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
 
   let hierarchy: CareerHierarchyFact | undefined;
-  let dashaSynthesisFact: CareerDashaSynthesisFact | undefined;
-  const careerDashaSynthesis = careerInterpretation?.conclusionData?.careerDashaSynthesis;
-
-  if (careerDashaSynthesis && careerDashaSynthesis.combined.combinedEffect !== 'INSUFFICIENT_DATA') {
-    const syn = careerDashaSynthesis.combined;
-
-    const mapSynthesisFactor = (f: CareerDashaFactor): CareerDashaSynthesisFactorFact => ({
-      id: f.id,
-      category: f.category,
-      direction: f.direction,
-      weight: f.weight,
-      statement: f.statement,
-      ...(f.houses ? { houses: [...f.houses] } : {}),
-      ...(f.evidenceIds ? { evidenceIds: [...f.evidenceIds] } : {})
-    });
-
-    dashaSynthesisFact = {
-      reasoningVersion: 'CW-02',
-      md: {
-        planet: syn.md.planet,
-        effect: syn.md.effect,
-        factors: syn.md.factors.map(mapSynthesisFactor)
-      },
-      ad: {
-        planet: syn.ad.planet,
-        effect: syn.ad.effect,
-        factors: syn.ad.factors.map(mapSynthesisFactor)
-      },
-      pd: {
-        planet: syn.pd.planet,
-        effect: syn.pd.effect,
-        factors: syn.pd.factors.map(mapSynthesisFactor)
-      },
-      hierarchy: {
-        mdRole: syn.hierarchy.mdRole,
-        adRole: syn.hierarchy.adRole,
-        pdRole: syn.hierarchy.pdRole,
-        combinedEffect: syn.combinedEffect
-      },
-      summary: syn.summary
-    };
-
-  }
 
   if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
     const md = timing.mahadasha;
@@ -982,7 +936,6 @@ function buildCareerFact(
     ? {
       ...(timing ?? { status: 'AVAILABLE' }),
       ...(hierarchy ? { hierarchy } : {}),
-      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
       ...(careerTimingSynthesisFact ? { timingSynthesis: careerTimingSynthesisFact } : {})
     }
     : undefined;
@@ -1003,7 +956,6 @@ function buildCareerFact(
       challengingFactors: [],
       conditionalFactors: [],
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
-      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
       ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {}),
       ...(careerFinalSynthesisFact ? { finalSynthesis: careerFinalSynthesisFact } : {}),
       ...(canonicalC11 ? { canonicalC11 } : {}),

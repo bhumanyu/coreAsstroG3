@@ -2,7 +2,6 @@ import { Planet, Sign, NatalGrahaDrishti } from '../../types';
 import type { DashaYogaReference } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type { TimingActivationEffect } from '../../domain/interpretation/DomainInterpretationTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import type { CareerFactorCategory } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type {
   CareerDashaCanonicalEffect,
   CareerDashaCanonicalLevel
@@ -320,44 +319,13 @@ export interface CareerPeriodTimingFact {
   readonly period: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
   readonly effect: TimingActivationEffect;
+  readonly direction?: ReasoningDirection;
   readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   readonly evidenceIds: readonly string[];
   readonly traceability?: 'RESOLVED' | 'DEGRADED';
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;
-}
-
-export interface CareerDashaSynthesisFactorFact {
-  readonly id: string;
-  readonly category: CareerFactorCategory;
-  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
-  readonly weight: number;
-  readonly statement: string;
-  readonly houses?: readonly number[];
-  readonly evidenceIds?: readonly string[];
-}
-
-export interface CareerDashaSynthesisPeriodFact {
-  readonly planet: Planet;
-  readonly effect: string;
-  readonly factors: readonly CareerDashaSynthesisFactorFact[];
-}
-
-export interface CareerDashaSynthesisHierarchyFact {
-  readonly mdRole: string;
-  readonly adRole: string;
-  readonly pdRole: string;
-  readonly combinedEffect: string;
-}
-
-export interface CareerDashaSynthesisFact {
-  readonly reasoningVersion: 'CW-02';
-  readonly md: CareerDashaSynthesisPeriodFact;
-  readonly ad: CareerDashaSynthesisPeriodFact;
-  readonly pd: CareerDashaSynthesisPeriodFact;
-  readonly hierarchy: CareerDashaSynthesisHierarchyFact;
-  readonly summary: string;
 }
 
 export interface CareerTimingFactorFact {
@@ -393,7 +361,6 @@ export interface CareerTimingFact {
   readonly antardasha?: CareerPeriodTimingFact;
   readonly pratyantardasha?: CareerPeriodTimingFact;
   readonly hierarchy?: CareerHierarchyFact;
-  readonly dashaSynthesis?: CareerDashaSynthesisFact;
   readonly timingSynthesis?: CareerTimingSynthesisFact;
 }
 
@@ -627,7 +594,6 @@ export interface CareerFact {
   readonly challengingFactors: readonly string[];
   readonly conditionalFactors?: readonly string[];
   readonly timing?: CareerTimingFact;
-  readonly dashaSynthesis?: CareerDashaSynthesisFact;
   readonly manifestationSynthesis?: readonly CareerManifestationSynthesisFact[];
   readonly finalSynthesis?: CareerWealthFinalSynthesisFact;
   readonly canonicalC11?: AiCareerCanonicalC11Fact;

@@ -194,7 +194,9 @@ export interface D10ProductResult {
  * Per-level counts of canonical C9 dasha evidence items by direction.
  * Display-only tally of evidence counts — NOT weighted scores. The period
  * verdict (effect/direction) remains predicate-driven and authoritative;
- * these counts may legitimately diverge from it.
+ * these counts may legitimately diverge from it. A tally is present only
+ * when at least one directional evidence record (SUPPORT, CHALLENGE, or
+ * NEUTRAL) exists; MIXED/UNAVAILABLE-only evidence is not a tally.
  */
 export interface DashaEvidenceTally {
   readonly supportingCount: number;

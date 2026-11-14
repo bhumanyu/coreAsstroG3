@@ -21,7 +21,10 @@ export type DashaLevel = 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
  * Product-level diagnostics emitted when canonical C9 career dasha data
  * cannot be reconciled with the engine dasha interpretation for a period.
  */
-export type DashaInterpretationDiagnosticCode = 'C9_PERIOD_PLANET_MISMATCH';
+export type DashaInterpretationDiagnosticCode =
+  | 'C9_PERIOD_MISSING'
+  | 'ENGINE_PERIOD_MISSING'
+  | 'C9_PERIOD_PLANET_MISMATCH';
 
 export interface DashaInterpretationDiagnostic {
   readonly code: DashaInterpretationDiagnosticCode;

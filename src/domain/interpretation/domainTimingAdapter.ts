@@ -183,7 +183,9 @@ export function buildNormalizedCareerTiming(
           tally.neutralCount += 1;
         }
       }
-      return tally;
+      return tally.supportingCount + tally.challengingCount + tally.neutralCount > 0
+        ? tally
+        : undefined;
     };
 
     const mapCanonicalPeriod = (level: 'MD' | 'AD' | 'PD'): CareerPeriodTimingProduct => {
@@ -199,6 +201,7 @@ export function buildNormalizedCareerTiming(
         period: level,
         planet: period.planet,
         effect: period.effect,
+        direction: period.direction,
         evidenceIds: evidence.evidenceIds,
         traceability: evidence.traceability,
         conditionAssessment: period.conditionAssessment,
