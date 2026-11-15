@@ -192,7 +192,7 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
                   </span>
                   {subtitle && (
                     <span className="text-xs text-slate-400 mt-0.5 light:text-slate-500">
-                      {subtitle} ({place.latitude.toFixed(2)}°, {place.longitude.toFixed(2)}°) • {place.timezone}
+                      {subtitle} ({place.latitude.toFixed(2)}°, {place.longitude.toFixed(2)}°){place.timezone ? ` • ${place.timezone}` : ''}
                     </span>
                   )}
                 </button>

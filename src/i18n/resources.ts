@@ -66,7 +66,9 @@ export const resources = {
       placeSearchUnavailable: 'Place search is temporarily unavailable. Please try again.',
       searchCityPlaceholder: 'Search city (e.g., Muzaffarpur, London, New York)...',
       clearSearch: 'Clear place search',
-      retry: 'Retry'
+      retry: 'Retry',
+      timeZoneBrowserHint: 'No timezone set for these coordinates. Browser suggests {{timeZone}}.',
+      useBrowserTimeZone: 'Use suggested timezone'
     },
     validation: {
       INVALID_LATITUDE: 'Latitude must be a finite number.',
@@ -2651,7 +2653,9 @@ export const resources = {
       placeSearchUnavailable: 'स्थान खोज अस्थायी रूप से उपलब्ध नहीं है। कृपया फिर प्रयास करें।',
       searchCityPlaceholder: 'शहर खोजें (जैसे मुज़फ्फरपुर, लंदन, न्यूयॉर्क)...',
       clearSearch: 'स्थान खोज मिटाएँ',
-      retry: 'पुनः प्रयास करें'
+      retry: 'पुनः प्रयास करें',
+      timeZoneBrowserHint: 'इन निर्देशांकों के लिए समय क्षेत्र सेट नहीं है। ब्राउज़र सुझाव देता है {{timeZone}}।',
+      useBrowserTimeZone: 'सुझाया गया समय क्षेत्र उपयोग करें'
     },
     validation: {
       INVALID_LATITUDE: 'अक्षांश एक सीमित संख्या होना चाहिए।',

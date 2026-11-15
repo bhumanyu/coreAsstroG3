@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { searchPlacesDetailed } from './geocoding';
+import { lookupTimeZoneByCoordinates, searchPlacesDetailed } from './geocoding';
 
 const validPlace = {
   name: 'London',
@@ -108,5 +108,57 @@ describe('searchPlacesDetailed', () => {
     }))));
 
     await expect(searchPlacesDetailed('London')).resolves.toEqual({ status: 'INVALID_RESPONSE' });
+  });
+});
+
+describe('lookupTimeZoneByCoordinates', () => {
+  it('returns the provider timezone for valid coordinates', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(200, async () => ({
+      timezone: 'Europe/London',
+      current: { temperature_2m: 12 }
+    }))));
+
+    await expect(lookupTimeZoneByCoordinates(51.5072, -0.1276)).resolves.toBe('Europe/London');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('api.open-meteo.com/v1/forecast'),
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+  });
+
+  it('returns undefined when the payload has no timezone', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(200, async () => ({
+      current: { temperature_2m: 12 }
+    }))));
+
+    await expect(lookupTimeZoneByCoordinates(51.5072, -0.1276)).resolves.toBeUndefined();
+  });
+
+  it('returns undefined for out-of-range coordinates without calling fetch', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(lookupTimeZoneByCoordinates(91, 0)).resolves.toBeUndefined();
+    await expect(lookupTimeZoneByCoordinates(0, 181)).resolves.toBeUndefined();
+    await expect(lookupTimeZoneByCoordinates(Number.NaN, 0)).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('returns undefined on HTTP errors and network failures', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(500)));
+    await expect(lookupTimeZoneByCoordinates(51.5, -0.1)).resolves.toBeUndefined();
+
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    await expect(lookupTimeZoneByCoordinates(51.5, -0.1)).resolves.toBeUndefined();
+  });
+
+  it('returns undefined when the request times out', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    })));
+    const result = lookupTimeZoneByCoordinates(51.5, -0.1, { timeoutMs: 500 });
+    await vi.advanceTimersByTimeAsync(500);
+
+    await expect(result).resolves.toBeUndefined();
   });
 });
