@@ -81,10 +81,69 @@ describe('careerD10QualificationRules', () => {
       code: 'D10_FACT_CONDITION_CONFLICT',
       planet: Planet.MERCURY,
       house: 10,
-      replacedSource: 'lord',
-      sourceCondition: 'WEAK',
-      planetCondition: 'STRONG'
+      canonicalSource: 'planet',
+      canonicalCondition: 'STRONG',
+      conflictingSource: 'lord',
+      conflictingCondition: 'WEAK'
     });
+  });
+
+  it('reports lord/planet and same-source conflicts regardless of input order', () => {
+    const baseContext: CareerD10Context = {
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG',
+      natalPrimarySupport: 5,
+      natalPrimaryChallenge: 0,
+      d10Available: true,
+      d10Houses: [{
+        house: 10,
+        role: 'PRIMARY',
+        occupied: true,
+        lord: Planet.MERCURY,
+        lordCondition: 'WEAK',
+        tenants: [],
+        tenantConditions: []
+      }],
+      d10Planets: [{
+        planet: Planet.MERCURY,
+        condition: 'STRONG',
+        d10House: 10,
+        natalHouse: 1,
+        relatedHouses: [10]
+      }],
+      expressions: emptyExpressions
+    };
+
+    const result = resolveCareerD10Qualification(baseContext);
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({
+      code: 'D10_FACT_CONDITION_CONFLICT',
+      canonicalSource: 'planet',
+      canonicalCondition: 'STRONG',
+      conflictingSource: 'lord',
+      conflictingCondition: 'WEAK'
+    }));
+
+    for (const conditions of [
+      ['WEAK', 'STRONG'],
+      ['STRONG', 'WEAK']
+    ] as const) {
+      const sameSourceResult = resolveCareerD10Qualification({
+        ...baseContext,
+        d10Houses: [],
+        d10Planets: conditions.map(condition => ({
+          planet: Planet.MERCURY,
+          condition,
+          d10House: 10,
+          natalHouse: 1,
+          relatedHouses: [10]
+        }))
+      });
+      expect(sameSourceResult.diagnostics).toContainEqual(expect.objectContaining({
+        code: 'D10_FACT_CONDITION_CONFLICT',
+        canonicalSource: 'planet',
+        conflictingSource: 'planet'
+      }));
+    }
   });
 
   describe('hasNatalCareerPromise', () => {

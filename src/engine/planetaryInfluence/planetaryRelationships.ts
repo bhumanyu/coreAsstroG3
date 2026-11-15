@@ -70,6 +70,7 @@ export interface PlanetaryRelationshipEvidence {
   readonly yogaType: string;
   readonly reason: string;
   readonly producerNamespace: PlanetaryRelationshipProducerNamespace;
+  readonly identityStatus: 'PRODUCER_ID' | 'DEGRADED_ATTRIBUTE_SIGNATURE';
   readonly producerEvidenceId?: string;
   readonly producerEvidenceIdProvenance?: readonly string[];
 }
@@ -400,6 +401,9 @@ export function resolvePlanetaryRelationships(
         relationshipEvidence.push(Object.freeze({
           relationship: rawEvidence.relationship,
           producerNamespace: yogaProducerNamespace,
+          identityStatus: producerEvidenceIds.length > 0
+            ? 'PRODUCER_ID'
+            : 'DEGRADED_ATTRIBUTE_SIGNATURE',
           planets: Object.freeze(
             PLANET_ORDER.filter((candidate) => evidencePlanets.includes(candidate))
           ),
@@ -456,6 +460,9 @@ export function resolvePlanetaryRelationships(
     relationshipEvidence.push(Object.freeze({
       relationship: rawEvidence.relationship,
       producerNamespace: 'RELATIONSHIP_EVIDENCE_INPUT',
+      identityStatus: producerEvidenceIds.length > 0
+        ? 'PRODUCER_ID'
+        : 'DEGRADED_ATTRIBUTE_SIGNATURE',
       planets: Object.freeze(
         PLANET_ORDER.filter((candidate) => evidencePlanets.includes(candidate))
       ),

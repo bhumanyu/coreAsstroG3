@@ -332,6 +332,20 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
   });
 
   it('buildNormalizedCareerTiming projects per-level evidence tally counts from canonical C9 evidence', () => {
+    const levelStatus = {
+      MD: {
+        expressionAnalysisStatus: 'EXECUTED' as const,
+        diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE' as const]
+      },
+      AD: {
+        expressionAnalysisStatus: 'PARTIAL' as const,
+        diagnostics: ['C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT' as const]
+      },
+      PD: {
+        expressionAnalysisStatus: 'UNAVAILABLE' as const,
+        diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE' as const]
+      }
+    } as const;
     const makePeriod = (level: 'MD' | 'AD' | 'PD'): CareerDashaCanonicalPeriod => ({
       level,
       planet: level === 'MD' ? Planet.JUPITER : level === 'AD' ? Planet.SATURN : Planet.MARS,
@@ -341,12 +355,7 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
       strength: 'STRONG',
       statement: `${level} period.`,
       afflictionAssessed: true,
-      ...(level === 'MD'
-        ? {
-            expressionAnalysisStatus: 'FAILED' as const,
-            diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE' as const]
-          }
-        : {})
+      ...levelStatus[level]
     });
     const makeEvidence = (
       level: 'MD' | 'AD' | 'PD',
@@ -419,7 +428,15 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     expect(timing?.mahadasha?.effect).toBe('ACTIVATES');
     expect(timing?.mahadasha?.statement).toContain('MD period for planet Jupiter');
     expect(timing?.mahadasha).toMatchObject({
-      expressionAnalysisStatus: 'FAILED',
+      expressionAnalysisStatus: 'EXECUTED',
+      diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE']
+    });
+    expect(timing?.antardasha).toMatchObject({
+      expressionAnalysisStatus: 'PARTIAL',
+      diagnostics: ['C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT']
+    });
+    expect(timing?.pratyantardasha).toMatchObject({
+      expressionAnalysisStatus: 'UNAVAILABLE',
       diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE']
     });
   });

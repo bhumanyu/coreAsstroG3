@@ -643,7 +643,8 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     expect(result.relationshipEvidence).toEqual([
       expect.objectContaining({
         ruleId: 'EXTERNAL_RELATIONSHIP_1',
-        yogaType: 'UNSPECIFIED'
+        yogaType: 'UNSPECIFIED',
+        identityStatus: 'DEGRADED_ATTRIBUTE_SIGNATURE'
       })
     ]);
     expect(result.yogas).toEqual([]);
@@ -672,6 +673,15 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       'ANOTHER_YOGA',
       'SYNTHETIC_RELATIONSHIP'
     ]);
+    expect(yogaResult.relationshipEvidence.every(item =>
+      item.identityStatus === 'DEGRADED_ATTRIBUTE_SIGNATURE'
+    )).toBe(true);
+    const yogaTrace = buildPlanetaryInfluenceTrace(yogaSourced).find(
+      (item) => item.planet === Planet.MERCURY
+    )!;
+    expect(yogaTrace.structuralRelationships.relationshipEvidence).toContainEqual(
+      expect.objectContaining({ identityStatus: 'DEGRADED_ATTRIBUTE_SIGNATURE' })
+    );
 
     const identifiedResult = resolvePlanetaryRelationships(
       makeHoroscope(),

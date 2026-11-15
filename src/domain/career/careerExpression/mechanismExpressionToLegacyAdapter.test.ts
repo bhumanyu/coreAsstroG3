@@ -194,6 +194,7 @@ describe('mechanismExpressionToLegacyAdapter', () => {
       expect(result.primaryExpression).toBeUndefined();
       expect(result.statement).toContain('unavailable');
       expect(result.statement).toContain('no mechanism candidates');
+      expect(result.analysisStatus).toBe('UNAVAILABLE');
     });
 
     it('should return explicit unavailable analysis for empty candidates', () => {
@@ -219,6 +220,34 @@ describe('mechanismExpressionToLegacyAdapter', () => {
       expect(result.expressions).toEqual([]);
       expect(result.primaryExpression).toBeUndefined();
       expect(result.statement).toContain('unavailable');
+      expect(result.analysisStatus).toBe('EXECUTED');
+    });
+
+    it('preserves PARTIAL and reports malformed resolver results as FAILED', () => {
+      const partialResult: CareerExpressionAnalysisResult = {
+        expressions: [],
+        status: 'PARTIAL',
+        sourceMechanismIds: [],
+        missingInputs: ['career10LFoundation'],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: [],
+          patternIds: [],
+          relationshipIds: [],
+          evidenceIds: [],
+          sourceStages: []
+        }
+      };
+      expect(adaptMechanismExpressionToLegacy(partialResult, []).analysisStatus)
+        .toBe('PARTIAL');
+
+      const malformedResult = {
+        expressions: [],
+        status: 'COMPLETE'
+      } as unknown as CareerExpressionAnalysisResult;
+      const failed = adaptMechanismExpressionToLegacy(malformedResult, []);
+      expect(failed.analysisStatus).toBe('FAILED');
+      expect(failed.statement).toContain('mechanism resolver returned a malformed result');
     });
   });
 

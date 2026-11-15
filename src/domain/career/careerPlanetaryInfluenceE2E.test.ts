@@ -313,6 +313,12 @@ describe('CW-10N independent multi-chart verification', () => {
     const natal = buildCareerNatalAnalysis({ horoscope });
     const venus = natal.condition.find((item) => item.planet === Planet.VENUS)!;
 
+    expect(horoscope.natalGrahaDrishti?.computationMethod)
+      .toBe('GRAHA_DRISHTI_HOUSE_BASED_V1');
+    expect(mercury.calculationContext.aspectComputationMethod)
+      .toBe(horoscope.natalGrahaDrishti?.computationMethod);
+    expect(venus.planetaryInfluenceTrace?.calculationContext.aspectComputationMethod)
+      .toBe(horoscope.natalGrahaDrishti?.computationMethod);
     expect(mercury.environmentalInfluence).toMatchObject({
       beneficAspectSources: [],
       maleficAspectSources: [],

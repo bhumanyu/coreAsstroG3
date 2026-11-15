@@ -40,6 +40,14 @@ import type {
   CareerExpressionAnalysis
 } from '../careerExpression';
 
+import {
+  adaptMechanismExpressionToLegacy
+} from '../careerExpression/mechanismExpressionToLegacyAdapter';
+
+import type {
+  CareerExpressionAnalysisResult
+} from '../careerExpression/careerExpressionTypes';
+
 import type {
   CareerManifestationMode
 } from '../careerTypes';
@@ -479,6 +487,127 @@ describe('C9 Dasha Integration', () => {
     expect(result.hierarchy?.diagnosticTrace?.levels[0]).toMatchObject({
       expressionAnalysisStatus: 'UNAVAILABLE'
     });
+  });
+
+  it('applies the C8 producer status contract to the C9 empty-expression fallback', () => {
+    const natal = makeMinimalNatal();
+    const primaryCondition: CareerPlanetaryConditionResult = {
+      planet: Planet.SATURN,
+      relevance: 'PRIMARY',
+      condition: 'STRONG',
+      dignity: 'OWN_SIGN' as any,
+      affliction: 'NONE' as any,
+      motion: 'DIRECT' as any,
+      combustion: 'NOT_COMBUST' as any,
+      positiveFactors: [],
+      negativeFactors: [],
+      relatedPlanets: [],
+      conditional: false,
+      assessment: 'FULL',
+      statement: 'Saturn is fully assessed.'
+    };
+    const supportedExpression = {
+      mode: 'EMPLOYMENT' as const,
+      direction: 'SUPPORTED' as const,
+      strength: 'STRONG' as const,
+      evidence: [{
+        id: 'C8-EVIDENCE-1',
+        mode: 'EMPLOYMENT' as const,
+        role: 'STRUCTURAL' as const,
+        statement: 'Employment expression evidence.',
+        weight: 1,
+        planets: [Planet.SATURN],
+        houses: [10]
+      }],
+      supportingEvidenceIds: ['C8-EVIDENCE-1'],
+      statement: 'Employment is supported.',
+      conditional: false
+    };
+    const failedAnalysis = adaptMechanismExpressionToLegacy({
+      expressions: [],
+      status: 'INVALID'
+    } as unknown as CareerExpressionAnalysisResult, []);
+    const cases: readonly {
+      readonly name: string;
+      readonly status?: CareerExpressionAnalysis['analysisStatus'];
+      readonly expressions: CareerExpressionAnalysis['expressions'];
+      readonly analysis?: CareerExpressionAnalysis;
+      readonly expectedDirection: string;
+      readonly expectsFallbackDiagnostic: boolean;
+      readonly expectedStatus: NonNullable<CareerExpressionAnalysis['analysisStatus']>;
+    }[] = [
+      {
+        name: 'EXECUTED with zero expressions',
+        status: 'EXECUTED' as const,
+        expressions: [],
+        expectedDirection: 'SUPPORT',
+        expectsFallbackDiagnostic: false,
+        expectedStatus: 'EXECUTED'
+      },
+      {
+        name: 'EXECUTED with expressions',
+        status: 'EXECUTED' as const,
+        expressions: [supportedExpression],
+        expectedDirection: 'SUPPORT',
+        expectsFallbackDiagnostic: false,
+        expectedStatus: 'EXECUTED'
+      },
+      {
+        name: 'PARTIAL',
+        status: 'PARTIAL' as const,
+        expressions: [],
+        expectedDirection: 'NEUTRAL',
+        expectsFallbackDiagnostic: true,
+        expectedStatus: 'PARTIAL'
+      },
+      {
+        name: 'FAILED',
+        analysis: failedAnalysis,
+        expressions: failedAnalysis.expressions,
+        expectedDirection: 'NEUTRAL',
+        expectsFallbackDiagnostic: true,
+        expectedStatus: 'FAILED'
+      },
+      {
+        name: 'UNAVAILABLE',
+        status: 'UNAVAILABLE' as const,
+        expressions: [],
+        expectedDirection: 'NEUTRAL',
+        expectsFallbackDiagnostic: true,
+        expectedStatus: 'UNAVAILABLE'
+      },
+      {
+        name: 'missing status',
+        status: undefined,
+        expressions: [],
+        expectedDirection: 'NEUTRAL',
+        expectsFallbackDiagnostic: true,
+        expectedStatus: 'UNAVAILABLE'
+      }
+    ] as const;
+
+    for (const testCase of cases) {
+      const expression: CareerExpressionAnalysis = testCase.analysis ?? {
+        expressions: testCase.expressions,
+        statement: `C8 ${testCase.name}`,
+        ...(testCase.status ? { analysisStatus: testCase.status } : {})
+      };
+      const result = buildCareerDashaAnalysis(makeInput({
+        expression,
+        natal: Object.freeze({
+          ...natal,
+          condition: Object.freeze([primaryCondition])
+        })
+      }));
+      const hasFallbackDiagnostic = (result.md.diagnostics ?? []).includes(
+        'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
+      );
+
+      expect(result.md.direction, testCase.name).toBe(testCase.expectedDirection);
+      expect(hasFallbackDiagnostic, testCase.name).toBe(testCase.expectsFallbackDiagnostic);
+      expect(result.md.expressionAnalysisStatus ?? 'UNAVAILABLE', testCase.name)
+        .toBe(testCase.expectedStatus);
+    }
   });
 
   it('blocks the empty-expression fallback when supplied C8 analysis is FAILED', () => {

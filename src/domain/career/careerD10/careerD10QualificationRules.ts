@@ -68,6 +68,7 @@ function buildCanonicalD10Facts(
 ): { readonly facts: CanonicalD10Fact[]; readonly diagnostics: CareerD10FactDiagnostic[] } {
   const factMap = new Map<string, CanonicalD10Fact>();
   const diagnostics: CareerD10FactDiagnostic[] = [];
+  const factsByKey = new Map<string, CanonicalD10Fact[]>();
 
   // Semantic rule: A D10 planet position is canonical.
   // House-lord and tenant context may enrich that canonical planet fact
@@ -83,40 +84,18 @@ function buildCanonicalD10Facts(
     return `${planet}:${house}:${role}`;
   }
 
-  function mergeOrAddFact(fact: CanonicalD10Fact) {
+  function collectFact(fact: CanonicalD10Fact) {
     const key = getFactKey(fact.planet, fact.house, fact.role);
-    const existing = factMap.get(key);
-
-    if (!existing) {
-      factMap.set(key, { ...fact });
-      return;
-    }
-
-    // Deterministic merge: planet position takes precedence over lord/tenant
-    // If both have the same source, keep the first one (deterministic by processing order)
-    if (fact.source === 'planet' && existing.source !== 'planet') {
-      if (existing.condition !== fact.condition) {
-        diagnostics.push(Object.freeze({
-          code: 'D10_FACT_CONDITION_CONFLICT',
-          planet: fact.planet,
-          house: fact.house,
-          replacedSource: existing.source,
-          sourceCondition: existing.condition,
-          planetCondition: fact.condition
-        }));
-      }
-      // Planet position is canonical, replace with it
-      factMap.set(key, { ...fact });
-    }
-    // If existing is planet and new is lord/tenant, keep existing (planet is canonical)
-    // If both are same source, keep existing (first-write-wins is deterministic)
+    const records = factsByKey.get(key) ?? [];
+    records.push(fact);
+    factsByKey.set(key, records);
   }
 
   // Process house lords - these are PRIMARY/SUPPORTING based on house role
   for (const house of context.d10Houses) {
     const classifiedRole = classifyCareerHouse(house.house, CAREER_D10_HOUSE_PORTFOLIO);
     const houseRole = classifiedRole === 'SECONDARY' ? 'NEUTRAL' : classifiedRole;
-    mergeOrAddFact({
+    collectFact({
       planet: house.lord,
       house: house.house,
       condition: house.lordCondition,
@@ -131,7 +110,7 @@ function buildCanonicalD10Facts(
       const tenant = house.tenants[i];
       const tenantCondition = house.tenantConditions[i];
       // Tenants are always MODIFIER, not the house's role
-      mergeOrAddFact({
+      collectFact({
         planet: tenant,
         house: house.house,
         condition: tenantCondition,
@@ -146,13 +125,33 @@ function buildCanonicalD10Facts(
   for (const planet of context.d10Planets) {
     const classifiedRole = classifyCareerHouse(planet.d10House, CAREER_D10_HOUSE_PORTFOLIO);
     const houseRole = classifiedRole === 'SECONDARY' ? 'NEUTRAL' : classifiedRole;
-    mergeOrAddFact({
+    collectFact({
       planet: planet.planet,
       house: planet.d10House,
       condition: planet.condition,
       role: houseRole,
       source: 'planet'
     });
+  }
+
+  for (const [key, records] of factsByKey) {
+    const canonical = records.find(fact => fact.source === 'planet') ?? records[0];
+    if (!canonical) continue;
+
+    for (const fact of records) {
+      if (fact === canonical || fact.condition === canonical.condition) continue;
+      diagnostics.push(Object.freeze({
+        code: 'D10_FACT_CONDITION_CONFLICT',
+        planet: fact.planet,
+        house: fact.house,
+        canonicalSource: canonical.source,
+        canonicalCondition: canonical.condition,
+        conflictingSource: fact.source,
+        conflictingCondition: fact.condition
+      }));
+    }
+
+    factMap.set(key, { ...canonical });
   }
 
   return {
@@ -214,6 +213,8 @@ export function dimensionEvidenceAvailable(
     return false;
   }
 
+  // Coverage currently means at least one configured indicator resolved; a per-dimension
+  // coverage ratio (resolved indicators / configured indicators) remains a future contract.
   return buildCanonicalD10Facts(context).facts.some(fact =>
     factors.houses.includes(fact.house) &&
     factors.planets.includes(fact.planet) &&

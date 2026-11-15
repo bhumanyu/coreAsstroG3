@@ -370,6 +370,43 @@ function createUnavailableLegacyAnalysis(
   });
 }
 
+function createFailedLegacyAnalysis(): CareerExpressionAnalysis {
+  return Object.freeze({
+    expressions: Object.freeze([]),
+    primaryExpression: undefined,
+    statement: 'Career expression analysis failed because the mechanism resolver returned a malformed result. / करियर अभिव्यक्ति विश्लेषण विफल हुआ क्योंकि मैकेनिज़्म रिज़ॉल्वर ने अमान्य परिणाम लौटाया।',
+    analysisStatus: 'FAILED'
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isMechanismExpressionResult(
+  value: unknown
+): value is CareerExpressionAnalysisResult | CareerExpressionCanonicalResult {
+  if (!isRecord(value) ||
+    !Array.isArray(value.expressions) ||
+    !Array.isArray(value.sourceMechanismIds) ||
+    !Array.isArray(value.missingInputs) ||
+    !Array.isArray(value.unmappedMechanismTypes) ||
+    !isRecord(value.provenance) ||
+    (value.status !== 'COMPLETE' &&
+      value.status !== 'PARTIAL' &&
+      value.status !== 'INSUFFICIENT_DATA')) {
+    return false;
+  }
+
+  return value.expressions.every(expression =>
+    isRecord(expression) &&
+    typeof expression.expressionId === 'string' &&
+    typeof expression.expressionType === 'string' &&
+    Array.isArray(expression.evidence) &&
+    isRecord(expression.provenance)
+  );
+}
+
 /**
  * Builds a map from mechanism candidate ID to its participant planets.
  * Extracts planets from provenance.participantIds using extractPlanetFromParticipantId,
@@ -463,9 +500,13 @@ export function adaptMechanismExpressionToLegacy(
  * Implementation of the adapter (handles both legacy and canonical result types).
  */
 export function adaptMechanismExpressionToLegacy(
-  mechanismResult: CareerExpressionAnalysisResult | CareerExpressionCanonicalResult,
+  mechanismResult: unknown,
   mechanismCandidates: readonly CareerMechanismCandidate[]
 ): CareerExpressionAnalysis {
+  if (!isMechanismExpressionResult(mechanismResult)) {
+    return createFailedLegacyAnalysis();
+  }
+
   // Check if this is a canonical result (has qualificationStatus on expressions)
   const isCanonical = mechanismResult.expressions.length > 0 &&
     'qualificationStatus' in mechanismResult.expressions[0];

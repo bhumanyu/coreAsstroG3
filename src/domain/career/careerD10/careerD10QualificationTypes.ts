@@ -125,9 +125,10 @@ export interface CareerD10FactDiagnostic {
   readonly code: 'D10_FACT_CONDITION_CONFLICT';
   readonly planet: Planet;
   readonly house: number;
-  readonly replacedSource: 'lord' | 'tenant';
-  readonly sourceCondition: CareerPlanetaryCondition;
-  readonly planetCondition: CareerPlanetaryCondition;
+  readonly canonicalSource: 'lord' | 'tenant' | 'planet';
+  readonly canonicalCondition: CareerPlanetaryCondition;
+  readonly conflictingSource: 'lord' | 'tenant' | 'planet';
+  readonly conflictingCondition: CareerPlanetaryCondition;
 }
 
 export interface CareerD10QualificationResult {
