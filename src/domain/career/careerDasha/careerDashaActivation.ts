@@ -125,6 +125,19 @@ function resolveLevel(
   const actualPlanetContext = planetContext ?? (timing.planet ? findPlanetContext(context, timing.planet) : undefined);
 
   if (!actualPlanetContext) {
+    const diagnostics = Object.freeze([
+      'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE' as const
+    ]);
+    if (diagnostic) {
+      diagnostic.conditionAssessment = 'UNAVAILABLE';
+      diagnostic.afflictionAssessed = false;
+      diagnostic.expressionAnalysisStatus = 'UNAVAILABLE';
+      diagnostic.expressionCount = 0;
+      diagnostic.expressionEvidenceCount = 0;
+      diagnostic.evidenceBasis = 'UNAVAILABLE';
+      diagnostic.diagnostics = diagnostics;
+    }
+
     return Object.freeze({
       level,
       planet: timing.planet,
@@ -136,7 +149,8 @@ function resolveLevel(
       afflictionAssessed: false,
       expressionEvidenceCount: 0,
       evidenceBasis: 'UNAVAILABLE',
-      diagnostics: Object.freeze([]),
+      expressionAnalysisStatus: 'UNAVAILABLE',
+      diagnostics,
       evidence: Object.freeze([]),
       statement: timing.planet ? `Planet ${timing.planet} has insufficient context for ${level} activation.` : `No planet specified for ${level} activation.`,
       start: timing.start,

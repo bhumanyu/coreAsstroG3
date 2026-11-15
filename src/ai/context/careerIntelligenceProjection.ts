@@ -203,7 +203,8 @@ function projectD10DimensionCoverage(
       coverageRecord.resolvedIndicatorCount < 0 ||
       typeof coverageRecord.configuredIndicatorCount !== 'number' ||
       !Number.isInteger(coverageRecord.configuredIndicatorCount) ||
-      coverageRecord.configuredIndicatorCount < 0
+      coverageRecord.configuredIndicatorCount < 0 ||
+      coverageRecord.resolvedIndicatorCount > coverageRecord.configuredIndicatorCount
     ) {
       return [];
     }

@@ -489,7 +489,119 @@ describe('CW-10N independent multi-chart verification', () => {
       ]);
     });
 
-    it('preserves independent MD/AD/PD C9 status and provenance through D10 and C11', () => {
+    it('produces independent MD/AD/PD outcomes from C6/C8 inputs and preserves generated IDs through C11', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      horoscope.dashaInterpretation = {
+        current: {
+          mahadasha: { planet: Planet.SATURN, start: '2020-01-01', end: '2025-01-01' },
+          antardasha: { planet: Planet.JUPITER, start: '2022-01-01', end: '2023-01-01' },
+          pratyantardasha: { planet: Planet.MERCURY, start: '2022-06-01', end: '2022-08-01' }
+        }
+      };
+
+      const baseNatal = buildCareerNatalAnalysis({ horoscope });
+      const getRelevantPlanet = (planet: Planet) => {
+        const relevance = baseNatal.relevance.find(item => item.planet === planet);
+        const condition = baseNatal.condition.find(item => item.planet === planet);
+        if (!relevance || !condition) {
+          throw new Error(`Missing C5/C6 producer evidence for ${planet}`);
+        }
+        return { relevance, condition };
+      };
+      const saturn = getRelevantPlanet(Planet.SATURN);
+      const mercury = getRelevantPlanet(Planet.MERCURY);
+
+      const producerNatal = Object.freeze({
+        ...baseNatal,
+        relevance: Object.freeze(baseNatal.relevance
+          .filter(item => item.planet !== Planet.JUPITER)
+          .map(item => item.planet === Planet.SATURN || item.planet === Planet.MERCURY
+            ? { ...item, relevance: 'PRIMARY' as const }
+            : item)),
+        condition: Object.freeze([
+          ...baseNatal.condition.filter(item =>
+            item.planet !== Planet.SATURN && item.planet !== Planet.MERCURY
+          ),
+          { ...saturn.condition, condition: 'STRONG' as const, assessment: 'FULL' as const, afflictionAssessed: true },
+          { ...mercury.condition, condition: 'STRONG' as const, assessment: 'PARTIAL' as const, afflictionAssessed: false }
+        ])
+      });
+      const expression = Object.freeze({
+        expressions: Object.freeze([]),
+        statement: 'C8 analysis executed; no expression evidence was emitted.',
+        analysisStatus: 'EXECUTED' as const
+      });
+
+      const generatedDasha = buildCareerDashaAnalysis({
+        horoscope,
+        natal: producerNatal,
+        expression
+      });
+      const d10 = buildCareerD10Analysis({
+        horoscope,
+        natal: producerNatal,
+        expression
+      });
+      const c11 = buildCareerFinalAnalysis({
+        natal: producerNatal,
+        expression,
+        dasha: generatedDasha,
+        d10
+      });
+
+      expect([generatedDasha.md, generatedDasha.ad, generatedDasha.pd].map(period => ({
+        level: period.level,
+        expressionAnalysisStatus: period.expressionAnalysisStatus,
+        conditionAssessment: period.conditionAssessment,
+        diagnostics: period.diagnostics
+      }))).toEqual([
+        {
+          level: 'MD',
+          expressionAnalysisStatus: 'EXECUTED',
+          conditionAssessment: 'FULL',
+          diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE']
+        },
+        {
+          level: 'AD',
+          expressionAnalysisStatus: 'UNAVAILABLE',
+          conditionAssessment: 'UNAVAILABLE',
+          diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE']
+        },
+        {
+          level: 'PD',
+          expressionAnalysisStatus: 'EXECUTED',
+          conditionAssessment: 'PARTIAL',
+          diagnostics: [
+            'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
+            'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
+          ]
+        }
+      ]);
+      expect(generatedDasha.hierarchy?.diagnosticTrace?.planetContextResolution).toEqual([
+        { level: 'MD', planet: Planet.SATURN, resolved: true },
+        { level: 'AD', planet: Planet.JUPITER, resolved: false },
+        { level: 'PD', planet: Planet.MERCURY, resolved: true }
+      ]);
+
+      const expectedC9IdentityKeys = [
+        'CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER',
+        'CAREER_DASHA:AD:JUPITER:MODIFIER',
+        'CAREER_DASHA:PD:MERCURY:REFINEMENT'
+      ];
+      expect([generatedDasha.md, generatedDasha.ad, generatedDasha.pd]
+        .map(period => generatedDasha.evidence.find(item => item.level === period.level)?.identityKey))
+        .toEqual(expectedC9IdentityKeys);
+      expect(c11.evidenceIds).toEqual(expect.arrayContaining([
+        expectedC9IdentityKeys[0],
+        expectedC9IdentityKeys[2]
+      ]));
+      expect(c11.evidenceIds).not.toContain(expectedC9IdentityKeys[1]);
+      expect(c11.sourceIds).toEqual(expect.arrayContaining(
+        generatedDasha.evidence.flatMap(item => item.sourceIds)
+      ));
+    });
+
+    it('propagation fixture: carries independent MD/AD/PD statuses and provenance through D10 and C11', () => {
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       horoscope.dashaInterpretation = {
         current: {

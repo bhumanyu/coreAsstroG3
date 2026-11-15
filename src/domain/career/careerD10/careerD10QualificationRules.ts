@@ -71,9 +71,14 @@ export interface CareerD10DirectionAssessment {
 
 function buildCanonicalD10Facts(
   context: CareerD10Context
-): { readonly facts: CareerD10CanonicalFact[]; readonly diagnostics: CareerD10FactDiagnostic[] } {
+): {
+  readonly facts: CareerD10CanonicalFact[];
+  readonly diagnostics: CareerD10FactDiagnostic[];
+  readonly conflictedIndicators: ReadonlySet<string>;
+} {
   const factMap = new Map<string, CareerD10CanonicalFact>();
   const diagnostics: CareerD10FactDiagnostic[] = [];
+  const conflictedIndicators = new Set<string>();
   const factsByKey = new Map<string, CareerD10CanonicalFact[]>();
 
   // Semantic rule: A D10 planet position is canonical.
@@ -165,6 +170,7 @@ function buildCanonicalD10Facts(
     const canonical = canonicalRecords[0];
 
     if (hasSameSourceConflict) {
+      conflictedIndicators.add(`${canonical.planet}:${canonical.house}`);
       for (const [source, sourceRecords] of sourceGroups) {
         const conditions = [...new Set(sourceRecords.map(record => record.condition))].sort();
         if (conditions.length < 2) continue;
@@ -215,7 +221,8 @@ function buildCanonicalD10Facts(
 
   return {
     facts: Array.from(factMap.values()),
-    diagnostics
+    diagnostics,
+    conflictedIndicators
   };
 }
 
@@ -1041,11 +1048,7 @@ export function evaluateDimensionQualification(
   let challengeCount = 0;
   let strongCount = 0;
   let weakCount = 0;
-  const conflictedIndicators = new Set(
-    getCanonicalD10FactDiagnostics(context)
-      .filter(diagnostic => diagnostic.canonicalSource === diagnostic.conflictingSource)
-      .map(diagnostic => `${diagnostic.planet}:${diagnostic.house}`)
-  );
+  const conflictedIndicators = buildCanonicalD10Facts(context).conflictedIndicators;
 
   // Check house lords and occupants
   for (const house of context.d10Houses) {

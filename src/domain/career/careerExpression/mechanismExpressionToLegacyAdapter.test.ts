@@ -308,6 +308,18 @@ describe('mechanismExpressionToLegacyAdapter', () => {
         },
         {
           ...result,
+          expressions: [{ ...expression, expressionType: 'UNKNOWN_EXPRESSION' }]
+        },
+        {
+          ...result,
+          expressions: [{ ...expression, mechanismTypes: ['UNKNOWN_MECHANISM'] }]
+        },
+        {
+          ...result,
+          expressions: [{ ...expression, pathway: 'UNKNOWN_PATHWAY' }]
+        },
+        {
+          ...result,
           expressions: [{
             ...expression,
             qualificationStatus: 'CANDIDATE',
@@ -322,6 +334,15 @@ describe('mechanismExpressionToLegacyAdapter', () => {
         expect(adaptMechanismExpressionToLegacy(malformed as unknown as CareerExpressionAnalysisResult, [])
           .analysisStatus).toBe('FAILED');
       }
+
+      const unknownExpressionType = {
+        ...result,
+        expressions: [{ ...expression, expressionType: 'UNKNOWN_EXPRESSION' }]
+      };
+      expect(adaptMechanismExpressionToLegacy(
+        unknownExpressionType as unknown as CareerExpressionAnalysisResult,
+        []
+      ).analysisStatus).toBe('FAILED');
 
       expect(adaptMechanismExpressionToLegacy(
         result as unknown as CareerExpressionAnalysisResult,
@@ -788,8 +809,8 @@ describe('mechanismExpressionToLegacyAdapter', () => {
     });
   });
 
-  describe('P2-11C Finding 3: Unknown expression type handling', () => {
-    it('should throw an explicit error for unknown expression types instead of silent fallback', () => {
+  describe('P2-11C Finding 3: Fail-closed unknown expression type handling', () => {
+    it('returns FAILED for unknown expression types instead of throwing downstream', () => {
       const mechanismResult: CareerExpressionAnalysisResult = {
         expressions: [
           {
@@ -851,9 +872,9 @@ describe('mechanismExpressionToLegacyAdapter', () => {
         }
       ];
 
-      expect(() => adaptMechanismExpressionToLegacy(mechanismResult, mechanismCandidates)).toThrow(
-        /Unknown expression type "UNKNOWN_EXPRESSION_TYPE"/
-      );
+      const failed = adaptMechanismExpressionToLegacy(mechanismResult, mechanismCandidates);
+      expect(failed.analysisStatus).toBe('FAILED');
+      expect(failed.statement).toContain('mechanism resolver returned a malformed result');
     });
   });
 

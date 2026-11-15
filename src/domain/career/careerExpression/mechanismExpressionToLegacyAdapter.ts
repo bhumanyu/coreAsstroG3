@@ -3,7 +3,8 @@ import type {
   CareerExpressionCandidate,
   CareerExpressionCanonicalResult,
   CareerExpressionCanonicalCandidate,
-  CareerMechanismExpressionEvidence
+  CareerMechanismExpressionEvidence,
+  CareerExpressionType
 } from './careerExpressionTypes';
 import type {
   CareerExpressionAnalysis,
@@ -21,6 +22,10 @@ import type {
   CareerMechanismCandidate
 } from '../careerMechanism/careerMechanismTypes';
 import {
+  CAREER_MECHANISM_TYPE_VALUES,
+  CAREER_MECHANISM_PATHWAY_VALUES
+} from '../careerMechanism/careerMechanismTypes';
+import {
   extractPlanetFromParticipantId,
   parseParticipantId
 } from '../careerParticipantRoles/participantRoleUtils';
@@ -35,7 +40,7 @@ import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
  * Per P2-11C Gate 2: One-way compatibility projection only.
  * - Never manufacture qualification/direction/strength/identity
  * - Preserve real sourceEvidenceIds/ruleIds/participant-derived planets
- * - Keep existing throw-on-unknown-expression-type behavior
+ * - Fail closed on unknown expression, mechanism, or pathway enum values
  * - Report lossy fields rather than forcing canonical identity into a legacy mode field
  *
  * BRIDGE RESPONSIBILITIES:
@@ -81,42 +86,33 @@ import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
  * Maps mechanism expression types to legacy manifestation modes.
  * This is a conservative mapping - not all expression types have a direct legacy equivalent.
  *
- * Unmapped types throw an explicit error to prevent silent conversion to a different manifestation mode.
- * This ensures that newly introduced expression types are handled intentionally rather than silently
- * mapped to an incorrect default.
+ * The runtime result guard rejects unknown expression types before this mapping is called.
  */
-function expressionTypeToManifestationMode(
-  expressionType: string
-): CareerManifestationMode {
-  const mapping: Record<string, CareerManifestationMode> = {
-    'AUTHORITY_EXPRESSION': 'AUTHORITY',
-    'LEADERSHIP_EXPRESSION': 'LEADERSHIP',
-    'TEACHING_EXPRESSION': 'MANAGEMENT',
-    'RESEARCH_WORK': 'TECHNICAL_SPECIALIZATION',
-    'COMMUNICATION_WORK': 'INDEPENDENT_WORK',
-    'WRITING_WORK': 'INDEPENDENT_WORK',
-    'INNOVATION_WORK': 'TECHNICAL_SPECIALIZATION',
-    'SERVICE_WORK': 'SERVICE_EMPLOYMENT',
-    'ANALYTICAL_SPECIALIZED_WORK': 'TECHNICAL_SPECIALIZATION',
-    'FINANCIAL_WORK': 'ENTREPRENEURSHIP',
-    'INSURANCE_WORK': 'ENTREPRENEURSHIP',
-    'TAXATION_WORK': 'ENTREPRENEURSHIP',
-    'COMPLIANCE_WORK': 'SERVICE_EMPLOYMENT',
-    'CRISIS_MANAGEMENT_WORK': 'SERVICE_EMPLOYMENT',
-    'INSTITUTIONAL_WORK_EXPRESSION': 'PUBLIC_INSTITUTIONAL',
-    'ISOLATED_WORK_EXPRESSION': 'SERVICE_EMPLOYMENT',
-    'FOREIGN_WORK_EXPRESSION': 'INDEPENDENT_WORK',
-    'REMOTE_WORK_EXPRESSION': 'INDEPENDENT_WORK'
-  };
+const EXPRESSION_TYPE_TO_MANIFESTATION_MODE: Record<CareerExpressionType, CareerManifestationMode> = {
+  'AUTHORITY_EXPRESSION': 'AUTHORITY',
+  'LEADERSHIP_EXPRESSION': 'LEADERSHIP',
+  'TEACHING_EXPRESSION': 'MANAGEMENT',
+  'RESEARCH_WORK': 'TECHNICAL_SPECIALIZATION',
+  'COMMUNICATION_WORK': 'INDEPENDENT_WORK',
+  'WRITING_WORK': 'INDEPENDENT_WORK',
+  'INNOVATION_WORK': 'TECHNICAL_SPECIALIZATION',
+  'SERVICE_WORK': 'SERVICE_EMPLOYMENT',
+  'ANALYTICAL_SPECIALIZED_WORK': 'TECHNICAL_SPECIALIZATION',
+  'FINANCIAL_WORK': 'ENTREPRENEURSHIP',
+  'INSURANCE_WORK': 'ENTREPRENEURSHIP',
+  'TAXATION_WORK': 'ENTREPRENEURSHIP',
+  'COMPLIANCE_WORK': 'SERVICE_EMPLOYMENT',
+  'CRISIS_MANAGEMENT_WORK': 'SERVICE_EMPLOYMENT',
+  'INSTITUTIONAL_WORK_EXPRESSION': 'PUBLIC_INSTITUTIONAL',
+  'ISOLATED_WORK_EXPRESSION': 'SERVICE_EMPLOYMENT',
+  'FOREIGN_WORK_EXPRESSION': 'INDEPENDENT_WORK',
+  'REMOTE_WORK_EXPRESSION': 'INDEPENDENT_WORK'
+};
 
-  const mapped = mapping[expressionType];
-  if (mapped === undefined) {
-    throw new Error(
-      `Unknown expression type "${expressionType}" cannot be mapped to a legacy manifestation mode. ` +
-      `Add the mapping to expressionTypeToManifestationMode or update the CareerExpressionType union.`
-    );
-  }
-  return mapped;
+function expressionTypeToManifestationMode(
+  expressionType: CareerExpressionType
+): CareerManifestationMode {
+  return EXPRESSION_TYPE_TO_MANIFESTATION_MODE[expressionType];
 }
 
 /**
@@ -390,6 +386,10 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(item => typeof item === 'string');
 }
 
+function isEnumValue<T extends readonly string[]>(value: unknown, values: T): value is T[number] {
+  return typeof value === 'string' && values.some(candidate => candidate === value);
+}
+
 function isExpressionProvenance(value: unknown): boolean {
   return isRecord(value) &&
     isStringArray(value.mechanismIds) &&
@@ -414,9 +414,11 @@ function isExpressionCandidate(value: unknown, canonical: boolean): boolean {
   if (!isRecord(value) ||
     typeof value.expressionId !== 'string' ||
     typeof value.expressionType !== 'string' ||
+    !Object.prototype.hasOwnProperty.call(EXPRESSION_TYPE_TO_MANIFESTATION_MODE, value.expressionType) ||
     !isStringArray(value.sourceMechanismIds) ||
     !isStringArray(value.mechanismTypes) ||
-    typeof value.pathway !== 'string' ||
+    !value.mechanismTypes.every(item => isEnumValue(item, CAREER_MECHANISM_TYPE_VALUES)) ||
+    !isEnumValue(value.pathway, CAREER_MECHANISM_PATHWAY_VALUES) ||
     !Array.isArray(value.evidence) ||
     !value.evidence.every(isMechanismExpressionEvidence) ||
     !isExpressionProvenance(value.provenance)) {
@@ -543,7 +545,7 @@ function resolvePrimaryExpression(
  * Per P2-11C Gate 2: One-way compatibility projection only.
  * - Never manufacture qualification/direction/strength/identity
  * - Preserve real sourceEvidenceIds/ruleIds/participant-derived planets
- * - Keep existing throw-on-unknown-expression-type behavior
+ * - Fail closed as FAILED on malformed or unknown enum values before mapping
  * - Report lossy fields rather than forcing canonical identity into a legacy mode field
  *
  * @param mechanismResult - The mechanism-based expression analysis result

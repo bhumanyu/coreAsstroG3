@@ -492,6 +492,13 @@ describe('careerIntelligenceProjection', () => {
                   resolvedIndicatorCount: 1,
                   configuredIndicatorCount: 6
                 }
+              }, {
+                expressionId: 'AUTHORITY:expr-2',
+                expression: { mode: 'AUTHORITY' },
+                dimensionCoverage: {
+                  resolvedIndicatorCount: 7,
+                  configuredIndicatorCount: 6
+                }
               }]
             }
           }
