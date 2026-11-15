@@ -318,12 +318,10 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
     "c6": {
       "affliction": "UNAVAILABLE",
       "afflictionAssessed": false,
-      "aspectPressure": [
-        "Planet receives deterministic malefic pressure.",
-      ],
+      "aspectPressure": [],
       "assessment": "PARTIAL",
       "combustion": "NOT_COMBUST",
-      "condition": "WEAK",
+      "condition": "NEUTRAL",
       "dignity": "NEUTRAL_SIGN",
     },
     "c8": {
@@ -333,27 +331,27 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
     },
     "c9": {
       "conditionAssessment": "PARTIAL",
-      "direction": "CHALLENGE",
-      "effect": "CHALLENGES",
+      "direction": "NEUTRAL",
+      "effect": "DOES_NOT_ACTIVATE",
       "evidence": [
         {
           "conditionAssessment": "PARTIAL",
-          "direction": "CHALLENGE",
-          "effect": "CHALLENGES",
-          "id": "CAREER_DASHA:PD:VENUS:REFINEMENT:CHALLENGES",
+          "direction": "NEUTRAL",
+          "effect": "DOES_NOT_ACTIVATE",
+          "id": "CAREER_DASHA:PD:VENUS:REFINEMENT:DOES_NOT_ACTIVATE",
           "ruleIds": [
-            "PD:VENUS:REFINEMENT:CHALLENGE:ACTIVATION:CHALLENGES",
-            "PD:VENUS:REFINEMENT:CHALLENGE:CONDITION:WEAK",
-            "PD:VENUS:REFINEMENT:CHALLENGE:RELEVANCE:SUPPORTING",
-            "PD:VENUS:REFINEMENT:CHALLENGE:STRUCTURAL",
-            "PD:VENUS:REFINEMENT:CHALLENGE:TIMING",
+            "PD:VENUS:REFINEMENT:NEUTRAL:ACTIVATION:DOES_NOT_ACTIVATE",
+            "PD:VENUS:REFINEMENT:NEUTRAL:CONDITION:NEUTRAL",
+            "PD:VENUS:REFINEMENT:NEUTRAL:RELEVANCE:SUPPORTING",
+            "PD:VENUS:REFINEMENT:NEUTRAL:STRUCTURAL",
+            "PD:VENUS:REFINEMENT:NEUTRAL:TIMING",
           ],
           "sourceIds": [
-            "PD:VENUS:REFINEMENT:CHALLENGE:STRUCTURAL",
-            "PD:VENUS:REFINEMENT:CHALLENGE:RELEVANCE:SUPPORTING",
-            "PD:VENUS:REFINEMENT:CHALLENGE:CONDITION:WEAK",
-            "PD:VENUS:REFINEMENT:CHALLENGE:TIMING",
-            "PD:VENUS:REFINEMENT:CHALLENGE:ACTIVATION:CHALLENGES",
+            "PD:VENUS:REFINEMENT:NEUTRAL:STRUCTURAL",
+            "PD:VENUS:REFINEMENT:NEUTRAL:RELEVANCE:SUPPORTING",
+            "PD:VENUS:REFINEMENT:NEUTRAL:CONDITION:NEUTRAL",
+            "PD:VENUS:REFINEMENT:NEUTRAL:TIMING",
+            "PD:VENUS:REFINEMENT:NEUTRAL:ACTIVATION:DOES_NOT_ACTIVATE",
           ],
         },
       ],
@@ -401,7 +399,7 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
     "planet": "VENUS",
     "productFields": {
       "careerActivation": {
-        "effect": "CHALLENGES",
+        "effect": "DOES_NOT_ACTIVATE",
         "field": "ProductAnalysis.career.activation.dasha.periods",
         "renderedBy": "CareerActivationSection / CareerDashaSection",
       },

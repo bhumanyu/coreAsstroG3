@@ -149,7 +149,7 @@ describe('Career/Dasha reconciliation trace', () => {
     expect(report.map((item) => item.planet)).toEqual(['JUPITER', 'MERCURY', 'VENUS']);
     expect(report[0].c9.effect).toBe('CHALLENGES');
     expect(report[0].cw09.effect).toBe('STRONGLY_SUPPORTS');
-    expect(report[2].c9.effect).toBe('CHALLENGES');
+    expect(report[2].c9.effect).toBe('DOES_NOT_ACTIVATE');
     expect(report[2].cw09.effect).toBe('DOES_NOT_ACTIVATE');
     expect(report).toMatchSnapshot();
   });

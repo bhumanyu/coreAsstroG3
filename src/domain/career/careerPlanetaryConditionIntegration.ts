@@ -17,8 +17,10 @@ import {
   type CareerPlanetaryDignity,
   type CareerPlanetaryAffliction,
   type CareerPlanetaryMotion,
-  type CareerPlanetaryCombustion
+  type CareerPlanetaryCombustion,
+  type CareerNonConsumedInfluence
 } from './careerPlanetaryCondition';
+import type { PlanetaryAspectInfluence } from '../../engine/planetaryInfluence/aspectInfluence';
 
 export interface CareerPlanetaryConditionIntegrationInput {
   readonly horoscope: Horoscope;
@@ -118,17 +120,90 @@ function mapCareerAffliction(_planetFact: PlanetFact | undefined): CareerPlaneta
  */
 function resolveAspectInfluence(
   trace: PlanetaryInfluenceTrace | undefined
-): { beneficSupport: boolean; maleficPressure: boolean } {
-  const sources = [
-    ...(trace?.environmentalInfluence.beneficAspectSources ?? []),
-    ...(trace?.environmentalInfluence.maleficAspectSources ?? []),
-    ...(trace?.environmentalInfluence.mixedAspectSources ?? []),
-    ...(trace?.environmentalInfluence.unassessedAspectSources ?? [])
+): {
+  readonly beneficSupport: boolean;
+  readonly maleficPressure: boolean;
+  readonly beneficSupportSources: readonly PlanetaryAspectInfluence[];
+  readonly maleficPressureSources: readonly PlanetaryAspectInfluence[];
+  readonly nonConsumedInfluence: readonly CareerNonConsumedInfluence[];
+} {
+  const beneficSources = trace?.environmentalInfluence.beneficAspectSources ?? [];
+  const maleficSources = trace?.environmentalInfluence.maleficAspectSources ?? [];
+  const beneficSupportSources = beneficSources.filter(
+    (source) => source.naturalNature === 'BENEFIC'
+  );
+  const maleficPressureSources = maleficSources.filter(
+    (source) => source.naturalNature === 'MALEFIC'
+  );
+  const nonConsumedInfluence: CareerNonConsumedInfluence[] = [
+    ...(trace?.environmentalInfluence.mixedAspectSources ?? []).map((record) => ({
+      record,
+      reason: 'MIXED_CLASSIFICATION' as const
+    })),
+    ...(trace?.environmentalInfluence.unassessedAspectSources ?? []).map((record) => ({
+      record,
+      reason: 'UNASSESSED_CLASSIFICATION' as const
+    })),
+    ...[...beneficSources, ...maleficSources]
+      .filter((record) => record.naturalNature === undefined)
+      .map((record) => ({ record, reason: 'FUNCTIONAL_ONLY' as const }))
   ];
   return {
-    beneficSupport: sources.some((source) => source.naturalNature === 'BENEFIC'),
-    maleficPressure: sources.some((source) => source.naturalNature === 'MALEFIC')
+    beneficSupport: beneficSupportSources.length > 0,
+    maleficPressure: maleficPressureSources.length > 0,
+    beneficSupportSources: Object.freeze(beneficSupportSources),
+    maleficPressureSources: Object.freeze(maleficPressureSources),
+    nonConsumedInfluence: Object.freeze(nonConsumedInfluence)
   };
+}
+
+function markAspectConsumer(
+  source: PlanetaryAspectInfluence,
+  consumer: 'CAREER_C6_BENEFIC_SUPPORT' | 'CAREER_C6_MALEFIC_PRESSURE'
+): PlanetaryAspectInfluence {
+  return Object.freeze({
+    ...source,
+    classificationBasis: Object.freeze({
+      ...source.classificationBasis,
+      consumedBy: Object.freeze([...new Set([
+        ...source.classificationBasis.consumedBy,
+        consumer
+      ])])
+    })
+  });
+}
+
+function traceWithC6Consumption(
+  trace: PlanetaryInfluenceTrace | undefined,
+  resolved: ReturnType<typeof resolveAspectInfluence>
+): PlanetaryInfluenceTrace | undefined {
+  if (!trace) return undefined;
+  const beneficSupport = new Set(resolved.beneficSupportSources);
+  const maleficPressure = new Set(resolved.maleficPressureSources);
+  return Object.freeze({
+    ...trace,
+    environmentalInfluence: Object.freeze({
+      ...trace.environmentalInfluence,
+      beneficAspectSources: Object.freeze(
+        trace.environmentalInfluence.beneficAspectSources.map((source) =>
+          beneficSupport.has(source)
+            ? markAspectConsumer(source, 'CAREER_C6_BENEFIC_SUPPORT')
+            : source
+        )
+      ),
+      maleficAspectSources: Object.freeze(
+        trace.environmentalInfluence.maleficAspectSources.map((source) =>
+          maleficPressure.has(source)
+            ? markAspectConsumer(source, 'CAREER_C6_MALEFIC_PRESSURE')
+            : source
+        )
+      )
+    })
+  });
+}
+
+function uniqueMissingFactors(factors: readonly string[]): readonly string[] {
+  return Object.freeze([...new Set(factors)]);
 }
 
 /**
@@ -145,7 +220,8 @@ function buildCareerPlanetaryConditionContext(
   const planetFact = horoscope.planetFacts[planet];
 
   if (!planetFact) {
-    const { beneficSupport, maleficPressure } = resolveAspectInfluence(trace);
+    const aspectInfluence = resolveAspectInfluence(trace);
+    const careerTrace = traceWithC6Consumption(trace, aspectInfluence);
     return Object.freeze({
       planet,
       relevance: relevanceItem.relevance,
@@ -153,11 +229,12 @@ function buildCareerPlanetaryConditionContext(
       affliction: 'UNAVAILABLE',
       motion: 'UNKNOWN',
       combustion: 'UNAVAILABLE',
-      beneficSupport,
-      maleficPressure,
+      beneficSupport: aspectInfluence.beneficSupport,
+      maleficPressure: aspectInfluence.maleficPressure,
       dataAvailable: false,
-      ...(trace ? { planetaryInfluenceTrace: trace } : {}),
-      assessmentMissingFactors: Object.freeze([
+      ...(careerTrace ? { planetaryInfluenceTrace: careerTrace } : {}),
+      nonConsumedInfluence: aspectInfluence.nonConsumedInfluence,
+      assessmentMissingFactors: uniqueMissingFactors([
         ...(trace?.assessment.missingFactors ?? []),
         'career.affliction'
       ])
@@ -168,7 +245,7 @@ function buildCareerPlanetaryConditionContext(
   const affliction = mapCareerAffliction(planetFact);
   const motion = mapCareerMotion(trace?.intrinsicStrength.motion);
   const combustion = mapCareerCombustion(trace?.intrinsicStrength.combustion);
-  const { beneficSupport, maleficPressure } = resolveAspectInfluence(trace);
+  const aspectInfluence = resolveAspectInfluence(trace);
 
   const dataAvailable =
     dignity !== 'UNAVAILABLE' &&
@@ -179,6 +256,7 @@ function buildCareerPlanetaryConditionContext(
     ...(trace?.assessment.missingFactors ?? []),
     ...(affliction === 'UNAVAILABLE' ? ['career.affliction'] : [])
   ];
+  const careerTrace = traceWithC6Consumption(trace, aspectInfluence);
   return Object.freeze({
     planet,
     relevance: relevanceItem.relevance,
@@ -186,11 +264,12 @@ function buildCareerPlanetaryConditionContext(
     affliction,
     motion,
     combustion,
-    beneficSupport,
-    maleficPressure,
+    beneficSupport: aspectInfluence.beneficSupport,
+    maleficPressure: aspectInfluence.maleficPressure,
     dataAvailable,
-    ...(trace ? { planetaryInfluenceTrace: trace } : {}),
-    assessmentMissingFactors: Object.freeze(missingFactors)
+    ...(careerTrace ? { planetaryInfluenceTrace: careerTrace } : {}),
+    nonConsumedInfluence: aspectInfluence.nonConsumedInfluence,
+    assessmentMissingFactors: uniqueMissingFactors(missingFactors)
   });
 }
 
@@ -220,6 +299,7 @@ function buildCareerPlanetaryConditionContexts(
     if (!relevanceItem) {
       // Planet missing from C5 relevance → emit NEUTRAL/UNAVAILABLE context
       const trace = traceByPlanet.get(planet);
+      const aspectInfluence = resolveAspectInfluence(trace);
       contexts.push(
         Object.freeze({
           planet,
@@ -232,7 +312,8 @@ function buildCareerPlanetaryConditionContexts(
           maleficPressure: false,
           dataAvailable: false,
           ...(trace ? { planetaryInfluenceTrace: trace } : {}),
-          assessmentMissingFactors: Object.freeze([
+          nonConsumedInfluence: aspectInfluence.nonConsumedInfluence,
+          assessmentMissingFactors: uniqueMissingFactors([
             ...(trace?.assessment.missingFactors ?? []),
             'career.affliction'
           ])

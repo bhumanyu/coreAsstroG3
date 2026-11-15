@@ -357,22 +357,19 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planet: 'VENUS',
         contextResolved: true,
         relevance: 'SUPPORTING',
-        condition: 'WEAK',
+        condition: 'NEUTRAL',
         conditionAssessment: 'PARTIAL',
         afflictionAssessed: false,
         expressionCount: 0,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
-        diagnostics: [
-          'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
-          'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
-        ],
+        diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'],
         hasCareerPromise: true,
         planetActivates: false,
-        planetChallenges: true,
+        planetChallenges: false,
         isRelevant: true,
-        direction: 'CHALLENGE',
-        effect: 'CHALLENGES'
+        direction: 'NEUTRAL',
+        effect: 'DOES_NOT_ACTIVATE'
       }
     ]);
     const c9Evidence = internalArtifacts.careerDashaEvidence as readonly {
@@ -416,10 +413,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         afflictionAssessed: false,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
-        diagnostics: [
-          'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
-          'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
-        ]
+        diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE']
       }
     ]);
     expect(trace).toMatchInlineSnapshot(`
@@ -496,15 +490,14 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           },
           {
             "afflictionAssessed": false,
-            "condition": "WEAK",
+            "condition": "NEUTRAL",
             "conditionAssessment": "PARTIAL",
             "contextResolved": true,
             "diagnostics": [
-              "C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT",
               "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
             ],
-            "direction": "CHALLENGE",
-            "effect": "CHALLENGES",
+            "direction": "NEUTRAL",
+            "effect": "DOES_NOT_ACTIVATE",
             "evidenceBasis": "CONDITION_AND_RELEVANCE",
             "expressionCount": 0,
             "expressionEvidenceCount": 0,
@@ -513,7 +506,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
             "level": "PD",
             "planet": "VENUS",
             "planetActivates": false,
-            "planetChallenges": true,
+            "planetChallenges": false,
             "relevance": "SUPPORTING",
           },
         ],

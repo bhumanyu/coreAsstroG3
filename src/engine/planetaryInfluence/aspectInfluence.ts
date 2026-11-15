@@ -15,6 +15,14 @@ export interface PlanetaryAspectInfluence {
   readonly aspectType: string;
   readonly houseOffset?: number;
   readonly sourceNature: PlanetarySourceNature;
+  readonly classificationBasis: {
+    readonly naturalRule: 'NATURAL_BENEFIC_TABLE' | 'MERCURY_ASSOCIATION' | 'MOON_PHASE';
+    readonly functionalSource:
+      | 'FUNCTIONAL_NATURE_INTEGRATION'
+      | 'FUNCTIONAL_ROLES'
+      | 'NONE';
+    readonly consumedBy: readonly string[];
+  };
   readonly naturalNature?: 'BENEFIC' | 'MALEFIC';
   readonly functionalNature?: 'BENEFIC' | 'MALEFIC' | 'MIXED' | 'NEUTRAL';
   readonly sourceHouse?: number;
@@ -25,12 +33,18 @@ export interface PlanetaryAspectInfluence {
   readonly reason?: string;
 }
 
+export interface AspectDiagnostic {
+  readonly record: unknown;
+  readonly reason: 'INVALID_SOURCE_PLANET' | 'INVALID_TARGET' | 'MISSING_FIELDS';
+}
+
 export interface PlanetaryAspectInfluenceResult {
   readonly beneficSources: readonly PlanetaryAspectInfluence[];
   readonly maleficSources: readonly PlanetaryAspectInfluence[];
   readonly mixedSources: readonly PlanetaryAspectInfluence[];
   readonly unassessedSources: readonly PlanetaryAspectInfluence[];
-  readonly availability: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly availability: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly ignoredRecords: readonly AspectDiagnostic[];
 }
 
 interface CanonicalAspectRecord {
@@ -78,44 +92,74 @@ function getNaturalNature(
   return isNaturalBenefic(planet, facts) ? 'BENEFIC' : 'MALEFIC';
 }
 
+function getNaturalRule(
+  planet: Planet
+): PlanetaryAspectInfluence['classificationBasis']['naturalRule'] {
+  if (planet === Planet.MOON) return 'MOON_PHASE';
+  if (planet === Planet.MERCURY) return 'MERCURY_ASSOCIATION';
+  return 'NATURAL_BENEFIC_TABLE';
+}
+
 function getFunctionalNature(
   planet: Planet,
   horoscope: Horoscope
-): FunctionalClassification | undefined {
-  const nature =
-    horoscope.functionalNatureIntegration?.planets?.[planet]?.functionalNature ??
-    horoscope.functionalRoles?.planets?.[planet]?.functionalNature;
-  return nature === 'BENEFIC' || nature === 'MALEFIC' || nature === 'MIXED' || nature === 'NEUTRAL'
-    ? nature
-    : undefined;
+): {
+  readonly nature?: FunctionalClassification;
+  readonly source: PlanetaryAspectInfluence['classificationBasis']['functionalSource'];
+} {
+  const integratedNature =
+    horoscope.functionalNatureIntegration?.planets?.[planet]?.functionalNature;
+  if (isFunctionalClassification(integratedNature)) {
+    return { nature: integratedNature, source: 'FUNCTIONAL_NATURE_INTEGRATION' };
+  }
+
+  const roleNature = horoscope.functionalRoles?.planets?.[planet]?.functionalNature;
+  if (isFunctionalClassification(roleNature)) {
+    return { nature: roleNature, source: 'FUNCTIONAL_ROLES' };
+  }
+  return { source: 'NONE' };
+}
+
+function isFunctionalClassification(value: unknown): value is FunctionalClassification {
+  return value === 'BENEFIC' || value === 'MALEFIC' ||
+    value === 'MIXED' || value === 'NEUTRAL';
 }
 
 function classifySource(
   planet: Planet,
   horoscope: Horoscope
-): Pick<PlanetaryAspectInfluence, 'sourceNature' | 'naturalNature' | 'functionalNature'> {
+): Pick<
+  PlanetaryAspectInfluence,
+  'sourceNature' | 'naturalNature' | 'functionalNature' | 'classificationBasis'
+> {
   const naturalNature = getNaturalNature(planet, horoscope);
-  const functionalNature = getFunctionalNature(planet, horoscope);
+  const functional = getFunctionalNature(planet, horoscope);
+  const functionalNature = functional.nature;
+  const classificationBasis = Object.freeze({
+    naturalRule: getNaturalRule(planet),
+    functionalSource: functional.source,
+    consumedBy: Object.freeze([])
+  });
 
   if (functionalNature === 'MIXED' ||
       (naturalNature !== undefined &&
         ((naturalNature === 'BENEFIC' && functionalNature === 'MALEFIC') ||
           (naturalNature === 'MALEFIC' && functionalNature === 'BENEFIC')))) {
-    return { sourceNature: 'MIXED', naturalNature, functionalNature };
+    return { sourceNature: 'MIXED', naturalNature, functionalNature, classificationBasis };
   }
   if (naturalNature === 'BENEFIC') {
-    return { sourceNature: 'NATURAL_BENEFIC', naturalNature, functionalNature };
+    return { sourceNature: 'NATURAL_BENEFIC', naturalNature, functionalNature, classificationBasis };
   }
   if (naturalNature === 'MALEFIC') {
-    return { sourceNature: 'NATURAL_MALEFIC', naturalNature, functionalNature };
+    return { sourceNature: 'NATURAL_MALEFIC', naturalNature, functionalNature, classificationBasis };
   }
   if (functionalNature === 'BENEFIC') {
-    return { sourceNature: 'FUNCTIONAL_BENEFIC', functionalNature };
+    return { sourceNature: 'FUNCTIONAL_BENEFIC', functionalNature, classificationBasis };
   }
   if (functionalNature === 'MALEFIC') {
-    return { sourceNature: 'FUNCTIONAL_MALEFIC', functionalNature };
+    return { sourceNature: 'FUNCTIONAL_MALEFIC', functionalNature, classificationBasis };
   }
-  return { sourceNature: 'UNASSESSED', naturalNature, functionalNature };
+  return { sourceNature: 'UNASSESSED', naturalNature, functionalNature, classificationBasis };
 }
 
 const byAspectOrder = (a: PlanetaryAspectInfluence, b: PlanetaryAspectInfluence): number =>
@@ -123,6 +167,48 @@ const byAspectOrder = (a: PlanetaryAspectInfluence, b: PlanetaryAspectInfluence)
   a.targetPlanet.localeCompare(b.targetPlanet) ||
   a.aspectType.localeCompare(b.aspectType) ||
   (a.houseOffset ?? -1) - (b.houseOffset ?? -1);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isHouse(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 12;
+}
+
+function readAspectRecord(
+  value: unknown
+):
+  | { readonly sourcePlanet: Planet; readonly targetPlanet: Planet; readonly aspectType: string }
+  | AspectDiagnostic['reason'] {
+  if (!isRecord(value)) return 'MISSING_FIELDS';
+  const sourcePlanet = value.sourcePlanet ?? value.aspectingPlanet;
+  const targetPlanet = value.targetPlanet ?? value.target;
+  if (sourcePlanet === undefined || sourcePlanet === null) return 'MISSING_FIELDS';
+  if (!isPlanet(sourcePlanet)) return 'INVALID_SOURCE_PLANET';
+  if (targetPlanet === undefined || targetPlanet === null) return 'MISSING_FIELDS';
+  if (!isPlanet(targetPlanet)) return 'INVALID_TARGET';
+  if (typeof value.aspectType !== 'string' || value.aspectType.trim().length === 0) {
+    return 'MISSING_FIELDS';
+  }
+  if (value.houseOffset !== undefined &&
+      (typeof value.houseOffset !== 'number' || !Number.isFinite(value.houseOffset))) {
+    return 'MISSING_FIELDS';
+  }
+  if (
+    (value.sourceHouse !== undefined && !isHouse(value.sourceHouse)) ||
+    (value.targetHouse !== undefined && !isHouse(value.targetHouse)) ||
+    (value.sourceSign !== undefined &&
+      (typeof value.sourceSign !== 'string' || value.sourceSign.length === 0)) ||
+    (value.targetSign !== undefined &&
+      (typeof value.targetSign !== 'string' || value.targetSign.length === 0)) ||
+    (value.description !== undefined && typeof value.description !== 'string') ||
+    (value.reason !== undefined && typeof value.reason !== 'string')
+  ) {
+    return 'MISSING_FIELDS';
+  }
+  return { sourcePlanet, targetPlanet, aspectType: value.aspectType };
+}
 
 /**
  * Resolves aspect provenance from the canonical D1 natalGrahaDrishti source.
@@ -139,7 +225,8 @@ export function resolvePlanetaryAspects(
       maleficSources: Object.freeze([]),
       mixedSources: Object.freeze([]),
       unassessedSources: Object.freeze([]),
-      availability: 'UNAVAILABLE'
+      availability: 'UNAVAILABLE',
+      ignoredRecords: Object.freeze([])
     });
   }
 
@@ -152,23 +239,28 @@ export function resolvePlanetaryAspects(
     mixedSources: [],
     unassessedSources: []
   };
-  for (const rawAspect of aspects as readonly CanonicalAspectRecord[]) {
-    const sourcePlanet = rawAspect.sourcePlanet ?? rawAspect.aspectingPlanet;
-    const targetPlanet = rawAspect.targetPlanet ?? rawAspect.target;
-    if (!isPlanet(sourcePlanet) || targetPlanet !== planet) continue;
+  const ignoredRecords: AspectDiagnostic[] = [];
+  for (const rawAspect of aspects as readonly unknown[]) {
+    const parsed = readAspectRecord(rawAspect);
+    if (typeof parsed === 'string') {
+      ignoredRecords.push(Object.freeze({ record: rawAspect, reason: parsed }));
+      continue;
+    }
+    if (parsed.targetPlanet !== planet) continue;
+    const record = rawAspect as CanonicalAspectRecord;
 
     const aspect: PlanetaryAspectInfluence = Object.freeze({
-      sourcePlanet,
-      targetPlanet: planet,
-      aspectType: rawAspect.aspectType ?? 'UNSPECIFIED',
-      ...(rawAspect.houseOffset !== undefined ? { houseOffset: rawAspect.houseOffset } : {}),
-      ...classifySource(sourcePlanet, horoscope),
-      ...(rawAspect.sourceHouse !== undefined ? { sourceHouse: rawAspect.sourceHouse } : {}),
-      ...(rawAspect.targetHouse !== undefined ? { targetHouse: rawAspect.targetHouse } : {}),
-      ...(rawAspect.sourceSign !== undefined ? { sourceSign: rawAspect.sourceSign } : {}),
-      ...(rawAspect.targetSign !== undefined ? { targetSign: rawAspect.targetSign } : {}),
-      ...(rawAspect.description !== undefined ? { description: rawAspect.description } : {}),
-      ...(rawAspect.reason !== undefined ? { reason: rawAspect.reason } : {})
+      sourcePlanet: parsed.sourcePlanet,
+      targetPlanet: parsed.targetPlanet,
+      aspectType: parsed.aspectType,
+      ...(record.houseOffset !== undefined ? { houseOffset: record.houseOffset } : {}),
+      ...classifySource(parsed.sourcePlanet, horoscope),
+      ...(record.sourceHouse !== undefined ? { sourceHouse: record.sourceHouse } : {}),
+      ...(record.targetHouse !== undefined ? { targetHouse: record.targetHouse } : {}),
+      ...(record.sourceSign !== undefined ? { sourceSign: record.sourceSign } : {}),
+      ...(record.targetSign !== undefined ? { targetSign: record.targetSign } : {}),
+      ...(record.description !== undefined ? { description: record.description } : {}),
+      ...(record.reason !== undefined ? { reason: record.reason } : {})
     });
 
     switch (aspect.sourceNature) {
@@ -195,6 +287,7 @@ export function resolvePlanetaryAspects(
     maleficSources: Object.freeze(result.maleficSources),
     mixedSources: Object.freeze(result.mixedSources),
     unassessedSources: Object.freeze(result.unassessedSources),
-    availability: 'AVAILABLE'
+    availability: ignoredRecords.length === 0 ? 'AVAILABLE' : 'PARTIAL',
+    ignoredRecords: Object.freeze(ignoredRecords)
   });
 }

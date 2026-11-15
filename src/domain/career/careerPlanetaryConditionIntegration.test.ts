@@ -453,13 +453,21 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
           sourcePlanet: Planet.JUPITER,
           targetPlanet: Planet.MERCURY,
           aspectType: 'SPECIAL_JUPITER_5TH',
-          naturalNature: 'BENEFIC'
+          naturalNature: 'BENEFIC',
+          classificationBasis: {
+            naturalRule: 'NATURAL_BENEFIC_TABLE',
+            functionalSource: 'NONE',
+            consumedBy: ['CAREER_C6_BENEFIC_SUPPORT']
+          }
         })]);
       expect(mercury.positiveFactors.some((factor) => factor.type === 'BENEFIC_SUPPORT')).toBe(true);
       expect(mercury.assessmentDetails).toMatchObject({
         status: 'PARTIAL',
         missingFactors: expect.arrayContaining(['career.affliction'])
       });
+      expect(
+        mercury.assessmentDetails?.missingFactors.filter((factor) => factor === 'career.affliction')
+      ).toHaveLength(1);
     });
 
     it('Jupiter aspecting Mercury → beneficSupport=true', () => {
@@ -469,7 +477,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       });
       horoscope.natalGrahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
@@ -483,6 +491,78 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       expect(mercuryResult!.positiveFactors.some(f => f.type === 'BENEFIC_SUPPORT')).toBe(true);
     });
 
+    it('does not consume MIXED natural-benefic/functional-malefic sources for C6', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.JUPITER]: createMockPlanetFact(Planet.JUPITER, { house: 5 }),
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 9 })
+      });
+      horoscope.natalGrahaDrishti = {
+        aspects: [{
+          sourcePlanet: Planet.JUPITER,
+          targetPlanet: Planet.MERCURY,
+          aspectType: 'SYNTHETIC'
+        }]
+      };
+      horoscope.functionalNatureIntegration = {
+        planets: { [Planet.JUPITER]: { functionalNature: 'MALEFIC' } }
+      };
+
+      const result = buildCareerPlanetaryCondition({
+        horoscope,
+        relevance: [createMockRelevance(Planet.MERCURY, 'PRIMARY')]
+      });
+      const mercury = result.find((item) => item.planet === Planet.MERCURY)!;
+
+      expect(mercury.planetaryInfluenceTrace?.environmentalInfluence.mixedAspectSources)
+        .toEqual([expect.objectContaining({ sourcePlanet: Planet.JUPITER, sourceNature: 'MIXED' })]);
+      expect(mercury.positiveFactors.some((factor) => factor.type === 'BENEFIC_SUPPORT')).toBe(false);
+      expect(mercury.negativeFactors.some((factor) => factor.type === 'MALEFIC_PRESSURE')).toBe(false);
+      expect(mercury.nonConsumedInfluence).toEqual([
+        expect.objectContaining({ reason: 'MIXED_CLASSIFICATION' })
+      ]);
+    });
+
+    it('does not consume functional-only or unassessed aspect sources for C6', () => {
+      const functionalOnly = createMockHoroscope({
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 9 })
+      });
+      functionalOnly.natalGrahaDrishti = {
+        aspects: [{
+          sourcePlanet: Planet.MOON,
+          targetPlanet: Planet.MERCURY,
+          aspectType: 'SYNTHETIC'
+        }]
+      };
+      functionalOnly.planetFacts[Planet.SUN].position.eclipticLongitude = undefined;
+      functionalOnly.planetFacts[Planet.MOON].position.eclipticLongitude = undefined;
+      functionalOnly.functionalNatureIntegration = {
+        planets: { [Planet.MOON]: { functionalNature: 'BENEFIC' } }
+      };
+
+      const functionalResult = buildCareerPlanetaryCondition({
+        horoscope: functionalOnly,
+        relevance: [createMockRelevance(Planet.MERCURY, 'PRIMARY')]
+      });
+      const functionalMercury = functionalResult.find((item) => item.planet === Planet.MERCURY)!;
+      expect(functionalMercury.positiveFactors.some((factor) => factor.type === 'BENEFIC_SUPPORT'))
+        .toBe(false);
+      expect(functionalMercury.nonConsumedInfluence).toEqual([
+        expect.objectContaining({ reason: 'FUNCTIONAL_ONLY' })
+      ]);
+
+      functionalOnly.functionalNatureIntegration = undefined;
+      const unassessedResult = buildCareerPlanetaryCondition({
+        horoscope: functionalOnly,
+        relevance: [createMockRelevance(Planet.MERCURY, 'PRIMARY')]
+      });
+      const unassessedMercury = unassessedResult.find((item) => item.planet === Planet.MERCURY)!;
+      expect(unassessedMercury.condition).not.toBe('WEAK');
+      expect(unassessedMercury.negativeFactors).toEqual([]);
+      expect(unassessedMercury.nonConsumedInfluence).toEqual([
+        expect.objectContaining({ reason: 'UNASSESSED_CLASSIFICATION' })
+      ]);
+    });
+
     it('Saturn aspecting Mercury → maleficPressure=true', () => {
       const horoscope = createMockHoroscope({
         [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { house: 7 }),
@@ -490,7 +570,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       });
       horoscope.natalGrahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
@@ -512,13 +592,13 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       });
       horoscope.natalGrahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       // Legacy grahaDrishti with conflicting aspect (should be ignored)
       (horoscope as any).grahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
@@ -542,7 +622,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       // Legacy grahaDrishti with Saturn aspect (should be ignored)
       (horoscope as any).grahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
@@ -606,7 +686,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       });
       horoscope.natalGrahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
@@ -627,7 +707,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       });
       horoscope.natalGrahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
@@ -649,8 +729,8 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       });
       horoscope.natalGrahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY },
-          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' },
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
@@ -676,8 +756,8 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       // Mock aspects with both benefic and malefic
       horoscope.natalGrahaDrishti = {
         aspects: [
-          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY },
-          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' },
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SYNTHETIC' }
         ] as any[]
       };
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];

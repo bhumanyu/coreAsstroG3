@@ -16,6 +16,31 @@ two ascendant-dependent functional classifications, and the live chart as one
 fixture. The Cartesian portion covers 2,592 combinations. Missing inputs remain
 distinguishable from resolved-empty inputs.
 
+## CW-10G–10J integrity follow-up
+
+Aspect records now identify the natural rule and functional source used for
+classification. Malformed canonical records are skipped with diagnostics and
+make aspect availability `PARTIAL`; a resolved empty aspect list remains
+`AVAILABLE`. Career C6 consumes only directionally classified natural-benefic
+and natural-malefic buckets. Mixed, unassessed, and functional-only records are
+retained as non-consumed provenance and cannot create C6 support or pressure.
+
+Trace completeness is reported for the stable factors `dignity`, `combustion`,
+`motion`, `shadbala`, `ownedHouses`, `occupiedHouse`, `aspectSources`,
+`coLocatedPlanets`, `relationships`, and `yogas`. Resolved-empty relationship
+inputs remain available. Complete Shadbala totals must be finite and
+non-negative. Relationship participant data is validated and deduplicated;
+exchanges are marked `OBSERVED` unless independent ownership and placement
+facts confirm them. Co-location uses position-level house/sign together, or
+fact-level house/sign only when the position object is absent. Angular
+separation is geometric provenance, not an effect classification.
+
+Each trace carries only calculation methodology and engine version metadata;
+it contains no birth details. The end-to-end regression matrix exercises three
+ascendants and all ten natural-by-functional classification combinations
+through trace, C6, C8, and C9. These integrity changes do not alter C6 verdict
+policy or C9 predicates.
+
 ## CW-10F policy review
 
 The matrix validates provenance isolation and completeness reporting; it does
