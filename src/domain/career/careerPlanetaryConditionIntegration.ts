@@ -1,7 +1,10 @@
 import type { Horoscope, PlanetFact, DignityStatus, PlanetMotion, PlanetStateCondition } from '../../types';
 import { Planet } from '../../types';
 
-import { isNaturalBenefic } from '../../engine/planetaryStrength/drikBala';
+import {
+  buildPlanetaryInfluenceTrace,
+  type PlanetaryInfluenceTrace
+} from '../../engine/planetaryInfluence/planetaryInfluenceTrace';
 
 import type {
   CareerPlanetaryRelevance
@@ -39,7 +42,8 @@ const CANONICAL_PLANET_ORDER: readonly Planet[] = Object.freeze([
  * IMPORTANT: MOOLATRIKONA maps to OWN_SIGN for compatibility — C6 has no MOOLATRIKONA vocabulary.
  * This must not introduce a parallel enum; it's a compatibility mapping only.
  */
-function mapCareerDignity(status: DignityStatus): CareerPlanetaryDignity {
+function mapCareerDignity(status: DignityStatus | undefined): CareerPlanetaryDignity {
+  if (status === undefined) return 'UNAVAILABLE';
   switch (status) {
     case 'EXALTED':
       return 'EXALTED';
@@ -68,7 +72,8 @@ function mapCareerDignity(status: DignityStatus): CareerPlanetaryDignity {
  * PlanetMotion is stored as an object with retrograde/stationary booleans on both
  * planetFact.state.motion and planetFact.position.motion.
  */
-function mapCareerMotion(motion: PlanetMotion): CareerPlanetaryMotion {
+function mapCareerMotion(motion: PlanetMotion | undefined): CareerPlanetaryMotion {
+  if (!motion) return 'UNKNOWN';
   if (motion.stationary) {
     return 'STATIONARY';
   }
@@ -83,7 +88,8 @@ function mapCareerMotion(motion: PlanetMotion): CareerPlanetaryMotion {
  * Combustion is stored on state.condition (PlanetStateCondition.COMBUST/DEEP_COMBUST/NORMAL).
  * DEEP_COMBUST collapses to COMBUST since C6 has no deep-combust category.
  */
-function mapCareerCombustion(condition: PlanetStateCondition): CareerPlanetaryCombustion {
+function mapCareerCombustion(condition: PlanetStateCondition | undefined): CareerPlanetaryCombustion {
+  if (condition === undefined) return 'UNAVAILABLE';
   switch (condition) {
     case 'COMBUST':
     case 'DEEP_COMBUST':
@@ -106,59 +112,23 @@ function mapCareerAffliction(_planetFact: PlanetFact | undefined): CareerPlaneta
 }
 
 /**
- * Narrow local type for aspect data at the engine boundary.
- * Keeps the `any` contamination localized; do not use bare `any[]`.
- */
-interface CareerConditionAspect {
-  readonly sourcePlanet?: Planet;
-  readonly aspectingPlanet?: Planet;
-  readonly targetPlanet?: Planet;
-  readonly target?: Planet;
-}
-
-/**
- * Reads natal aspects from the horoscope.
- * `natalGrahaDrishti` is the canonical natal aspect source for Career C4/C5/C6 reasoning;
- * the legacy `grahaDrishti` field is intentionally ignored; missing `natalGrahaDrishti`
- * means no aspect influence is established and must not fall back to a legacy representation
- * (missing evidence ≠ negative evidence).
- */
-function getNatalAspects(horoscope: Horoscope): readonly CareerConditionAspect[] {
-  const aspects = horoscope.natalGrahaDrishti?.aspects ?? [];
-  return aspects as CareerConditionAspect[];
-}
-
-/**
- * Resolves aspect influence for a target planet.
- * For each aspect where targetPlanet === planet, checks if the source is a natural benefic.
+ * Preserves C6's natural-nature boolean inputs while deriving them from generic
+ * aspect provenance. Mixed natural/functional classifications are not collapsed
+ * into a new C6 classification.
  */
 function resolveAspectInfluence(
-  horoscope: Horoscope,
-  planet: Planet
+  trace: PlanetaryInfluenceTrace | undefined
 ): { beneficSupport: boolean; maleficPressure: boolean } {
-  const aspects = getNatalAspects(horoscope);
-  let beneficSupport = false;
-  let maleficPressure = false;
-
-  for (const aspect of aspects) {
-    const target = aspect.targetPlanet ?? aspect.target;
-    if (target !== planet) {
-      continue;
-    }
-
-    const source = aspect.sourcePlanet ?? aspect.aspectingPlanet;
-    if (!source) {
-      continue;
-    }
-
-    if (isNaturalBenefic(source, horoscope.planetFacts)) {
-      beneficSupport = true;
-    } else {
-      maleficPressure = true;
-    }
-  }
-
-  return { beneficSupport, maleficPressure };
+  const sources = [
+    ...(trace?.environmentalInfluence.beneficAspectSources ?? []),
+    ...(trace?.environmentalInfluence.maleficAspectSources ?? []),
+    ...(trace?.environmentalInfluence.mixedAspectSources ?? []),
+    ...(trace?.environmentalInfluence.unassessedAspectSources ?? [])
+  ];
+  return {
+    beneficSupport: sources.some((source) => source.naturalNature === 'BENEFIC'),
+    maleficPressure: sources.some((source) => source.naturalNature === 'MALEFIC')
+  };
 }
 
 /**
@@ -168,12 +138,14 @@ function resolveAspectInfluence(
  */
 function buildCareerPlanetaryConditionContext(
   horoscope: Horoscope,
-  relevanceItem: CareerPlanetaryRelevance
+  relevanceItem: CareerPlanetaryRelevance,
+  trace: PlanetaryInfluenceTrace | undefined
 ): CareerPlanetaryConditionContext {
   const planet = relevanceItem.planet;
   const planetFact = horoscope.planetFacts[planet];
 
   if (!planetFact) {
+    const { beneficSupport, maleficPressure } = resolveAspectInfluence(trace);
     return Object.freeze({
       planet,
       relevance: relevanceItem.relevance,
@@ -181,23 +153,32 @@ function buildCareerPlanetaryConditionContext(
       affliction: 'UNAVAILABLE',
       motion: 'UNKNOWN',
       combustion: 'UNAVAILABLE',
-      beneficSupport: false,
-      maleficPressure: false,
-      dataAvailable: false
+      beneficSupport,
+      maleficPressure,
+      dataAvailable: false,
+      ...(trace ? { planetaryInfluenceTrace: trace } : {}),
+      assessmentMissingFactors: Object.freeze([
+        ...(trace?.assessment.missingFactors ?? []),
+        'career.affliction'
+      ])
     });
   }
 
-  const dignity = mapCareerDignity(planetFact.dignity.status);
+  const dignity = mapCareerDignity(trace?.intrinsicStrength.dignity);
   const affliction = mapCareerAffliction(planetFact);
-  const motion = mapCareerMotion(planetFact.state.motion);
-  const combustion = mapCareerCombustion(planetFact.state.condition);
-  const { beneficSupport, maleficPressure } = resolveAspectInfluence(horoscope, planet);
+  const motion = mapCareerMotion(trace?.intrinsicStrength.motion);
+  const combustion = mapCareerCombustion(trace?.intrinsicStrength.combustion);
+  const { beneficSupport, maleficPressure } = resolveAspectInfluence(trace);
 
   const dataAvailable =
     dignity !== 'UNAVAILABLE' &&
     motion !== 'UNKNOWN' &&
     combustion !== 'UNAVAILABLE';
 
+  const missingFactors = [
+    ...(trace?.assessment.missingFactors ?? []),
+    ...(affliction === 'UNAVAILABLE' ? ['career.affliction'] : [])
+  ];
   return Object.freeze({
     planet,
     relevance: relevanceItem.relevance,
@@ -207,7 +188,9 @@ function buildCareerPlanetaryConditionContext(
     combustion,
     beneficSupport,
     maleficPressure,
-    dataAvailable
+    dataAvailable,
+    ...(trace ? { planetaryInfluenceTrace: trace } : {}),
+    assessmentMissingFactors: Object.freeze(missingFactors)
   });
 }
 
@@ -221,6 +204,9 @@ function buildCareerPlanetaryConditionContexts(
 ): readonly CareerPlanetaryConditionContext[] {
   const { horoscope, relevance } = input;
   const relevanceByPlanet = new Map<Planet, CareerPlanetaryRelevance>();
+  const traceByPlanet = new Map(
+    buildPlanetaryInfluenceTrace(horoscope).map((trace) => [trace.planet, trace] as const)
+  );
 
   for (const item of relevance) {
     relevanceByPlanet.set(item.planet, item);
@@ -233,6 +219,7 @@ function buildCareerPlanetaryConditionContexts(
 
     if (!relevanceItem) {
       // Planet missing from C5 relevance → emit NEUTRAL/UNAVAILABLE context
+      const trace = traceByPlanet.get(planet);
       contexts.push(
         Object.freeze({
           planet,
@@ -243,11 +230,20 @@ function buildCareerPlanetaryConditionContexts(
           combustion: 'UNAVAILABLE',
           beneficSupport: false,
           maleficPressure: false,
-          dataAvailable: false
+          dataAvailable: false,
+          ...(trace ? { planetaryInfluenceTrace: trace } : {}),
+          assessmentMissingFactors: Object.freeze([
+            ...(trace?.assessment.missingFactors ?? []),
+            'career.affliction'
+          ])
         })
       );
     } else {
-      contexts.push(buildCareerPlanetaryConditionContext(horoscope, relevanceItem));
+      contexts.push(buildCareerPlanetaryConditionContext(
+        horoscope,
+        relevanceItem,
+        traceByPlanet.get(planet)
+      ));
     }
   }
 

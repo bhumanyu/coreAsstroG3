@@ -428,6 +428,40 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
 
   // Group F — aspect influence
   describe('Group F — aspect influence', () => {
+    it('attaches generic aspect provenance and keeps C6 natural-nature flags compatible', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.JUPITER]: createMockPlanetFact(Planet.JUPITER, { house: 5 }),
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 9 })
+      });
+      horoscope.natalGrahaDrishti = {
+        aspects: [{
+          sourcePlanet: Planet.JUPITER,
+          targetPlanet: Planet.MERCURY,
+          aspectType: 'SPECIAL_JUPITER_5TH',
+          houseOffset: 4
+        }] as any[]
+      };
+
+      const result = buildCareerPlanetaryCondition({
+        horoscope,
+        relevance: [createMockRelevance(Planet.MERCURY, 'PRIMARY')]
+      });
+      const mercury = result.find((item) => item.planet === Planet.MERCURY)!;
+
+      expect(mercury.planetaryInfluenceTrace?.environmentalInfluence.beneficAspectSources)
+        .toEqual([expect.objectContaining({
+          sourcePlanet: Planet.JUPITER,
+          targetPlanet: Planet.MERCURY,
+          aspectType: 'SPECIAL_JUPITER_5TH',
+          naturalNature: 'BENEFIC'
+        })]);
+      expect(mercury.positiveFactors.some((factor) => factor.type === 'BENEFIC_SUPPORT')).toBe(true);
+      expect(mercury.assessmentDetails).toMatchObject({
+        status: 'PARTIAL',
+        missingFactors: expect.arrayContaining(['career.affliction'])
+      });
+    });
+
     it('Jupiter aspecting Mercury → beneficSupport=true', () => {
       const horoscope = createMockHoroscope({
         [Planet.JUPITER]: createMockPlanetFact(Planet.JUPITER, { house: 5 }),
@@ -468,6 +502,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       expect(mercuryResult).toBeDefined();
       // Saturn is a natural malefic, so maleficPressure should be true
       expect(mercuryResult!.negativeFactors.some(f => f.type === 'MALEFIC_PRESSURE')).toBe(true);
+      expect(mercuryResult!.condition).toBe('WEAK');
     });
 
     it('both sources conflicting (canonical wins): natalGrahaDrishti Jupiter→Mercury, legacy grahaDrishti Saturn→Mercury ignored', () => {
@@ -540,6 +575,28 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       // Condition should not become CHALLENGE/WEAK merely from missing aspect data
       expect(mercuryResult!.condition).not.toBe('CHALLENGE');
       expect(mercuryResult!.condition).not.toBe('WEAK');
+    });
+
+    it('records conjunction provenance without adding a C6 conjunction condition factor', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.JUPITER]: createMockPlanetFact(Planet.JUPITER, { house: 1 }),
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { house: 1 })
+      });
+      horoscope.natalGrahaDrishti = { aspects: [] };
+
+      const result = buildCareerPlanetaryCondition({
+        horoscope,
+        relevance: [createMockRelevance(Planet.JUPITER, 'PRIMARY')]
+      });
+      const jupiter = result.find((item) => item.planet === Planet.JUPITER)!;
+
+      expect(jupiter.planetaryInfluenceTrace?.environmentalInfluence.coLocatedPlanets)
+        .toEqual(expect.arrayContaining([
+          expect.objectContaining({ planet: Planet.SATURN })
+        ]));
+      expect(jupiter.condition).toBe('NEUTRAL');
+      expect(jupiter.negativeFactors.some((factor) => factor.type === 'MALEFIC_PRESSURE'))
+        .toBe(false);
     });
 
     it('influence directions: Jupiter→Mercury only ⇒ beneficSupport=true', () => {

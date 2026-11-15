@@ -3,6 +3,7 @@ import { Planet } from '../../types';
 import type {
   CareerPlanetRelevance
 } from './careerPlanetaryRelevance';
+import type { PlanetaryInfluenceTrace } from '../../engine/planetaryInfluence/planetaryInfluenceTrace';
 
 export type CareerPlanetaryCondition =
   | 'STRONG'
@@ -82,6 +83,15 @@ export interface CareerPlanetaryConditionContext {
   readonly maleficPressure: boolean;
 
   readonly dataAvailable: boolean;
+
+  readonly planetaryInfluenceTrace?: PlanetaryInfluenceTrace;
+
+  readonly assessmentMissingFactors?: readonly string[];
+}
+
+export interface CareerPlanetaryConditionAssessmentDetails {
+  readonly status: CareerPlanetaryConditionAssessment;
+  readonly missingFactors: readonly string[];
 }
 
 export interface CareerPlanetaryConditionResult {
@@ -108,6 +118,10 @@ export interface CareerPlanetaryConditionResult {
   readonly conditional: boolean;
 
   readonly assessment?: CareerPlanetaryConditionAssessment;
+
+  readonly assessmentDetails?: CareerPlanetaryConditionAssessmentDetails;
+
+  readonly planetaryInfluenceTrace?: PlanetaryInfluenceTrace;
 
   readonly afflictionAssessed?: boolean;
 
@@ -424,6 +438,13 @@ export function interpretCareerPlanetaryCondition(
       relatedPlanets: Object.freeze([]),
       conditional: false,
       assessment: 'UNAVAILABLE',
+      assessmentDetails: Object.freeze({
+        status: 'UNAVAILABLE',
+        missingFactors: Object.freeze([...(context.assessmentMissingFactors ?? [])])
+      }),
+      ...(context.planetaryInfluenceTrace
+        ? { planetaryInfluenceTrace: context.planetaryInfluenceTrace }
+        : {}),
       afflictionAssessed: context.affliction !== 'UNAVAILABLE',
       statement:
         `Planet ${context.planet} has no established Career relevance; ` +
@@ -441,6 +462,11 @@ export function interpretCareerPlanetaryCondition(
     factors
   );
 
+  const assessment = condition === 'UNAVAILABLE'
+    ? 'UNAVAILABLE'
+    : context.affliction === 'UNAVAILABLE'
+      ? 'PARTIAL'
+      : 'FULL';
   return Object.freeze({
     planet: context.planet,
     relevance: context.relevance,
@@ -453,11 +479,14 @@ export function interpretCareerPlanetaryCondition(
     negativeFactors: factors.negative,
     relatedPlanets: Object.freeze([]),
     conditional: condition === 'UNAVAILABLE' || context.affliction === 'UNAVAILABLE',
-    assessment: condition === 'UNAVAILABLE'
-      ? 'UNAVAILABLE'
-      : context.affliction === 'UNAVAILABLE'
-        ? 'PARTIAL'
-        : 'FULL',
+    assessment,
+    assessmentDetails: Object.freeze({
+      status: assessment,
+      missingFactors: Object.freeze([...(context.assessmentMissingFactors ?? [])])
+    }),
+    ...(context.planetaryInfluenceTrace
+      ? { planetaryInfluenceTrace: context.planetaryInfluenceTrace }
+      : {}),
     afflictionAssessed: context.affliction !== 'UNAVAILABLE',
     statement
   });
