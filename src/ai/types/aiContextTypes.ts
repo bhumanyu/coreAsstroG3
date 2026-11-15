@@ -500,6 +500,13 @@ export interface AiCareerCanonicalEvidenceTrace {
   readonly ruleIds: readonly string[];
 }
 
+export interface AiCareerD10DimensionCoverageFact {
+  readonly expressionId: string;
+  readonly mode: string;
+  readonly resolvedIndicatorCount: number;
+  readonly configuredIndicatorCount: number;
+}
+
 /**
  * P2-10B AI DTO: Career canonical C11 fact.
  * Projects the authoritative C11 result into AI context.
@@ -524,6 +531,7 @@ export interface AiCareerCanonicalC11Fact {
   readonly transitDirection: string;
   readonly currentPressure: string;
   readonly expressions: readonly AiCareerCanonicalExpressionFact[];
+  readonly d10DimensionCoverage?: readonly AiCareerD10DimensionCoverageFact[];
   readonly strongestExpressions: readonly string[];
   readonly challengedExpressions: readonly string[];
   readonly conflicts: readonly AiCareerCanonicalConflictFact[];

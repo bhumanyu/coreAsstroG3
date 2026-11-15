@@ -13,6 +13,8 @@ import {
   chartStructureAvailable,
   dimensionEvidenceAvailable,
   hasNatalCareerPromise,
+  getCanonicalD10Facts,
+  getCanonicalD10FactDiagnostics,
   isD10DataAvailable,
   usableEvidenceAvailable,
   resolveD10PlanetDirection,
@@ -144,6 +146,69 @@ describe('careerD10QualificationRules', () => {
         conflictingSource: 'planet'
       }));
     }
+  });
+
+  it('canonicalizes same-source condition conflicts to INSUFFICIENT_DATA independent of input order', () => {
+    const makeContext = (conditions: readonly ('WEAK' | 'STRONG')[]): CareerD10Context => ({
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG',
+      natalPrimarySupport: 5,
+      natalPrimaryChallenge: 0,
+      d10Available: true,
+      d10Houses: [],
+      d10Planets: conditions.map(condition => ({
+        planet: Planet.MERCURY,
+        condition,
+        d10House: 10,
+        natalHouse: 1,
+        relatedHouses: [10]
+      })),
+      expressions: emptyExpressions
+    });
+
+    const first = makeContext(['WEAK', 'STRONG']);
+    const permuted = makeContext(['STRONG', 'WEAK']);
+
+    expect(getCanonicalD10Facts(first)).toEqual(getCanonicalD10Facts(permuted));
+    expect(getCanonicalD10Facts(first)[0].condition).toBe('INSUFFICIENT_DATA');
+    expect(getCanonicalD10FactDiagnostics(first)).toEqual(getCanonicalD10FactDiagnostics(permuted));
+    expect(getCanonicalD10FactDiagnostics(first)[0]).toMatchObject({
+      canonicalCondition: 'INSUFFICIENT_DATA',
+      conflictingSource: 'planet',
+      conflictingConditions: ['STRONG', 'WEAK']
+    });
+  });
+
+  it('does not use same-source conflicting indicators to force a dimension direction', () => {
+    const context: CareerD10Context = {
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG',
+      natalPrimarySupport: 5,
+      natalPrimaryChallenge: 0,
+      d10Available: true,
+      d10Houses: [
+        { house: 10, role: 'PRIMARY', occupied: false, lord: Planet.SATURN, lordCondition: 'UNAVAILABLE', tenants: [], tenantConditions: [] },
+        { house: 11, role: 'SUPPORTING', occupied: false, lord: Planet.VENUS, lordCondition: 'UNAVAILABLE', tenants: [], tenantConditions: [] }
+      ],
+      d10Planets: [
+        { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+        { planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+        { planet: Planet.JUPITER, condition: 'WEAK', d10House: 11, natalHouse: 1, relatedHouses: [11] }
+      ],
+      expressions: emptyExpressions
+    };
+
+    const result = evaluateDimensionQualification('LEADERSHIP', context);
+
+    expect(result.dimensionCoverage).toEqual({
+      resolvedIndicatorCount: 1,
+      configuredIndicatorCount: 6
+    });
+    expect(result).toMatchObject({
+      matched: false,
+      direction: 'UNAVAILABLE',
+      sourceIds: []
+    });
   });
 
   describe('hasNatalCareerPromise', () => {
@@ -1597,6 +1662,25 @@ describe('resolveCareerD10Qualification', () => {
       expect(result.matched).toBe(true);
       expect(result.direction).toBe('SUPPORT');
       expect(result.strength).toBe('VERY_STRONG');
+      expect(result.dimensionCoverage).toEqual({
+        resolvedIndicatorCount: 1,
+        configuredIndicatorCount: 6
+      });
+
+      const fullyCoveredContext: CareerD10Context = {
+        ...context,
+        d10Planets: [Planet.SUN, Planet.MARS, Planet.JUPITER].flatMap(planet =>
+          [10, 11].map(d10House => ({
+            planet,
+            condition: 'STRONG' as const,
+            d10House,
+            natalHouse: 1,
+            relatedHouses: [d10House]
+          }))
+        )
+      };
+      expect(evaluateDimensionQualification('LEADERSHIP', fullyCoveredContext).dimensionCoverage)
+        .toEqual({ resolvedIndicatorCount: 6, configuredIndicatorCount: 6 });
     });
 
     it('requires dimension-matched usable evidence and preserves natal direction otherwise', () => {
@@ -1629,7 +1713,11 @@ describe('resolveCareerD10Qualification', () => {
       expect(dimensionEvidenceAvailable('LEADERSHIP', context)).toBe(false);
       expect(evaluateDimensionQualification('LEADERSHIP', context)).toMatchObject({
         matched: false,
-        direction: 'UNAVAILABLE'
+        direction: 'UNAVAILABLE',
+        dimensionCoverage: {
+          resolvedIndicatorCount: 0,
+          configuredIndicatorCount: 6
+        }
       });
 
       const result = resolveCareerD10Qualification(context);

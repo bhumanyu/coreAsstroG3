@@ -20,7 +20,10 @@ import type {
 import type {
   CareerMechanismCandidate
 } from '../careerMechanism/careerMechanismTypes';
-import { extractPlanetFromParticipantId } from '../careerParticipantRoles/participantRoleUtils';
+import {
+  extractPlanetFromParticipantId,
+  parseParticipantId
+} from '../careerParticipantRoles/participantRoleUtils';
 import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
 
 /**
@@ -383,28 +386,102 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isMechanismExpressionResult(
-  value: unknown
-): value is CareerExpressionAnalysisResult | CareerExpressionCanonicalResult {
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+function isExpressionProvenance(value: unknown): boolean {
+  return isRecord(value) &&
+    isStringArray(value.mechanismIds) &&
+    isStringArray(value.patternIds) &&
+    isStringArray(value.relationshipIds) &&
+    isStringArray(value.evidenceIds) &&
+    isStringArray(value.sourceStages);
+}
+
+function isMechanismExpressionEvidence(value: unknown): boolean {
+  return isRecord(value) &&
+    typeof value.evidenceId === 'string' &&
+    typeof value.sourceMechanismId === 'string' &&
+    isStringArray(value.sourceEvidenceIds) &&
+    (value.source10HIds === undefined || isStringArray(value.source10HIds)) &&
+    (value.source10LIds === undefined || isStringArray(value.source10LIds)) &&
+    typeof value.ruleId === 'string' &&
+    (value.role === 'ESTABLISHING' || value.role === 'REFINING');
+}
+
+function isExpressionCandidate(value: unknown, canonical: boolean): boolean {
   if (!isRecord(value) ||
-    !Array.isArray(value.expressions) ||
-    !Array.isArray(value.sourceMechanismIds) ||
-    !Array.isArray(value.missingInputs) ||
-    !Array.isArray(value.unmappedMechanismTypes) ||
-    !isRecord(value.provenance) ||
-    (value.status !== 'COMPLETE' &&
-      value.status !== 'PARTIAL' &&
-      value.status !== 'INSUFFICIENT_DATA')) {
+    typeof value.expressionId !== 'string' ||
+    typeof value.expressionType !== 'string' ||
+    !isStringArray(value.sourceMechanismIds) ||
+    !isStringArray(value.mechanismTypes) ||
+    typeof value.pathway !== 'string' ||
+    !Array.isArray(value.evidence) ||
+    !value.evidence.every(isMechanismExpressionEvidence) ||
+    !isExpressionProvenance(value.provenance)) {
     return false;
   }
 
-  return value.expressions.every(expression =>
-    isRecord(expression) &&
-    typeof expression.expressionId === 'string' &&
-    typeof expression.expressionType === 'string' &&
-    Array.isArray(expression.evidence) &&
-    isRecord(expression.provenance)
+  if (canonical) {
+    return (
+      value.qualificationStatus === 'QUALIFIED' ||
+      value.qualificationStatus === 'CANDIDATE' ||
+      value.qualificationStatus === 'UNRESOLVED' ||
+      value.qualificationStatus === 'NOT_APPLICABLE'
+    ) &&
+      (value.direction === 'SUPPORTED' ||
+        value.direction === 'CONDITIONAL' ||
+        value.direction === 'NEUTRAL' ||
+        value.direction === 'UNAVAILABLE') &&
+      (value.strength === 'STRONG' ||
+        value.strength === 'MODERATE' ||
+        value.strength === 'WEAK' ||
+        value.strength === 'UNAVAILABLE') &&
+      isStringArray(value.trace);
+  }
+
+  return value.status === 'CANDIDATE' || value.status === 'INSUFFICIENT_DATA';
+}
+
+function isMechanismCandidates(value: unknown): value is readonly CareerMechanismCandidate[] {
+  return Array.isArray(value) && value.every(candidate =>
+    isRecord(candidate) &&
+    typeof candidate.candidateId === 'string' &&
+    isRecord(candidate.provenance) &&
+    Array.isArray(candidate.provenance.participantIds) &&
+    candidate.provenance.participantIds.every((participantId: unknown) =>
+      typeof participantId === 'string' && parseParticipantId(participantId) !== undefined
+    )
   );
+}
+
+function isMechanismExpressionResult(
+  value: unknown,
+  mechanismCandidates: unknown
+): value is CareerExpressionAnalysisResult | CareerExpressionCanonicalResult {
+  if (!isRecord(value) ||
+    !Array.isArray(value.expressions) ||
+    !isStringArray(value.sourceMechanismIds) ||
+    !isStringArray(value.missingInputs) ||
+    !isStringArray(value.unmappedMechanismTypes) ||
+    !isExpressionProvenance(value.provenance) ||
+    (value.status !== 'COMPLETE' &&
+      value.status !== 'PARTIAL' &&
+      value.status !== 'INSUFFICIENT_DATA') ||
+    !isMechanismCandidates(mechanismCandidates)) {
+    return false;
+  }
+
+  const canonicalKinds = value.expressions.map(expression =>
+    isRecord(expression) && 'qualificationStatus' in expression
+  );
+  if (canonicalKinds.some(isCanonical => isCanonical !== canonicalKinds[0])) {
+    return false;
+  }
+
+  const canonical = canonicalKinds[0] ?? false;
+  return value.expressions.every(expression => isExpressionCandidate(expression, canonical));
 }
 
 /**
@@ -503,7 +580,7 @@ export function adaptMechanismExpressionToLegacy(
   mechanismResult: unknown,
   mechanismCandidates: readonly CareerMechanismCandidate[]
 ): CareerExpressionAnalysis {
-  if (!isMechanismExpressionResult(mechanismResult)) {
+  if (!isMechanismExpressionResult(mechanismResult, mechanismCandidates)) {
     return createFailedLegacyAnalysis();
   }
 

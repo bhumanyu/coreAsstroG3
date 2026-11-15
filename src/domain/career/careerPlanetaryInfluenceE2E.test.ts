@@ -4,8 +4,10 @@ import { calculateHoroscope } from '../../engine/astroEngine';
 import { buildPlanetaryInfluenceTrace } from '../../engine/planetaryInfluence/planetaryInfluenceTrace';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { buildCareerDashaAnalysis } from './careerDasha/careerDashaIntegration';
+import { buildCareerD10Analysis } from './careerD10/careerD10Integration';
 import { buildCareerExpression } from './careerExpressionIntegration';
 import { buildCareerNatalAnalysis } from './careerNatalConvergence';
+import { buildCareerFinalAnalysis } from './careerFinalSynthesis/careerFinalSynthesisIntegration';
 import { buildCareerPlanetaryCondition } from './careerPlanetaryConditionIntegration';
 import type { CareerPlanetaryRelevance } from './careerPlanetaryRelevance';
 
@@ -485,6 +487,130 @@ describe('CW-10N independent multi-chart verification', () => {
         'CAREER_DASHA:AD:JUPITER:MODIFIER:CHALLENGES',
         'CAREER_DASHA:PD:MERCURY:REFINEMENT:ACTIVATES'
       ]);
+    });
+
+    it('preserves independent MD/AD/PD C9 status and provenance through D10 and C11', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      horoscope.dashaInterpretation = {
+        current: {
+          mahadasha: { planet: Planet.SATURN, start: '2020-01-01', end: '2025-01-01' },
+          antardasha: { planet: Planet.JUPITER, start: '2022-01-01', end: '2023-01-01' },
+          pratyantardasha: { planet: Planet.MERCURY, start: '2022-06-01', end: '2022-08-01' }
+        }
+      };
+
+      const natal = buildCareerNatalAnalysis({ horoscope });
+      expect(natal.condition.length).toBeGreaterThan(0);
+      const expression = buildCareerExpression({ natal });
+      const generatedDasha = buildCareerDashaAnalysis({ horoscope, natal, expression });
+      const d10 = buildCareerD10Analysis({ horoscope, natal, expression });
+
+      const perLevel = {
+        MD: {
+          expressionAnalysisStatus: 'EXECUTED' as const,
+          conditionAssessment: 'FULL' as const,
+          diagnostics: [] as const
+        },
+        AD: {
+          expressionAnalysisStatus: 'UNAVAILABLE' as const,
+          conditionAssessment: 'UNAVAILABLE' as const,
+          diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'] as const
+        },
+        PD: {
+          expressionAnalysisStatus: 'EXECUTED' as const,
+          conditionAssessment: 'PARTIAL' as const,
+          diagnostics: ['C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT'] as const
+        }
+      };
+      const mappableEvidence = ([
+        ['MD', 'SUPPORT', 'ACTIVATES'],
+        ['AD', 'CHALLENGE', 'CHALLENGES'],
+        ['PD', 'SUPPORT', 'ACTIVATES']
+      ] as const).map(([level, direction, effect]) => {
+        const source = generatedDasha.evidence.find(item => item.level === level);
+        if (!source) {
+          throw new Error(`Missing generated C9 evidence for ${level}`);
+        }
+        return {
+          ...source,
+          identityKey: `cross-layer:${level}`,
+          id: `cross-layer-occurrence:${level}`,
+          direction,
+          effect,
+          strength: 'MODERATE' as const,
+          statement: `Cross-layer ${level} evidence fixture.`,
+          sourceIds: [`cross-layer-source:${level}`],
+          provenance: {
+            ...source.provenance,
+            activationLevel: level,
+            ruleIds: [`cross-layer-rule:${level}`]
+          }
+        };
+      });
+      const independentlyAssessedDasha = {
+        ...generatedDasha,
+        md: { ...generatedDasha.md, ...perLevel.MD },
+        ad: { ...generatedDasha.ad, ...perLevel.AD },
+        pd: { ...generatedDasha.pd, ...perLevel.PD },
+        evidence: [
+          ...generatedDasha.evidence.map(item => ({
+            ...item,
+            ...(item.level === 'MD' ? perLevel.MD :
+              item.level === 'AD' ? perLevel.AD : perLevel.PD)
+          })),
+          ...mappableEvidence.map(item => ({
+            ...item,
+            ...(item.level === 'MD' ? perLevel.MD :
+              item.level === 'AD' ? perLevel.AD : perLevel.PD)
+          }))
+        ]
+      };
+
+      expect([
+        independentlyAssessedDasha.md,
+        independentlyAssessedDasha.ad,
+        independentlyAssessedDasha.pd
+      ].map(({ expressionAnalysisStatus, conditionAssessment, diagnostics }) => ({
+        expressionAnalysisStatus,
+        conditionAssessment,
+        diagnostics
+      }))).toEqual([
+        perLevel.MD,
+        perLevel.AD,
+        perLevel.PD
+      ]);
+
+      for (const [level, period] of [
+        ['MD', independentlyAssessedDasha.md],
+        ['AD', independentlyAssessedDasha.ad],
+        ['PD', independentlyAssessedDasha.pd]
+      ] as const) {
+        const levelEvidence = independentlyAssessedDasha.evidence.filter(item => item.level === level);
+        expect(levelEvidence.length).toBeGreaterThan(0);
+        expect(levelEvidence.every(item =>
+          item.expressionAnalysisStatus === perLevel[level].expressionAnalysisStatus &&
+          item.conditionAssessment === perLevel[level].conditionAssessment
+        )).toBe(true);
+        expect(levelEvidence.map(item => item.diagnostics)).toEqual(
+          Array.from({ length: levelEvidence.length }, () => [...perLevel[level].diagnostics])
+        );
+        expect(period.expressionAnalysisStatus).toBe(perLevel[level].expressionAnalysisStatus);
+      }
+
+      const c11 = buildCareerFinalAnalysis({
+        natal,
+        expression,
+        dasha: independentlyAssessedDasha,
+        d10
+      });
+      const allC9SourceIds = independentlyAssessedDasha.evidence.flatMap(item => item.sourceIds);
+      expect(c11.sourceIds).toEqual(expect.arrayContaining(allC9SourceIds));
+      for (const level of ['MD', 'AD', 'PD'] as const) {
+        expect(c11.evidenceIds).toContain(`cross-layer:${level}`);
+      }
+      expect(independentlyAssessedDasha.ad.expressionAnalysisStatus).toBe('UNAVAILABLE');
+      expect(independentlyAssessedDasha.md.expressionAnalysisStatus).toBe('EXECUTED');
+      expect(independentlyAssessedDasha.pd.expressionAnalysisStatus).toBe('EXECUTED');
     });
   });
 

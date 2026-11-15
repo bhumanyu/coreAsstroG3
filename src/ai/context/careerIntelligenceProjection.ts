@@ -10,6 +10,7 @@ import type {
   AiCareerCanonicalC11Fact,
   AiCareerCanonicalExpressionFact,
   AiCareerCanonicalConflictFact,
+  AiCareerD10DimensionCoverageFact,
   AiCareerProfessionFact,
   AiCareerProfessionCandidateFact,
   AiCareerProfessionEvidenceFact
@@ -153,6 +154,69 @@ export function isCareerFinalSynthesisResult(
   return true;
 }
 
+function projectD10DimensionCoverage(
+  interpretation: DomainInterpretation
+): readonly AiCareerD10DimensionCoverageFact[] {
+  if (interpretation.domain !== 'CAREER') {
+    return Object.freeze([]);
+  }
+
+  const conclusionData = interpretation.conclusionData;
+  if (!conclusionData || typeof conclusionData !== 'object' ||
+    !('internalArtifacts' in conclusionData)) {
+    return Object.freeze([]);
+  }
+
+  const internalArtifacts = conclusionData.internalArtifacts;
+  if (typeof internalArtifacts !== 'object' || internalArtifacts === null) {
+    return Object.freeze([]);
+  }
+
+  const canonicalD10Analysis = (internalArtifacts as Record<string, unknown>).canonicalD10Analysis;
+  if (typeof canonicalD10Analysis !== 'object' || canonicalD10Analysis === null ||
+    !Array.isArray((canonicalD10Analysis as Record<string, unknown>).expressionQualifications)) {
+    return Object.freeze([]);
+  }
+
+  const qualifications = (canonicalD10Analysis as Record<string, unknown>)
+    .expressionQualifications as unknown[];
+  return Object.freeze(qualifications.flatMap(qualification => {
+    if (typeof qualification !== 'object' || qualification === null) {
+      return [];
+    }
+
+    const record = qualification as Record<string, unknown>;
+    const expression = record.expression;
+    const coverage = record.dimensionCoverage;
+    if (typeof expression !== 'object' || expression === null ||
+      typeof coverage !== 'object' || coverage === null) {
+      return [];
+    }
+
+    const expressionRecord = expression as Record<string, unknown>;
+    const coverageRecord = coverage as Record<string, unknown>;
+    if (
+      typeof record.expressionId !== 'string' ||
+      typeof expressionRecord.mode !== 'string' ||
+      typeof coverageRecord.resolvedIndicatorCount !== 'number' ||
+      !Number.isInteger(coverageRecord.resolvedIndicatorCount) ||
+      coverageRecord.resolvedIndicatorCount < 0 ||
+      typeof coverageRecord.configuredIndicatorCount !== 'number' ||
+      !Number.isInteger(coverageRecord.configuredIndicatorCount) ||
+      coverageRecord.configuredIndicatorCount < 0
+    ) {
+      return [];
+    }
+
+    return [{
+      expressionId: record.expressionId,
+      mode: expressionRecord.mode,
+      resolvedIndicatorCount: coverageRecord.resolvedIndicatorCount,
+      configuredIndicatorCount: coverageRecord.configuredIndicatorCount
+    }];
+  }));
+}
+
 /**
  * Projects the authoritative canonical C11 result into AI DTO.
  *
@@ -188,6 +252,8 @@ export function projectCanonicalCareerC11(
     )
   );
 
+  const d10DimensionCoverage = projectD10DimensionCoverage(interpretation);
+
   return Object.freeze({
     reasoningVersion: canonicalC11.reasoningVersion,
     finalStatus: canonicalC11.finalStatus,
@@ -210,6 +276,7 @@ export function projectCanonicalCareerC11(
     transitDirection: canonicalC11.transitDirection,
     currentPressure: canonicalC11.currentPressure,
     expressions,
+    ...(d10DimensionCoverage.length > 0 ? { d10DimensionCoverage } : {}),
     strongestExpressions: Object.freeze([...canonicalC11.strongestExpressions]),
     challengedExpressions: Object.freeze([...canonicalC11.challengedExpressions]),
     conflicts,

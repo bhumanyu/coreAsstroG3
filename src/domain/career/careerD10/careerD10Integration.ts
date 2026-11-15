@@ -621,6 +621,7 @@ function canonicalizeExpressionQualification(
     effect: semanticQual.effect,
     direction: semanticQual.direction,
     strength: semanticQual.strength,
+    dimensionCoverage: semanticQual.dimensionCoverage,
     evidence: qualificationEvidence,
     mappingStatus: resolution.status,
     mappingDiagnostic: resolution.status === 'RESOLVED' ? undefined : resolution.diagnostic,

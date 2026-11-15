@@ -117,8 +117,14 @@ export interface CareerD10ExpressionQualification {
   readonly effect: CareerD10QualificationEffect;
   readonly direction: CareerD10QualificationDirection;
   readonly strength: CareerD10QualificationStrength;
+  readonly dimensionCoverage: CareerD10DimensionCoverage;
   readonly evidence: readonly CareerD10Evidence[];
   readonly statement: string;
+}
+
+export interface CareerD10DimensionCoverage {
+  readonly resolvedIndicatorCount: number;
+  readonly configuredIndicatorCount: number;
 }
 
 export interface CareerD10FactDiagnostic {
@@ -129,6 +135,7 @@ export interface CareerD10FactDiagnostic {
   readonly canonicalCondition: CareerPlanetaryCondition;
   readonly conflictingSource: 'lord' | 'tenant' | 'planet';
   readonly conflictingCondition: CareerPlanetaryCondition;
+  readonly conflictingConditions?: readonly CareerPlanetaryCondition[];
 }
 
 export interface CareerD10QualificationResult {

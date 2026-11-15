@@ -34,6 +34,9 @@ import type {
   CareerDashaCanonicalAnalysis
 } from './careerDasha/careerDashaCanonicalTypes';
 import type {
+  CareerD10CanonicalAnalysis
+} from './careerD10/careerD10CanonicalTypes';
+import type {
   CareerDashaActivationDiagnosticTrace
 } from './careerDasha/careerDashaActivationTypes';
 import type {
@@ -193,6 +196,7 @@ export interface CareerInternalArtifacts {
   readonly canonicalExpressionAnalysis?: CareerExpressionCanonicalResult;
   readonly mechanismCandidates?: readonly CareerMechanismCandidate[];
   readonly canonicalDashaAnalysis?: CareerDashaCanonicalAnalysis;
+  readonly canonicalD10Analysis?: CareerD10CanonicalAnalysis;
   /** Legacy CW-01 per-level timing confidence; distinct from canonical C9 data. */
   readonly cw01DashaTimingHierarchy?: import('../reasoning/reasoningTypes').TimingHierarchyResult;
   readonly careerDashaEvidence: readonly DomainEvidence[];

@@ -322,6 +322,10 @@ describe('C10 D10 Integration', () => {
       expect(qualification.qualified).toBe(true);
       expect(qualification.expressionId).toBe('LEADERSHIP:evidence-1:evidence-2');
       expect(qualification.effect).toBe('REINFORCES');
+      expect(qualification.dimensionCoverage).toEqual({
+        resolvedIndicatorCount: 1,
+        configuredIndicatorCount: 6
+      });
     });
   });
 

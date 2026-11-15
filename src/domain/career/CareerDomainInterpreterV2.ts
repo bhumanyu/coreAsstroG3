@@ -1239,6 +1239,7 @@ export function interpretCareerV2(
     canonicalExpressionAnalysis: careerMechanismCandidates !== undefined ? canonicalMechanismExpressionResult : undefined,
     mechanismCandidates: careerMechanismCandidates, // Pass through explicitly (may be empty array)
     canonicalDashaAnalysis,
+    canonicalD10Analysis,
     cw01DashaTimingHierarchy: cw01Result.timingHierarchy,
     careerDashaEvidence: canonicalDashaAnalysis.evidence,
     careerOrchestrationDiagnostics: foundationWithAdapterDiagnostics.diagnostics,

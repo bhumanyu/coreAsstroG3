@@ -71,6 +71,10 @@ export interface PlanetaryRelationshipEvidence {
   readonly reason: string;
   readonly producerNamespace: PlanetaryRelationshipProducerNamespace;
   readonly identityStatus: 'PRODUCER_ID' | 'DEGRADED_ATTRIBUTE_SIGNATURE';
+  /**
+   * Scoped to (producerNamespace, chart/calculation run), not globally unique.
+   * Horoscope currently provides no run identity, so deduplication is bounded to this input.
+   */
   readonly producerEvidenceId?: string;
   readonly producerEvidenceIdProvenance?: readonly string[];
 }

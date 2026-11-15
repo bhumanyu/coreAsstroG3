@@ -21,7 +21,8 @@ import type {
   CareerD10QualificationEffect,
   CareerD10QualificationStrength,
   CareerD10HouseRole,
-  CareerD10FactDiagnostic
+  CareerD10FactDiagnostic,
+  CareerD10DimensionCoverage
 } from './careerD10QualificationTypes';
 
 import {
@@ -35,12 +36,17 @@ import type {
   CareerManifestationMode
 } from '../careerTypes';
 
-interface CanonicalD10Fact {
-  planet: Planet;
-  house: number;
-  condition: CareerPlanetaryCondition;
-  role: CareerD10HouseRole | 'MODIFIER';
-  source: 'lord' | 'tenant' | 'planet';
+/**
+ * Canonical D10 indicator after source reconciliation.
+ * Planet positions take precedence across sources; conflicting conditions from any one
+ * source mark the fact INSUFFICIENT_DATA so selection is independent of input order.
+ */
+export interface CareerD10CanonicalFact {
+  readonly planet: Planet;
+  readonly house: number;
+  readonly condition: CareerPlanetaryCondition;
+  readonly role: CareerD10HouseRole | 'MODIFIER';
+  readonly source: 'lord' | 'tenant' | 'planet';
 }
 
 /**
@@ -65,10 +71,10 @@ export interface CareerD10DirectionAssessment {
 
 function buildCanonicalD10Facts(
   context: CareerD10Context
-): { readonly facts: CanonicalD10Fact[]; readonly diagnostics: CareerD10FactDiagnostic[] } {
-  const factMap = new Map<string, CanonicalD10Fact>();
+): { readonly facts: CareerD10CanonicalFact[]; readonly diagnostics: CareerD10FactDiagnostic[] } {
+  const factMap = new Map<string, CareerD10CanonicalFact>();
   const diagnostics: CareerD10FactDiagnostic[] = [];
-  const factsByKey = new Map<string, CanonicalD10Fact[]>();
+  const factsByKey = new Map<string, CareerD10CanonicalFact[]>();
 
   // Semantic rule: A D10 planet position is canonical.
   // House-lord and tenant context may enrich that canonical planet fact
@@ -84,7 +90,7 @@ function buildCanonicalD10Facts(
     return `${planet}:${house}:${role}`;
   }
 
-  function collectFact(fact: CanonicalD10Fact) {
+  function collectFact(fact: CareerD10CanonicalFact) {
     const key = getFactKey(fact.planet, fact.house, fact.role);
     const records = factsByKey.get(key) ?? [];
     records.push(fact);
@@ -134,30 +140,89 @@ function buildCanonicalD10Facts(
     });
   }
 
-  for (const [key, records] of factsByKey) {
-    const canonical = records.find(fact => fact.source === 'planet') ?? records[0];
-    if (!canonical) continue;
+  const sourcePriority = { planet: 0, lord: 1, tenant: 2 } as const;
+  const sortedKeys = [...factsByKey.keys()].sort();
+  for (const key of sortedKeys) {
+    const records = factsByKey.get(key);
+    if (!records?.length) continue;
 
-    for (const fact of records) {
-      if (fact === canonical || fact.condition === canonical.condition) continue;
-      diagnostics.push(Object.freeze({
-        code: 'D10_FACT_CONDITION_CONFLICT',
-        planet: fact.planet,
-        house: fact.house,
-        canonicalSource: canonical.source,
-        canonicalCondition: canonical.condition,
-        conflictingSource: fact.source,
-        conflictingCondition: fact.condition
-      }));
+    const recordsBySource = new Map<CareerD10CanonicalFact['source'], CareerD10CanonicalFact[]>();
+    for (const record of records) {
+      const sourceRecords = recordsBySource.get(record.source) ?? [];
+      sourceRecords.push(record);
+      recordsBySource.set(record.source, sourceRecords);
     }
 
-    factMap.set(key, { ...canonical });
+    const sourceGroups = [...recordsBySource.entries()]
+      .sort(([sourceA], [sourceB]) => sourcePriority[sourceA] - sourcePriority[sourceB]);
+    const [canonicalSource, canonicalRecords] = sourceGroups[0];
+    const canonicalConditions = [...new Set(canonicalRecords.map(record => record.condition))].sort();
+    const hasSameSourceConflict = sourceGroups.some(([, sourceRecords]) =>
+      new Set(sourceRecords.map(record => record.condition)).size > 1
+    );
+    const selectedCondition = canonicalConditions[0];
+    const canonicalCondition = hasSameSourceConflict ? 'INSUFFICIENT_DATA' : selectedCondition;
+    const canonical = canonicalRecords[0];
+
+    if (hasSameSourceConflict) {
+      for (const [source, sourceRecords] of sourceGroups) {
+        const conditions = [...new Set(sourceRecords.map(record => record.condition))].sort();
+        if (conditions.length < 2) continue;
+        diagnostics.push(Object.freeze({
+          code: 'D10_FACT_CONDITION_CONFLICT',
+          planet: canonical.planet,
+          house: canonical.house,
+          canonicalSource,
+          canonicalCondition,
+          conflictingSource: source,
+          conflictingCondition: conditions[1],
+          conflictingConditions: Object.freeze(conditions)
+        }));
+      }
+    } else {
+      for (const [source, sourceRecords] of sourceGroups.slice(1)) {
+        const conflictingConditions = [...new Set(sourceRecords.map(record => record.condition))]
+          .filter(condition => condition !== canonicalCondition)
+          .sort();
+        for (const condition of conflictingConditions) {
+          diagnostics.push(Object.freeze({
+            code: 'D10_FACT_CONDITION_CONFLICT',
+            planet: canonical.planet,
+            house: canonical.house,
+            canonicalSource,
+            canonicalCondition,
+            conflictingSource: source,
+            conflictingCondition: condition
+          }));
+        }
+      }
+    }
+
+    factMap.set(key, Object.freeze({
+      ...canonical,
+      condition: canonicalCondition
+    }));
   }
+
+  diagnostics.sort((a, b) =>
+    a.planet.localeCompare(b.planet) ||
+    a.house - b.house ||
+    a.canonicalSource.localeCompare(b.canonicalSource) ||
+    a.conflictingSource.localeCompare(b.conflictingSource) ||
+    (a.conflictingConditions ?? [a.conflictingCondition]).join('|')
+      .localeCompare((b.conflictingConditions ?? [b.conflictingCondition]).join('|'))
+  );
 
   return {
     facts: Array.from(factMap.values()),
     diagnostics
   };
+}
+
+export function getCanonicalD10Facts(
+  context: CareerD10Context
+): readonly CareerD10CanonicalFact[] {
+  return Object.freeze(buildCanonicalD10Facts(context).facts);
 }
 
 export function hasNatalCareerPromise(
@@ -208,18 +273,34 @@ export function dimensionEvidenceAvailable(
   mode: CareerManifestationMode,
   context: CareerD10Context
 ): boolean {
+  // Availability means at least one configured indicator resolved. A per-dimension
+  // coverage ratio is surfaced separately and remains a future policy contract.
+  return getDimensionEvidenceCoverage(mode, context).resolvedIndicatorCount > 0;
+}
+
+function getDimensionEvidenceCoverage(
+  mode: CareerManifestationMode,
+  context: CareerD10Context
+): CareerD10DimensionCoverage {
   const factors = DIMENSION_FACTORS[mode];
   if (!factors) {
-    return false;
+    return Object.freeze({ resolvedIndicatorCount: 0, configuredIndicatorCount: 0 });
   }
 
-  // Coverage currently means at least one configured indicator resolved; a per-dimension
-  // coverage ratio (resolved indicators / configured indicators) remains a future contract.
-  return buildCanonicalD10Facts(context).facts.some(fact =>
-    factors.houses.includes(fact.house) &&
-    factors.planets.includes(fact.planet) &&
-    isUsableD10Condition(fact.condition)
+  const resolvedIndicators = new Set(
+    buildCanonicalD10Facts(context).facts
+      .filter(fact =>
+        factors.houses.includes(fact.house) &&
+        factors.planets.includes(fact.planet) &&
+        isUsableD10Condition(fact.condition)
+      )
+      .map(fact => `${fact.house}:${fact.planet}`)
   );
+
+  return Object.freeze({
+    resolvedIndicatorCount: resolvedIndicators.size,
+    configuredIndicatorCount: factors.houses.length * factors.planets.length
+  });
 }
 
 export function resolveD10PlanetDirection(
@@ -328,7 +409,7 @@ export function resolveD10DirectionAssessment(
 
 function evaluateTier(
   context: CareerD10Context,
-  included: (fact: CanonicalD10Fact) => boolean
+  included: (fact: CareerD10CanonicalFact) => boolean
 ): { readonly direction: CareerD10QualificationDirection; readonly assessed: boolean } {
   let supportCount = 0;
   let challengeCount = 0;
@@ -926,14 +1007,17 @@ export function evaluateDimensionQualification(
   matched: boolean;
   direction: CareerD10QualificationDirection;
   strength: CareerD10QualificationStrength;
+  dimensionCoverage: CareerD10DimensionCoverage;
   sourceIds: readonly string[];
   ruleIds: readonly string[];
 } {
+  const dimensionCoverage = getDimensionEvidenceCoverage(mode, context);
   if (!isD10DataAvailable(context)) {
     return {
       matched: false,
       direction: 'UNAVAILABLE',
       strength: 'UNDETERMINED',
+      dimensionCoverage,
       sourceIds: Object.freeze([]),
       ruleIds: Object.freeze([])
     };
@@ -945,6 +1029,7 @@ export function evaluateDimensionQualification(
       matched: false,
       direction: 'UNAVAILABLE',
       strength: 'UNDETERMINED',
+      dimensionCoverage,
       sourceIds: Object.freeze([]),
       ruleIds: Object.freeze([])
     };
@@ -956,12 +1041,18 @@ export function evaluateDimensionQualification(
   let challengeCount = 0;
   let strongCount = 0;
   let weakCount = 0;
+  const conflictedIndicators = new Set(
+    getCanonicalD10FactDiagnostics(context)
+      .filter(diagnostic => diagnostic.canonicalSource === diagnostic.conflictingSource)
+      .map(diagnostic => `${diagnostic.planet}:${diagnostic.house}`)
+  );
 
   // Check house lords and occupants
   for (const house of context.d10Houses) {
     if (factors.houses.includes(house.house)) {
       // Check lord
-      if (factors.planets.includes(house.lord)) {
+      if (factors.planets.includes(house.lord) &&
+        !conflictedIndicators.has(`${house.lord}:${house.house}`)) {
         const lordDirection = resolveD10PlanetDirection({
           planet: house.lord,
           condition: house.lordCondition,
@@ -987,7 +1078,8 @@ export function evaluateDimensionQualification(
         const tenant = house.tenants[i];
         const tenantCondition = house.tenantConditions[i];
 
-        if (factors.planets.includes(tenant)) {
+        if (factors.planets.includes(tenant) &&
+          !conflictedIndicators.has(`${tenant}:${house.house}`)) {
           const tenantDirection = resolveD10PlanetDirection({
             planet: tenant,
             condition: tenantCondition,
@@ -1013,7 +1105,11 @@ export function evaluateDimensionQualification(
 
   // Check planets in D10
   for (const planetContext of context.d10Planets) {
-    if (factors.planets.includes(planetContext.planet) && factors.houses.includes(planetContext.d10House)) {
+    if (
+      factors.planets.includes(planetContext.planet) &&
+      factors.houses.includes(planetContext.d10House) &&
+      !conflictedIndicators.has(`${planetContext.planet}:${planetContext.d10House}`)
+    ) {
       const planetDirection = resolveD10PlanetDirection(planetContext);
 
       if (planetDirection === 'SUPPORT') {
@@ -1036,6 +1132,7 @@ export function evaluateDimensionQualification(
       matched: false,
       direction: 'UNAVAILABLE',
       strength: 'UNDETERMINED',
+      dimensionCoverage,
       sourceIds: Object.freeze([]),
       ruleIds: Object.freeze([])
     };
@@ -1081,6 +1178,7 @@ export function evaluateDimensionQualification(
     matched,
     direction,
     strength,
+    dimensionCoverage,
     sourceIds: Object.freeze(sourceIds),
     ruleIds: Object.freeze(ruleIds)
   };

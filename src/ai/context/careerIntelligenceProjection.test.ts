@@ -482,11 +482,29 @@ describe('careerIntelligenceProjection', () => {
               status: 'UNAVAILABLE',
               result: { assessment: 'NOT_ASSESSED' }
             }
+          },
+          internalArtifacts: {
+            canonicalD10Analysis: {
+              expressionQualifications: [{
+                expressionId: 'LEADERSHIP:expr-1',
+                expression: { mode: 'LEADERSHIP' },
+                dimensionCoverage: {
+                  resolvedIndicatorCount: 1,
+                  configuredIndicatorCount: 6
+                }
+              }]
+            }
           }
         }
       } as unknown as DomainInterpretation;
 
       const projected = projectCanonicalCareerC11(interpretation);
+      expect(projected?.d10DimensionCoverage).toEqual([{
+        expressionId: 'LEADERSHIP:expr-1',
+        mode: 'LEADERSHIP',
+        resolvedIndicatorCount: 1,
+        configuredIndicatorCount: 6
+      }]);
       const profession = projectCareerProfessionAnalysis({
         candidates: [],
         ranking: {

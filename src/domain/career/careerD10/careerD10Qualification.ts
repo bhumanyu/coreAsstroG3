@@ -131,6 +131,7 @@ function qualifyExpressionSemantically(
     strength: qualified ? dimensionResult.strength : expression.strength === 'STRONG' ? 'STRONG' :
       expression.strength === 'MODERATE' ? 'MODERATE' :
         expression.strength === 'WEAK' ? 'WEAK' : 'UNDETERMINED',
+    dimensionCoverage: dimensionResult.dimensionCoverage,
     evidence: Object.freeze(qualificationEvidence),
     statement: qualified
       ? `Expression ${expressionId} qualified by D10 with effect ${relationship}.`

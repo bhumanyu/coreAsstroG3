@@ -4,7 +4,8 @@ import type {
   CareerD10QualificationStrength,
   CareerD10EvidenceRole,
   CareerD10HouseRole,
-  CareerD10FactDiagnostic
+  CareerD10FactDiagnostic,
+  CareerD10DimensionCoverage
 } from './careerD10QualificationTypes';
 
 import type {
@@ -116,6 +117,7 @@ export interface CareerD10ExpressionQualificationCanonical {
   readonly effect: CareerD10QualificationEffect;
   readonly direction: CareerD10QualificationDirection;
   readonly strength: CareerD10QualificationStrength;
+  readonly dimensionCoverage?: CareerD10DimensionCoverage;
   readonly evidence: readonly CareerD10CanonicalEvidence[];
   readonly mappingStatus?: C8ToC10MappingStatus;
   readonly mappingDiagnostic?: string;

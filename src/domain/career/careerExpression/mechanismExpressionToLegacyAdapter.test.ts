@@ -249,6 +249,99 @@ describe('mechanismExpressionToLegacyAdapter', () => {
       expect(failed.analysisStatus).toBe('FAILED');
       expect(failed.statement).toContain('mechanism resolver returned a malformed result');
     });
+
+    it('fails closed on malformed nested evidence, provenance, participant planets, and canonical enums', () => {
+      const evidence = {
+        evidenceId: 'EVID-001',
+        sourceMechanismId: 'MECH-001',
+        sourceEvidenceIds: ['SRC-001'],
+        ruleId: 'RULE-001',
+        role: 'ESTABLISHING'
+      };
+      const provenance = {
+        mechanismIds: ['MECH-001'],
+        patternIds: ['PATTERN-001'],
+        relationshipIds: [],
+        evidenceIds: ['EVID-001'],
+        sourceStages: ['PATTERN']
+      };
+      const expression = {
+        expressionId: 'EXPR-001',
+        expressionType: 'AUTHORITY_EXPRESSION',
+        sourceMechanismIds: ['MECH-001'],
+        mechanismTypes: ['AUTHORITY'],
+        status: 'CANDIDATE',
+        pathway: 'HOUSE',
+        evidence: [evidence],
+        provenance
+      };
+      const result = {
+        expressions: [expression],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance
+      };
+
+      const malformedResults = [
+        {
+          ...result,
+          expressions: [{
+            ...expression,
+            evidence: [{ ...evidence, evidenceId: undefined }]
+          }]
+        },
+        {
+          ...result,
+          expressions: [{
+            ...expression,
+            provenance: { ...provenance, relationshipIds: 'REL-001' }
+          }]
+        },
+        {
+          ...result,
+          expressions: [{
+            ...expression,
+            evidence: [{ ...evidence, role: 'UNRECOGNIZED' }]
+          }]
+        },
+        {
+          ...result,
+          expressions: [{
+            ...expression,
+            qualificationStatus: 'CANDIDATE',
+            direction: 'UNRECOGNIZED',
+            strength: 'UNAVAILABLE',
+            trace: []
+          }]
+        }
+      ];
+
+      for (const malformed of malformedResults) {
+        expect(adaptMechanismExpressionToLegacy(malformed as unknown as CareerExpressionAnalysisResult, [])
+          .analysisStatus).toBe('FAILED');
+      }
+
+      expect(adaptMechanismExpressionToLegacy(
+        result as unknown as CareerExpressionAnalysisResult,
+        [{
+          candidateId: 'MECH-001',
+          patternId: 'PATTERN-001',
+          mechanismType: 'AUTHORITY',
+          pathway: 'HOUSE',
+          evidence: [],
+          provenance: {
+            patternIds: ['PATTERN-001'],
+            relationshipIds: [],
+            participantIds: 'PLANET:SUN',
+            evidenceIds: [],
+            sourceStages: ['PATTERN']
+          },
+          explanation: 'Malformed participant planets'
+        }] as unknown as CareerMechanismCandidate[]
+      ).analysisStatus).toBe('FAILED');
+    });
   });
 
   describe('authoritative planet provenance', () => {
