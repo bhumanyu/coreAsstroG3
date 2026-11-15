@@ -23,7 +23,8 @@ describe('Career Planetary Condition (C6)', () => {
         combustion: 'NOT_COMBUST',
         beneficSupport: false,
         maleficPressure: false,
-        dataAvailable: true
+        dataAvailable: true,
+        assessmentStatus: 'FULL'
       });
 
       const result = interpretCareerPlanetaryCondition(context);
@@ -42,7 +43,8 @@ describe('Career Planetary Condition (C6)', () => {
         combustion: 'NOT_COMBUST',
         beneficSupport: false,
         maleficPressure: false,
-        dataAvailable: true
+        dataAvailable: true,
+        assessmentStatus: 'FULL'
       });
 
       const result = interpretCareerPlanetaryCondition(context);
@@ -61,7 +63,8 @@ describe('Career Planetary Condition (C6)', () => {
         combustion: 'NOT_COMBUST',
         beneficSupport: false,
         maleficPressure: false,
-        dataAvailable: true
+        dataAvailable: true,
+        assessmentStatus: 'FULL'
       });
 
       const result = interpretCareerPlanetaryCondition(context);
@@ -89,7 +92,7 @@ describe('Career Planetary Condition (C6)', () => {
       expect(result.relevance).toBe('CONDITIONAL');
     });
 
-    it('partial assessment with no directional factors is unavailable, not neutral', () => {
+    it('partial assessment with no directional factors is insufficient data, not neutral', () => {
       const result = interpretCareerPlanetaryCondition({
         planet: Planet.MERCURY,
         relevance: 'PRIMARY',
@@ -101,10 +104,10 @@ describe('Career Planetary Condition (C6)', () => {
         maleficPressure: false,
         dataAvailable: true,
         assessmentStatus: 'PARTIAL',
-        assessmentMissingFactors: ['career.affliction']
+        assessmentMissingFactors: ['aspectSources']
       });
 
-      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).toBe('INSUFFICIENT_DATA');
       expect(result.assessment).toBe('PARTIAL');
       expect(result.positiveFactors).toEqual([]);
       expect(result.negativeFactors).toEqual([]);
@@ -133,7 +136,7 @@ describe('Career Planetary Condition (C6)', () => {
 
   // Group B — missing data
   describe('Group B — missing data', () => {
-    it('PRIMARY + dataAvailable=false → UNAVAILABLE', () => {
+    it('PRIMARY + dataAvailable=false → INSUFFICIENT_DATA', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
@@ -148,13 +151,13 @@ describe('Career Planetary Condition (C6)', () => {
 
       const result = interpretCareerPlanetaryCondition(context);
 
-      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).toBe('INSUFFICIENT_DATA');
       expect(result.condition).not.toBe('WEAK');
       expect(result.condition).not.toBe('AFFLICTED');
       expect(result.condition).not.toBe('NEUTRAL');
     });
 
-    it('PRIMARY + dataAvailable=true + dignity=UNAVAILABLE → UNAVAILABLE', () => {
+    it('PRIMARY + dataAvailable=true + dignity=UNAVAILABLE → INSUFFICIENT_DATA', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
@@ -169,11 +172,11 @@ describe('Career Planetary Condition (C6)', () => {
 
       const result = interpretCareerPlanetaryCondition(context);
 
-      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).toBe('INSUFFICIENT_DATA');
       expect(result.condition).not.toBe('NEUTRAL');
     });
 
-    it('PRIMARY + required data + affliction=UNAVAILABLE → partial condition', () => {
+    it('affliction is optional when all required evidence dimensions are resolved', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
@@ -183,21 +186,23 @@ describe('Career Planetary Condition (C6)', () => {
         combustion: 'NOT_COMBUST',
         beneficSupport: false,
         maleficPressure: false,
-        dataAvailable: true
+        dataAvailable: true,
+        assessmentStatus: 'FULL'
       });
 
       const result = interpretCareerPlanetaryCondition(context);
 
       expect(result.condition).toBe('STRONG');
       expect(result.conditional).toBe(true);
-      expect(result.assessment).toBe('PARTIAL');
+      expect(result.assessment).toBe('FULL');
+      expect(result.assessmentDetails?.missingFactors).toEqual([]);
       expect(result.afflictionAssessed).toBe(false);
       expect(result.negativeFactors).toEqual([]);
       expect(result.statement).toContain('Affliction was not assessed');
       expect(result.statement).toContain('no affliction-based challenge is inferred');
     });
 
-    it('PRIMARY + dataAvailable=true + combustion=UNAVAILABLE → UNAVAILABLE', () => {
+    it('PRIMARY + dataAvailable=true + combustion=UNAVAILABLE → INSUFFICIENT_DATA', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
@@ -212,11 +217,11 @@ describe('Career Planetary Condition (C6)', () => {
 
       const result = interpretCareerPlanetaryCondition(context);
 
-      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).toBe('INSUFFICIENT_DATA');
       expect(result.condition).not.toBe('NEUTRAL');
     });
 
-    it('PRIMARY + dataAvailable=true + motion=UNKNOWN → UNAVAILABLE', () => {
+    it('PRIMARY + dataAvailable=true + motion=UNKNOWN → INSUFFICIENT_DATA', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
@@ -231,7 +236,7 @@ describe('Career Planetary Condition (C6)', () => {
 
       const result = interpretCareerPlanetaryCondition(context);
 
-      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).toBe('INSUFFICIENT_DATA');
       expect(result.condition).not.toBe('NEUTRAL');
     });
   });
@@ -317,7 +322,8 @@ describe('Career Planetary Condition (C6)', () => {
         combustion: 'NOT_COMBUST',
         beneficSupport: false,
         maleficPressure: false,
-        dataAvailable: true
+        dataAvailable: true,
+        assessmentStatus: 'FULL'
       });
 
       const result = interpretCareerPlanetaryCondition(context);
@@ -619,7 +625,8 @@ describe('Career Planetary Condition (C6)', () => {
         combustion: 'NOT_COMBUST',
         beneficSupport: false,
         maleficPressure: false,
-        dataAvailable: true
+        dataAvailable: true,
+        assessmentStatus: 'FULL'
       });
 
       const result = interpretCareerPlanetaryCondition(context);

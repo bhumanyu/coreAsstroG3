@@ -1,5 +1,14 @@
-import { AspectType, Planet, type Horoscope } from '../../types';
-import { isNaturalBenefic } from '../planetaryStrength/drikBala';
+import {
+  AspectType,
+  Planet,
+  type Horoscope,
+  type NatalGrahaDrishtiComputationStatus
+} from '../../types';
+import {
+  isNaturalBenefic,
+  NATURAL_CLASSIFICATION_RULE_VERSION
+} from '../planetaryStrength/drikBala';
+import { normalizeDegree } from '../nakshatraUtils';
 
 export type PlanetaryAspectConsumerId =
   | 'CAREER_C6_BENEFIC_SUPPORT'
@@ -47,6 +56,28 @@ export interface PlanetaryAspectInfluence {
       | 'NONE';
     readonly consumedBy: readonly PlanetaryAspectConsumerId[];
   };
+  readonly naturalClassificationProvenance: {
+    readonly ruleVersion: typeof NATURAL_CLASSIFICATION_RULE_VERSION;
+    readonly inputs:
+      | {
+          readonly rule: 'NATURAL_BENEFIC_TABLE';
+          readonly planet: Planet;
+        }
+      | {
+          readonly rule: 'MERCURY_ASSOCIATION';
+          readonly mercuryHouse?: number;
+          readonly maleficHouses: readonly {
+            readonly planet: Planet;
+            readonly house?: number;
+          }[];
+        }
+      | {
+          readonly rule: 'MOON_PHASE';
+          readonly sunLongitude?: number;
+          readonly moonLongitude?: number;
+          readonly phaseAngle?: number;
+        };
+  };
   readonly naturalNature?: 'BENEFIC' | 'MALEFIC';
   readonly functionalNature?: 'BENEFIC' | 'MALEFIC' | 'MIXED' | 'NEUTRAL';
   readonly sourceHouse?: number;
@@ -59,7 +90,16 @@ export interface PlanetaryAspectInfluence {
 
 export interface AspectDiagnostic {
   readonly record: unknown;
-  readonly reason: 'INVALID_SOURCE_PLANET' | 'INVALID_TARGET' | 'MISSING_FIELDS';
+  readonly reason:
+    | 'INVALID_SOURCE_PLANET'
+    | 'INVALID_TARGET'
+    | 'MISSING_FIELDS'
+    | 'ASPECT_COMPUTATION_STATUS_UNKNOWN'
+    | 'ASPECT_COMPUTATION_PARTIAL'
+    | 'ASPECT_COMPUTATION_UNAVAILABLE'
+    | 'ASPECT_PRODUCER_DIAGNOSTIC'
+    | 'ASPECT_RECORDS_MISSING';
+  readonly detail?: string;
 }
 
 export interface PlanetaryAspectInfluenceResult {
@@ -68,8 +108,9 @@ export interface PlanetaryAspectInfluenceResult {
   readonly mixedSources: readonly PlanetaryAspectInfluence[];
   readonly unassessedSources: readonly PlanetaryAspectInfluence[];
   readonly availability: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
-  readonly producerStatus?: 'ASSUMED_COMPLETE';
+  readonly producerStatus?: NatalGrahaDrishtiComputationStatus | 'UNKNOWN';
   readonly ignoredRecords: readonly AspectDiagnostic[];
+  readonly diagnostics: readonly AspectDiagnostic[];
 }
 
 interface CanonicalAspectRecord {
@@ -93,28 +134,98 @@ function isPlanet(value: unknown): value is Planet {
   return typeof value === 'string' && Object.values(Planet).includes(value as Planet);
 }
 
-function getNaturalNature(
+function getNaturalClassification(
   planet: Planet,
   horoscope: Horoscope
-): 'BENEFIC' | 'MALEFIC' | undefined {
+): {
+  readonly nature?: 'BENEFIC' | 'MALEFIC';
+  readonly provenance: PlanetaryAspectInfluence['naturalClassificationProvenance'];
+} {
   const facts = horoscope.planetFacts;
-  if (!facts) return undefined;
+  const rule = getNaturalRule(planet);
   if (planet === Planet.MOON) {
-    const sunLongitude = facts[Planet.SUN]?.position?.eclipticLongitude;
-    const moonLongitude = facts[Planet.MOON]?.position?.eclipticLongitude;
-    if (!Number.isFinite(sunLongitude) || !Number.isFinite(moonLongitude)) return undefined;
+    const sunLongitude = facts?.[Planet.SUN]?.position?.eclipticLongitude;
+    const moonLongitude = facts?.[Planet.MOON]?.position?.eclipticLongitude;
+    const hasPhaseInputs = Number.isFinite(sunLongitude) && Number.isFinite(moonLongitude);
+    return {
+      ...(facts?.[planet] && hasPhaseInputs
+        ? { nature: isNaturalBenefic(planet, facts) ? 'BENEFIC' as const : 'MALEFIC' as const }
+        : {}),
+      provenance: Object.freeze({
+        ruleVersion: NATURAL_CLASSIFICATION_RULE_VERSION,
+        inputs: Object.freeze({
+          rule: 'MOON_PHASE',
+          ...(typeof sunLongitude === 'number' && Number.isFinite(sunLongitude)
+            ? { sunLongitude }
+            : {}),
+          ...(typeof moonLongitude === 'number' && Number.isFinite(moonLongitude)
+            ? { moonLongitude }
+            : {}),
+          ...(typeof sunLongitude === 'number' && Number.isFinite(sunLongitude) &&
+              typeof moonLongitude === 'number' && Number.isFinite(moonLongitude)
+            ? { phaseAngle: normalizeDegree(moonLongitude - sunLongitude) }
+            : {})
+        })
+      })
+    };
   }
+
   if (planet === Planet.MERCURY) {
-    const mercuryHouse = facts[Planet.MERCURY]?.house;
-    if (typeof mercuryHouse !== 'number' || !Number.isFinite(mercuryHouse)) return undefined;
-    const requiredMalefics = [Planet.SUN, Planet.MARS, Planet.SATURN, Planet.RAHU, Planet.KETU];
-    if (requiredMalefics.some((malefic) =>
-      typeof facts[malefic]?.house !== 'number' || !Number.isFinite(facts[malefic].house))) {
-      return undefined;
-    }
+    const mercuryHouse = facts?.[Planet.MERCURY]?.house;
+    const maleficPlanets = [
+      Planet.SUN,
+      Planet.MARS,
+      Planet.SATURN,
+      Planet.RAHU,
+      Planet.KETU
+    ] as const;
+    const maleficHouses = maleficPlanets.map((malefic) => {
+      const house = facts?.[malefic]?.house;
+      return Object.freeze({
+        planet: malefic,
+        ...(typeof house === 'number' && Number.isFinite(house) ? { house } : {})
+      });
+    });
+    const hasAssociationInputs =
+      typeof mercuryHouse === 'number' &&
+      Number.isFinite(mercuryHouse) &&
+      maleficHouses.every((item) => item.house !== undefined);
+    return {
+      ...(facts?.[planet] && facts && hasAssociationInputs
+        ? { nature: isNaturalBenefic(planet, facts) ? 'BENEFIC' as const : 'MALEFIC' as const }
+        : {}),
+      provenance: Object.freeze({
+        ruleVersion: NATURAL_CLASSIFICATION_RULE_VERSION,
+        inputs: Object.freeze({
+          rule: 'MERCURY_ASSOCIATION',
+          ...(typeof mercuryHouse === 'number' && Number.isFinite(mercuryHouse)
+            ? { mercuryHouse }
+            : {}),
+          maleficHouses: Object.freeze(maleficHouses)
+        })
+      })
+    };
   }
-  if (!facts[planet]) return undefined;
-  return isNaturalBenefic(planet, facts) ? 'BENEFIC' : 'MALEFIC';
+
+  if (!facts) {
+    return {
+      provenance: Object.freeze({
+        ruleVersion: NATURAL_CLASSIFICATION_RULE_VERSION,
+        inputs: Object.freeze({ rule: 'NATURAL_BENEFIC_TABLE', planet } as const)
+      })
+    };
+  }
+
+  const nature = facts[planet]
+    ? isNaturalBenefic(planet, facts) ? 'BENEFIC' as const : 'MALEFIC' as const
+    : undefined;
+  return {
+    ...(nature ? { nature } : {}),
+    provenance: Object.freeze({
+      ruleVersion: NATURAL_CLASSIFICATION_RULE_VERSION,
+      inputs: Object.freeze({ rule: 'NATURAL_BENEFIC_TABLE', planet } as const)
+    })
+  };
 }
 
 function getNaturalRule(
@@ -155,9 +266,14 @@ function classifySource(
   horoscope: Horoscope
 ): Pick<
   PlanetaryAspectInfluence,
-  'sourceNature' | 'naturalNature' | 'functionalNature' | 'classificationBasis'
+  | 'sourceNature'
+  | 'naturalNature'
+  | 'functionalNature'
+  | 'classificationBasis'
+  | 'naturalClassificationProvenance'
 > {
-  const naturalNature = getNaturalNature(planet, horoscope);
+  const naturalClassification = getNaturalClassification(planet, horoscope);
+  const naturalNature = naturalClassification.nature;
   const functional = getFunctionalNature(planet, horoscope);
   const functionalNature = functional.nature;
   const classificationBasis = Object.freeze({
@@ -165,26 +281,61 @@ function classifySource(
     functionalSource: functional.source,
     consumedBy: Object.freeze([])
   });
+  const provenance = naturalClassification.provenance;
 
   if (functionalNature === 'MIXED' ||
       (naturalNature !== undefined &&
         ((naturalNature === 'BENEFIC' && functionalNature === 'MALEFIC') ||
           (naturalNature === 'MALEFIC' && functionalNature === 'BENEFIC')))) {
-    return { sourceNature: 'MIXED', naturalNature, functionalNature, classificationBasis };
+    return {
+      sourceNature: 'MIXED',
+      naturalNature,
+      functionalNature,
+      classificationBasis,
+      naturalClassificationProvenance: provenance
+    };
   }
   if (naturalNature === 'BENEFIC') {
-    return { sourceNature: 'NATURAL_BENEFIC', naturalNature, functionalNature, classificationBasis };
+    return {
+      sourceNature: 'NATURAL_BENEFIC',
+      naturalNature,
+      functionalNature,
+      classificationBasis,
+      naturalClassificationProvenance: provenance
+    };
   }
   if (naturalNature === 'MALEFIC') {
-    return { sourceNature: 'NATURAL_MALEFIC', naturalNature, functionalNature, classificationBasis };
+    return {
+      sourceNature: 'NATURAL_MALEFIC',
+      naturalNature,
+      functionalNature,
+      classificationBasis,
+      naturalClassificationProvenance: provenance
+    };
   }
   if (functionalNature === 'BENEFIC') {
-    return { sourceNature: 'FUNCTIONAL_BENEFIC', functionalNature, classificationBasis };
+    return {
+      sourceNature: 'FUNCTIONAL_BENEFIC',
+      functionalNature,
+      classificationBasis,
+      naturalClassificationProvenance: provenance
+    };
   }
   if (functionalNature === 'MALEFIC') {
-    return { sourceNature: 'FUNCTIONAL_MALEFIC', functionalNature, classificationBasis };
+    return {
+      sourceNature: 'FUNCTIONAL_MALEFIC',
+      functionalNature,
+      classificationBasis,
+      naturalClassificationProvenance: provenance
+    };
   }
-  return { sourceNature: 'UNASSESSED', naturalNature, functionalNature, classificationBasis };
+  return {
+    sourceNature: 'UNASSESSED',
+    naturalNature,
+    functionalNature,
+    classificationBasis,
+    naturalClassificationProvenance: provenance
+  };
 }
 
 const byAspectOrder = (a: PlanetaryAspectInfluence, b: PlanetaryAspectInfluence): number =>
@@ -195,6 +346,12 @@ const byAspectOrder = (a: PlanetaryAspectInfluence, b: PlanetaryAspectInfluence)
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isComputationStatus(
+  value: unknown
+): value is NatalGrahaDrishtiComputationStatus {
+  return value === 'COMPLETE' || value === 'PARTIAL' || value === 'UNAVAILABLE';
 }
 
 function isHouse(value: unknown): value is number {
@@ -251,7 +408,49 @@ export function resolvePlanetaryAspects(
   horoscope: Horoscope,
   planet: Planet
 ): PlanetaryAspectInfluenceResult {
-  const aspects = horoscope.natalGrahaDrishti?.aspects;
+  const report = horoscope.natalGrahaDrishti;
+  const aspects = report?.aspects;
+  const producerStatus: NatalGrahaDrishtiComputationStatus | 'UNKNOWN' | undefined =
+    !report
+      ? undefined
+      : isComputationStatus(report.computationStatus)
+        ? report.computationStatus
+        : 'UNKNOWN';
+  const diagnostics: AspectDiagnostic[] = [];
+  if (producerStatus === 'UNKNOWN') {
+    diagnostics.push(Object.freeze({
+      record: report,
+      reason: 'ASPECT_COMPUTATION_STATUS_UNKNOWN'
+    }));
+  } else if (producerStatus === 'PARTIAL') {
+    diagnostics.push(Object.freeze({
+      record: report,
+      reason: 'ASPECT_COMPUTATION_PARTIAL'
+    }));
+  } else if (producerStatus === 'UNAVAILABLE') {
+    diagnostics.push(Object.freeze({
+      record: report,
+      reason: 'ASPECT_COMPUTATION_UNAVAILABLE'
+    }));
+  }
+  const rawProducerDiagnostics: unknown = report?.diagnostics;
+  if (rawProducerDiagnostics !== undefined && !Array.isArray(rawProducerDiagnostics)) {
+    diagnostics.push(Object.freeze({
+      record: rawProducerDiagnostics,
+      reason: 'ASPECT_PRODUCER_DIAGNOSTIC',
+      detail: 'INVALID_PRODUCER_DIAGNOSTICS'
+    }));
+  } else {
+    for (const rawDiagnostic of (rawProducerDiagnostics ?? []) as readonly unknown[]) {
+      diagnostics.push(Object.freeze({
+        record: rawDiagnostic,
+        reason: 'ASPECT_PRODUCER_DIAGNOSTIC',
+        detail: isRecord(rawDiagnostic) && typeof rawDiagnostic.code === 'string'
+          ? rawDiagnostic.code
+          : 'INVALID_PRODUCER_DIAGNOSTIC'
+      }));
+    }
+  }
   if (!Array.isArray(aspects)) {
     return Object.freeze({
       beneficSources: Object.freeze([]),
@@ -259,7 +458,17 @@ export function resolvePlanetaryAspects(
       mixedSources: Object.freeze([]),
       unassessedSources: Object.freeze([]),
       availability: 'UNAVAILABLE',
-      ignoredRecords: Object.freeze([])
+      ...(producerStatus ? { producerStatus } : {}),
+      ignoredRecords: Object.freeze([]),
+      diagnostics: Object.freeze([
+        ...diagnostics,
+        ...(report
+          ? [Object.freeze({
+              record: report,
+              reason: 'ASPECT_RECORDS_MISSING' as const
+            })]
+          : [])
+      ])
     });
   }
 
@@ -276,7 +485,9 @@ export function resolvePlanetaryAspects(
   for (const rawAspect of aspects as readonly unknown[]) {
     const parsed = readAspectRecord(rawAspect);
     if (typeof parsed === 'string') {
-      ignoredRecords.push(Object.freeze({ record: rawAspect, reason: parsed }));
+      const diagnostic = Object.freeze({ record: rawAspect, reason: parsed });
+      ignoredRecords.push(diagnostic);
+      diagnostics.push(diagnostic);
       continue;
     }
     if (parsed.targetPlanet !== planet) continue;
@@ -321,8 +532,15 @@ export function resolvePlanetaryAspects(
     maleficSources: Object.freeze(result.maleficSources),
     mixedSources: Object.freeze(result.mixedSources),
     unassessedSources: Object.freeze(result.unassessedSources),
-    availability: ignoredRecords.length === 0 ? 'AVAILABLE' : 'PARTIAL',
-    producerStatus: 'ASSUMED_COMPLETE',
-    ignoredRecords: Object.freeze(ignoredRecords)
+    availability: producerStatus === 'UNAVAILABLE'
+      ? 'UNAVAILABLE'
+      : producerStatus !== 'COMPLETE' ||
+          ignoredRecords.length > 0 ||
+          diagnostics.some((diagnostic) => diagnostic.reason === 'ASPECT_PRODUCER_DIAGNOSTIC')
+        ? 'PARTIAL'
+        : 'AVAILABLE',
+    ...(producerStatus ? { producerStatus } : {}),
+    ignoredRecords: Object.freeze(ignoredRecords),
+    diagnostics: Object.freeze(diagnostics)
   });
 }

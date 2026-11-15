@@ -317,15 +317,12 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         contextResolved: true,
         relevance: 'PRIMARY',
         condition: 'WEAK',
-        conditionAssessment: 'PARTIAL',
+        conditionAssessment: 'FULL',
         afflictionAssessed: false,
         expressionCount: 0,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
-        diagnostics: [
-          'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
-          'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
-        ],
+        diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'],
         hasCareerPromise: true,
         planetActivates: false,
         planetChallenges: true,
@@ -338,8 +335,8 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planet: 'MERCURY',
         contextResolved: true,
         relevance: 'SUPPORTING',
-        condition: 'UNAVAILABLE',
-        conditionAssessment: 'UNAVAILABLE',
+        condition: 'NEUTRAL',
+        conditionAssessment: 'FULL',
         afflictionAssessed: false,
         expressionCount: 0,
         expressionEvidenceCount: 0,
@@ -349,7 +346,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planetActivates: false,
         planetChallenges: false,
         isRelevant: true,
-        direction: 'UNAVAILABLE',
+        direction: 'NEUTRAL',
         effect: 'DOES_NOT_ACTIVATE'
       },
       {
@@ -357,8 +354,8 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planet: 'VENUS',
         contextResolved: true,
         relevance: 'SUPPORTING',
-        condition: 'UNAVAILABLE',
-        conditionAssessment: 'UNAVAILABLE',
+        condition: 'INSUFFICIENT_DATA',
+        conditionAssessment: 'PARTIAL',
         afflictionAssessed: false,
         expressionCount: 0,
         expressionEvidenceCount: 0,
@@ -390,7 +387,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     })).sort((a, b) => a.level.localeCompare(b.level))).toEqual([
       {
         level: 'AD',
-        conditionAssessment: 'UNAVAILABLE',
+        conditionAssessment: 'FULL',
         afflictionAssessed: false,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
@@ -398,18 +395,15 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
       },
       {
         level: 'MD',
-        conditionAssessment: 'PARTIAL',
+        conditionAssessment: 'FULL',
         afflictionAssessed: false,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
-        diagnostics: [
-          'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT',
-          'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
-        ]
+        diagnostics: ['C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE']
       },
       {
         level: 'PD',
-        conditionAssessment: 'UNAVAILABLE',
+        conditionAssessment: 'PARTIAL',
         afflictionAssessed: false,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
@@ -422,7 +416,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           "conflictedCandidateCount": 0,
           "conflictedQualificationCount": 0,
           "distinctCandidateIdCount": 1,
-          "eligiblePatternCount": 1,
+          "eligiblePatternCount": 0,
           "evidenceCount": 0,
           "evidenceWithPlanetAttributionCount": 0,
           "expressionCount": 0,
@@ -448,10 +442,9 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           {
             "afflictionAssessed": false,
             "condition": "WEAK",
-            "conditionAssessment": "PARTIAL",
+            "conditionAssessment": "FULL",
             "contextResolved": true,
             "diagnostics": [
-              "C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT",
               "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
             ],
             "direction": "CHALLENGE",
@@ -469,13 +462,13 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           },
           {
             "afflictionAssessed": false,
-            "condition": "UNAVAILABLE",
-            "conditionAssessment": "UNAVAILABLE",
+            "condition": "NEUTRAL",
+            "conditionAssessment": "FULL",
             "contextResolved": true,
             "diagnostics": [
               "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
             ],
-            "direction": "UNAVAILABLE",
+            "direction": "NEUTRAL",
             "effect": "DOES_NOT_ACTIVATE",
             "evidenceBasis": "CONDITION_AND_RELEVANCE",
             "expressionCount": 0,
@@ -490,8 +483,8 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           },
           {
             "afflictionAssessed": false,
-            "condition": "UNAVAILABLE",
-            "conditionAssessment": "UNAVAILABLE",
+            "condition": "INSUFFICIENT_DATA",
+            "conditionAssessment": "PARTIAL",
             "contextResolved": true,
             "diagnostics": [
               "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
@@ -894,7 +887,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     expect(result.canonicalC11.timingStatus).toBe('CHALLENGED');
     expect(diagnosticTrace.c9LevelResultsBeforeHierarchy).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        conditionAssessment: 'PARTIAL',
+        conditionAssessment: 'FULL',
         afflictionAssessed: false,
         direction: 'CHALLENGE',
         effect: 'CHALLENGES'

@@ -41,13 +41,14 @@ export type InfluenceFactorStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
 export interface FactorAvailability {
   readonly status: InfluenceFactorStatus;
   readonly source?: string;
-  readonly producerStatus?: 'ASSUMED_COMPLETE';
+  readonly producerStatus?: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE' | 'UNKNOWN';
 }
 
 export interface PlanetaryRelationshipDiagnostic {
   readonly record: unknown;
   readonly reason:
     | 'POSITION_HOUSE_MISMATCH'
+    | 'EXCHANGE_SIGN_LORDSHIP_UNAVAILABLE'
     | 'INVALID_YOGA_RECORD'
     | 'INVALID_YOGA_FIELDS'
     | 'INVALID_EVIDENCE_RECORD'
@@ -66,7 +67,7 @@ export interface PlanetaryRelationshipEvidence {
 
 export interface PlanetaryExchangeEvidence extends PlanetaryRelationshipEvidence {
   readonly relationship: 'EXCHANGE';
-  readonly validationStatus: 'OBSERVED' | 'SIGN_EXCHANGE_VALIDATED';
+  readonly validationStatus: 'OBSERVED' | 'VALIDATED_SIGN_EXCHANGE';
 }
 
 export interface PlanetaryYogaParticipation {
@@ -149,23 +150,59 @@ function isPlanetArray(value: unknown): value is readonly Planet[] {
   return Array.isArray(value) && Array.from(value).every(isPlanet);
 }
 
-function confirmsExchange(horoscope: Horoscope, planets: readonly Planet[]): boolean {
-  if (planets.length !== 2) return false;
+function validateSignExchange(
+  horoscope: Horoscope,
+  planets: readonly Planet[]
+): {
+  readonly validationStatus: PlanetaryExchangeEvidence['validationStatus'];
+  readonly unavailable: boolean;
+} {
+  if (planets.length !== 2) {
+    return { validationStatus: 'OBSERVED', unavailable: true };
+  }
   const [first, second] = planets;
   const firstPosition = resolveCanonicalPlanetPosition(horoscope.planetFacts?.[first]);
   const secondPosition = resolveCanonicalPlanetPosition(horoscope.planetFacts?.[second]);
-  return firstPosition.sign !== undefined &&
-    secondPosition.sign !== undefined &&
-    SIGNS_METADATA[firstPosition.sign].ruler === second &&
-    SIGNS_METADATA[secondPosition.sign].ruler === first;
+  const firstRuler = firstPosition.sign
+    ? SIGNS_METADATA[firstPosition.sign]?.ruler
+    : undefined;
+  const secondRuler = secondPosition.sign
+    ? SIGNS_METADATA[secondPosition.sign]?.ruler
+    : undefined;
+  if (!firstRuler || !secondRuler) {
+    return { validationStatus: 'OBSERVED', unavailable: true };
+  }
+  return {
+    validationStatus: firstRuler === second && secondRuler === first
+      ? 'VALIDATED_SIGN_EXCHANGE'
+      : 'OBSERVED',
+    unavailable: false
+  };
 }
 
 function getProducerEvidenceId(record: Record<string, unknown>): string | undefined {
-  for (const key of ['occurrenceId', 'evidenceId', 'relationshipEvidenceId', 'id']) {
+  for (const key of [
+    'sourceOccurrenceId',
+    'occurrenceId',
+    'evidenceId',
+    'relationshipEvidenceId',
+    'id'
+  ]) {
     const value = record[key];
     if (typeof value === 'string' && value.length > 0) return `${key}:${value}`;
   }
   return undefined;
+}
+
+function hasValidProducerEvidenceId(record: Record<string, unknown>): boolean {
+  return [
+    'sourceOccurrenceId',
+    'occurrenceId',
+    'evidenceId',
+    'relationshipEvidenceId',
+    'id'
+  ].every((key) => record[key] === undefined ||
+    (typeof record[key] === 'string' && record[key].length > 0));
 }
 
 /**
@@ -240,7 +277,14 @@ export function resolvePlanetaryRelationships(
         relationshipErrors = true;
         continue;
       }
-      if (typeof rawYoga.type !== 'string' || typeof rawYoga.category !== 'string') {
+      if (
+        typeof rawYoga.type !== 'string' ||
+        rawYoga.type.length === 0 ||
+        typeof rawYoga.category !== 'string' ||
+        rawYoga.category.length === 0 ||
+        (rawYoga.finalStatus !== undefined &&
+          (typeof rawYoga.finalStatus !== 'string' || rawYoga.finalStatus.length === 0))
+      ) {
         diagnostics.push(Object.freeze({ record: rawYoga, reason: 'INVALID_YOGA_FIELDS' }));
         yogaErrors = true;
         relationshipErrors = true;
@@ -253,7 +297,11 @@ export function resolvePlanetaryRelationships(
           const ruleIds = evidenceRecords.flatMap((item: unknown) =>
             isRecord(item) &&
             isPlanetArray(item.planets) &&
-            typeof item.ruleId === 'string'
+            typeof item.ruleId === 'string' &&
+            item.ruleId.length > 0 &&
+            typeof item.reason === 'string' &&
+            item.reason.length > 0 &&
+            hasValidProducerEvidenceId(item)
               ? [item.ruleId]
               : []
           ).sort((a, b) => a.localeCompare(b));
@@ -289,11 +337,12 @@ export function resolvePlanetaryRelationships(
           relationshipErrors = true;
           continue;
         }
-        if (rawEvidence.relationship === undefined) continue;
         if (
-          rawEvidence.relationship !== 'CONJUNCTION' &&
-          rawEvidence.relationship !== 'MUTUAL_ASPECT' &&
-          rawEvidence.relationship !== 'EXCHANGE'
+          typeof rawEvidence.ruleId !== 'string' ||
+          rawEvidence.ruleId.length === 0 ||
+          typeof rawEvidence.reason !== 'string' ||
+          rawEvidence.reason.length === 0 ||
+          !hasValidProducerEvidenceId(rawEvidence)
         ) {
           diagnostics.push(Object.freeze({
             record: rawEvidence,
@@ -302,10 +351,11 @@ export function resolvePlanetaryRelationships(
           relationshipErrors = true;
           continue;
         }
+        if (rawEvidence.relationship === undefined) continue;
         if (
-          typeof rawEvidence.ruleId !== 'string' ||
-          rawEvidence.ruleId.length === 0 ||
-          typeof rawEvidence.reason !== 'string'
+          rawEvidence.relationship !== 'CONJUNCTION' &&
+          rawEvidence.relationship !== 'MUTUAL_ASPECT' &&
+          rawEvidence.relationship !== 'EXCHANGE'
         ) {
           diagnostics.push(Object.freeze({
             record: rawEvidence,
@@ -355,7 +405,10 @@ export function resolvePlanetaryRelationships(
       typeof rawEvidence.ruleId !== 'string' ||
       rawEvidence.ruleId.length === 0 ||
       typeof rawEvidence.reason !== 'string' ||
-      (rawEvidence.yogaType !== undefined && typeof rawEvidence.yogaType !== 'string')
+      rawEvidence.reason.length === 0 ||
+      (rawEvidence.yogaType !== undefined &&
+        (typeof rawEvidence.yogaType !== 'string' || rawEvidence.yogaType.length === 0)) ||
+      !hasValidProducerEvidenceId(rawEvidence)
     ) {
       diagnostics.push(Object.freeze({ record: rawEvidence, reason: 'INVALID_EVIDENCE_FIELDS' }));
       relationshipErrors = true;
@@ -388,20 +441,28 @@ export function resolvePlanetaryRelationships(
   const seenRelationships = new Set<string>();
   const deduplicatedRelationships = relationshipEvidence.filter((item) => {
     const identity = item.producerEvidenceId
-      ? `producer:${item.producerEvidenceId}`
-      : `${item.ruleId}|${participantKey(item.planets)}|${item.relationship}|${item.yogaType}`;
+      ? `producer:${item.producerEvidenceId}|${item.relationship}|${item.yogaType}`
+      : `fallback:${item.ruleId}|${participantKey(item.planets)}|${item.relationship}|` +
+        `${item.yogaType}|${item.reason}`;
     if (seenRelationships.has(identity)) return false;
     seenRelationships.add(identity);
     return true;
   });
+  let exchangeValidationErrors = false;
   for (const item of deduplicatedRelationships) {
     if (item.relationship !== 'EXCHANGE') continue;
+    const validation = validateSignExchange(horoscope, item.planets);
+    if (validation.unavailable) {
+      exchangeValidationErrors = true;
+      diagnostics.push(Object.freeze({
+        record: item,
+        reason: 'EXCHANGE_SIGN_LORDSHIP_UNAVAILABLE'
+      }));
+    }
     exchanges.push(Object.freeze({
       ...item,
       relationship: 'EXCHANGE',
-      validationStatus: confirmsExchange(horoscope, item.planets)
-        ? 'SIGN_EXCHANGE_VALIDATED'
-        : 'OBSERVED'
+      validationStatus: validation.validationStatus
     }));
   }
   exchanges.sort((a, b) =>
@@ -438,6 +499,9 @@ export function resolvePlanetaryRelationships(
   const relationshipsStatus: InfluenceFactorStatus = !relationshipInputAvailable
     ? 'UNAVAILABLE'
     : relationshipErrors ? 'PARTIAL' : 'AVAILABLE';
+  const exchangesStatus: InfluenceFactorStatus = !relationshipInputAvailable
+    ? 'UNAVAILABLE'
+    : relationshipErrors || exchangeValidationErrors ? 'PARTIAL' : 'AVAILABLE';
   const yogasStatus: InfluenceFactorStatus = !yogaInputAvailable
     ? 'UNAVAILABLE'
     : yogaErrors ? 'PARTIAL' : 'AVAILABLE';
@@ -457,7 +521,7 @@ export function resolvePlanetaryRelationships(
         source: 'planetFacts.position.eclipticLongitude|longitude'
       }),
       exchanges: Object.freeze({
-        status: relationshipsStatus,
+        status: exchangesStatus,
         source: 'yogas.yogas[].evidence'
       }),
       relationships: Object.freeze({

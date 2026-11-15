@@ -367,7 +367,7 @@ function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTra
         ? 'UNAVAILABLE'
         : 'PARTIAL';
   const diagnostics: PlanetaryInfluenceDiagnostic[] = [
-    ...aspects.ignoredRecords.map((diagnostic) => Object.freeze({
+    ...aspects.diagnostics.map((diagnostic) => Object.freeze({
       factor: 'aspectSources' as const,
       ...diagnostic
     })),

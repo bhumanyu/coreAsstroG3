@@ -148,7 +148,9 @@ export function hasNatalCareerPromise(
 export function isD10DataAvailable(context: CareerD10Context): boolean {
   return context.d10Available &&
     context.d10Houses.length > 0 &&
-    context.d10Planets.some(planet => planet.condition !== 'UNAVAILABLE');
+    context.d10Planets.some(planet =>
+      planet.condition !== 'UNAVAILABLE' && planet.condition !== 'INSUFFICIENT_DATA'
+    );
 }
 
 export function resolveD10PlanetDirection(
@@ -156,7 +158,7 @@ export function resolveD10PlanetDirection(
 ): CareerD10QualificationDirection {
   const { condition, d10House } = planetContext;
 
-  if (condition === 'UNAVAILABLE') {
+  if (condition === 'UNAVAILABLE' || condition === 'INSUFFICIENT_DATA') {
     return 'UNAVAILABLE';
   }
 

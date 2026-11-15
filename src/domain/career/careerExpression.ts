@@ -150,7 +150,8 @@ function isPlanetAvailableForExpression(
   planetContext: CareerExpressionPlanetContext
 ): boolean {
   return hasCareerRelevance(planetContext.relevance) &&
-    planetContext.condition !== 'UNAVAILABLE';
+    planetContext.condition !== 'UNAVAILABLE' &&
+    planetContext.condition !== 'INSUFFICIENT_DATA';
 }
 
 function hasCareerStructuralContext(context: CareerExpressionContext): boolean {

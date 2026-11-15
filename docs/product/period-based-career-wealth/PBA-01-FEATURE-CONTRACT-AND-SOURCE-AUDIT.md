@@ -510,7 +510,14 @@ Verification:
 
 ## 8. Appendices
 
-### 8.1 Part 1 Investigation: Canonical C11 Qualification Input Trace
+### 8.1 Part 1 Investigation: Canonical C11 Qualification Input Trace (Historical)
+
+> **Current-contract update (CW-10K):** The observations below record the earlier C6
+> completeness contract. C6 now treats dignity, combustion, motion, and aspect
+> provenance as required, while affliction is optional. On the canonical chart,
+> Jupiter's weak condition is fully assessed; the current qualification result is
+> therefore `UNQUALIFIED`, and orchestration skips mechanism resolution. The earlier
+> `INSUFFICIENT_DATA` / resolver-coverage-gap conclusion is historical, not current.
 
 This investigation traces why `resolvedMechanisms` is empty for the Jupiter-Ketu chart (CANONICAL_BIRTH_DETAILS), which reproduces `CAREER_QUALIFICATION_UNAVAILABLE` in the selected-period builder.
 

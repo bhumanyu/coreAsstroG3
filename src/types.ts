@@ -414,7 +414,19 @@ export interface HouseDrishti {
   description: string;
 }
 
+export type NatalGrahaDrishtiComputationStatus =
+  | 'COMPLETE'
+  | 'PARTIAL'
+  | 'UNAVAILABLE';
+
+export interface NatalGrahaDrishtiDiagnostic {
+  readonly code: string;
+  readonly message?: string;
+}
+
 export interface NatalGrahaDrishti {
+  computationStatus?: NatalGrahaDrishtiComputationStatus;
+  diagnostics?: readonly NatalGrahaDrishtiDiagnostic[];
   aspects?: any[];
   planetToPlanetAspects?: AspectPair[];
   planetToHouseAspects?: HouseDrishti[];
@@ -435,6 +447,11 @@ export interface NatalGrahaDrishti {
 
 export interface NatalGrahaDrishtiReport extends NatalGrahaDrishti {
   aspects: any[];
+}
+
+export interface NatalGrahaDrishtiComputedReport extends NatalGrahaDrishtiReport {
+  computationStatus: NatalGrahaDrishtiComputationStatus;
+  diagnostics: readonly NatalGrahaDrishtiDiagnostic[];
 }
 
 export interface PlanetFact {

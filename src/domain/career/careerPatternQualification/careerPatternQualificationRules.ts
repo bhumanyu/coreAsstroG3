@@ -272,7 +272,12 @@ export function computeQualificationDimensions(
   // UNAVAILABLE or WEAK in any participant yields that result
   const planetaryCondition = participantConditions.length > 0
     ? participantConditions.reduce((weakest, condition) => {
-      if (condition === 'UNAVAILABLE' || weakest === 'UNAVAILABLE') return 'UNAVAILABLE';
+      if (
+        condition === 'UNAVAILABLE' ||
+        weakest === 'UNAVAILABLE'
+      ) {
+        return 'UNAVAILABLE';
+      }
       if (condition === 'WEAK' || weakest === 'WEAK') return 'WEAK';
       if (condition === 'MODERATE' && weakest === 'STRONG') return condition;
       return weakest;

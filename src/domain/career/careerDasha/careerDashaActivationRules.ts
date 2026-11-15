@@ -35,7 +35,8 @@ export function resolveConditionAssessmentMetadata(
   readonly afflictionAssessed: boolean;
 } {
   const conditionAssessment = planetContext.conditionAssessment
-    ?? (planetContext.condition === 'UNAVAILABLE'
+    ?? (planetContext.condition === 'UNAVAILABLE' ||
+        planetContext.condition === 'INSUFFICIENT_DATA'
       ? 'UNAVAILABLE'
       : planetContext.afflictionAssessed === true
         ? 'FULL'
@@ -54,7 +55,7 @@ export function resolveCareerDashaPlanetDirection(
 ): CareerDashaActivationDirection {
   const { relevance, condition, expressions } = planetContext;
 
-  if (condition === 'UNAVAILABLE') {
+  if (condition === 'UNAVAILABLE' || condition === 'INSUFFICIENT_DATA') {
     return 'UNAVAILABLE';
   }
 
@@ -108,7 +109,7 @@ export function isCareerDashaRelevant(
 export function isCareerDashaConditionUsable(
   condition: CareerPlanetaryCondition
 ): boolean {
-  return condition !== 'UNAVAILABLE';
+  return condition !== 'UNAVAILABLE' && condition !== 'INSUFFICIENT_DATA';
 }
 
 export function isCareerDashaConditionSupportive(
@@ -224,7 +225,7 @@ export function resolveCareerDashaStrength(
   condition: CareerPlanetaryCondition,
   direction: CareerDashaActivationDirection
 ): CareerDashaActivationStrength {
-  if (condition === 'UNAVAILABLE') {
+  if (condition === 'UNAVAILABLE' || condition === 'INSUFFICIENT_DATA') {
     return 'UNDETERMINED';
   }
 

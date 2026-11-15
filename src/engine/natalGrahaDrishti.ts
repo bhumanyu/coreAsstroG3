@@ -1,6 +1,6 @@
 import {
   Planet,
-  NatalGrahaDrishti,
+  NatalGrahaDrishtiComputedReport,
   NatalGrahaDrishtiReport,
   PlanetFact,
   PlanetFacts
@@ -48,7 +48,7 @@ function formatPlanetName(p: Planet): string {
  */
 export function analyzeNatalGrahaDrishti(
   planetFacts: Readonly<Record<Planet, PlanetFact>> | Readonly<Record<Planet, PlanetFacts>> | any
-): NatalGrahaDrishtiReport {
+): NatalGrahaDrishtiComputedReport {
   if (!planetFacts) {
     throw new Error('planetFacts must not be null or undefined.');
   }
@@ -109,6 +109,8 @@ export function analyzeNatalGrahaDrishti(
 
   return Object.freeze({
     aspects: Object.freeze(aspects),
+    computationStatus: 'COMPLETE',
+    diagnostics: Object.freeze([]),
     planetToPlanetAspects: [] as any,
     planetToHouseAspects: [] as any,
     aspectsReceivedByPlanet: {} as any,

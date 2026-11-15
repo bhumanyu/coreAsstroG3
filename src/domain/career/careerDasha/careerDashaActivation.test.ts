@@ -416,6 +416,19 @@ describe('Career Dasha Activation', () => {
     });
   });
 
+  it('keeps INSUFFICIENT_DATA conditions unavailable rather than neutral or challenging', () => {
+    const result = resolveCareerDashaActivation(makeContext({
+      planetContexts: Object.freeze([
+        makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'INSUFFICIENT_DATA')
+      ])
+    }));
+
+    expect(result.md.direction).toBe('UNAVAILABLE');
+    expect(result.md.effect).not.toBe('CHALLENGES');
+    expect(result.md.effect).not.toBe('ACTIVATES');
+    expect(result.md.conditionAssessment).toBe('UNAVAILABLE');
+  });
+
   it('uses a partially assessed condition and records that affliction was not assessed', () => {
     const planetContext = Object.freeze({
       ...makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'STRONG'),

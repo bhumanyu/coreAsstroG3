@@ -15,7 +15,24 @@ export type CareerPlanetaryCondition =
   | 'NEUTRAL'
   | 'WEAK'
   | 'AFFLICTED'
+  | 'INSUFFICIENT_DATA'
   | 'UNAVAILABLE';
+
+export const CAREER_C6_REQUIRED_EVIDENCE_DIMENSIONS = Object.freeze([
+  'dignity',
+  'combustion',
+  'motion',
+  'aspectSources'
+] as const);
+
+export type CareerC6RequiredEvidenceDimension =
+  typeof CAREER_C6_REQUIRED_EVIDENCE_DIMENSIONS[number];
+
+/** Shadbala and affliction remain optional until their producers are authoritative. */
+export const CAREER_C6_OPTIONAL_EVIDENCE_DIMENSIONS = Object.freeze([
+  'shadbala',
+  'career.affliction'
+] as const);
 
 export type CareerPlanetaryConditionAssessment =
   | 'FULL'
@@ -109,12 +126,12 @@ export interface CareerPlanetaryConditionContext {
 
   readonly assessmentStatus?: CareerPlanetaryConditionAssessment;
 
-  readonly assessmentMissingFactors?: readonly string[];
+  readonly assessmentMissingFactors?: readonly CareerC6RequiredEvidenceDimension[];
 }
 
 export interface CareerPlanetaryConditionAssessmentDetails {
   readonly status: CareerPlanetaryConditionAssessment;
-  readonly missingFactors: readonly string[];
+  readonly missingFactors: readonly CareerC6RequiredEvidenceDimension[];
 }
 
 export interface CareerPlanetaryConditionResult {
@@ -335,21 +352,47 @@ function hasRequiredConditionData(
   );
 }
 
+function resolveConditionAssessment(
+  context: CareerPlanetaryConditionContext
+): {
+  readonly status: CareerPlanetaryConditionAssessment;
+  readonly missingFactors: readonly CareerC6RequiredEvidenceDimension[];
+} {
+  if (context.assessmentStatus !== undefined) {
+    return {
+      status: context.assessmentStatus,
+      missingFactors: Object.freeze([
+        ...new Set(context.assessmentMissingFactors ?? [])
+      ])
+    };
+  }
+
+  const missingFactors: CareerC6RequiredEvidenceDimension[] = [];
+  if (context.dignity === 'UNAVAILABLE') missingFactors.push('dignity');
+  if (context.combustion === 'UNAVAILABLE') missingFactors.push('combustion');
+  if (context.motion === 'UNKNOWN') missingFactors.push('motion');
+  missingFactors.push('aspectSources');
+  const resolvedCount = CAREER_C6_REQUIRED_EVIDENCE_DIMENSIONS.length -
+    new Set(missingFactors).size;
+  return {
+    status: resolvedCount === 0 ? 'UNAVAILABLE' : 'PARTIAL',
+    missingFactors: Object.freeze([...new Set(missingFactors)])
+  };
+}
+
 function resolveCondition(
   context: CareerPlanetaryConditionContext,
   assessment: CareerPlanetaryConditionAssessment,
   factors: CareerPlanetaryConditionFactors
 ): CareerPlanetaryCondition {
+  const hasDirectionalFactors =
+    factors.positive.length > 0 || factors.negative.length > 0;
   if (!hasRequiredConditionData(context)) {
-    return 'UNAVAILABLE';
+    return 'INSUFFICIENT_DATA';
   }
 
-  if (
-    assessment === 'PARTIAL' &&
-    factors.positive.length === 0 &&
-    factors.negative.length === 0
-  ) {
-    return 'UNAVAILABLE';
+  if (assessment !== 'FULL' && !hasDirectionalFactors) {
+    return 'INSUFFICIENT_DATA';
   }
 
   if (context.affliction === 'SEVERE') {
@@ -491,8 +534,8 @@ export function interpretCareerPlanetaryCondition(
   }
 
   const factors = createConditionFactors(context);
-  const assessment = context.assessmentStatus ??
-    (context.affliction === 'UNAVAILABLE' ? 'PARTIAL' : 'FULL');
+  const resolvedAssessment = resolveConditionAssessment(context);
+  const assessment = resolvedAssessment.status;
   const condition = resolveCondition(context, assessment, factors);
 
   const statement = createConditionStatement(
@@ -512,13 +555,13 @@ export function interpretCareerPlanetaryCondition(
     positiveFactors: factors.positive,
     negativeFactors: factors.negative,
     relatedPlanets: Object.freeze([]),
-    conditional: condition === 'UNAVAILABLE' || context.affliction === 'UNAVAILABLE',
+    conditional: condition === 'UNAVAILABLE' ||
+      condition === 'INSUFFICIENT_DATA' ||
+      context.affliction === 'UNAVAILABLE',
     assessment,
     assessmentDetails: Object.freeze({
       status: assessment,
-      missingFactors: Object.freeze([
-        ...new Set(context.assessmentMissingFactors ?? [])
-      ])
+      missingFactors: resolvedAssessment.missingFactors
     }),
     ...(context.planetaryInfluenceTrace
       ? { planetaryInfluenceTrace: context.planetaryInfluenceTrace }

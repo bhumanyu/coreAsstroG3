@@ -5,7 +5,8 @@ import {
   PlanetStateCondition,
   Sign,
   type Horoscope,
-  type PlanetFact
+  type PlanetFact,
+  type NatalGrahaDrishtiComputationStatus
 } from '../../../types';
 import { calculateHoroscope } from '../../astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
@@ -32,6 +33,7 @@ const PLANETS: readonly Planet[] = [
 
 type SyntheticOptions = {
   readonly aspects?: readonly Record<string, unknown>[];
+  readonly aspectStatus?: NatalGrahaDrishtiComputationStatus;
   readonly missingAspects?: boolean;
   readonly missingPlanet?: Planet;
   readonly missingCombustion?: Planet;
@@ -128,7 +130,11 @@ function makeHoroscope(options: SyntheticOptions = {}): Horoscope {
     planetFacts,
     natalGrahaDrishti: options.missingAspects
       ? undefined
-      : { aspects: [...(options.aspects ?? [])] },
+      : {
+          aspects: [...(options.aspects ?? [])],
+          computationStatus: options.aspectStatus ?? 'COMPLETE',
+          diagnostics: []
+        },
     functionalNatureIntegration: { planets: functionalNature },
     houseLordship: options.includeStructuralRoles === false
       ? undefined
@@ -243,6 +249,57 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     });
   });
 
+  it('records Mercury association and Moon phase inputs with the natural-rule version', () => {
+    const mercuryHoroscope = makeHoroscope({
+      aspects: [{
+        sourcePlanet: Planet.MERCURY,
+        targetPlanet: Planet.JUPITER,
+        aspectType: 'FULL_7TH'
+      }]
+    });
+    const mercury = resolvePlanetaryAspects(
+      mercuryHoroscope,
+      Planet.JUPITER
+    ).beneficSources[0];
+
+    expect(mercury.naturalClassificationProvenance).toEqual({
+      ruleVersion: 'DRIK_BALA_NATURAL_CLASSIFICATION_V1',
+      inputs: {
+        rule: 'MERCURY_ASSOCIATION',
+        mercuryHouse: 4,
+        maleficHouses: [
+          { planet: Planet.SUN, house: 1 },
+          { planet: Planet.MARS, house: 3 },
+          { planet: Planet.SATURN, house: 7 },
+          { planet: Planet.RAHU, house: 8 },
+          { planet: Planet.KETU, house: 9 }
+        ]
+      }
+    });
+
+    const moonHoroscope = makeHoroscope({
+      aspects: [{
+        sourcePlanet: Planet.MOON,
+        targetPlanet: Planet.JUPITER,
+        aspectType: 'FULL_7TH'
+      }]
+    });
+    const moon = resolvePlanetaryAspects(
+      moonHoroscope,
+      Planet.JUPITER
+    ).beneficSources[0];
+
+    expect(moon.naturalClassificationProvenance).toEqual({
+      ruleVersion: 'DRIK_BALA_NATURAL_CLASSIFICATION_V1',
+      inputs: {
+        rule: 'MOON_PHASE',
+        sunLongitude: 0,
+        moonLongitude: 40,
+        phaseAngle: 40
+      }
+    });
+  });
+
   it('preserves multiple benefic, malefic, and mixed aspect sources independently', () => {
     const horoscope = makeHoroscope({
       aspects: [
@@ -300,6 +357,12 @@ describe('CW-10E synthetic planetary influence matrix', () => {
 
   it('distinguishes no aspects from unavailable aspect input and ignores legacy aspect data', () => {
     const noAspects = resolvePlanetaryAspects(makeHoroscope(), Planet.MERCURY);
+    const unknownStatusHoroscope = makeHoroscope();
+    unknownStatusHoroscope.natalGrahaDrishti = { aspects: [] };
+    const unknownStatus = resolvePlanetaryAspects(
+      unknownStatusHoroscope,
+      Planet.MERCURY
+    );
     const unavailable = resolvePlanetaryAspects(
       makeHoroscope({ missingAspects: true }),
       Planet.MERCURY
@@ -316,9 +379,14 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     };
 
     expect(noAspects.availability).toBe('AVAILABLE');
-    expect(noAspects.producerStatus).toBe('ASSUMED_COMPLETE');
+    expect(noAspects.producerStatus).toBe('COMPLETE');
     expect(noAspects.beneficSources).toEqual([]);
     expect(noAspects.ignoredRecords).toEqual([]);
+    expect(unknownStatus.availability).toBe('PARTIAL');
+    expect(unknownStatus.producerStatus).toBe('UNKNOWN');
+    expect(unknownStatus.diagnostics).toEqual([
+      expect.objectContaining({ reason: 'ASPECT_COMPUTATION_STATUS_UNKNOWN' })
+    ]);
     expect(unavailable.availability).toBe('UNAVAILABLE');
     expect(resolvePlanetaryAspects(legacyOnly, Planet.MERCURY).maleficSources).toEqual([]);
   });
@@ -459,7 +527,27 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     horoscope.planetFacts[Planet.JUPITER].position.sign = Sign.GEMINI;
 
     expect(resolvePlanetaryRelationships(horoscope, Planet.MERCURY).exchanges[0])
-      .toMatchObject({ validationStatus: 'SIGN_EXCHANGE_VALIDATED' });
+      .toMatchObject({ validationStatus: 'VALIDATED_SIGN_EXCHANGE' });
+  });
+
+  it('keeps exchanges observed and diagnoses missing sign-lordship inputs', () => {
+    const horoscope = makeHoroscope({
+      yogaEvidence: [{
+        relationship: 'EXCHANGE',
+        planets: [Planet.MERCURY, Planet.JUPITER],
+        ruleId: 'UNVALIDATED_EXCHANGE',
+        reason: 'Existing relationship evidence'
+      }]
+    });
+    horoscope.planetFacts[Planet.MERCURY].position.sign = undefined as never;
+
+    const result = resolvePlanetaryRelationships(horoscope, Planet.MERCURY);
+
+    expect(result.exchanges[0].validationStatus).toBe('OBSERVED');
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({ reason: 'EXCHANGE_SIGN_LORDSHIP_UNAVAILABLE' })
+    ]);
+    expect(result.availability.exchanges.status).toBe('PARTIAL');
   });
 
   it('validates relationship participant arrays, deduplicates identity, and does not throw', () => {
@@ -498,8 +586,9 @@ describe('CW-10E synthetic planetary influence matrix', () => {
 
     const result = resolvePlanetaryRelationships(horoscope, Planet.MERCURY);
 
-    expect(result.relationshipEvidence).toHaveLength(2);
+    expect(result.relationshipEvidence).toHaveLength(3);
     expect(result.relationshipEvidence.map((item) => item.relationship)).toEqual([
+      'CONJUNCTION',
       'CONJUNCTION',
       'EXCHANGE'
     ]);

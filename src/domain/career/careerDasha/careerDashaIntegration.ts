@@ -187,7 +187,7 @@ function getCurrentDasha(
  * - Builds an expressions-by-planet map derived from expression.expressions[].evidence[].planets
  * - Iterates CAREER_DASHA_PLANET_ORDER
  * - Skips planets with no C5 relevance (missing evidence is not negative evidence)
- * - Maps condition?.condition ?? 'UNAVAILABLE' (preserves C6 UNAVAILABLE — never coerces to WEAK/NEUTRAL/CHALLENGE)
+ * - Preserves unavailable/insufficient C6 conditions without coercing them to direction.
  * - Sorts relatedHouses numerically and relatedPlanets by canonical order
  * - Freezes each context
  */
@@ -203,8 +203,14 @@ function getConditionAssessment(
   condition: CareerPlanetaryConditionResult | undefined,
   afflictionAssessed: boolean
 ): NonNullable<CareerDashaPlanetContext['conditionAssessment']> {
-  if (!condition || condition.condition === 'UNAVAILABLE') {
+  if (!condition) {
     return 'UNAVAILABLE';
+  }
+  if (
+    condition.condition === 'UNAVAILABLE' ||
+    condition.condition === 'INSUFFICIENT_DATA'
+  ) {
+    return condition.assessment ?? 'UNAVAILABLE';
   }
   return condition.assessment ?? (afflictionAssessed ? 'FULL' : 'PARTIAL');
 }

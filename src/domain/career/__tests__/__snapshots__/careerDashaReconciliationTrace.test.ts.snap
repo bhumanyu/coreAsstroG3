@@ -29,7 +29,7 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
       "aspectPressure": [
         "Planet receives deterministic malefic pressure.",
       ],
-      "assessment": "PARTIAL",
+      "assessment": "FULL",
       "combustion": "COMBUST",
       "condition": "WEAK",
       "dignity": "NEUTRAL_SIGN",
@@ -40,12 +40,12 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
       "status": "INSUFFICIENT_DATA",
     },
     "c9": {
-      "conditionAssessment": "PARTIAL",
+      "conditionAssessment": "FULL",
       "direction": "CHALLENGE",
       "effect": "CHALLENGES",
       "evidence": [
         {
-          "conditionAssessment": "PARTIAL",
+          "conditionAssessment": "FULL",
           "direction": "CHALLENGE",
           "effect": "CHALLENGES",
           "id": "CAREER_DASHA:MD:JUPITER:PRIMARY_DRIVER:CHALLENGES",
@@ -202,9 +202,9 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
       "affliction": "UNAVAILABLE",
       "afflictionAssessed": false,
       "aspectPressure": [],
-      "assessment": "PARTIAL",
+      "assessment": "FULL",
       "combustion": "NOT_COMBUST",
-      "condition": "UNAVAILABLE",
+      "condition": "NEUTRAL",
       "dignity": "NEUTRAL_SIGN",
     },
     "c8": {
@@ -213,28 +213,28 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
       "status": "INSUFFICIENT_DATA",
     },
     "c9": {
-      "conditionAssessment": "UNAVAILABLE",
-      "direction": "UNAVAILABLE",
+      "conditionAssessment": "FULL",
+      "direction": "NEUTRAL",
       "effect": "DOES_NOT_ACTIVATE",
       "evidence": [
         {
-          "conditionAssessment": "UNAVAILABLE",
-          "direction": "UNAVAILABLE",
+          "conditionAssessment": "FULL",
+          "direction": "NEUTRAL",
           "effect": "DOES_NOT_ACTIVATE",
           "id": "CAREER_DASHA:AD:MERCURY:MODIFIER:DOES_NOT_ACTIVATE",
           "ruleIds": [
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:ACTIVATION:DOES_NOT_ACTIVATE",
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:CONDITION:UNAVAILABLE",
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:RELEVANCE:SUPPORTING",
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:STRUCTURAL",
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:TIMING",
+            "AD:MERCURY:MODIFIER:NEUTRAL:ACTIVATION:DOES_NOT_ACTIVATE",
+            "AD:MERCURY:MODIFIER:NEUTRAL:CONDITION:NEUTRAL",
+            "AD:MERCURY:MODIFIER:NEUTRAL:RELEVANCE:SUPPORTING",
+            "AD:MERCURY:MODIFIER:NEUTRAL:STRUCTURAL",
+            "AD:MERCURY:MODIFIER:NEUTRAL:TIMING",
           ],
           "sourceIds": [
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:STRUCTURAL",
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:RELEVANCE:SUPPORTING",
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:CONDITION:UNAVAILABLE",
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:TIMING",
-            "AD:MERCURY:MODIFIER:UNAVAILABLE:ACTIVATION:DOES_NOT_ACTIVATE",
+            "AD:MERCURY:MODIFIER:NEUTRAL:STRUCTURAL",
+            "AD:MERCURY:MODIFIER:NEUTRAL:RELEVANCE:SUPPORTING",
+            "AD:MERCURY:MODIFIER:NEUTRAL:CONDITION:NEUTRAL",
+            "AD:MERCURY:MODIFIER:NEUTRAL:TIMING",
+            "AD:MERCURY:MODIFIER:NEUTRAL:ACTIVATION:DOES_NOT_ACTIVATE",
           ],
         },
       ],
@@ -321,7 +321,7 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
       "aspectPressure": [],
       "assessment": "PARTIAL",
       "combustion": "NOT_COMBUST",
-      "condition": "UNAVAILABLE",
+      "condition": "INSUFFICIENT_DATA",
       "dignity": "NEUTRAL_SIGN",
     },
     "c8": {
@@ -330,18 +330,18 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
       "status": "INSUFFICIENT_DATA",
     },
     "c9": {
-      "conditionAssessment": "UNAVAILABLE",
+      "conditionAssessment": "PARTIAL",
       "direction": "UNAVAILABLE",
       "effect": "DOES_NOT_ACTIVATE",
       "evidence": [
         {
-          "conditionAssessment": "UNAVAILABLE",
+          "conditionAssessment": "PARTIAL",
           "direction": "UNAVAILABLE",
           "effect": "DOES_NOT_ACTIVATE",
           "id": "CAREER_DASHA:PD:VENUS:REFINEMENT:DOES_NOT_ACTIVATE",
           "ruleIds": [
             "PD:VENUS:REFINEMENT:UNAVAILABLE:ACTIVATION:DOES_NOT_ACTIVATE",
-            "PD:VENUS:REFINEMENT:UNAVAILABLE:CONDITION:UNAVAILABLE",
+            "PD:VENUS:REFINEMENT:UNAVAILABLE:CONDITION:INSUFFICIENT_DATA",
             "PD:VENUS:REFINEMENT:UNAVAILABLE:RELEVANCE:SUPPORTING",
             "PD:VENUS:REFINEMENT:UNAVAILABLE:STRUCTURAL",
             "PD:VENUS:REFINEMENT:UNAVAILABLE:TIMING",
@@ -349,7 +349,7 @@ exports[`Career/Dasha reconciliation trace > records canonical C5-C9 and legacy 
           "sourceIds": [
             "PD:VENUS:REFINEMENT:UNAVAILABLE:STRUCTURAL",
             "PD:VENUS:REFINEMENT:UNAVAILABLE:RELEVANCE:SUPPORTING",
-            "PD:VENUS:REFINEMENT:UNAVAILABLE:CONDITION:UNAVAILABLE",
+            "PD:VENUS:REFINEMENT:UNAVAILABLE:CONDITION:INSUFFICIENT_DATA",
             "PD:VENUS:REFINEMENT:UNAVAILABLE:TIMING",
             "PD:VENUS:REFINEMENT:UNAVAILABLE:ACTIVATION:DOES_NOT_ACTIVATE",
           ],

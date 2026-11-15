@@ -167,7 +167,9 @@ export function hasConditionData(
   planet: Planet
 ): boolean {
   const condition = conditionByPlanet.get(planet);
-  return condition !== undefined && condition.condition !== 'UNAVAILABLE';
+  return condition !== undefined &&
+    condition.condition !== 'UNAVAILABLE' &&
+    condition.condition !== 'INSUFFICIENT_DATA';
 }
 
 /**
@@ -188,7 +190,11 @@ export function aggregateWeakestCondition(
 
   for (const planet of planets) {
     const condition = conditionByPlanet.get(planet);
-    if (!condition || condition.condition === 'UNAVAILABLE') {
+    if (
+      !condition ||
+      condition.condition === 'UNAVAILABLE' ||
+      condition.condition === 'INSUFFICIENT_DATA'
+    ) {
       hasUnavailable = true;
       continue; // Don't break, check all planets first
     }

@@ -7,10 +7,11 @@
  * Asserts the observed state at each stage against the documented investigation in
  * docs/product/period-based-career-wealth/PBA-01-FEATURE-CONTRACT-AND-SOURCE-AUDIT.md section 8.1:
  * - Detection yields exactly the CAREER_HOUSE_NETWORK pattern with houses [6,8,11]
- * - Qualification is INSUFFICIENT_DATA (not UNQUALIFIED)
- * - Resolution observes 0 mechanism candidates under the currently implemented rules (INFO diagnostic)
+ * - Qualification is UNQUALIFIED because Jupiter has fully assessed weak condition
+ * - Fully assessed weak planetary condition makes the pattern UNQUALIFIED
+ * - Resolution observes 0 mechanism candidates after the qualification gate (INFO diagnostic)
  *
- * This test asserts the genuine empty-coverage end state, not that a career mechanism exists.
+ * This test asserts the qualification gate end state, not that a career mechanism exists.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -27,7 +28,7 @@ import {
 } from '../orchestration/canonicalCareerFoundationBuilder';
 
 describe('PBA-04 Part 3: Real integration test (detector→qualification→resolution)', () => {
-  it('asserts detector→qualification→resolution state for Jupiter-Ketu chart per PBA-01 section 8.1 investigation', async () => {
+  it('asserts current qualification gating for the Jupiter-Ketu chart', async () => {
     // Stage 1: Use the real CANONICAL_BIRTH_DETAILS horoscope
     const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
@@ -43,21 +44,21 @@ describe('PBA-04 Part 3: Real integration test (detector→qualification→resol
     expect(pattern.classification).toBe('CAREER_HOUSE_NETWORK');
     expect(pattern.sourcePattern.houses).toEqual([6, 8, 11]);
 
-    // Stage 4: Assert qualification is INSUFFICIENT_DATA (not UNQUALIFIED)
+    // Stage 4: A fully assessed weak Jupiter condition is a known disqualifier.
     expect(canonicalCareerFoundation.patternQualifications).toHaveLength(1);
     const qualification = canonicalCareerFoundation.patternQualifications[0];
-    expect(qualification.status).toBe('INSUFFICIENT_DATA');
+    expect(qualification.status).toBe('UNQUALIFIED');
 
     // Stage 5: Assert resolution observes 0 candidates under the currently implemented rules
     expect(canonicalCareerFoundation.resolvedMechanisms).toHaveLength(0);
-    const coverageGapDiagnostic = canonicalCareerFoundation.diagnostics.find(
-      d => d.diagnosticId === 'ORCHESTRATION_NO_MECHANISM_RULE_MATCHED_' + pattern.patternId
+    const qualificationDiagnostic = canonicalCareerFoundation.diagnostics.find(
+      d => d.diagnosticId === 'ORCHESTRATION_UNQUALIFIED_PATTERN_MECHANISM_' + pattern.patternId
     );
-    expect(coverageGapDiagnostic).toBeDefined();
-    expect(coverageGapDiagnostic?.severity).toBe('INFO');
-    expect(coverageGapDiagnostic?.category).toBe('GATING');
-    expect(coverageGapDiagnostic?.message).toContain('Canonical career inputs produced no mechanism candidates');
-    expect(coverageGapDiagnostic?.message).toContain('CAREER_HOUSE_NETWORK');
-    expect(coverageGapDiagnostic?.message).toContain('houses [6, 8, 11]');
+    expect(qualificationDiagnostic).toBeDefined();
+    expect(qualificationDiagnostic?.severity).toBe('INFO');
+    expect(qualificationDiagnostic?.category).toBe('GATING');
+    expect(qualificationDiagnostic?.message).toContain('UNQUALIFIED - skipping mechanism resolution');
+    expect(qualificationDiagnostic?.message).toContain('CAREER_HOUSE_NETWORK');
+    expect(qualificationDiagnostic?.message).toContain('HOUSES:6,8,11');
   });
 });

@@ -11,10 +11,12 @@ import type {
 } from './careerPlanetaryRelevance';
 
 import {
+  CAREER_C6_REQUIRED_EVIDENCE_DIMENSIONS,
   interpretCareerPlanetaryConditionBatch,
   type CareerPlanetaryConditionContext,
   type CareerPlanetaryConditionResult,
   type CareerPlanetaryConditionAssessment,
+  type CareerC6RequiredEvidenceDimension,
   type CareerPlanetaryDignity,
   type CareerPlanetaryAffliction,
   type CareerPlanetaryMotion,
@@ -43,29 +45,25 @@ const CANONICAL_PLANET_ORDER: readonly Planet[] = Object.freeze([
   Planet.KETU
 ] as const);
 
-const C6_REQUIRED_TRACE_FACTORS = Object.freeze([
-  'dignity',
-  'combustion',
-  'motion',
-  'aspectSources'
-] as const);
-
 function resolveC6Assessment(
   trace: PlanetaryInfluenceTrace | undefined,
-  affliction: CareerPlanetaryAffliction
+  nonConsumedInfluence: readonly CareerNonConsumedInfluence[]
 ): {
   readonly status: CareerPlanetaryConditionAssessment;
-  readonly missingFactors: readonly string[];
+  readonly missingFactors: readonly CareerC6RequiredEvidenceDimension[];
 } {
-  const statuses: Array<readonly [string, 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE']> =
-    C6_REQUIRED_TRACE_FACTORS.map((factor) => [
-      factor,
-      trace?.evidenceAvailability.factors[factor].status ?? 'UNAVAILABLE'
-    ] as const);
-  statuses.push([
-    'career.affliction',
-    affliction === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE'
-  ]);
+  const statuses: Array<readonly [
+    CareerC6RequiredEvidenceDimension,
+    'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE'
+  ]> = CAREER_C6_REQUIRED_EVIDENCE_DIMENSIONS.map((factor) => {
+    const traceStatus = trace?.evidenceAvailability.factors[factor].status ?? 'UNAVAILABLE';
+    const c6Status = factor === 'aspectSources' &&
+        nonConsumedInfluence.length > 0 &&
+        traceStatus === 'AVAILABLE'
+      ? 'PARTIAL'
+      : traceStatus;
+    return [factor, c6Status] as const;
+  });
   const missingFactors = statuses
     .filter(([, status]) => status !== 'AVAILABLE')
     .map(([factor]) => factor);
@@ -271,7 +269,7 @@ function buildCareerPlanetaryConditionContext(
   if (!planetFact) {
     const aspectInfluence = resolveAspectInfluence(trace);
     const careerTrace = traceWithC6Consumption(trace, aspectInfluence);
-    const c6Assessment = resolveC6Assessment(trace, 'UNAVAILABLE');
+    const c6Assessment = resolveC6Assessment(trace, aspectInfluence.nonConsumedInfluence);
     return Object.freeze({
       planet,
       relevance: relevanceItem.relevance,
@@ -294,7 +292,7 @@ function buildCareerPlanetaryConditionContext(
   const motion = mapCareerMotion(trace?.intrinsicStrength.motion);
   const combustion = mapCareerCombustion(trace?.intrinsicStrength.combustion);
   const aspectInfluence = resolveAspectInfluence(trace);
-  const c6Assessment = resolveC6Assessment(trace, affliction);
+  const c6Assessment = resolveC6Assessment(trace, aspectInfluence.nonConsumedInfluence);
 
   const dataAvailable =
     dignity !== 'UNAVAILABLE' &&
@@ -346,7 +344,10 @@ function buildCareerPlanetaryConditionContexts(
       // Planet missing from C5 relevance → emit NEUTRAL/UNAVAILABLE context
       const trace = traceByPlanet.get(planet);
       const aspectInfluence = resolveAspectInfluence(trace);
-      const c6Assessment = resolveC6Assessment(trace, 'UNAVAILABLE');
+      const c6Assessment = resolveC6Assessment(
+        trace,
+        aspectInfluence.nonConsumedInfluence
+      );
       contexts.push(
         Object.freeze({
           planet,

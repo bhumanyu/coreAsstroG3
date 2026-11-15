@@ -19,6 +19,9 @@ export const CLASSICAL_PLANETS: readonly Planet[] = Object.freeze([
   Planet.SATURN
 ]);
 
+export const NATURAL_CLASSIFICATION_RULE_VERSION =
+  'DRIK_BALA_NATURAL_CLASSIFICATION_V1' as const;
+
 export interface DrikBalaResult {
   readonly status: StrengthComponentStatus;
   readonly value?: number;

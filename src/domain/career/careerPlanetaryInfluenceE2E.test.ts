@@ -10,6 +10,14 @@ import { buildCareerPlanetaryCondition } from './careerPlanetaryConditionIntegra
 import type { CareerPlanetaryRelevance } from './careerPlanetaryRelevance';
 
 type FunctionalClassification = 'BENEFIC' | 'MALEFIC' | 'MIXED' | 'NEUTRAL' | 'UNAVAILABLE';
+type ExpectedAspect = {
+  sourcePlanet: Planet;
+  targetPlanet: Planet;
+  aspectType: string;
+  houseOffset: number;
+  sourceSign: string;
+  targetSign: string;
+};
 
 const FUNCTIONAL_CLASSIFICATIONS: readonly FunctionalClassification[] = [
   'BENEFIC',
@@ -23,6 +31,77 @@ const NATURAL_SOURCE_CASES = [
   { planet: Planet.JUPITER, natural: 'BENEFIC' as const },
   { planet: Planet.SATURN, natural: 'MALEFIC' as const }
 ];
+
+const REAL_CHART_ASPECT_EXPECTATIONS: readonly {
+  readonly dateTimeStr: string;
+  readonly ascendant: string;
+  readonly aspects: readonly ExpectedAspect[];
+}[] = [
+  {
+    dateTimeStr: '1988-05-08T09:30:00+05:30',
+    ascendant: 'GEMINI',
+    aspects: [
+      { sourcePlanet: Planet.MARS, targetPlanet: Planet.SUN, aspectType: 'SPECIAL_4TH', houseOffset: 3, sourceSign: 'CAPRICORN', targetSign: 'ARIES' },
+      { sourcePlanet: Planet.MARS, targetPlanet: Planet.JUPITER, aspectType: 'SPECIAL_4TH', houseOffset: 3, sourceSign: 'CAPRICORN', targetSign: 'ARIES' },
+      { sourcePlanet: Planet.MARS, targetPlanet: Planet.KETU, aspectType: 'SPECIAL_8TH', houseOffset: 7, sourceSign: 'CAPRICORN', targetSign: 'LEO' },
+      { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.SATURN, aspectType: 'SPECIAL_9TH', houseOffset: 8, sourceSign: 'ARIES', targetSign: 'SAGITTARIUS' },
+      { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.KETU, aspectType: 'SPECIAL_5TH', houseOffset: 4, sourceSign: 'ARIES', targetSign: 'LEO' },
+      { sourcePlanet: Planet.VENUS, targetPlanet: Planet.SATURN, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'GEMINI', targetSign: 'SAGITTARIUS' },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.VENUS, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'SAGITTARIUS', targetSign: 'GEMINI' },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.RAHU, aspectType: 'SPECIAL_3RD', houseOffset: 2, sourceSign: 'SAGITTARIUS', targetSign: 'AQUARIUS' },
+      { sourcePlanet: Planet.RAHU, targetPlanet: Planet.KETU, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'AQUARIUS', targetSign: 'LEO' },
+      { sourcePlanet: Planet.KETU, targetPlanet: Planet.RAHU, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'LEO', targetSign: 'AQUARIUS' }
+    ]
+  },
+  {
+    dateTimeStr: '1991-08-15T10:15:00+05:30',
+    ascendant: 'LIBRA',
+    aspects: [
+      { sourcePlanet: Planet.SUN, targetPlanet: Planet.SATURN, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'CANCER', targetSign: 'CAPRICORN' },
+      { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.RAHU, aspectType: 'SPECIAL_5TH', houseOffset: 4, sourceSign: 'LEO', targetSign: 'SAGITTARIUS' },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.SUN, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'CAPRICORN', targetSign: 'CANCER' },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MOON, aspectType: 'SPECIAL_10TH', houseOffset: 9, sourceSign: 'CAPRICORN', targetSign: 'LIBRA' },
+      { sourcePlanet: Planet.RAHU, targetPlanet: Planet.KETU, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'SAGITTARIUS', targetSign: 'GEMINI' },
+      { sourcePlanet: Planet.KETU, targetPlanet: Planet.RAHU, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'GEMINI', targetSign: 'SAGITTARIUS' }
+    ]
+  },
+  {
+    dateTimeStr: '2000-01-20T21:15:00+05:30',
+    ascendant: 'LEO',
+    aspects: [
+      { sourcePlanet: Planet.SUN, targetPlanet: Planet.RAHU, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'CAPRICORN', targetSign: 'CANCER' },
+      { sourcePlanet: Planet.MOON, targetPlanet: Planet.VENUS, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'GEMINI', targetSign: 'SAGITTARIUS' },
+      { sourcePlanet: Planet.MERCURY, targetPlanet: Planet.RAHU, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'CAPRICORN', targetSign: 'CANCER' },
+      { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.VENUS, aspectType: 'SPECIAL_9TH', houseOffset: 8, sourceSign: 'ARIES', targetSign: 'SAGITTARIUS' },
+      { sourcePlanet: Planet.VENUS, targetPlanet: Planet.MOON, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'SAGITTARIUS', targetSign: 'GEMINI' },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.SUN, aspectType: 'SPECIAL_10TH', houseOffset: 9, sourceSign: 'ARIES', targetSign: 'CAPRICORN' },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MOON, aspectType: 'SPECIAL_3RD', houseOffset: 2, sourceSign: 'ARIES', targetSign: 'GEMINI' },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SPECIAL_10TH', houseOffset: 9, sourceSign: 'ARIES', targetSign: 'CAPRICORN' },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.KETU, aspectType: 'SPECIAL_10TH', houseOffset: 9, sourceSign: 'ARIES', targetSign: 'CAPRICORN' },
+      { sourcePlanet: Planet.RAHU, targetPlanet: Planet.SUN, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'CANCER', targetSign: 'CAPRICORN' },
+      { sourcePlanet: Planet.RAHU, targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'CANCER', targetSign: 'CAPRICORN' },
+      { sourcePlanet: Planet.RAHU, targetPlanet: Planet.KETU, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'CANCER', targetSign: 'CAPRICORN' },
+      { sourcePlanet: Planet.KETU, targetPlanet: Planet.RAHU, aspectType: 'FULL_7TH', houseOffset: 6, sourceSign: 'CAPRICORN', targetSign: 'CANCER' }
+    ]
+  }
+];
+
+function sortedAspectRecords(aspects: readonly any[] | undefined): ExpectedAspect[] {
+  return (aspects ?? [])
+    .map((aspect) => ({
+      sourcePlanet: aspect.sourcePlanet,
+      targetPlanet: aspect.targetPlanet,
+      aspectType: aspect.aspectType,
+      houseOffset: aspect.houseOffset,
+      sourceSign: aspect.sourceSign,
+      targetSign: aspect.targetSign
+    }))
+    .sort((a, b) => [
+      a.sourcePlanet, a.targetPlanet, a.aspectType, a.houseOffset, a.sourceSign, a.targetSign
+    ].join('|').localeCompare([
+      b.sourcePlanet, b.targetPlanet, b.aspectType, b.houseOffset, b.sourceSign, b.targetSign
+    ].join('|')));
+}
 
 function makePrimaryMercuryRelevance(): CareerPlanetaryRelevance {
   return {
@@ -93,17 +172,18 @@ function expectedC6Consumption(
       (natural === 'MALEFIC' && functional === 'BENEFIC'));
 }
 
-describe('CW-10J planetary influence career end-to-end matrix', () => {
+describe('CW-10N independent multi-chart verification', () => {
+  describe('synthetic aspect provenance and C6 combinatorial coverage', () => {
   it('executes horoscope → trace → C6 → C8 → C9 across the natural × functional grid', () => {
-    const locations = [
-      { latitude: -30, longitude: -120 },
-      { latitude: 5, longitude: 0 },
-      { latitude: 40, longitude: 120 }
+    const birthTimes = [
+      '1988-05-08T03:30:00+05:30',
+      '1991-08-15T10:15:00+05:30',
+      '2000-01-20T21:15:00+05:30'
     ] as const;
-    const baseHoroscopes = locations.map((location) =>
+    const baseHoroscopes = birthTimes.map((dateTimeStr) =>
       calculateHoroscope({
         ...CANONICAL_BIRTH_DETAILS,
-        ...location
+        dateTimeStr
       } as BirthDetails)
     );
     const ascendantSigns = new Set(baseHoroscopes.map((horoscope) =>
@@ -195,6 +275,33 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
     }
     expect(scenario).toBe(10);
   });
+  });
+
+  describe('real chart and aspect-engine regression expectations', () => {
+  it('matches full computed aspect records for three explicitly specified charts', () => {
+    for (const fixture of REAL_CHART_ASPECT_EXPECTATIONS) {
+      const horoscope = calculateHoroscope({
+        ...CANONICAL_BIRTH_DETAILS,
+        dateTimeStr: fixture.dateTimeStr
+      } as BirthDetails);
+      const trace = buildPlanetaryInfluenceTrace(horoscope);
+      const tracedAspectRecords = trace.flatMap((planetTrace) => [
+        ...planetTrace.environmentalInfluence.beneficAspectSources,
+        ...planetTrace.environmentalInfluence.maleficAspectSources,
+        ...planetTrace.environmentalInfluence.mixedAspectSources,
+        ...planetTrace.environmentalInfluence.unassessedAspectSources
+      ]);
+
+      expect(horoscope.rasiChart?.ascendantSign).toBe(fixture.ascendant);
+      expect(sortedAspectRecords(horoscope.natalGrahaDrishti?.aspects))
+        .toEqual(sortedAspectRecords(fixture.aspects));
+      expect(sortedAspectRecords(tracedAspectRecords)).toEqual(
+        sortedAspectRecords(fixture.aspects)
+      );
+      expect(horoscope.natalGrahaDrishti?.computationStatus).toBe('COMPLETE');
+      expect(trace).toHaveLength(9);
+    }
+  });
 
   it('checks concrete live-chart Mercury provenance and Venus C6 condition basis', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -203,29 +310,6 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
     const natal = buildCareerNatalAnalysis({ horoscope });
     const venus = natal.condition.find((item) => item.planet === Planet.VENUS)!;
 
-    const actualAspectSet = (horoscope.natalGrahaDrishti?.aspects ?? [])
-      .map((item: any) => ({
-        sourcePlanet: item.sourcePlanet,
-        targetPlanet: item.targetPlanet,
-        aspectType: item.aspectType,
-        houseOffset: item.houseOffset
-      }))
-      .sort((a: any, b: any) =>
-        `${a.sourcePlanet}->${a.targetPlanet}:${a.aspectType}:${a.houseOffset}`
-          .localeCompare(`${b.sourcePlanet}->${b.targetPlanet}:${b.aspectType}:${b.houseOffset}`)
-      );
-    expect(actualAspectSet).toEqual([
-      { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.KETU, aspectType: 'SPECIAL_5TH', houseOffset: 4 },
-      { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.SATURN, aspectType: 'SPECIAL_9TH', houseOffset: 8 },
-      { sourcePlanet: Planet.KETU, targetPlanet: Planet.RAHU, aspectType: 'FULL_7TH', houseOffset: 6 },
-      { sourcePlanet: Planet.MARS, targetPlanet: Planet.JUPITER, aspectType: 'SPECIAL_4TH', houseOffset: 3 },
-      { sourcePlanet: Planet.MARS, targetPlanet: Planet.KETU, aspectType: 'SPECIAL_8TH', houseOffset: 7 },
-      { sourcePlanet: Planet.MARS, targetPlanet: Planet.SUN, aspectType: 'SPECIAL_4TH', houseOffset: 3 },
-      { sourcePlanet: Planet.RAHU, targetPlanet: Planet.KETU, aspectType: 'FULL_7TH', houseOffset: 6 },
-      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.RAHU, aspectType: 'SPECIAL_3RD', houseOffset: 2 },
-      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.VENUS, aspectType: 'FULL_7TH', houseOffset: 6 },
-      { sourcePlanet: Planet.VENUS, targetPlanet: Planet.SATURN, aspectType: 'FULL_7TH', houseOffset: 6 }
-    ]);
     expect(mercury.environmentalInfluence).toMatchObject({
       beneficAspectSources: [],
       maleficAspectSources: [],
@@ -241,10 +325,10 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
     });
     expect(mercury.evidenceAvailability.factors.aspectSources).toMatchObject({
       status: 'AVAILABLE',
-      producerStatus: 'ASSUMED_COMPLETE'
+      producerStatus: 'COMPLETE'
     });
     expect(venus).toMatchObject({
-      condition: 'UNAVAILABLE',
+      condition: 'INSUFFICIENT_DATA',
       dignity: 'NEUTRAL_SIGN',
       affliction: 'UNAVAILABLE',
       motion: 'DIRECT',
@@ -253,9 +337,26 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
       negativeFactors: [],
       assessmentDetails: {
         status: 'PARTIAL',
-        missingFactors: ['career.affliction']
+        missingFactors: ['aspectSources']
       }
     });
+    expect(venus.planetaryInfluenceTrace?.environmentalInfluence.mixedAspectSources)
+      .toEqual([expect.objectContaining({
+        sourcePlanet: Planet.SATURN,
+        targetPlanet: Planet.VENUS,
+        aspectType: 'FULL_7TH',
+        houseOffset: 6,
+        sourceSign: 'SAGITTARIUS',
+        targetSign: 'GEMINI',
+        sourceNature: 'MIXED',
+        naturalNature: 'MALEFIC',
+        functionalNature: 'MIXED',
+        classificationBasis: {
+          naturalRule: 'NATURAL_BENEFIC_TABLE',
+          functionalSource: 'FUNCTIONAL_NATURE_INTEGRATION',
+          consumedBy: []
+        }
+      })]);
   });
 
   it('derives functional classification from distinct ascendants at different birth times', () => {
@@ -313,5 +414,114 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
         ...lateJupiter.environmentalInfluence.unassessedAspectSources
       ].find((item) => item.sourcePlanet === Planet.MERCURY)?.functionalNature
     ).toBe(lateNature);
+  });
+  });
+
+  describe('C6 → C8 → C9 outcome and evidence contract', () => {
+    it('asserts actual MD, AD, and PD effects, directions, and evidence IDs', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      horoscope.dashaInterpretation = {
+        current: {
+          mahadasha: { planet: Planet.SATURN, start: '2020-01-01', end: '2025-01-01' },
+          antardasha: { planet: Planet.JUPITER, start: '2022-01-01', end: '2023-01-01' },
+          pratyantardasha: { planet: Planet.MERCURY, start: '2022-06-01', end: '2022-08-01' }
+        }
+      };
+      const natal = buildCareerNatalAnalysis({ horoscope });
+      const venus = natal.condition.find((item) => item.planet === Planet.VENUS)!;
+      const expression = buildCareerExpression({ natal });
+      const dasha = buildCareerDashaAnalysis({ horoscope, natal, expression });
+
+      expect(venus).toMatchObject({
+        condition: 'INSUFFICIENT_DATA',
+        assessment: 'PARTIAL',
+        assessmentDetails: { missingFactors: ['aspectSources'] }
+      });
+      expect(expression.expressions.map((item) => ({
+        mode: item.mode,
+        direction: item.direction,
+        evidenceIds: item.evidence.map((evidence) => evidence.id)
+      }))).toEqual([
+        { mode: 'MANAGEMENT', direction: 'CONDITIONAL', evidenceIds: ['CAREER.EXPRESSION.MANAGEMENT'] },
+        { mode: 'TECHNICAL_SPECIALIZATION', direction: 'SUPPORTED', evidenceIds: ['CAREER.EXPRESSION.TECHNICAL_SPECIALIZATION'] },
+        { mode: 'PUBLIC_INSTITUTIONAL', direction: 'CONDITIONAL', evidenceIds: ['CAREER.EXPRESSION.PUBLIC_INSTITUTIONAL'] },
+        { mode: 'EMPLOYMENT', direction: 'CONDITIONAL', evidenceIds: ['CAREER.EXPRESSION.EMPLOYMENT'] }
+      ]);
+      expect([
+        { level: 'MD', effect: dasha.md.effect, direction: dasha.md.direction },
+        { level: 'AD', effect: dasha.ad.effect, direction: dasha.ad.direction },
+        { level: 'PD', effect: dasha.pd.effect, direction: dasha.pd.direction }
+      ]).toEqual([
+        { level: 'MD', effect: 'DOES_NOT_ACTIVATE', direction: 'NEUTRAL' },
+        { level: 'AD', effect: 'CHALLENGES', direction: 'CHALLENGE' },
+        { level: 'PD', effect: 'ACTIVATES', direction: 'NEUTRAL' }
+      ]);
+      expect([dasha.md, dasha.ad, dasha.pd].map((period) =>
+        dasha.evidence.find((item) => item.level === period.level)?.id
+      )).toEqual([
+        'CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER:DOES_NOT_ACTIVATE',
+        'CAREER_DASHA:AD:JUPITER:MODIFIER:CHALLENGES',
+        'CAREER_DASHA:PD:MERCURY:REFINEMENT:ACTIVATES'
+      ]);
+    });
+  });
+
+  describe('missing and conflicting inputs preserve uncertainty', () => {
+    it('quarantines malformed aspects and keeps C6/C9 direction unavailable', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      horoscope.dashaInterpretation = {
+        current: {
+          mahadasha: { planet: Planet.SATURN, start: '2020-01-01', end: '2025-01-01' },
+          antardasha: { planet: Planet.JUPITER, start: '2022-01-01', end: '2023-01-01' },
+          pratyantardasha: { planet: Planet.MERCURY, start: '2022-06-01', end: '2022-08-01' }
+        }
+      };
+      horoscope.natalGrahaDrishti = {
+        ...horoscope.natalGrahaDrishti,
+        computationStatus: 'PARTIAL',
+        aspects: [{
+          sourcePlanet: 'NOT_A_PLANET',
+          targetPlanet: Planet.SATURN,
+          aspectType: 'FULL_7TH',
+          houseOffset: 6
+        }] as any[]
+      };
+      const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+        (item) => item.planet === Planet.SATURN
+      )!;
+      const natal = buildCareerNatalAnalysis({ horoscope });
+      const saturn = natal.condition.find((item) => item.planet === Planet.SATURN)!;
+      const expression = buildCareerExpression({ natal });
+      const dasha = buildCareerDashaAnalysis({ horoscope, natal, expression });
+      const mdEvidence = dasha.evidence.find((item) => item.level === 'MD');
+
+      expect(trace.evidenceAvailability.factors.aspectSources.status).toBe('PARTIAL');
+      expect(trace.environmentalInfluence).toMatchObject({
+        beneficAspectSources: [],
+        maleficAspectSources: [],
+        mixedAspectSources: [],
+        unassessedAspectSources: []
+      });
+      expect(trace.diagnostics).toEqual(expect.arrayContaining([
+        expect.objectContaining({ factor: 'aspectSources', reason: 'INVALID_SOURCE_PLANET' })
+      ]));
+      expect(saturn).toMatchObject({
+        condition: 'INSUFFICIENT_DATA',
+        assessment: 'PARTIAL',
+        assessmentDetails: { missingFactors: ['aspectSources'] },
+        positiveFactors: [],
+        negativeFactors: []
+      });
+      expect(dasha.md.direction).toBe('UNAVAILABLE');
+      expect(dasha.md.effect).toBe('DOES_NOT_ACTIVATE');
+      expect(dasha.md.effect).not.toBe('CHALLENGES');
+      expect(mdEvidence).toMatchObject({
+        direction: 'UNAVAILABLE',
+        conditionAssessment: 'PARTIAL'
+      });
+      expect(mdEvidence?.sourceIds).toContain(
+        'MD:SATURN:PRIMARY_DRIVER:UNAVAILABLE:CONDITION:INSUFFICIENT_DATA'
+      );
+    });
   });
 });
