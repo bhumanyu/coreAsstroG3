@@ -107,6 +107,55 @@ export async function searchPlacesDetailed(
   }
 }
 
+export interface TimeZoneLookupOptions {
+  readonly signal?: AbortSignal;
+  readonly timeoutMs?: number;
+}
+
+/**
+ * Resolves the IANA timezone for a coordinate pair via Open-Meteo's forecast
+ * endpoint (`timezone=auto`). Returns undefined on any failure or missing
+ * value — callers must treat that as "unresolved", never substitute UTC.
+ */
+export async function lookupTimeZoneByCoordinates(
+  latitude: number,
+  longitude: number,
+  options: TimeZoneLookupOptions = {}
+): Promise<string | undefined> {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+    || latitude < -90 || latitude > 90
+    || longitude < -180 || longitude > 180) {
+    return undefined;
+  }
+  if (options.signal?.aborted) return undefined;
+
+  const timeoutMs = normalizeTimeout(options.timeoutMs);
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+  const abortFromCaller = () => abortController.abort();
+  options.signal?.addEventListener('abort', abortFromCaller, { once: true });
+
+  try {
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+      '&current=temperature_2m&timezone=auto';
+    const response = await fetch(url, { signal: abortController.signal });
+    if (options.signal?.aborted) return undefined;
+    if (!response.ok) return undefined;
+    const payload: unknown = await response.json();
+    if (typeof payload !== 'object' || payload === null) return undefined;
+    const timezone = (payload as { timezone?: unknown }).timezone;
+    return typeof timezone === 'string' && timezone.trim().length > 0
+      ? timezone
+      : undefined;
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timeoutId);
+    options.signal?.removeEventListener('abort', abortFromCaller);
+  }
+}
+
 export async function searchPlaces(
   query: string,
   options?: SearchPlacesOptions

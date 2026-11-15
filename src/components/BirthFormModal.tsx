@@ -4,7 +4,7 @@ import { X, Calendar, MapPin, Globe, Compass, Sparkles, Clock } from 'lucide-rea
 import { BirthDetails, AyanamsaType } from '../types';
 import { PlaceAutocomplete } from './PlaceAutocomplete';
 import { DateTimeSelector } from './DateTimeSelector';
-import { PlaceResult } from '../services/geocoding';
+import { lookupTimeZoneByCoordinates, type PlaceResult } from '../services/geocoding';
 import { validateBirthDetails, type BirthValidationError } from '../core/validation/birthDetailsValidation';
 import { getTimeZoneResolutionStatus, isValidIanaTimeZone, resolveLocalDateTime, type TimeZoneResolutionStatus } from '../core/time/timeZoneResolution';
 import { ChartProfileService, type ChartProfileOperationError } from '../features/chart-profiles/chartProfileService';
@@ -83,12 +83,26 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [validationErrors, setValidationErrors] = useState<readonly BirthValidationError[]>([]);
   const [selectedAmbiguousInstant, setSelectedAmbiguousInstant] = useState('');
   const [timeZoneSource, setTimeZoneSource] = useState<'PROVIDER' | 'USER'>('PROVIDER');
+  const timeZoneRef = useRef(timeZone);
+  timeZoneRef.current = timeZone;
+  const placeTimeZoneRequestRef = useRef(0);
   const [savedProfiles, setSavedProfiles] = useState<readonly ChartProfile[]>([]);
   const [profileListError, setProfileListError] = useState<ChartProfileOperationError | ''>('');
   const [saveAsProfile, setSaveAsProfile] = useState(false);
   const [profileSaveWarning, setProfileSaveWarning] = useState<ChartProfileOperationError | ''>('');
   const timeZoneStatus: TimeZoneResolutionStatus = getTimeZoneResolutionStatus(timeZone, timeZoneSource);
   const localDateTimeResolution = resolveLocalDateTime(dateTimeStr, timeZone);
+  const browserTimeZone = useMemo(() => {
+    try {
+      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+      return isValidIanaTimeZone(zone) ? zone : '';
+    } catch {
+      return '';
+    }
+  }, []);
+  const coordinatesReady =
+    latitude.trim().length > 0 && longitude.trim().length > 0 &&
+    Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude));
   const validationMessage = (error?: BirthValidationError) => {
     if (!error) return '';
     const value = error.field === 'latitude' ? latitude
@@ -253,10 +267,35 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     setPlaceOfBirth(label);
     setLatitude(place.latitude.toString());
     setLongitude(place.longitude.toString());
-    // A new location invalidates the prior timezone unless the provider supplies one.
-    setTimeZone(place.timezone ?? '');
-    setTimeZoneSource('PROVIDER');
     setSelectedAmbiguousInstant('');
+    const requestId = ++placeTimeZoneRequestRef.current;
+
+    // Only a provider-supplied valid IANA zone may replace the current value;
+    // a missing provider timezone must not clobber a user-entered one.
+    if (place.timezone && isValidIanaTimeZone(place.timezone)) {
+      setTimeZone(place.timezone);
+      setTimeZoneSource('PROVIDER');
+      return;
+    }
+
+    const currentTimeZone = timeZoneRef.current;
+    if (currentTimeZone.trim().length > 0 && isValidIanaTimeZone(currentTimeZone)) {
+      return;
+    }
+
+    // Provider gave no timezone and the field is empty/invalid: derive one
+    // from the coordinates. On failure the field stays unresolved and the
+    // browser-timezone hint below guides the user.
+    void lookupTimeZoneByCoordinates(place.latitude, place.longitude)
+      .then((resolved) => {
+        if (requestId !== placeTimeZoneRequestRef.current) return;
+        if (!resolved || !isValidIanaTimeZone(resolved)) return;
+        const latest = timeZoneRef.current;
+        if (latest.trim().length > 0 && isValidIanaTimeZone(latest)) return;
+        setTimeZone(resolved);
+        setTimeZoneSource('PROVIDER');
+      })
+      .catch(() => undefined);
   };
 
   const applyBirthDetails = (details: BirthDetails) => {
@@ -449,6 +488,18 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                       <option value="Australia/Sydney" />
                       <option value="Pacific/Auckland" />
                     </datalist>
+                    {timeZoneStatus === 'UNRESOLVED' && coordinatesReady && browserTimeZone.length > 0 && (
+                      <p className="mt-1 text-xs text-slate-400 dark:text-slate-400 light:text-slate-500">
+                        {tDateTime('timeZoneBrowserHint', { timeZone: browserTimeZone })}{' '}
+                        <button
+                          type="button"
+                          onClick={() => { setTimeZone(browserTimeZone); setTimeZoneSource('USER'); setSelectedAmbiguousInstant(''); }}
+                          className="font-medium text-indigo-400 underline underline-offset-2 hover:text-indigo-300 light:text-indigo-600 light:hover:text-indigo-500 cursor-pointer"
+                        >
+                          {tDateTime('useBrowserTimeZone')}
+                        </button>
+                      </p>
+                    )}
                     {timeZoneStatus === 'UNRESOLVED' && (
                       <p role="alert" className="mt-1 text-xs text-amber-300 light:text-amber-600">
                         {tDateTime('timeZoneUnresolved')}
