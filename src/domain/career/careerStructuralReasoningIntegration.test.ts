@@ -23,6 +23,7 @@ describe('Career Structural Reasoning Integration', () => {
         natalGrahaDrishti: {
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [
             { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'FULL' }
           ]
@@ -47,6 +48,7 @@ describe('Career Structural Reasoning Integration', () => {
         natalGrahaDrishti: {
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [
             { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'FULL' }
           ]
@@ -404,6 +406,7 @@ describe('Career Structural Reasoning Integration', () => {
         natalGrahaDrishti: {
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [
             { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'FULL' },
             { sourcePlanet: Planet.SATURN, targetHouse: 6, aspectType: 'FULL' }
@@ -451,6 +454,7 @@ describe('Career Structural Reasoning Integration', () => {
         natalGrahaDrishti: {
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [
             { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'FULL' }
           ]

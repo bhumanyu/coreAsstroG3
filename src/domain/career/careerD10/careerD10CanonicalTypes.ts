@@ -3,7 +3,8 @@ import type {
   CareerD10QualificationDirection,
   CareerD10QualificationStrength,
   CareerD10EvidenceRole,
-  CareerD10HouseRole
+  CareerD10HouseRole,
+  CareerD10FactDiagnostic
 } from './careerD10QualificationTypes';
 
 import type {
@@ -140,6 +141,7 @@ export interface CareerD10CanonicalAnalysis {
   readonly relationship: CareerD10CanonicalRelationship;
   readonly evidence: readonly CareerD10CanonicalEvidence[];
   readonly conflicts: readonly CareerD10Conflict[];
+  readonly diagnostics?: readonly CareerD10FactDiagnostic[];
   readonly expressionQualifications: readonly CareerD10ExpressionQualificationCanonical[];
   /** Aggregate of explicit canonical root identityKey references from D10 evidence. */
   readonly rootEvidenceIds: readonly string[];

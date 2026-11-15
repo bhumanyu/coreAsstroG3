@@ -12,6 +12,10 @@ import type {
 } from '../../../domain/career/careerDasha/careerDashaCanonicalTypes';
 import type { ReasoningDirection } from '../../../domain/reasoning/reasoningTypes';
 import type { CareerPlanetaryConditionAssessment } from '../../../domain/career/careerPlanetaryCondition';
+import type {
+  CareerDashaActivationDiagnosticCode,
+  CareerDashaExpressionAnalysisStatus
+} from '../../../domain/career/careerDasha/careerDashaActivationTypes';
  
 export type DashaInterpretationStatus = 'AVAILABLE' | 'UNAVAILABLE';
  
@@ -49,6 +53,8 @@ export interface CanonicalCareerActivationProduct {
   readonly direction: ReasoningDirection;
   readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
   readonly afflictionAssessed?: boolean;
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly expressionEvidenceCount?: number;
   readonly evidenceIds: readonly string[];
   readonly sourceIds: readonly string[];

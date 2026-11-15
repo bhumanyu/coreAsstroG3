@@ -29,7 +29,8 @@ import {
   resolveD10Effect,
   resolveD10Strength,
   qualifyNatalCareerWithD10,
-  evaluateDimensionQualification
+  evaluateDimensionQualification,
+  getCanonicalD10FactDiagnostics
 } from './careerD10QualificationRules';
 
 function createEvidence(
@@ -143,6 +144,7 @@ export function resolveCareerD10Qualification(
   context: CareerD10Context
 ): CareerD10QualificationResult {
   const evidence: CareerD10Evidence[] = [];
+  const diagnostics = getCanonicalD10FactDiagnostics(context);
 
   const natalDirection = context.natalDirection;
   const natalStrength = context.natalStrength;
@@ -178,6 +180,7 @@ export function resolveCareerD10Qualification(
       dashaPreserved,
       evidence: Object.freeze(evidence),
       expressionQualifications: Object.freeze([]),
+      diagnostics,
       statement: 'Natal career direction is unavailable; D10 qualification is unavailable.'
     });
   }
@@ -206,6 +209,7 @@ export function resolveCareerD10Qualification(
       dashaPreserved,
       evidence: Object.freeze(evidence),
       expressionQualifications: Object.freeze([]),
+      diagnostics,
       statement: 'Natal career has no promise; D10 qualification is insufficient.'
     });
   }
@@ -240,6 +244,7 @@ export function resolveCareerD10Qualification(
       dashaPreserved,
       evidence: Object.freeze(evidence),
       expressionQualifications: Object.freeze([]),
+      diagnostics,
       statement: 'D10 data is unavailable; preserving natal direction and strength.'
     });
   }
@@ -327,6 +332,7 @@ export function resolveCareerD10Qualification(
     dashaPreserved,
     evidence: Object.freeze(evidence),
     expressionQualifications,
+    diagnostics,
     statement
   });
 }

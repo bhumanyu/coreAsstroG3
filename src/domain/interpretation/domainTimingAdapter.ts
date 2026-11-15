@@ -206,6 +206,8 @@ export function buildNormalizedCareerTiming(
         traceability: evidence.traceability,
         conditionAssessment: period.conditionAssessment,
         afflictionAssessed: period.afflictionAssessed,
+        expressionAnalysisStatus: period.expressionAnalysisStatus,
+        diagnostics: period.diagnostics,
         statement: formatCanonicalDashaPeriodStatement(period, levelEvidence.length),
         ...(evidenceTally ? { evidenceTally } : {}),
         ...(period.start ? { start: period.start } : {}),

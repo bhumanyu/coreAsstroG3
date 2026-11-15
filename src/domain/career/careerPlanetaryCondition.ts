@@ -388,7 +388,13 @@ function resolveCondition(
 ): CareerPlanetaryCondition {
   const hasDirectionalFactors =
     factors.positive.length > 0 || factors.negative.length > 0;
+  const hasResolvedCoreDimension =
+    context.dignity !== 'UNAVAILABLE' || context.combustion !== 'UNAVAILABLE';
   // PARTIAL with directional evidence is provisional, not neutral or unavailable.
+  if (assessment === 'PARTIAL' && hasDirectionalFactors && !hasResolvedCoreDimension) {
+    return 'INSUFFICIENT_DATA';
+  }
+
   if (!hasRequiredConditionData(context) && !hasDirectionalFactors) {
     return 'INSUFFICIENT_DATA';
   }

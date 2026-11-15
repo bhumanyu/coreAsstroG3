@@ -20,7 +20,8 @@ import type {
   CareerD10QualificationDirection,
   CareerD10QualificationEffect,
   CareerD10QualificationStrength,
-  CareerD10HouseRole
+  CareerD10HouseRole,
+  CareerD10FactDiagnostic
 } from './careerD10QualificationTypes';
 
 import {
@@ -59,13 +60,14 @@ export type CareerD10EvidenceTier = 'PRIMARY' | 'SECONDARY' | 'MODIFIER';
 
 export interface CareerD10DirectionAssessment {
   readonly direction: CareerD10QualificationDirection;
-  readonly assessedTiers: readonly CareerD10EvidenceTier[];
+  readonly evaluatedTiers: readonly CareerD10EvidenceTier[];
 }
 
 function buildCanonicalD10Facts(
   context: CareerD10Context
-): CanonicalD10Fact[] {
+): { readonly facts: CanonicalD10Fact[]; readonly diagnostics: CareerD10FactDiagnostic[] } {
   const factMap = new Map<string, CanonicalD10Fact>();
+  const diagnostics: CareerD10FactDiagnostic[] = [];
 
   // Semantic rule: A D10 planet position is canonical.
   // House-lord and tenant context may enrich that canonical planet fact
@@ -93,6 +95,16 @@ function buildCanonicalD10Facts(
     // Deterministic merge: planet position takes precedence over lord/tenant
     // If both have the same source, keep the first one (deterministic by processing order)
     if (fact.source === 'planet' && existing.source !== 'planet') {
+      if (existing.condition !== fact.condition) {
+        diagnostics.push(Object.freeze({
+          code: 'D10_FACT_CONDITION_CONFLICT',
+          planet: fact.planet,
+          house: fact.house,
+          replacedSource: existing.source,
+          sourceCondition: existing.condition,
+          planetCondition: fact.condition
+        }));
+      }
       // Planet position is canonical, replace with it
       factMap.set(key, { ...fact });
     }
@@ -143,7 +155,10 @@ function buildCanonicalD10Facts(
     });
   }
 
-  return Array.from(factMap.values());
+  return {
+    facts: Array.from(factMap.values()),
+    diagnostics
+  };
 }
 
 export function hasNatalCareerPromise(
@@ -165,18 +180,29 @@ export function hasNatalCareerPromise(
   return natalDirection === 'SUPPORT' || natalDirection === 'MIXED' || natalDirection === 'CHALLENGE';
 }
 
-export function chartAvailable(context: CareerD10Context): boolean {
+export function chartStructureAvailable(context: CareerD10Context): boolean {
   return context.d10Available &&
     context.d10Houses.length > 0 &&
-    context.d10Planets.some(planet =>
-      planet.condition !== 'UNAVAILABLE' && planet.condition !== 'INSUFFICIENT_DATA'
-    );
+    context.d10Planets.length > 0;
 }
 
-export const isD10DataAvailable = chartAvailable;
+export const chartAvailable = chartStructureAvailable;
+export const isD10DataAvailable = chartStructureAvailable;
 
 function isUsableD10Condition(condition: CareerPlanetaryCondition): boolean {
   return condition !== 'UNAVAILABLE' && condition !== 'INSUFFICIENT_DATA';
+}
+
+export function usableEvidenceAvailable(context: CareerD10Context): boolean {
+  return buildCanonicalD10Facts(context).facts.some(fact =>
+    isUsableD10Condition(fact.condition)
+  );
+}
+
+export function getCanonicalD10FactDiagnostics(
+  context: CareerD10Context
+): readonly CareerD10FactDiagnostic[] {
+  return Object.freeze(buildCanonicalD10Facts(context).diagnostics);
 }
 
 export function dimensionEvidenceAvailable(
@@ -188,7 +214,7 @@ export function dimensionEvidenceAvailable(
     return false;
   }
 
-  return buildCanonicalD10Facts(context).some(fact =>
+  return buildCanonicalD10Facts(context).facts.some(fact =>
     factors.houses.includes(fact.house) &&
     factors.planets.includes(fact.planet) &&
     isUsableD10Condition(fact.condition)
@@ -268,14 +294,14 @@ export function resolveD10Direction(
 export function resolveD10DirectionAssessment(
   context: CareerD10Context
 ): CareerD10DirectionAssessment {
-  if (!chartAvailable(context)) {
+  if (!chartStructureAvailable(context)) {
     return Object.freeze({
       direction: 'UNAVAILABLE',
-      assessedTiers: Object.freeze([])
+      evaluatedTiers: Object.freeze([])
     });
   }
 
-  const assessedTiers: CareerD10EvidenceTier[] = [];
+  const evaluatedTiers: CareerD10EvidenceTier[] = [];
   const tierEvaluations = [
     { tier: 'PRIMARY' as const, result: evaluatePrimaryEvidence(context) },
     { tier: 'SECONDARY' as const, result: evaluateSecondaryEvidence(context) },
@@ -284,18 +310,18 @@ export function resolveD10DirectionAssessment(
 
   for (const { tier, result } of tierEvaluations) {
     if (!result.assessed) continue;
-    assessedTiers.push(tier);
+    evaluatedTiers.push(tier);
     if (result.direction !== 'NEUTRAL') {
       return Object.freeze({
         direction: result.direction,
-        assessedTiers: Object.freeze(assessedTiers)
+        evaluatedTiers: Object.freeze(evaluatedTiers)
       });
     }
   }
 
   return Object.freeze({
-    direction: assessedTiers.length > 0 ? 'NEUTRAL' : 'UNAVAILABLE',
-    assessedTiers: Object.freeze(assessedTiers)
+    direction: evaluatedTiers.length > 0 ? 'NEUTRAL' : 'UNAVAILABLE',
+    evaluatedTiers: Object.freeze(evaluatedTiers)
   });
 }
 
@@ -306,7 +332,7 @@ function evaluateTier(
   let supportCount = 0;
   let challengeCount = 0;
 
-  const facts = buildCanonicalD10Facts(context)
+  const facts = buildCanonicalD10Facts(context).facts
     .filter(fact => included(fact) && isUsableD10Condition(fact.condition));
 
   for (const fact of facts) {
@@ -362,7 +388,7 @@ export function resolveD10Effect(
   d10Direction: CareerD10QualificationDirection,
   context: CareerD10Context
 ): CareerD10QualificationEffect {
-  if (!chartAvailable(context)) {
+  if (!chartStructureAvailable(context)) {
     return 'UNAVAILABLE';
   }
 
@@ -418,7 +444,7 @@ export function resolveD10Strength(
   d10Direction: CareerD10QualificationDirection,
   context: CareerD10Context
 ): CareerD10QualificationStrength {
-  if (!isD10DataAvailable(context)) {
+  if (!usableEvidenceAvailable(context)) {
     return 'UNDETERMINED';
   }
 
@@ -433,7 +459,7 @@ export function resolveD10Strength(
   let modifierStrong = 0;
   let modifierWeak = 0;
 
-  const facts = buildCanonicalD10Facts(context);
+  const facts = buildCanonicalD10Facts(context).facts;
 
   for (const fact of facts) {
     if (fact.role === 'PRIMARY') {

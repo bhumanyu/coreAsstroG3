@@ -212,6 +212,7 @@ describe('yogaModifiers', () => {
       natalGrahaDrishti: {
         computationStatus: 'COMPLETE',
         diagnostics: [],
+        computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
         aspects: [
           {
             sourcePlanet: Planet.SATURN,
@@ -247,6 +248,7 @@ describe('yogaModifiers', () => {
       natalGrahaDrishti: {
         computationStatus: 'COMPLETE',
         diagnostics: [],
+        computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
         aspects: [
           {
             sourcePlanet: Planet.JUPITER,
@@ -364,6 +366,7 @@ describe('yogaModifiers', () => {
       natalGrahaDrishti: {
         computationStatus: 'COMPLETE',
         diagnostics: [],
+        computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
         aspects: [
           {
             sourcePlanet: Planet.SATURN,

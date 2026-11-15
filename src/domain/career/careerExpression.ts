@@ -85,6 +85,7 @@ export interface CareerExpressionAnalysis {
   readonly expressions: readonly CareerExpression[];
   readonly primaryExpression?: CareerExpression;
   readonly statement: string;
+  readonly analysisStatus?: 'EXECUTED' | 'PARTIAL' | 'FAILED' | 'UNAVAILABLE';
 }
 
 export interface CareerExpressionPlanetContext {
@@ -946,7 +947,8 @@ export function resolveCareerExpression(
     return Object.freeze({
       expressions: Object.freeze([]),
       primaryExpression: undefined,
-      statement: 'Career expression is unavailable because structural direction is UNAVAILABLE.'
+      statement: 'Career expression is unavailable because structural direction is UNAVAILABLE.',
+      analysisStatus: 'UNAVAILABLE'
     });
   }
 
@@ -958,7 +960,8 @@ export function resolveCareerExpression(
     return Object.freeze({
       expressions: Object.freeze([]),
       primaryExpression: undefined,
-      statement: 'Career expression is unavailable because no structural evidence is present.'
+      statement: 'Career expression is unavailable because no structural evidence is present.',
+      analysisStatus: 'UNAVAILABLE'
     });
   }
 
@@ -1025,7 +1028,8 @@ export function resolveCareerExpression(
   return Object.freeze({
     expressions: sortedExpressions,
     primaryExpression,
-    statement
+    statement,
+    analysisStatus: 'EXECUTED'
   });
 }
 

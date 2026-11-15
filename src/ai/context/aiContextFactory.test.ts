@@ -924,7 +924,9 @@ describe('AI Context Factory', () => {
           ruleIds: ['rule-md'],
           natalRootIds: ['root-md']
         },
-        conditionAssessment: 'FULL'
+        conditionAssessment: 'FULL',
+        expressionAnalysisStatus: 'FAILED',
+        diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE']
       }
     ];
     const canonicalDasha: CareerDashaCanonicalAnalysis = {
@@ -934,7 +936,9 @@ describe('AI Context Factory', () => {
         role: 'PRIMARY_DRIVER',
         effect: 'ACTIVATES',
         direction: 'SUPPORT',
-        conditionAssessment: 'FULL'
+        conditionAssessment: 'FULL',
+        expressionAnalysisStatus: 'FAILED',
+        diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE']
       },
       evidence: canonicalEvidence
     };
@@ -1020,6 +1024,8 @@ describe('AI Context Factory', () => {
       effect: 'ACTIVATES',
       direction: 'SUPPORT',
       conditionAssessment: 'FULL',
+      expressionAnalysisStatus: 'FAILED',
+      diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'],
       evidenceIds: ['CAREER_DASHA:MD:JUPITER:SUPPORT']
     });
     expect(md?.statement).toBe(

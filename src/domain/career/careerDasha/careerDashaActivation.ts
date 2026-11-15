@@ -175,7 +175,7 @@ function resolveLevel(
     ...(actualPlanetContext.relevance === 'PRIMARY' &&
         (actualPlanetContext.condition === 'STRONG' || actualPlanetContext.condition === 'MODERATE') &&
         actualPlanetContext.expressions.length === 0 &&
-        actualPlanetContext.expressionAnalysisStatus === 'UNAVAILABLE'
+        actualPlanetContext.expressionAnalysisStatus !== 'EXECUTED'
       ? ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE' as const]
       : []),
     'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
@@ -248,6 +248,7 @@ function resolveLevel(
     afflictionAssessed,
     expressionEvidenceCount,
     evidenceBasis,
+    expressionAnalysisStatus: actualPlanetContext.expressionAnalysisStatus,
     diagnostics,
     evidence,
     statement,

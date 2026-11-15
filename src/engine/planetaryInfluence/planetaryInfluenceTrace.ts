@@ -6,6 +6,7 @@ import {
   Planet,
   DignityStatus,
   PlanetStateCondition,
+  NatalGrahaDrishtiComputationMethod,
   type Horoscope,
   type PlanetMotion
 } from '../../types';
@@ -80,6 +81,7 @@ export interface PlanetaryInfluenceTrace {
     readonly houseSystem: MethodologyValue;
     readonly engineVersion: string;
     readonly aspectSource: 'natalGrahaDrishti';
+    readonly aspectComputationMethod: NatalGrahaDrishtiComputationMethod;
   };
   readonly intrinsicStrength: {
     readonly dignity?: DignityStatus;
@@ -397,7 +399,8 @@ function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTra
       ayanamsa,
       houseSystem,
       engineVersion,
-      aspectSource: 'natalGrahaDrishti'
+      aspectSource: 'natalGrahaDrishti',
+      aspectComputationMethod: horoscope.natalGrahaDrishti?.computationMethod ?? 'UNKNOWN'
     }),
     intrinsicStrength: Object.freeze({
       ...(resolvedDignity ? { dignity: resolvedDignity } : {}),

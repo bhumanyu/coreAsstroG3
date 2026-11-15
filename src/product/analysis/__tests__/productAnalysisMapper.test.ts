@@ -65,6 +65,17 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     const canonicalDasha = getCareerConclusionData(careerInterpretation)
       ?.internalArtifacts?.canonicalDashaAnalysis;
     const activeDasha = temporalState.dashaInterpretation?.current;
+    const normalizedTiming = buildNormalizedCareerTiming(careerInterpretation, asOf);
+    const timingWithUnavailableExpression = normalizedTiming?.mahadasha
+      ? {
+          ...normalizedTiming,
+          mahadasha: {
+            ...normalizedTiming.mahadasha,
+            expressionAnalysisStatus: 'FAILED' as const,
+            diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE' as const]
+          }
+        }
+      : normalizedTiming;
 
     expect(canonicalDasha).toBeDefined();
     expect(activeDasha).toBeDefined();
@@ -73,7 +84,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       ...sampleViewModel,
       careerDetail: {
         ...sampleViewModel.careerDetail!,
-        timing: buildNormalizedCareerTiming(careerInterpretation, asOf)
+        timing: timingWithUnavailableExpression
       }
     };
     const product = mapProductAnalysis({
@@ -118,6 +129,11 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       expect(careerPeriod?.effect).toBe(canonicalPeriod.effect);
       expect(activationCardPeriod?.effect).toBe(canonicalPeriod.effect);
       expect(lifePeriod.effect).toBe(canonicalPeriod.effect);
+      if (lifePeriod.level === 'MD') {
+        expect(careerPeriod?.diagnostics).toContain(
+          'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
+        );
+      }
       // Single verdict: the evidence tally is a display-only count projection
       // and must match the canonical evidence array exactly.
       if (!hasDirectionalEvidence) {

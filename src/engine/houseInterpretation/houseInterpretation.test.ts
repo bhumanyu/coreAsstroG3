@@ -718,7 +718,8 @@ describe('houseInterpretation', () => {
       natalGrahaDrishti: {
         aspects: undefined as any,
         computationStatus: 'PARTIAL' as const,
-        diagnostics: []
+        diagnostics: [],
+        computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1' as const
       }
     };
     const reportLow = analyzeHouseInterpretation(inputLow);

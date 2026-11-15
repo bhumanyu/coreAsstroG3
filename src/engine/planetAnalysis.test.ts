@@ -15,6 +15,7 @@ import {
 } from '../types';
 import { SIGNS_METADATA, NAKSHATRAS_METADATA } from '../data/astroData';
 import { analyzePlanets, PlanetAnalysisInput } from './planetAnalysis';
+import { normalizeNatalGrahaDrishti } from './natalGrahaDrishti';
 
 function createMockPlanetFacts(
   overrides?: Partial<
@@ -86,11 +87,23 @@ function createNatalGrahaDrishtiReport(aspects: any[] = []): NatalGrahaDrishtiCo
     summary: [],
     aspects: aspects as any,
     computationStatus: 'COMPLETE',
-    diagnostics: []
+    diagnostics: [],
+    computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1'
   };
 }
 
 describe('Planet Analysis Aggregation Layer (P-03)', () => {
+  it('normalizes a legacy aspect report without computation metadata to unavailable', () => {
+    const normalized = normalizeNatalGrahaDrishti({ aspects: [] });
+
+    expect(normalized).toMatchObject({
+      aspects: [],
+      computationStatus: 'UNAVAILABLE',
+      computationMethod: 'UNKNOWN',
+      diagnostics: [{ code: 'INVALID_OR_LEGACY_COMPUTATION_REPORT' }]
+    });
+  });
+
   it('shouldAnalyzeAllNinePlanets', () => {
     const pf = createMockPlanetFacts();
     const dr = createNatalGrahaDrishtiReport();

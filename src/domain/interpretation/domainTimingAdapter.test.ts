@@ -340,7 +340,13 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
       direction: 'SUPPORT',
       strength: 'STRONG',
       statement: `${level} period.`,
-      afflictionAssessed: true
+      afflictionAssessed: true,
+      ...(level === 'MD'
+        ? {
+            expressionAnalysisStatus: 'FAILED' as const,
+            diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE' as const]
+          }
+        : {})
     });
     const makeEvidence = (
       level: 'MD' | 'AD' | 'PD',
@@ -412,6 +418,10 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     // The tally never alters the predicate-driven period verdict.
     expect(timing?.mahadasha?.effect).toBe('ACTIVATES');
     expect(timing?.mahadasha?.statement).toContain('MD period for planet Jupiter');
+    expect(timing?.mahadasha).toMatchObject({
+      expressionAnalysisStatus: 'FAILED',
+      diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE']
+    });
   });
 
   it('buildNormalizedWealthTiming includes traceability status on each period', () => {

@@ -546,6 +546,12 @@ function mapDashaPeriods(
       ...('afflictionAssessed' in md && md.afflictionAssessed !== undefined
         ? { afflictionAssessed: md.afflictionAssessed }
         : {}),
+      ...('expressionAnalysisStatus' in md && md.expressionAnalysisStatus !== undefined
+        ? { expressionAnalysisStatus: md.expressionAnalysisStatus }
+        : {}),
+      ...('diagnostics' in md && md.diagnostics !== undefined
+        ? { diagnostics: [...md.diagnostics] }
+        : {}),
       ...('evidenceTally' in md && md.evidenceTally !== undefined
         ? { evidenceTally: md.evidenceTally }
         : {})
@@ -570,6 +576,12 @@ function mapDashaPeriods(
       ...('afflictionAssessed' in ad && ad.afflictionAssessed !== undefined
         ? { afflictionAssessed: ad.afflictionAssessed }
         : {}),
+      ...('expressionAnalysisStatus' in ad && ad.expressionAnalysisStatus !== undefined
+        ? { expressionAnalysisStatus: ad.expressionAnalysisStatus }
+        : {}),
+      ...('diagnostics' in ad && ad.diagnostics !== undefined
+        ? { diagnostics: [...ad.diagnostics] }
+        : {}),
       ...('evidenceTally' in ad && ad.evidenceTally !== undefined
         ? { evidenceTally: ad.evidenceTally }
         : {})
@@ -593,6 +605,12 @@ function mapDashaPeriods(
         : {}),
       ...('afflictionAssessed' in pd && pd.afflictionAssessed !== undefined
         ? { afflictionAssessed: pd.afflictionAssessed }
+        : {}),
+      ...('expressionAnalysisStatus' in pd && pd.expressionAnalysisStatus !== undefined
+        ? { expressionAnalysisStatus: pd.expressionAnalysisStatus }
+        : {}),
+      ...('diagnostics' in pd && pd.diagnostics !== undefined
+        ? { diagnostics: [...pd.diagnostics] }
         : {}),
       ...('evidenceTally' in pd && pd.evidenceTally !== undefined
         ? { evidenceTally: pd.evidenceTally }

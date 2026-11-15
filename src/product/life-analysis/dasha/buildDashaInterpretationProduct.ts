@@ -47,6 +47,12 @@ function mapCanonicalCareerActivation(
     ...(period.afflictionAssessed !== undefined
       ? { afflictionAssessed: period.afflictionAssessed }
       : {}),
+    ...(period.expressionAnalysisStatus !== undefined
+      ? { expressionAnalysisStatus: period.expressionAnalysisStatus }
+      : {}),
+    ...(period.diagnostics !== undefined
+      ? { diagnostics: [...period.diagnostics] }
+      : {}),
     ...(period.expressionEvidenceCount !== undefined
       ? { expressionEvidenceCount: period.expressionEvidenceCount }
       : {}),

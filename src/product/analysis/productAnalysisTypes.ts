@@ -20,6 +20,10 @@ import type {
   SynthesisAxisStatus
 } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { WealthDimension } from '../../domain/wealth/wealthTypes';
+import type {
+  CareerDashaActivationDiagnosticCode,
+  CareerDashaExpressionAnalysisStatus
+} from '../../domain/career/careerDasha/careerDashaActivationTypes';
 
 export type ProductStatus = 'READY' | 'PARTIAL' | 'ERROR';
 export type ProductAnalysisStatus = ProductStatus;
@@ -216,6 +220,8 @@ export interface ProductDashaPeriod {
   readonly end?: string;
   readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   readonly afflictionAssessed?: boolean;
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly evidenceTally?: DashaEvidenceTally;
 }
 

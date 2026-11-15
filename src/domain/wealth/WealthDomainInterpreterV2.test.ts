@@ -64,7 +64,12 @@ function makeEmptyProducerChartFor(horoscope: Horoscope, hasCompleteInputs: bool
       ? resolveDashaInterpretationForAsOf(horoscope, new Date(CANONICAL_UTC_INSTANT))
       : undefined,
     natalGrahaDrishti: hasCompleteInputs
-      ? { aspects: [], computationStatus: 'COMPLETE', diagnostics: [] }
+      ? {
+          aspects: [],
+          computationStatus: 'COMPLETE',
+          diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1'
+        }
       : undefined
   };
 }

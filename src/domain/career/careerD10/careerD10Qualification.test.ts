@@ -10,9 +10,11 @@ import {
 
 import {
   chartAvailable,
+  chartStructureAvailable,
   dimensionEvidenceAvailable,
   hasNatalCareerPromise,
   isD10DataAvailable,
+  usableEvidenceAvailable,
   resolveD10PlanetDirection,
   resolveD10Direction,
   resolveD10DirectionAssessment,
@@ -48,6 +50,43 @@ import { Planet } from '../../../types';
 const emptyExpressions: readonly CareerExpression[] = Object.freeze([]);
 
 describe('careerD10QualificationRules', () => {
+  it('keeps canonical planet precedence and reports differing lord condition', () => {
+    const result = resolveCareerD10Qualification({
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG',
+      natalPrimarySupport: 5,
+      natalPrimaryChallenge: 0,
+      d10Available: true,
+      d10Houses: [{
+        house: 10,
+        role: 'PRIMARY',
+        occupied: true,
+        lord: Planet.MERCURY,
+        lordCondition: 'WEAK',
+        tenants: [],
+        tenantConditions: []
+      }],
+      d10Planets: [{
+        planet: Planet.MERCURY,
+        condition: 'STRONG',
+        d10House: 10,
+        natalHouse: 1,
+        relatedHouses: [10]
+      }],
+      expressions: emptyExpressions
+    });
+
+    expect(result.d10Direction).toBe('SUPPORT');
+    expect(result.diagnostics).toContainEqual({
+      code: 'D10_FACT_CONDITION_CONFLICT',
+      planet: Planet.MERCURY,
+      house: 10,
+      replacedSource: 'lord',
+      sourceCondition: 'WEAK',
+      planetCondition: 'STRONG'
+    });
+  });
+
   describe('hasNatalCareerPromise', () => {
     it('returns false for UNAVAILABLE natal direction', () => {
       expect(hasNatalCareerPromise('UNAVAILABLE', 'STRONG')).toBe(false);
@@ -131,7 +170,7 @@ describe('careerD10QualificationRules', () => {
       expect(isD10DataAvailable(context)).toBe(true);
     });
 
-    it('treats nonempty D10 arrays with only unavailable conditions as unavailable', () => {
+    it('keeps chart structure available when all conditions are unavailable', () => {
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -143,7 +182,44 @@ describe('careerD10QualificationRules', () => {
         expressions: emptyExpressions
       };
 
-      expect(isD10DataAvailable(context)).toBe(false);
+      expect(chartStructureAvailable(context)).toBe(true);
+      expect(chartAvailable(context)).toBe(true);
+      expect(isD10DataAvailable(context)).toBe(true);
+      expect(usableEvidenceAvailable(context)).toBe(false);
+      expect(resolveD10Direction(context)).toBe('UNAVAILABLE');
+    });
+
+    it('keeps chart available when positions exist but every condition is INSUFFICIENT_DATA', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          {
+            house: 10,
+            role: 'PRIMARY',
+            occupied: true,
+            lord: Planet.SUN,
+            lordCondition: 'INSUFFICIENT_DATA',
+            tenants: [],
+            tenantConditions: []
+          }
+        ],
+        d10Planets: [
+          {
+            planet: Planet.SUN,
+            condition: 'INSUFFICIENT_DATA',
+            d10House: 10,
+            natalHouse: 1,
+            relatedHouses: [10]
+          }
+        ],
+        expressions: emptyExpressions
+      };
+
+      expect(chartStructureAvailable(context)).toBe(true);
       expect(resolveD10Direction(context)).toBe('UNAVAILABLE');
     });
   });
@@ -321,7 +397,7 @@ describe('careerD10QualificationRules', () => {
 
       expect(resolveD10DirectionAssessment(context)).toEqual({
         direction: 'UNAVAILABLE',
-        assessedTiers: []
+        evaluatedTiers: []
       });
     });
 
@@ -345,7 +421,7 @@ describe('careerD10QualificationRules', () => {
 
       expect(resolveD10DirectionAssessment(context)).toEqual({
         direction: 'NEUTRAL',
-        assessedTiers: ['PRIMARY', 'SECONDARY']
+        evaluatedTiers: ['PRIMARY', 'SECONDARY']
       });
     });
 
@@ -369,7 +445,7 @@ describe('careerD10QualificationRules', () => {
 
       expect(resolveD10DirectionAssessment(context)).toEqual({
         direction: 'NEUTRAL',
-        assessedTiers: ['SECONDARY']
+        evaluatedTiers: ['SECONDARY']
       });
     });
 

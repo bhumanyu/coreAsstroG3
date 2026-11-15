@@ -66,7 +66,11 @@ export type CareerDashaActivationDiagnosticCode =
   | 'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
   | 'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE';
 
-export type CareerDashaExpressionAnalysisStatus = 'EXECUTED' | 'UNAVAILABLE';
+export type CareerDashaExpressionAnalysisStatus =
+  | 'EXECUTED'
+  | 'PARTIAL'
+  | 'FAILED'
+  | 'UNAVAILABLE';
 
 export type CareerDashaEvidenceRole =
   | 'STRUCTURAL'
@@ -116,6 +120,7 @@ export interface CareerDashaActivation {
   readonly afflictionAssessed?: boolean;
   readonly expressionEvidenceCount?: number;
   readonly evidenceBasis?: CareerDashaEvidenceBasis;
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
   readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly evidence: readonly CareerDashaActivationEvidence[];
   readonly statement: string;

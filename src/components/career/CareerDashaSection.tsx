@@ -71,6 +71,12 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
         </div>
       </div>
 
+      {period.diagnostics?.includes('C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE') && (
+        <p className="text-xs text-amber-300">
+          {t('ui.dasha.expressionAnalysisUnavailable')}
+        </p>
+      )}
+
       {period.statement && (
         <p className="text-xs text-slate-300 leading-relaxed font-sans pt-1">
           {period.statement}

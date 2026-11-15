@@ -359,11 +359,14 @@ function mapCanonicalStrengthToLegacy(
  * Creates an explicit unavailable legacy expression analysis.
  * Used when mechanism-based result has no expressions (INSUFFICIENT_DATA or empty candidates).
  */
-function createUnavailableLegacyAnalysis(): CareerExpressionAnalysis {
+function createUnavailableLegacyAnalysis(
+  analysisStatus: CareerExpressionAnalysis['analysisStatus']
+): CareerExpressionAnalysis {
   return Object.freeze({
     expressions: Object.freeze([]),
     primaryExpression: undefined,
-    statement: 'Career expression is unavailable because no mechanism candidates were resolved from the canonical career foundation.'
+    statement: 'Career expression is unavailable because no mechanism candidates were resolved from the canonical career foundation.',
+    analysisStatus
   });
 }
 
@@ -468,8 +471,13 @@ export function adaptMechanismExpressionToLegacy(
     'qualificationStatus' in mechanismResult.expressions[0];
 
   // If mechanism result is INSUFFICIENT_DATA or has no expressions, emit explicit unavailable
+  const analysisStatus = mechanismResult.status === 'COMPLETE'
+    ? 'EXECUTED'
+    : mechanismResult.status === 'PARTIAL'
+      ? 'PARTIAL'
+      : 'UNAVAILABLE';
   if (mechanismResult.status === 'INSUFFICIENT_DATA' || mechanismResult.expressions.length === 0) {
-    return createUnavailableLegacyAnalysis();
+    return createUnavailableLegacyAnalysis(analysisStatus);
   }
 
   // Build planet map from mechanism candidates
@@ -513,6 +521,7 @@ export function adaptMechanismExpressionToLegacy(
   return Object.freeze({
     expressions: sortedExpressions,
     primaryExpression,
-    statement
+    statement,
+    analysisStatus
   });
 }

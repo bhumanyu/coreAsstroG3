@@ -7,6 +7,10 @@ import type {
   CareerDashaCanonicalLevel
 } from '../../domain/career/careerDasha/careerDashaCanonicalTypes';
 import type { CareerPlanetaryConditionAssessment } from '../../domain/career/careerPlanetaryCondition';
+import type {
+  CareerDashaActivationDiagnosticCode,
+  CareerDashaExpressionAnalysisStatus
+} from '../../domain/career/careerDasha/careerDashaActivationTypes';
 import type { DomainStrength, ReasoningDirection } from '../../domain/reasoning/reasoningTypes';
 import type { TimingEffect, TimingSourceCategory } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationMode } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
@@ -221,6 +225,8 @@ export interface CanonicalCareerActivationFacts {
   readonly direction: ReasoningDirection;
   readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
   readonly afflictionAssessed?: boolean;
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly expressionEvidenceCount?: number;
   readonly evidenceIds: readonly string[];
   readonly sourceIds: readonly string[];
@@ -300,6 +306,8 @@ export interface DashaHierarchyLevelFact {
   readonly planet?: Planet;
   readonly effect: TimingActivationEffect;
   readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly start?: string;
   readonly end?: string;
 }
@@ -321,6 +329,8 @@ export interface CareerPeriodTimingFact {
   readonly effect: TimingActivationEffect;
   readonly direction?: ReasoningDirection;
   readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly evidenceIds: readonly string[];
   readonly traceability?: 'RESOLVED' | 'DEGRADED';
   readonly statement?: string;

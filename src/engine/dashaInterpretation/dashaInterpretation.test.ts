@@ -144,7 +144,8 @@ function createDashaFixture(overrides?: {
   const natalGrahaDrishti: NatalGrahaDrishtiComputed = {
     aspects: overrides?.aspects ?? [],
     computationStatus: 'COMPLETE',
-    diagnostics: []
+    diagnostics: [],
+    computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1'
   };
   const yogas: YogaAnalysisReport = { yogas: overrides?.yogas ?? [] };
   const planetAnalysis = analyzePlanets({ planetFacts: planetFacts as any, natalGrahaDrishti });

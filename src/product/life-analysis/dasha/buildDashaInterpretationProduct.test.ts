@@ -26,7 +26,7 @@ function makeCanonicalCareerDasha(
     { level: 'AD' as const, source: current.antardasha, role: 'MODIFIER' as const, effect: 'DOES_NOT_ACTIVATE' as const, direction: 'NEUTRAL' as const },
     { level: 'PD' as const, source: current.pratyantardasha, role: 'REFINEMENT' as const, effect: 'ACTIVATES' as const, direction: 'SUPPORT' as const }
   ];
-  const periods = periodInputs.map(({ level, source, role, effect, direction }) => ({
+  const periods: CareerDashaCanonicalPeriod[] = periodInputs.map(({ level, source, role, effect, direction }) => ({
     level,
     planet: source.planet,
     role,
@@ -35,13 +35,15 @@ function makeCanonicalCareerDasha(
     strength: 'MODERATE' as const,
     statement: `${level} canonical career activation.`,
     conditionAssessment: 'PARTIAL' as const,
-    afflictionAssessed: false
+    afflictionAssessed: false,
+    expressionAnalysisStatus: level === 'MD' ? 'FAILED' as const : 'EXECUTED' as const,
+    diagnostics: level === 'MD'
+      ? ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE' as const]
+      : []
   }));
-  const [md, ad, pd] = periods as [
-    CareerDashaCanonicalPeriod,
-    CareerDashaCanonicalPeriod,
-    CareerDashaCanonicalPeriod
-  ];
+  const md = periods[0]!;
+  const ad = periods[1]!;
+  const pd = periods[2]!;
   const levels: readonly CareerDashaCanonicalLevel[] = ['MD', 'AD', 'PD'];
   const effects: readonly CareerDashaCanonicalEffect[] = [
     'CHALLENGES',
@@ -256,6 +258,8 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
       effect: 'CHALLENGES',
       direction: 'CHALLENGE',
       conditionAssessment: 'PARTIAL',
+      expressionAnalysisStatus: 'FAILED',
+      diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'],
       evidenceIds: [canonicalDasha.evidence[0].id],
       sourceIds: ['source-MD'],
       ruleIds: ['rule-MD']

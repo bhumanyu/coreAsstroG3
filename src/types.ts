@@ -419,6 +419,10 @@ export type NatalGrahaDrishtiComputationStatus =
   | 'PARTIAL'
   | 'UNAVAILABLE';
 
+export type NatalGrahaDrishtiComputationMethod =
+  | 'GRAHA_DRISHTI_HOUSE_BASED_V1'
+  | 'UNKNOWN';
+
 export interface NatalGrahaDrishtiDiagnostic {
   readonly code: string;
   readonly message?: string;
@@ -452,6 +456,7 @@ export interface NatalGrahaDrishtiReport extends NatalGrahaDrishti {
 export interface NatalGrahaDrishtiComputed extends NatalGrahaDrishtiReport {
   computationStatus: NatalGrahaDrishtiComputationStatus;
   diagnostics: readonly NatalGrahaDrishtiDiagnostic[];
+  computationMethod: NatalGrahaDrishtiComputationMethod;
 }
 
 /** @deprecated Use NatalGrahaDrishtiComputed for computed reports. */

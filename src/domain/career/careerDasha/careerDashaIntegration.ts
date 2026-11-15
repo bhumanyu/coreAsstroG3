@@ -422,7 +422,7 @@ function buildCareerDashaActivationContext(
 
   // Build planet contexts
   // Per P2-11C Gate 3: Use mechanism-aware planet resolution when available
-  const expressionAnalysisStatus = input.expression ? 'EXECUTED' : 'UNAVAILABLE';
+  const expressionAnalysisStatus = input.expression?.analysisStatus ?? 'UNAVAILABLE';
   const planetContexts = mechanismAwareInput
     ? buildPlanetContextsFromMechanismAware(natal, mechanismAwareInput, expressionAnalysisStatus)
     : buildPlanetContexts(natal, input.expression, expressionAnalysisStatus);
@@ -611,6 +611,7 @@ function buildCanonicalPeriod(
     afflictionAssessed: activation.afflictionAssessed,
     expressionEvidenceCount: activation.expressionEvidenceCount,
     evidenceBasis: activation.evidenceBasis,
+    expressionAnalysisStatus: activation.expressionAnalysisStatus,
     diagnostics: activation.diagnostics
   });
 }
@@ -743,6 +744,7 @@ function buildCanonicalEvidence(
       afflictionAssessed: activation.afflictionAssessed,
       expressionEvidenceCount: activation.expressionEvidenceCount,
       evidenceBasis: activation.evidenceBasis,
+      expressionAnalysisStatus: activation.expressionAnalysisStatus,
       diagnostics: activation.diagnostics
     });
 

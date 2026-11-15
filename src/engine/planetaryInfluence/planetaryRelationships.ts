@@ -54,8 +54,14 @@ export interface PlanetaryRelationshipDiagnostic {
     | 'INVALID_EVIDENCE_RECORD'
     | 'INVALID_EVIDENCE_FIELDS'
     | 'INVALID_PLANETS'
-    | 'PRODUCER_OCCURRENCE_ID_REUSED';
+    | 'PRODUCER_OCCURRENCE_ID_REUSED'
+    | 'PRODUCER_OCCURRENCE_ID_CONFLICT';
 }
+
+export type PlanetaryRelationshipProducerNamespace =
+  | 'HOROSCOPE_YOGA_EVIDENCE'
+  | 'YOGA_PARTICIPATION_INPUT'
+  | 'RELATIONSHIP_EVIDENCE_INPUT';
 
 export interface PlanetaryRelationshipEvidence {
   readonly relationship: PlanetaryRelationshipKind;
@@ -63,6 +69,7 @@ export interface PlanetaryRelationshipEvidence {
   readonly ruleId: string;
   readonly yogaType: string;
   readonly reason: string;
+  readonly producerNamespace: PlanetaryRelationshipProducerNamespace;
   readonly producerEvidenceId?: string;
   readonly producerEvidenceIdProvenance?: readonly string[];
 }
@@ -275,6 +282,10 @@ export function resolvePlanetaryRelationships(
   const relationshipEvidence: PlanetaryRelationshipEvidence[] = [];
   const exchanges: PlanetaryExchangeEvidence[] = [];
   const yogas: PlanetaryYogaParticipation[] = [];
+  const yogaProducerNamespace: PlanetaryRelationshipProducerNamespace =
+    inputs?.yogaParticipation !== undefined
+      ? 'YOGA_PARTICIPATION_INPUT'
+      : 'HOROSCOPE_YOGA_EVIDENCE';
   const rawYogas: unknown =
     inputs?.yogaParticipation?.records ?? horoscope.yogas?.yogas;
   let yogaErrors = false;
@@ -388,6 +399,7 @@ export function resolvePlanetaryRelationships(
         const producerEvidenceIds = getProducerEvidenceIds(rawEvidence);
         relationshipEvidence.push(Object.freeze({
           relationship: rawEvidence.relationship,
+          producerNamespace: yogaProducerNamespace,
           planets: Object.freeze(
             PLANET_ORDER.filter((candidate) => evidencePlanets.includes(candidate))
           ),
@@ -443,6 +455,7 @@ export function resolvePlanetaryRelationships(
     const producerEvidenceIds = getProducerEvidenceIds(rawEvidence);
     relationshipEvidence.push(Object.freeze({
       relationship: rawEvidence.relationship,
+      producerNamespace: 'RELATIONSHIP_EVIDENCE_INPUT',
       planets: Object.freeze(
         PLANET_ORDER.filter((candidate) => evidencePlanets.includes(candidate))
       ),
@@ -465,25 +478,51 @@ export function resolvePlanetaryRelationships(
     participantKey(a.planets).localeCompare(participantKey(b.planets)) ||
     a.relationship.localeCompare(b.relationship) ||
     a.yogaType.localeCompare(b.yogaType) ||
+    a.producerNamespace.localeCompare(b.producerNamespace) ||
     (a.producerEvidenceId ?? '').localeCompare(b.producerEvidenceId ?? '')
   );
-  const seenRelationships = new Set<string>();
+  const seenRelationshipSignatures = new Set<string>();
+  const firstRelationshipByOccurrence = new Map<string, string>();
+  const conflictedOccurrences = new Set<string>();
   const deduplicatedRelationships = relationshipEvidence.filter((item) => {
-    const identity = item.producerEvidenceId
-      ? `producer:${item.producerEvidenceId}`
-      : `fallback:${item.ruleId}|${participantKey(item.planets)}|${item.relationship}|` +
-        `${item.yogaType}|${item.reason}`;
-    if (seenRelationships.has(identity)) {
-      if (item.producerEvidenceId) {
-        diagnostics.push(Object.freeze({
-          record: item,
-          reason: 'PRODUCER_OCCURRENCE_ID_REUSED'
-        }));
-        relationshipErrors = true;
-      }
+    const signature = [
+      item.relationship,
+      item.ruleId,
+      participantKey(item.planets),
+      item.yogaType,
+      item.reason,
+      item.producerEvidenceIdProvenance?.join(',')
+    ].join('|');
+    const occurrenceIdentity = item.producerEvidenceId
+      ? `${item.producerNamespace}:${item.producerEvidenceId}`
+      : undefined;
+    const exactIdentity = occurrenceIdentity
+      ? `${occurrenceIdentity}:${signature}`
+      : `fallback:${item.producerNamespace}:${signature}`;
+    if (seenRelationshipSignatures.has(exactIdentity)) {
       return false;
     }
-    seenRelationships.add(identity);
+    seenRelationshipSignatures.add(exactIdentity);
+
+    if (occurrenceIdentity) {
+      const previousSignature = firstRelationshipByOccurrence.get(occurrenceIdentity);
+      if (previousSignature !== undefined && previousSignature !== signature) {
+        if (!conflictedOccurrences.has(occurrenceIdentity)) {
+          diagnostics.push(Object.freeze({
+            record: item,
+            reason: 'PRODUCER_OCCURRENCE_ID_CONFLICT'
+          }));
+          conflictedOccurrences.add(occurrenceIdentity);
+        }
+        relationshipErrors = true;
+      } else {
+        firstRelationshipByOccurrence.set(occurrenceIdentity, signature);
+      }
+      if (previousSignature !== undefined && previousSignature !== signature) {
+        return true;
+      }
+    }
+
     return true;
   });
   let exchangeValidationErrors = false;

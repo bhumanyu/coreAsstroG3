@@ -1,11 +1,29 @@
 import {
   Planet,
   NatalGrahaDrishtiComputed,
-  NatalGrahaDrishtiReport,
   PlanetFact,
   PlanetFacts
 } from '../types';
 import { getGrahaDrishtiOffsets, DrishtiRule } from './transitEngine';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isNatalGrahaDrishtiComputed(
+  value: Record<string, unknown>
+): value is Record<string, unknown> & NatalGrahaDrishtiComputed {
+  const validStatus = value.computationStatus === 'COMPLETE' ||
+    value.computationStatus === 'PARTIAL' ||
+    value.computationStatus === 'UNAVAILABLE';
+  const validDiagnostics = Array.isArray(value.diagnostics) &&
+    value.diagnostics.every(diagnostic => isRecord(diagnostic) &&
+      typeof diagnostic.code === 'string' &&
+      (diagnostic.message === undefined || typeof diagnostic.message === 'string'));
+  const validMethod = value.computationMethod === 'GRAHA_DRISHTI_HOUSE_BASED_V1' ||
+    value.computationMethod === 'UNKNOWN';
+  return Array.isArray(value.aspects) && validStatus && validDiagnostics && validMethod;
+}
 
 /**
  * Returns the DrishtiRule if targetHouse receives a Graha Drishti aspect from sourceHouse for sourcePlanet.
@@ -111,6 +129,7 @@ export function analyzeNatalGrahaDrishti(
     aspects: Object.freeze(aspects),
     computationStatus: 'COMPLETE',
     diagnostics: Object.freeze([]),
+    computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
     planetToPlanetAspects: [] as any,
     planetToHouseAspects: [] as any,
     aspectsReceivedByPlanet: {} as any,
@@ -121,21 +140,24 @@ export function analyzeNatalGrahaDrishti(
 
 /**
  * Validates and normalizes natal graha drishti input.
- * Returns NatalGrahaDrishtiReport if valid, or undefined when invalid or missing.
+ * Returns a computed contract or normalizes a present but legacy/malformed report
+ * to explicit UNAVAILABLE status. Missing input remains undefined.
  * Missing evidence is preserved as undefined and must not be synthesized as empty aspects.
- * Note: Performs shallow structural validation (checks object and aspects is array);
- * does not validate individual aspect records.
  */
 export function normalizeNatalGrahaDrishti(
   input: unknown
-): NatalGrahaDrishtiReport | undefined {
-  if (!input || typeof input !== 'object') {
+): NatalGrahaDrishtiComputed | undefined {
+  if (!isRecord(input)) {
     return undefined;
   }
-  const candidate = input as Partial<NatalGrahaDrishtiReport>;
-  if (!Array.isArray(candidate.aspects)) {
-    return undefined;
+  if (isNatalGrahaDrishtiComputed(input)) {
+    return input;
   }
-  return candidate as NatalGrahaDrishtiReport;
+  return Object.freeze({
+    aspects: [],
+    computationStatus: 'UNAVAILABLE',
+    computationMethod: 'UNKNOWN',
+    diagnostics: Object.freeze([{ code: 'INVALID_OR_LEGACY_COMPUTATION_REPORT' }])
+  });
 }
 

@@ -800,6 +800,7 @@ export function buildCareerD10Analysis(
     relationship,
     evidence: canonicalEvidence,
     conflicts,
+    diagnostics: result.diagnostics ?? Object.freeze([]),
     expressionQualifications,
     rootEvidenceIds,
     statement

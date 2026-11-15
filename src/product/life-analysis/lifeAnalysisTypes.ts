@@ -29,6 +29,10 @@ import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { CareerC8ExpressionCoverage, CareerInternalArtifacts } from '../../domain/career/careerTypes';
 import type { CareerPlanetaryConditionAssessment } from '../../domain/career/careerPlanetaryCondition';
+import type {
+  CareerDashaActivationDiagnosticCode,
+  CareerDashaExpressionAnalysisStatus
+} from '../../domain/career/careerDasha/careerDashaActivationTypes';
 import type { ReasoningDirection } from '../../domain/reasoning/reasoningTypes';
 import type { DashaEvidenceTally } from '../analysis/productAnalysisTypes';
 import type { AiExplanationResult } from '../../ai/browser';
@@ -124,6 +128,8 @@ export interface CareerPeriodTimingProduct {
   readonly traceability?: TraceabilityStatus;
   readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
   readonly afflictionAssessed?: boolean;
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
+  readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;

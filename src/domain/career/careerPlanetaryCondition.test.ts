@@ -138,6 +138,25 @@ describe('Career Planetary Condition (C6)', () => {
       expect(result.negativeFactors).not.toContainEqual(expect.objectContaining({ type: 'MOTION' }));
     });
 
+    it('aspect-only direction stays insufficient when dignity and combustion are missing', () => {
+      const result = interpretCareerPlanetaryCondition({
+        planet: Planet.MERCURY,
+        relevance: 'PRIMARY',
+        dignity: 'UNAVAILABLE',
+        affliction: 'UNAVAILABLE',
+        motion: 'UNKNOWN',
+        combustion: 'UNAVAILABLE',
+        beneficSupport: false,
+        maleficPressure: true,
+        dataAvailable: true,
+        assessmentStatus: 'PARTIAL',
+        assessmentMissingFactors: ['dignity', 'combustion', 'motion']
+      });
+
+      expect(result.assessment).toBe('PARTIAL');
+      expect(result.condition).toBe('INSUFFICIENT_DATA');
+    });
+
     it('A5: NEUTRAL → UNAVAILABLE', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.VENUS,

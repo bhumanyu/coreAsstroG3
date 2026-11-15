@@ -599,6 +599,7 @@ export const resources = {
           unavailable: 'Unavailable',
           unknownPlanet: 'Unknown Planet',
           partialAssessment: 'Partially assessed',
+          expressionAnalysisUnavailable: 'Expression analysis was unavailable; this period is not treated as an assessed neutral.',
           evidence: 'Canonical C9 evidence',
           evidenceTally: {
             supporting: '{{count}} supporting',
@@ -3187,6 +3188,7 @@ export const resources = {
           unavailable: 'उपलब्ध नहीं',
           unknownPlanet: 'अज्ञात ग्रह',
           partialAssessment: 'आंशिक रूप से आकलित',
+          expressionAnalysisUnavailable: 'अभिव्यक्ति विश्लेषण उपलब्ध नहीं था; इस अवधि को आकलित तटस्थ नहीं माना गया है।',
           evidence: 'कैनोनिकल C9 साक्ष्य',
           evidenceTally: {
             supporting: '{{count}} समर्थक',

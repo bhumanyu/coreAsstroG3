@@ -494,7 +494,8 @@ describe('Career Section Components Suite (P-UI-04)', () => {
             evidenceIds: [],
             evidence: [],
             conditionAssessment: 'PARTIAL',
-            afflictionAssessed: false
+            afflictionAssessed: false,
+            diagnostics: ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE']
           },
           {
             level: 'AD',
@@ -513,6 +514,9 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       render(<CareerDashaSection dasha={dasha} />);
 
       expect(screen.getAllByText('Partially assessed')).toHaveLength(2);
+      expect(screen.getByText(
+        'Expression analysis was unavailable; this period is not treated as an assessed neutral.'
+      )).toBeInTheDocument();
     });
 
     it('renders the canonical C9 challenge verdict without a conflicting legacy verdict', () => {

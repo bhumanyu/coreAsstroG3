@@ -121,6 +121,15 @@ export interface CareerD10ExpressionQualification {
   readonly statement: string;
 }
 
+export interface CareerD10FactDiagnostic {
+  readonly code: 'D10_FACT_CONDITION_CONFLICT';
+  readonly planet: Planet;
+  readonly house: number;
+  readonly replacedSource: 'lord' | 'tenant';
+  readonly sourceCondition: CareerPlanetaryCondition;
+  readonly planetCondition: CareerPlanetaryCondition;
+}
+
 export interface CareerD10QualificationResult {
   readonly natalDirection: CareerStructuralDirection;
   readonly natalStrength: CareerStructuralStrength;
@@ -135,5 +144,6 @@ export interface CareerD10QualificationResult {
   readonly dashaPreserved: boolean;
   readonly evidence: readonly CareerD10Evidence[];
   readonly expressionQualifications: readonly CareerD10ExpressionQualification[];
+  readonly diagnostics?: readonly CareerD10FactDiagnostic[];
   readonly statement: string;
 }

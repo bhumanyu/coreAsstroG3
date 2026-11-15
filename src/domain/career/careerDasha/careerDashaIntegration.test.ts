@@ -161,6 +161,7 @@ function makeMinimalNatalAnalysis(): CareerNatalAnalysis {
 function makeMinimalExpressionAnalysis(): CareerExpressionAnalysis {
   return Object.freeze({
     expressions: [],
+    analysisStatus: 'EXECUTED',
     evidenceIds: [],
     unresolvedEvidenceIds: [],
     sourceIds: [],
@@ -346,7 +347,8 @@ function makeMinimalNatal(): CareerNatalAnalysis {
 function makeMinimalExpression(): CareerExpressionAnalysis {
   return Object.freeze({
     expressions: Object.freeze([]),
-    statement: 'No expressions available.'
+    statement: 'No expressions available.',
+    analysisStatus: 'EXECUTED'
   });
 }
 
@@ -477,6 +479,46 @@ describe('C9 Dasha Integration', () => {
     expect(result.hierarchy?.diagnosticTrace?.levels[0]).toMatchObject({
       expressionAnalysisStatus: 'UNAVAILABLE'
     });
+  });
+
+  it('blocks the empty-expression fallback when supplied C8 analysis is FAILED', () => {
+    const natal = makeMinimalNatal();
+    const condition: CareerPlanetaryConditionResult = {
+      planet: Planet.SATURN,
+      relevance: 'PRIMARY',
+      condition: 'STRONG',
+      dignity: 'OWN_SIGN' as any,
+      affliction: 'NONE' as any,
+      motion: 'DIRECT' as any,
+      combustion: 'NOT_COMBUST' as any,
+      positiveFactors: [],
+      negativeFactors: [],
+      relatedPlanets: [],
+      conditional: false,
+      assessment: 'FULL',
+      statement: 'Saturn is fully assessed.'
+    };
+    const result = buildCareerDashaAnalysis(makeInput({
+      expression: Object.freeze({
+        ...makeMinimalExpression(),
+        analysisStatus: 'FAILED'
+      }),
+      natal: Object.freeze({
+        ...natal,
+        condition: Object.freeze([condition])
+      })
+    }));
+
+    expect(result.md.direction).toBe('NEUTRAL');
+    expect(result.md.effect).toBe('DOES_NOT_ACTIVATE');
+    expect(result.md.expressionAnalysisStatus).toBe('FAILED');
+    expect(result.md.diagnostics).toContain(
+      'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
+    );
+    expect(result.evidence.find(item => item.level === 'MD')?.diagnostics).toContain(
+      'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
+    );
+    expect(result.hierarchy?.diagnosticTrace?.expressionTrace?.analysisStatus).toBe('FAILED');
   });
 
   describe('Test 2: Unavailable case', () => {

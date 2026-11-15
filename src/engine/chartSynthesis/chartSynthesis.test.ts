@@ -14,7 +14,12 @@ function createDummyLifeThemeInput(overrides?: Partial<LifeThemeInput>): LifeThe
     houseInterpretation: { houses: [] as any },
     functionalRoles: { ascendantSign: Sign.ARIES, badhakaHouse: 11, badhakaLord: Planet.SATURN, planets: {} as any },
     yogas: { yogas: [] },
-    natalGrahaDrishti: { aspects: [], computationStatus: 'COMPLETE', diagnostics: [] },
+    natalGrahaDrishti: {
+      aspects: [],
+      computationStatus: 'COMPLETE',
+      diagnostics: [],
+      computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1'
+    },
     dashaInterpretation: { mahadashas: [] } as any,
     divisionalInterpretation: {
       d9: {

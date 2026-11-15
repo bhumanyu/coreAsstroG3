@@ -648,6 +648,12 @@ function mapDashaPlanetProductToPeriodFacts(
           ...(product.canonicalCareerActivation.conditionAssessment
             ? { conditionAssessment: product.canonicalCareerActivation.conditionAssessment }
             : {}),
+          ...(product.canonicalCareerActivation.expressionAnalysisStatus
+            ? { expressionAnalysisStatus: product.canonicalCareerActivation.expressionAnalysisStatus }
+            : {}),
+          ...(product.canonicalCareerActivation.diagnostics
+            ? { diagnostics: [...product.canonicalCareerActivation.diagnostics] }
+            : {}),
           ...(product.canonicalCareerActivation.afflictionAssessed !== undefined
             ? { afflictionAssessed: product.canonicalCareerActivation.afflictionAssessed }
             : {}),
@@ -835,6 +841,8 @@ function buildCareerFact(
         planet: md.planet,
         effect: md.effect,
         conditionAssessment: md.conditionAssessment,
+        expressionAnalysisStatus: md.expressionAnalysisStatus,
+        diagnostics: md.diagnostics,
         ...(md.start ? { start: md.start } : {}),
         ...(md.end ? { end: md.end } : {})
       },
@@ -844,6 +852,8 @@ function buildCareerFact(
         planet: ad.planet,
         effect: ad.effect,
         conditionAssessment: ad.conditionAssessment,
+        expressionAnalysisStatus: ad.expressionAnalysisStatus,
+        diagnostics: ad.diagnostics,
         ...(ad.start ? { start: ad.start } : {}),
         ...(ad.end ? { end: ad.end } : {})
       },
@@ -853,6 +863,8 @@ function buildCareerFact(
         planet: pd.planet,
         effect: pd.effect,
         conditionAssessment: pd.conditionAssessment,
+        expressionAnalysisStatus: pd.expressionAnalysisStatus,
+        diagnostics: pd.diagnostics,
         ...(pd.start ? { start: pd.start } : {}),
         ...(pd.end ? { end: pd.end } : {})
       },

@@ -92,6 +92,8 @@ export interface CareerDashaPeriodViewModel {
   readonly end?: string;
   readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
   readonly afflictionAssessed?: boolean;
+  readonly expressionAnalysisStatus?: import('../../domain/career/careerDasha/careerDashaActivationTypes').CareerDashaExpressionAnalysisStatus;
+  readonly diagnostics?: readonly import('../../domain/career/careerDasha/careerDashaActivationTypes').CareerDashaActivationDiagnosticCode[];
   readonly evidenceTally?: DashaEvidenceTally;
 }
 
@@ -337,6 +339,10 @@ export function selectCareerViewModel(
     end: p.end,
     ...(p.conditionAssessment ? { conditionAssessment: p.conditionAssessment } : {}),
     ...(p.afflictionAssessed !== undefined ? { afflictionAssessed: p.afflictionAssessed } : {}),
+    ...(p.expressionAnalysisStatus
+      ? { expressionAnalysisStatus: p.expressionAnalysisStatus }
+      : {}),
+    ...(p.diagnostics ? { diagnostics: [...p.diagnostics] } : {}),
     ...(p.evidenceTally ? { evidenceTally: p.evidenceTally } : {})
   }));
 

@@ -75,6 +75,8 @@ export interface ReasoningDashaPeriodViewModel {
   readonly direction: ProductDirection;
   readonly effect: ActivationEffect;
   readonly conditionAssessment?: 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly expressionAnalysisStatus?: import('../../domain/career/careerDasha/careerDashaActivationTypes').CareerDashaExpressionAnalysisStatus;
+  readonly diagnostics?: readonly import('../../domain/career/careerDasha/careerDashaActivationTypes').CareerDashaActivationDiagnosticCode[];
   readonly evidenceIds: readonly string[];
   readonly statement?: string;
   readonly start?: string;
@@ -411,6 +413,8 @@ export function buildCareerReasoningViewModel(
     direction: p.direction,
     effect: normalizeActivationEffect(p.effect),
     conditionAssessment: p.conditionAssessment,
+    expressionAnalysisStatus: p.expressionAnalysisStatus,
+    diagnostics: p.diagnostics,
     evidenceIds: p.evidenceIds ?? [],
     statement: p.statement,
     start: p.start,

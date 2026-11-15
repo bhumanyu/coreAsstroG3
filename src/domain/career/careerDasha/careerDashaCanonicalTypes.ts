@@ -11,6 +11,7 @@ import type {
   CareerDashaTiming
 } from './careerDashaActivationTypes';
 import type { CareerPlanetaryConditionAssessment } from '../careerPlanetaryCondition';
+import type { CareerDashaExpressionAnalysisStatus } from './careerDashaActivationTypes';
 
 import {
   Planet
@@ -89,6 +90,7 @@ export interface CareerDashaCanonicalEvidence {
   readonly afflictionAssessed?: boolean;
   readonly expressionEvidenceCount?: number;
   readonly evidenceBasis?: CareerDashaEvidenceBasis;
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
   readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
 }
 
@@ -120,6 +122,7 @@ export interface CareerDashaCanonicalPeriod {
   readonly afflictionAssessed?: boolean;
   readonly expressionEvidenceCount?: number;
   readonly evidenceBasis?: CareerDashaEvidenceBasis;
+  readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
   readonly diagnostics?: readonly CareerDashaActivationDiagnosticCode[];
 }
 

@@ -201,6 +201,7 @@ describe('CW-10N independent multi-chart verification', () => {
           ...horoscope.natalGrahaDrishti,
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [{
             sourcePlanet: sourceCase.planet,
             targetPlanet: Planet.MERCURY,
@@ -323,7 +324,8 @@ describe('CW-10N independent multi-chart verification', () => {
       ayanamsa: { value: 'LAHIRI', status: 'DECLARED' },
       houseSystem: { value: 'WHOLE_SIGN', status: 'DEFAULTED' },
       engineVersion: 'P-21-v1',
-      aspectSource: 'natalGrahaDrishti'
+      aspectSource: 'natalGrahaDrishti',
+      aspectComputationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1'
     });
     expect(mercury.evidenceAvailability.factors.aspectSources).toMatchObject({
       status: 'AVAILABLE',
@@ -391,12 +393,14 @@ describe('CW-10N independent multi-chart verification', () => {
       ...earlyChart.natalGrahaDrishti,
       computationStatus: 'COMPLETE',
       diagnostics: [],
+      computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
       aspects: aspect
     };
     lateChart.natalGrahaDrishti = {
       ...lateChart.natalGrahaDrishti,
       computationStatus: 'COMPLETE',
       diagnostics: [],
+      computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
       aspects: aspect
     };
     const earlyJupiter = buildPlanetaryInfluenceTrace(earlyChart).find(
@@ -492,6 +496,7 @@ describe('CW-10N independent multi-chart verification', () => {
         ...horoscope.natalGrahaDrishti,
         computationStatus: 'PARTIAL',
         diagnostics: [],
+        computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
         aspects: [{
           sourcePlanet: 'NOT_A_PLANET',
           targetPlanet: Planet.SATURN,

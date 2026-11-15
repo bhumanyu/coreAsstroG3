@@ -167,6 +167,7 @@ describe('Career Planetary Relevance Integration', () => {
         natalGrahaDrishti: {
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [
             { sourcePlanet: Planet.JUPITER, targetHouse: 10, aspectType: 'FULL' }
           ]
@@ -192,6 +193,7 @@ describe('Career Planetary Relevance Integration', () => {
         natalGrahaDrishti: {
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [
             { sourcePlanet: Planet.JUPITER, targetHouse: 3, aspectType: 'FULL' },
             { sourcePlanet: Planet.JUPITER, targetHouse: 5, aspectType: 'FULL' }
@@ -217,6 +219,7 @@ describe('Career Planetary Relevance Integration', () => {
         natalGrahaDrishti: {
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [
             { sourcePlanet: Planet.JUPITER, targetHouse: 10, aspectType: 'FULL' }
           ]
@@ -422,6 +425,7 @@ describe('Career Planetary Relevance Integration', () => {
         natalGrahaDrishti: {
           computationStatus: 'COMPLETE',
           diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1',
           aspects: [
             { sourcePlanet: Planet.MERCURY, targetHouse: 6, aspectType: 'FULL' }
           ]

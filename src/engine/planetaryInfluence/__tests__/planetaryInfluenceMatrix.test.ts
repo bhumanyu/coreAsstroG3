@@ -45,6 +45,9 @@ type SyntheticOptions = {
     readonly planets: readonly Planet[];
     readonly ruleId: string;
     readonly reason: string;
+    readonly sourceOccurrenceId?: string;
+    readonly occurrenceId?: string;
+    readonly evidenceId?: string;
   }[];
   readonly includeShadbala?: boolean;
   readonly includeStructuralRoles?: boolean;
@@ -133,7 +136,8 @@ function makeHoroscope(options: SyntheticOptions = {}): Horoscope {
       : {
           aspects: [...(options.aspects ?? [])],
           computationStatus: options.aspectStatus ?? 'COMPLETE',
-          diagnostics: []
+          diagnostics: [],
+          computationMethod: 'GRAHA_DRISHTI_HOUSE_BASED_V1'
         },
     functionalNatureIntegration: { planets: functionalNature },
     houseLordship: options.includeStructuralRoles === false
@@ -693,7 +697,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
               relationship: 'CONJUNCTION',
               planets: [Planet.MERCURY, Planet.JUPITER],
               ruleId: 'SAME_RULE',
-              reason: 'Duplicate occurrence',
+              reason: 'Occurrence one',
               occurrenceId: 'occurrence-1'
             }
           ]
@@ -702,10 +706,95 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     );
     expect(identifiedResult.relationshipEvidence.map((item) => item.producerEvidenceId))
       .toEqual(['occurrenceId:occurrence-1', 'occurrenceId:occurrence-2']);
-    expect(identifiedResult.diagnostics).toContainEqual(
-      expect.objectContaining({ reason: 'PRODUCER_OCCURRENCE_ID_REUSED' })
+    expect(identifiedResult.diagnostics).not.toContainEqual(
+      expect.objectContaining({ reason: 'PRODUCER_OCCURRENCE_ID_CONFLICT' })
     );
-    expect(identifiedResult.availability.relationships.status).toBe('PARTIAL');
+    expect(identifiedResult.availability.relationships.status).toBe('AVAILABLE');
+  });
+
+  it('namespaces producer occurrence IDs and retains conflicting records', () => {
+    const sameIdFromDifferentProducers = resolvePlanetaryRelationships(
+      makeHoroscope({
+        yogaEvidence: [{
+          relationship: 'CONJUNCTION',
+          planets: [Planet.MERCURY, Planet.JUPITER],
+          ruleId: 'YOGA_RULE',
+          reason: 'Yoga producer occurrence',
+          occurrenceId: 'shared-id'
+        }]
+      }),
+      Planet.MERCURY,
+      {
+        relationshipEvidence: {
+          records: [{
+            relationship: 'CONJUNCTION',
+            planets: [Planet.MERCURY, Planet.JUPITER],
+            ruleId: 'RELATIONSHIP_RULE',
+            reason: 'Relationship producer occurrence',
+            occurrenceId: 'shared-id'
+          }]
+        }
+      }
+    );
+    expect(sameIdFromDifferentProducers.relationshipEvidence).toHaveLength(2);
+    expect(sameIdFromDifferentProducers.relationshipEvidence.map((item) => item.producerNamespace))
+      .toContain('HOROSCOPE_YOGA_EVIDENCE');
+    expect(sameIdFromDifferentProducers.relationshipEvidence.map((item) => item.producerNamespace))
+      .toContain('RELATIONSHIP_EVIDENCE_INPUT');
+
+    const conflictingOccurrence = resolvePlanetaryRelationships(
+      makeHoroscope(),
+      Planet.MERCURY,
+      {
+        relationshipEvidence: {
+          records: [
+            {
+              relationship: 'CONJUNCTION',
+              planets: [Planet.MERCURY, Planet.JUPITER],
+              ruleId: 'SAME_RULE',
+              reason: 'Conjunction evidence',
+              occurrenceId: 'conflicting-id'
+            },
+            {
+              relationship: 'MUTUAL_ASPECT',
+              planets: [Planet.MERCURY, Planet.JUPITER],
+              ruleId: 'SAME_RULE',
+              reason: 'Mutual-aspect evidence',
+              occurrenceId: 'conflicting-id'
+            }
+          ]
+        }
+      }
+    );
+    expect(conflictingOccurrence.relationshipEvidence).toHaveLength(2);
+    expect(conflictingOccurrence.diagnostics).toContainEqual(
+      expect.objectContaining({ reason: 'PRODUCER_OCCURRENCE_ID_CONFLICT' })
+    );
+    expect(conflictingOccurrence.availability.relationships.status).toBe('PARTIAL');
+
+    const quarantinedTrace = buildPlanetaryInfluenceTrace(makeHoroscope({
+      yogaEvidence: [
+        {
+          relationship: 'CONJUNCTION',
+          planets: [Planet.MERCURY, Planet.JUPITER],
+          ruleId: 'SAME_RULE',
+          reason: 'Conjunction evidence',
+          occurrenceId: 'trace-conflict'
+        },
+        {
+          relationship: 'MUTUAL_ASPECT',
+          planets: [Planet.MERCURY, Planet.JUPITER],
+          ruleId: 'SAME_RULE',
+          reason: 'Mutual-aspect evidence',
+          occurrenceId: 'trace-conflict'
+        }
+      ]
+    })).find((trace) => trace.planet === Planet.MERCURY)!;
+    expect(quarantinedTrace.structuralRelationships.relationshipEvidence).toHaveLength(2);
+    expect(quarantinedTrace.evidenceAvailability.factors.relationships.status).toBe('PARTIAL');
+    expect(quarantinedTrace.diagnostics).toContainEqual(
+      expect.objectContaining({ reason: 'PRODUCER_OCCURRENCE_ID_CONFLICT' })
+    );
   });
 
   it('uses the highest-priority occurrence id and retains other producer ids as provenance', () => {
@@ -756,6 +845,8 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     const mercury = traces.find((trace) => trace.planet === Planet.MERCURY)!;
 
     expect(traces.map((trace) => trace.planet)).toEqual(PLANETS);
+    expect(mercury.calculationContext.aspectComputationMethod)
+      .toBe('GRAHA_DRISHTI_HOUSE_BASED_V1');
     expect(mercury.intrinsicStrength.dignity).toBe(DignityStatus.NEUTRAL);
     expect(mercury.structuralRelationships.ownedHouses).toEqual([1, 10]);
     expect(mercury.structuralRelationships.yogas).toHaveLength(1);
