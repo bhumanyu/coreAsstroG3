@@ -449,10 +449,13 @@ export interface NatalGrahaDrishtiReport extends NatalGrahaDrishti {
   aspects: any[];
 }
 
-export interface NatalGrahaDrishtiComputedReport extends NatalGrahaDrishtiReport {
+export interface NatalGrahaDrishtiComputed extends NatalGrahaDrishtiReport {
   computationStatus: NatalGrahaDrishtiComputationStatus;
   diagnostics: readonly NatalGrahaDrishtiDiagnostic[];
 }
+
+/** @deprecated Use NatalGrahaDrishtiComputed for computed reports. */
+export type NatalGrahaDrishtiComputedReport = NatalGrahaDrishtiComputed;
 
 export interface PlanetFact {
   planet: Planet;
@@ -990,7 +993,7 @@ export interface Horoscope {
   vimshottari?: any;
   houseLordship?: any;
   yogas?: YogaAnalysisReport;
-  natalGrahaDrishti?: NatalGrahaDrishtiReport;
+  natalGrahaDrishti?: NatalGrahaDrishtiComputed;
   grahaDrishti?: NatalGrahaDrishtiReport;
   planetAnalysis?: any;
   houseAnalysis?: HouseAnalysisReport;

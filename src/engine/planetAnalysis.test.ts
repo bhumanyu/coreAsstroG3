@@ -10,7 +10,7 @@ import {
   PlanetCondition,
   DignityStatus,
   NatalGrahaDrishti,
-  NatalGrahaDrishtiReport,
+  NatalGrahaDrishtiComputed,
   PlanetAnalysisEvidenceType
 } from '../types';
 import { SIGNS_METADATA, NAKSHATRAS_METADATA } from '../data/astroData';
@@ -77,14 +77,16 @@ function createMockPlanetFacts(
   return result as Record<Planet, PlanetFact>;
 }
 
-function createNatalGrahaDrishtiReport(aspects: any[] = []): NatalGrahaDrishtiReport {
+function createNatalGrahaDrishtiReport(aspects: any[] = []): NatalGrahaDrishtiComputed {
   return {
     planetToPlanetAspects: aspects as any,
     planetToHouseAspects: [],
     aspectsReceivedByPlanet: {} as any,
     aspectsReceivedByHouse: {} as any,
     summary: [],
-    aspects: aspects as any
+    aspects: aspects as any,
+    computationStatus: 'COMPLETE',
+    diagnostics: []
   };
 }
 
@@ -509,7 +511,7 @@ describe('Planet Analysis Aggregation Layer (P-03)', () => {
     expect(() =>
       analyzePlanets({
         planetFacts: pf,
-        natalGrahaDrishti: null as unknown as NatalGrahaDrishtiReport
+        natalGrahaDrishti: null as unknown as NatalGrahaDrishtiComputed
       })
     ).toThrow('natalGrahaDrishti must not be null or undefined.');
   });

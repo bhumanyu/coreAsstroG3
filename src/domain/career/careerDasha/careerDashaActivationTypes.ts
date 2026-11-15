@@ -63,7 +63,10 @@ export type CareerDashaEvidenceBasis =
 
 export type CareerDashaActivationDiagnosticCode =
   | 'C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT'
+  | 'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
   | 'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE';
+
+export type CareerDashaExpressionAnalysisStatus = 'EXECUTED' | 'UNAVAILABLE';
 
 export type CareerDashaEvidenceRole =
   | 'STRUCTURAL'
@@ -80,6 +83,7 @@ export interface CareerDashaPlanetContext {
   readonly condition: CareerPlanetaryCondition;
   readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
   readonly afflictionAssessed?: boolean;
+  readonly expressionAnalysisStatus: CareerDashaExpressionAnalysisStatus;
   readonly expressions: readonly CareerExpression[];
   readonly relatedHouses: readonly number[];
   readonly relatedPlanets: readonly Planet[];
@@ -153,6 +157,7 @@ export interface CareerDashaActivationDiagnosticTrace {
     readonly condition?: CareerPlanetaryCondition;
     readonly conditionAssessment?: CareerPlanetaryConditionAssessment;
     readonly afflictionAssessed?: boolean;
+    readonly expressionAnalysisStatus?: CareerDashaExpressionAnalysisStatus;
     readonly expressionCount?: number;
     readonly expressionEvidenceCount?: number;
     readonly evidenceBasis?: CareerDashaEvidenceBasis;
@@ -168,6 +173,7 @@ export interface CareerDashaActivationDiagnosticTrace {
 
 export interface CareerDashaExpressionDiagnosticTrace {
   readonly source: 'EXPRESSION_EVIDENCE_PLANETS' | 'MECHANISM_AWARE_PARTICIPANTS';
+  readonly analysisStatus: CareerDashaExpressionAnalysisStatus;
   readonly expressionCount: number;
   readonly evidenceCount: number;
   readonly evidenceWithPlanetAttributions: number;

@@ -4,7 +4,7 @@ import {
   AspectType,
   HouseAnalysisReport,
   PlanetAnalysisReport,
-  NatalGrahaDrishtiReport,
+  NatalGrahaDrishtiComputed,
   PlanetaryStrengthReport
 } from '../../types';
 import { FunctionalRole } from '../functionalNature/functionalRoleTypes';
@@ -148,7 +148,7 @@ export interface HouseInterpretationInput {
   readonly planetAnalysis: PlanetAnalysisReport;
   readonly planetInterpretation: PlanetInterpretationReport;
   readonly functionalRoles: FunctionalRoleAnalysisReport;
-  readonly natalGrahaDrishti: NatalGrahaDrishtiReport;
+  readonly natalGrahaDrishti: NatalGrahaDrishtiComputed;
   readonly yogas: YogaAnalysisReport;
   readonly planetaryStrength?: PlanetaryStrengthReport;
 }

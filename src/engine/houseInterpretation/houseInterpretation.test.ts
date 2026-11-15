@@ -715,7 +715,11 @@ describe('houseInterpretation', () => {
     // 3. Missing core aspect evidence -> LOW
     const inputLow = {
       ...inputMedium,
-      natalGrahaDrishti: { aspects: undefined as any }
+      natalGrahaDrishti: {
+        aspects: undefined as any,
+        computationStatus: 'PARTIAL' as const,
+        diagnostics: []
+      }
     };
     const reportLow = analyzeHouseInterpretation(inputLow);
     expect(reportLow.houses[1].confidence).toBe('LOW');

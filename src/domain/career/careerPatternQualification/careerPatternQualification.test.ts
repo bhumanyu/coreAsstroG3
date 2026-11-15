@@ -1936,6 +1936,24 @@ describe('Career Pattern Qualification', () => {
           expectedStatus: 'INSUFFICIENT_DATA'
         },
         {
+          name: 'PARTIAL WEAK plus FULL STRONG',
+          planets: [Planet.SATURN, Planet.JUPITER],
+          conditions: [
+            { planet: Planet.SATURN, condition: 'WEAK', assessment: 'PARTIAL' },
+            { planet: Planet.JUPITER, condition: 'STRONG', assessment: 'FULL' }
+          ],
+          expectedStatus: 'INSUFFICIENT_DATA'
+        },
+        {
+          name: 'all participants FULL STRONG',
+          planets: [Planet.SATURN, Planet.JUPITER],
+          conditions: [
+            { planet: Planet.SATURN, condition: 'STRONG', assessment: 'FULL' },
+            { planet: Planet.JUPITER, condition: 'STRONG', assessment: 'FULL' }
+          ],
+          expectedStatus: 'INSUFFICIENT_DATA'
+        },
+        {
           name: 'FULL WEAK plus FULL STRONG',
           planets: [Planet.SATURN, Planet.JUPITER],
           conditions: [
@@ -1992,6 +2010,12 @@ describe('Career Pattern Qualification', () => {
         const qualified = result.qualifiedPatterns[0];
 
         expect(qualified.status).toBe(testCase.expectedStatus);
+        if (
+          testCase.name === 'all participants FULL STRONG' ||
+          testCase.name === 'PARTIAL WEAK plus FULL STRONG'
+        ) {
+          expect(qualified.status).not.toBe('UNQUALIFIED');
+        }
         if (testCase.name === 'PARTIAL WEAK plus UNAVAILABLE') {
           expect(qualified.decisionBlockingReasons).toContainEqual({
             reason: 'planetary condition is only partially assessed',

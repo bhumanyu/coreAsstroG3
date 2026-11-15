@@ -199,6 +199,8 @@ describe('CW-10N independent multi-chart verification', () => {
         configureFunctionalNature(horoscope, sourceCase.planet, functional);
         horoscope.natalGrahaDrishti = {
           ...horoscope.natalGrahaDrishti,
+          computationStatus: 'COMPLETE',
+          diagnostics: [],
           aspects: [{
             sourcePlanet: sourceCase.planet,
             targetPlanet: Planet.MERCURY,
@@ -385,8 +387,18 @@ describe('CW-10N independent multi-chart verification', () => {
       targetPlanet: Planet.JUPITER,
       aspectType: 'FULL_7TH'
     }];
-    earlyChart.natalGrahaDrishti = { ...earlyChart.natalGrahaDrishti, aspects: aspect };
-    lateChart.natalGrahaDrishti = { ...lateChart.natalGrahaDrishti, aspects: aspect };
+    earlyChart.natalGrahaDrishti = {
+      ...earlyChart.natalGrahaDrishti,
+      computationStatus: 'COMPLETE',
+      diagnostics: [],
+      aspects: aspect
+    };
+    lateChart.natalGrahaDrishti = {
+      ...lateChart.natalGrahaDrishti,
+      computationStatus: 'COMPLETE',
+      diagnostics: [],
+      aspects: aspect
+    };
     const earlyJupiter = buildPlanetaryInfluenceTrace(earlyChart).find(
       (item) => item.planet === Planet.JUPITER
     )!;
@@ -479,6 +491,7 @@ describe('CW-10N independent multi-chart verification', () => {
       horoscope.natalGrahaDrishti = {
         ...horoscope.natalGrahaDrishti,
         computationStatus: 'PARTIAL',
+        diagnostics: [],
         aspects: [{
           sourcePlanet: 'NOT_A_PLANET',
           targetPlanet: Planet.SATURN,

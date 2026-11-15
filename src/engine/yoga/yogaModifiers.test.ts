@@ -10,7 +10,7 @@ import {
   PlanetFact,
   PlanetFacts,
   PlanetaryStrengthReport,
-  NatalGrahaDrishtiReport,
+  NatalGrahaDrishtiComputed,
   AspectType
 } from '../../types';
 import { SIGNS_METADATA, NAKSHATRAS_METADATA } from '../../data/astroData';
@@ -210,6 +210,8 @@ describe('yogaModifiers', () => {
         [Planet.SATURN]: createDummyFact(Planet.SATURN, 7, Sign.LIBRA)
       } as Record<Planet, PlanetFact>,
       natalGrahaDrishti: {
+        computationStatus: 'COMPLETE',
+        diagnostics: [],
         aspects: [
           {
             sourcePlanet: Planet.SATURN,
@@ -224,7 +226,7 @@ describe('yogaModifiers', () => {
             reason: 'Saturn 7th aspect'
           }
         ]
-      } as NatalGrahaDrishtiReport
+      } as NatalGrahaDrishtiComputed
     };
 
     const assessment = evaluateYogaModifiers(yoga, input);
@@ -243,6 +245,8 @@ describe('yogaModifiers', () => {
         [Planet.JUPITER]: createDummyFact(Planet.JUPITER, 5, Sign.LEO)
       } as Record<Planet, PlanetFact>,
       natalGrahaDrishti: {
+        computationStatus: 'COMPLETE',
+        diagnostics: [],
         aspects: [
           {
             sourcePlanet: Planet.JUPITER,
@@ -257,7 +261,7 @@ describe('yogaModifiers', () => {
             reason: 'Jupiter 9th aspect'
           }
         ]
-      } as NatalGrahaDrishtiReport
+      } as NatalGrahaDrishtiComputed
     };
 
     const assessment = evaluateYogaModifiers(yoga, input);
@@ -358,6 +362,8 @@ describe('yogaModifiers', () => {
         [Planet.SATURN]: createDummyFact(Planet.SATURN, 7, Sign.LIBRA)
       } as Record<Planet, PlanetFact>,
       natalGrahaDrishti: {
+        computationStatus: 'COMPLETE',
+        diagnostics: [],
         aspects: [
           {
             sourcePlanet: Planet.SATURN,
@@ -372,7 +378,7 @@ describe('yogaModifiers', () => {
             reason: 'Saturn 7th aspect'
           }
         ]
-      } as NatalGrahaDrishtiReport
+      } as NatalGrahaDrishtiComputed
     };
 
     const assessment = evaluateYogaModifiers(yoga, input);

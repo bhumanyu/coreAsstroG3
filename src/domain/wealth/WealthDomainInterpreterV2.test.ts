@@ -63,7 +63,9 @@ function makeEmptyProducerChartFor(horoscope: Horoscope, hasCompleteInputs: bool
     dashaInterpretation: hasCompleteInputs
       ? resolveDashaInterpretationForAsOf(horoscope, new Date(CANONICAL_UTC_INSTANT))
       : undefined,
-    natalGrahaDrishti: hasCompleteInputs ? { aspects: [] } : undefined
+    natalGrahaDrishti: hasCompleteInputs
+      ? { aspects: [], computationStatus: 'COMPLETE', diagnostics: [] }
+      : undefined
   };
 }
 

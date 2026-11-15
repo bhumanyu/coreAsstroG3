@@ -4,7 +4,7 @@ import {
   PlanetFacts,
   Sign,
   PlanetAnalysisReport,
-  NatalGrahaDrishtiReport,
+  NatalGrahaDrishtiComputed,
   PlanetaryStrengthReport
 } from '../../types';
 import { HouseLordshipReport } from '../houseLordship/houseLordship';
@@ -140,7 +140,7 @@ export interface YogaAnalysisInput {
   readonly functionalRoles?: FunctionalRoleAnalysisReport;
   readonly planetaryStrength?: PlanetaryStrengthReport;
   readonly planetAnalysis?: PlanetAnalysisReport;
-  readonly natalGrahaDrishti?: NatalGrahaDrishtiReport;
+  readonly natalGrahaDrishti?: NatalGrahaDrishtiComputed;
 }
 
 export interface YogaRule {

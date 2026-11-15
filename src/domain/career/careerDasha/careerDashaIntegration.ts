@@ -28,6 +28,7 @@ import type {
 import type {
   CareerDashaActivationContext,
   CareerDashaPlanetContext,
+  CareerDashaExpressionAnalysisStatus,
   CareerDashaTiming,
   CareerDashaActivation,
   CareerDashaActivationHierarchy,
@@ -96,7 +97,7 @@ import {
 export interface CareerDashaIntegrationInput {
   readonly horoscope: Horoscope;
   readonly natal: CareerNatalAnalysis;
-  readonly expression: CareerExpressionAnalysis;
+  readonly expression?: CareerExpressionAnalysis;
   /**
    * Optional canonical dasha interpretation from temporalState.
    * When provided, this takes precedence over horoscope.dashaInterpretation
@@ -216,14 +217,15 @@ function getConditionAssessment(
 }
 
 function buildExpressionDiagnosticTrace(
-  expression: CareerExpressionAnalysis,
+  expression: CareerExpressionAnalysis | undefined,
+  analysisStatus: CareerDashaExpressionAnalysisStatus,
   source: CareerDashaExpressionDiagnosticTrace['source']
 ): CareerDashaExpressionDiagnosticTrace {
   const planetCounts = new Map<Planet, number>();
   let evidenceCount = 0;
   let evidenceWithPlanetAttributions = 0;
 
-  for (const item of expression.expressions) {
+  for (const item of expression?.expressions ?? []) {
     for (const evidence of item.evidence) {
       evidenceCount += 1;
       if (evidence.planets.length > 0) {
@@ -237,7 +239,8 @@ function buildExpressionDiagnosticTrace(
 
   return Object.freeze({
     source,
-    expressionCount: expression.expressions.length,
+    analysisStatus,
+    expressionCount: expression?.expressions.length ?? 0,
     evidenceCount,
     evidenceWithPlanetAttributions,
     planetAttributionCounts: Object.freeze(
@@ -253,7 +256,8 @@ function buildExpressionDiagnosticTrace(
 
 function buildPlanetContexts(
   natal: CareerNatalAnalysis,
-  expression: CareerExpressionAnalysis
+  expression: CareerExpressionAnalysis | undefined,
+  expressionAnalysisStatus: CareerDashaExpressionAnalysisStatus
 ): readonly CareerDashaPlanetContext[] {
   // Build relevance and condition maps
   const relevanceByPlanet = new Map<Planet, CareerPlanetaryRelevance>();
@@ -270,7 +274,7 @@ function buildPlanetContexts(
   // Use Map<Planet, Map<string, CareerExpression>> where key is `${mode}:${direction}`
   // to deduplicate expressions per planet (same mode+direction appears once)
   const expressionsByPlanet = new Map<Planet, Map<string, CareerExpression>>();
-  for (const expr of expression.expressions) {
+  for (const expr of expression?.expressions ?? []) {
     for (const evidence of expr.evidence) {
       for (const planet of evidence.planets) {
         const planetMap = expressionsByPlanet.get(planet) ?? new Map<string, CareerExpression>();
@@ -332,6 +336,7 @@ function buildPlanetContexts(
       condition: planetCondition,
       conditionAssessment,
       afflictionAssessed,
+      expressionAnalysisStatus,
       expressions: Object.freeze(planetExpressions),
       relatedHouses: Object.freeze(sortedRelatedHouses),
       relatedPlanets: Object.freeze(mergedRelatedPlanets)
@@ -417,11 +422,13 @@ function buildCareerDashaActivationContext(
 
   // Build planet contexts
   // Per P2-11C Gate 3: Use mechanism-aware planet resolution when available
+  const expressionAnalysisStatus = input.expression ? 'EXECUTED' : 'UNAVAILABLE';
   const planetContexts = mechanismAwareInput
-    ? buildPlanetContextsFromMechanismAware(natal, mechanismAwareInput)
-    : buildPlanetContexts(natal, input.expression);
+    ? buildPlanetContextsFromMechanismAware(natal, mechanismAwareInput, expressionAnalysisStatus)
+    : buildPlanetContexts(natal, input.expression, expressionAnalysisStatus);
   const expressionTrace = buildExpressionDiagnosticTrace(
     input.expression,
+    expressionAnalysisStatus,
     mechanismAwareInput ? 'MECHANISM_AWARE_PARTICIPANTS' : 'EXPRESSION_EVIDENCE_PLANETS'
   );
 
@@ -453,7 +460,8 @@ function buildCareerDashaActivationContext(
  */
 function buildPlanetContextsFromMechanismAware(
   natal: CareerNatalAnalysis,
-  mechanismAwareInput: CareerDashaMechanismAwareInput
+  mechanismAwareInput: CareerDashaMechanismAwareInput,
+  expressionAnalysisStatus: CareerDashaExpressionAnalysisStatus
 ): readonly CareerDashaPlanetContext[] {
   const planetContexts: CareerDashaPlanetContext[] = [];
 
@@ -524,6 +532,7 @@ function buildPlanetContextsFromMechanismAware(
       condition: planetCondition,
       conditionAssessment,
       afflictionAssessed,
+      expressionAnalysisStatus,
       expressions: Object.freeze([]), // No expressions from mechanism-aware path
       relatedHouses: Object.freeze(sortedRelatedHouses),
       relatedPlanets: Object.freeze(mergedRelatedPlanets)

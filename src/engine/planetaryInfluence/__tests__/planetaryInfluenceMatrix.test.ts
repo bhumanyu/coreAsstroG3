@@ -358,7 +358,9 @@ describe('CW-10E synthetic planetary influence matrix', () => {
   it('distinguishes no aspects from unavailable aspect input and ignores legacy aspect data', () => {
     const noAspects = resolvePlanetaryAspects(makeHoroscope(), Planet.MERCURY);
     const unknownStatusHoroscope = makeHoroscope();
-    unknownStatusHoroscope.natalGrahaDrishti = { aspects: [] };
+    unknownStatusHoroscope.natalGrahaDrishti = { aspects: [] } as unknown as NonNullable<
+      Horoscope['natalGrahaDrishti']
+    >;
     const unknownStatus = resolvePlanetaryAspects(
       unknownStatusHoroscope,
       Planet.MERCURY
@@ -527,7 +529,26 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     horoscope.planetFacts[Planet.JUPITER].position.sign = Sign.GEMINI;
 
     expect(resolvePlanetaryRelationships(horoscope, Planet.MERCURY).exchanges[0])
-      .toMatchObject({ validationStatus: 'VALIDATED_SIGN_EXCHANGE' });
+      .toMatchObject({
+        validationStatus: 'VALIDATED_SIGN_EXCHANGE',
+        validation: {
+          scope: 'MUTUAL_SIGN_LORDSHIP_CONFIRMED',
+          participants: [
+            {
+              planet: Planet.MERCURY,
+              sign: Sign.SAGITTARIUS,
+              ruler: Planet.JUPITER,
+              positionSource: 'planetFacts.position'
+            },
+            {
+              planet: Planet.JUPITER,
+              sign: Sign.GEMINI,
+              ruler: Planet.MERCURY,
+              positionSource: 'planetFacts.position'
+            }
+          ]
+        }
+      });
   });
 
   it('keeps exchanges observed and diagnoses missing sign-lordship inputs', () => {
@@ -659,28 +680,61 @@ describe('CW-10E synthetic planetary influence matrix', () => {
               planets: [Planet.MERCURY, Planet.JUPITER],
               ruleId: 'SAME_RULE',
               reason: 'Occurrence one',
-              evidenceId: 'occurrence-1'
+              occurrenceId: 'occurrence-1'
             },
             {
               relationship: 'CONJUNCTION',
               planets: [Planet.MERCURY, Planet.JUPITER],
               ruleId: 'SAME_RULE',
               reason: 'Occurrence two',
-              evidenceId: 'occurrence-2'
+              occurrenceId: 'occurrence-2'
             },
             {
               relationship: 'CONJUNCTION',
               planets: [Planet.MERCURY, Planet.JUPITER],
               ruleId: 'SAME_RULE',
               reason: 'Duplicate occurrence',
-              evidenceId: 'occurrence-1'
+              occurrenceId: 'occurrence-1'
             }
           ]
         }
       }
     );
     expect(identifiedResult.relationshipEvidence.map((item) => item.producerEvidenceId))
-      .toEqual(['evidenceId:occurrence-1', 'evidenceId:occurrence-2']);
+      .toEqual(['occurrenceId:occurrence-1', 'occurrenceId:occurrence-2']);
+    expect(identifiedResult.diagnostics).toContainEqual(
+      expect.objectContaining({ reason: 'PRODUCER_OCCURRENCE_ID_REUSED' })
+    );
+    expect(identifiedResult.availability.relationships.status).toBe('PARTIAL');
+  });
+
+  it('uses the highest-priority occurrence id and retains other producer ids as provenance', () => {
+    const result = resolvePlanetaryRelationships(
+      makeHoroscope(),
+      Planet.MERCURY,
+      {
+        relationshipEvidence: {
+          records: [{
+            relationship: 'CONJUNCTION',
+            planets: [Planet.MERCURY, Planet.JUPITER],
+            ruleId: 'MULTIPLE_IDS',
+            reason: 'Producer supplied multiple identity fields',
+            sourceOccurrenceId: 'source-1',
+            occurrenceId: 'occurrence-1',
+            evidenceId: 'evidence-1'
+          }]
+        }
+      }
+    );
+
+    expect(result.relationshipEvidence[0]).toMatchObject({
+      producerEvidenceId: 'sourceOccurrenceId:source-1',
+      producerEvidenceIdProvenance: [
+        'sourceOccurrenceId:source-1',
+        'occurrenceId:occurrence-1',
+        'evidenceId:evidence-1'
+      ]
+    });
   });
 
   it('builds nine traces in canonical order and exposes all five independent dimensions', () => {

@@ -438,6 +438,44 @@ describe('C9 Dasha Integration', () => {
       expect(result.md.role).toBe('PRIMARY_DRIVER');
       expect(result.ad.role).toBe('MODIFIER');
       expect(result.pd.role).toBe('REFINEMENT');
+      expect(result.hierarchy?.diagnosticTrace?.expressionTrace?.analysisStatus).toBe('EXECUTED');
+    });
+  });
+
+  it('marks omitted C8 analysis unavailable and blocks the empty-expression C9 fallback', () => {
+    const natal = makeMinimalNatal();
+    const condition: CareerPlanetaryConditionResult = {
+      planet: Planet.SATURN,
+      relevance: 'PRIMARY',
+      condition: 'STRONG',
+      dignity: 'OWN_SIGN' as any,
+      affliction: 'NONE' as any,
+      motion: 'DIRECT' as any,
+      combustion: 'NOT_COMBUST' as any,
+      positiveFactors: [],
+      negativeFactors: [],
+      relatedPlanets: [],
+      conditional: false,
+      assessment: 'FULL',
+      statement: 'Saturn is fully assessed.'
+    };
+    const input = makeInput({
+      expression: undefined,
+      natal: Object.freeze({
+        ...natal,
+        condition: Object.freeze([condition])
+      })
+    });
+    const result = buildCareerDashaAnalysis(input);
+
+    expect(result.md.direction).toBe('NEUTRAL');
+    expect(result.md.effect).toBe('DOES_NOT_ACTIVATE');
+    expect(result.md.diagnostics).toContain(
+      'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
+    );
+    expect(result.hierarchy?.diagnosticTrace?.expressionTrace?.analysisStatus).toBe('UNAVAILABLE');
+    expect(result.hierarchy?.diagnosticTrace?.levels[0]).toMatchObject({
+      expressionAnalysisStatus: 'UNAVAILABLE'
     });
   });
 

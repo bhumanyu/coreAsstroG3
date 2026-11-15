@@ -53,7 +53,8 @@ export interface PlanetaryRelationshipDiagnostic {
     | 'INVALID_YOGA_FIELDS'
     | 'INVALID_EVIDENCE_RECORD'
     | 'INVALID_EVIDENCE_FIELDS'
-    | 'INVALID_PLANETS';
+    | 'INVALID_PLANETS'
+    | 'PRODUCER_OCCURRENCE_ID_REUSED';
 }
 
 export interface PlanetaryRelationshipEvidence {
@@ -63,11 +64,21 @@ export interface PlanetaryRelationshipEvidence {
   readonly yogaType: string;
   readonly reason: string;
   readonly producerEvidenceId?: string;
+  readonly producerEvidenceIdProvenance?: readonly string[];
 }
 
 export interface PlanetaryExchangeEvidence extends PlanetaryRelationshipEvidence {
   readonly relationship: 'EXCHANGE';
   readonly validationStatus: 'OBSERVED' | 'VALIDATED_SIGN_EXCHANGE';
+  readonly validation: {
+    readonly scope: 'MUTUAL_SIGN_LORDSHIP_CONFIRMED';
+    readonly participants: readonly {
+      readonly planet: Planet;
+      readonly sign?: Sign;
+      readonly ruler?: Planet;
+      readonly positionSource: CanonicalPlanetPosition['source'];
+    }[];
+  };
 }
 
 export interface PlanetaryYogaParticipation {
@@ -156,52 +167,60 @@ function validateSignExchange(
 ): {
   readonly validationStatus: PlanetaryExchangeEvidence['validationStatus'];
   readonly unavailable: boolean;
+  readonly validation: PlanetaryExchangeEvidence['validation'];
 } {
+  const participants = planets.map(planet => {
+    const position = resolveCanonicalPlanetPosition(horoscope.planetFacts?.[planet]);
+    return Object.freeze({
+      planet,
+      ...(position.sign ? { sign: position.sign } : {}),
+      ...(position.sign && SIGNS_METADATA[position.sign]?.ruler
+        ? { ruler: SIGNS_METADATA[position.sign]?.ruler }
+        : {}),
+      positionSource: position.source
+    });
+  });
+  const validation: PlanetaryExchangeEvidence['validation'] = Object.freeze({
+    scope: 'MUTUAL_SIGN_LORDSHIP_CONFIRMED',
+    participants: Object.freeze(participants)
+  });
+
   if (planets.length !== 2) {
-    return { validationStatus: 'OBSERVED', unavailable: true };
+    return { validationStatus: 'OBSERVED', unavailable: true, validation };
   }
-  const [first, second] = planets;
-  const firstPosition = resolveCanonicalPlanetPosition(horoscope.planetFacts?.[first]);
-  const secondPosition = resolveCanonicalPlanetPosition(horoscope.planetFacts?.[second]);
-  const firstRuler = firstPosition.sign
-    ? SIGNS_METADATA[firstPosition.sign]?.ruler
-    : undefined;
-  const secondRuler = secondPosition.sign
-    ? SIGNS_METADATA[secondPosition.sign]?.ruler
-    : undefined;
+  const [first, second] = participants;
+  const firstRuler = first.ruler;
+  const secondRuler = second.ruler;
   if (!firstRuler || !secondRuler) {
-    return { validationStatus: 'OBSERVED', unavailable: true };
+    return { validationStatus: 'OBSERVED', unavailable: true, validation };
   }
   return {
-    validationStatus: firstRuler === second && secondRuler === first
+    validationStatus: firstRuler === second.planet && secondRuler === first.planet
       ? 'VALIDATED_SIGN_EXCHANGE'
       : 'OBSERVED',
-    unavailable: false
+    unavailable: false,
+    validation
   };
 }
 
-function getProducerEvidenceId(record: Record<string, unknown>): string | undefined {
-  for (const key of [
-    'sourceOccurrenceId',
-    'occurrenceId',
-    'evidenceId',
-    'relationshipEvidenceId',
-    'id'
-  ]) {
+// The first present ID defines identity; all supplied IDs remain provenance and are validated.
+const PRODUCER_OCCURRENCE_ID_PRECEDENCE = Object.freeze([
+  'sourceOccurrenceId',
+  'occurrenceId',
+  'evidenceId',
+  'relationshipEvidenceId',
+  'id'
+] as const);
+
+function getProducerEvidenceIds(record: Record<string, unknown>): readonly string[] {
+  return PRODUCER_OCCURRENCE_ID_PRECEDENCE.flatMap(key => {
     const value = record[key];
-    if (typeof value === 'string' && value.length > 0) return `${key}:${value}`;
-  }
-  return undefined;
+    return typeof value === 'string' && value.length > 0 ? [`${key}:${value}`] : [];
+  });
 }
 
 function hasValidProducerEvidenceId(record: Record<string, unknown>): boolean {
-  return [
-    'sourceOccurrenceId',
-    'occurrenceId',
-    'evidenceId',
-    'relationshipEvidenceId',
-    'id'
-  ].every((key) => record[key] === undefined ||
+  return PRODUCER_OCCURRENCE_ID_PRECEDENCE.every((key) => record[key] === undefined ||
     (typeof record[key] === 'string' && record[key].length > 0));
 }
 
@@ -366,7 +385,7 @@ export function resolvePlanetaryRelationships(
         }
         const evidencePlanets = rawEvidence.planets as readonly Planet[];
         if (!evidencePlanets.includes(planet) || typeof rawYoga.type !== 'string') continue;
-        const producerEvidenceId = getProducerEvidenceId(rawEvidence);
+        const producerEvidenceIds = getProducerEvidenceIds(rawEvidence);
         relationshipEvidence.push(Object.freeze({
           relationship: rawEvidence.relationship,
           planets: Object.freeze(
@@ -375,7 +394,12 @@ export function resolvePlanetaryRelationships(
           ruleId: rawEvidence.ruleId,
           yogaType: rawYoga.type,
           reason: rawEvidence.reason,
-          ...(producerEvidenceId ? { producerEvidenceId } : {})
+          ...(producerEvidenceIds.length > 0
+            ? {
+                producerEvidenceId: producerEvidenceIds[0],
+                producerEvidenceIdProvenance: Object.freeze([...producerEvidenceIds])
+              }
+            : {})
         }));
       }
     }
@@ -416,7 +440,7 @@ export function resolvePlanetaryRelationships(
     }
     const evidencePlanets = rawEvidence.planets as readonly Planet[];
     if (!evidencePlanets.includes(planet)) continue;
-    const producerEvidenceId = getProducerEvidenceId(rawEvidence);
+    const producerEvidenceIds = getProducerEvidenceIds(rawEvidence);
     relationshipEvidence.push(Object.freeze({
       relationship: rawEvidence.relationship,
       planets: Object.freeze(
@@ -425,7 +449,12 @@ export function resolvePlanetaryRelationships(
       ruleId: rawEvidence.ruleId,
       yogaType: typeof rawEvidence.yogaType === 'string' ? rawEvidence.yogaType : 'UNSPECIFIED',
       reason: rawEvidence.reason,
-      ...(producerEvidenceId ? { producerEvidenceId } : {})
+      ...(producerEvidenceIds.length > 0
+        ? {
+            producerEvidenceId: producerEvidenceIds[0],
+            producerEvidenceIdProvenance: Object.freeze([...producerEvidenceIds])
+          }
+        : {})
     }));
   }
 
@@ -441,10 +470,19 @@ export function resolvePlanetaryRelationships(
   const seenRelationships = new Set<string>();
   const deduplicatedRelationships = relationshipEvidence.filter((item) => {
     const identity = item.producerEvidenceId
-      ? `producer:${item.producerEvidenceId}|${item.relationship}|${item.yogaType}`
+      ? `producer:${item.producerEvidenceId}`
       : `fallback:${item.ruleId}|${participantKey(item.planets)}|${item.relationship}|` +
         `${item.yogaType}|${item.reason}`;
-    if (seenRelationships.has(identity)) return false;
+    if (seenRelationships.has(identity)) {
+      if (item.producerEvidenceId) {
+        diagnostics.push(Object.freeze({
+          record: item,
+          reason: 'PRODUCER_OCCURRENCE_ID_REUSED'
+        }));
+        relationshipErrors = true;
+      }
+      return false;
+    }
     seenRelationships.add(identity);
     return true;
   });
@@ -462,7 +500,8 @@ export function resolvePlanetaryRelationships(
     exchanges.push(Object.freeze({
       ...item,
       relationship: 'EXCHANGE',
-      validationStatus: validation.validationStatus
+      validationStatus: validation.validationStatus,
+      validation: validation.validation
     }));
   }
   exchanges.sort((a, b) =>

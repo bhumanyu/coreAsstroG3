@@ -81,6 +81,7 @@ const AxisCard: React.FC<{ label: string; axis: Axis; renderResult: () => React.
   const statusDescription = axis.unavailableReason || t(statusKey[axis.status]);
   const diagnosticMessages: Record<string, string> = {
     C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT: t('ui.axes.partialConditionAssessment'),
+    C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE: t('ui.axes.expressionAnalysisUnavailable'),
     C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE: t('ui.axes.provenanceIncomplete')
   };
   return (

@@ -212,13 +212,14 @@ function resolveAfflictionEffect(
 
 function resolveMotionEffect(
   motion: CareerPlanetaryMotion
-): 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' {
+): 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'UNASSESSED' {
   switch (motion) {
     case 'DIRECT':
     case 'RETROGRADE':
     case 'STATIONARY':
-    case 'UNKNOWN':
       return 'NEUTRAL';
+    case 'UNKNOWN':
+      return 'UNASSESSED';
   }
 }
 
@@ -387,7 +388,8 @@ function resolveCondition(
 ): CareerPlanetaryCondition {
   const hasDirectionalFactors =
     factors.positive.length > 0 || factors.negative.length > 0;
-  if (!hasRequiredConditionData(context)) {
+  // PARTIAL with directional evidence is provisional, not neutral or unavailable.
+  if (!hasRequiredConditionData(context) && !hasDirectionalFactors) {
     return 'INSUFFICIENT_DATA';
   }
 

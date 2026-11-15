@@ -109,13 +109,18 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
         challengingCount: levelEvidence.filter((item) => item.direction === 'CHALLENGE').length,
         neutralCount: levelEvidence.filter((item) => item.direction === 'NEUTRAL').length
       };
+      const hasDirectionalEvidence = levelEvidence.some(
+        (item) => item.direction === 'SUPPORT' ||
+          item.direction === 'CHALLENGE' ||
+          item.direction === 'NEUTRAL'
+      );
 
       expect(careerPeriod?.effect).toBe(canonicalPeriod.effect);
       expect(activationCardPeriod?.effect).toBe(canonicalPeriod.effect);
       expect(lifePeriod.effect).toBe(canonicalPeriod.effect);
       // Single verdict: the evidence tally is a display-only count projection
       // and must match the canonical evidence array exactly.
-      if (levelEvidence.length === 0) {
+      if (!hasDirectionalEvidence) {
         expect(careerPeriod?.evidenceTally).toBeUndefined();
       } else {
         expect(careerPeriod?.evidenceTally).toEqual(expectedTally);

@@ -165,6 +165,8 @@ describe('Career Planetary Relevance Integration', () => {
     it('planet aspecting career house gets SUPPORTING relevance with HOUSE_ASPECTOR role', () => {
       const horoscope = createMinimalHoroscope({
         natalGrahaDrishti: {
+          computationStatus: 'COMPLETE',
+          diagnostics: [],
           aspects: [
             { sourcePlanet: Planet.JUPITER, targetHouse: 10, aspectType: 'FULL' }
           ]
@@ -188,6 +190,8 @@ describe('Career Planetary Relevance Integration', () => {
     it('planet aspecting only non-career houses does not get HOUSE_ASPECTOR role', () => {
       const horoscope = createMinimalHoroscope({
         natalGrahaDrishti: {
+          computationStatus: 'COMPLETE',
+          diagnostics: [],
           aspects: [
             { sourcePlanet: Planet.JUPITER, targetHouse: 3, aspectType: 'FULL' },
             { sourcePlanet: Planet.JUPITER, targetHouse: 5, aspectType: 'FULL' }
@@ -211,6 +215,8 @@ describe('Career Planetary Relevance Integration', () => {
     it('ignores grahaDrishti when both natalGrahaDrishti and grahaDrishti are present with conflicting values', () => {
       const horoscope = createMinimalHoroscope({
         natalGrahaDrishti: {
+          computationStatus: 'COMPLETE',
+          diagnostics: [],
           aspects: [
             { sourcePlanet: Planet.JUPITER, targetHouse: 10, aspectType: 'FULL' }
           ]
@@ -414,6 +420,8 @@ describe('Career Planetary Relevance Integration', () => {
           [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 10, longitude: 0, sign: 'CAPRICORN' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any
         },
         natalGrahaDrishti: {
+          computationStatus: 'COMPLETE',
+          diagnostics: [],
           aspects: [
             { sourcePlanet: Planet.MERCURY, targetHouse: 6, aspectType: 'FULL' }
           ]

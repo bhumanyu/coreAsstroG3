@@ -1,4 +1,4 @@
-import { Planet, NatalGrahaDrishtiReport } from '../../types';
+import { Planet, NatalGrahaDrishtiComputed } from '../../types';
 import {
   InterpretationConfidence,
   PlanetInterpretationReport
@@ -74,7 +74,7 @@ export interface LifeThemeInput {
   readonly houseInterpretation: HouseInterpretationReport;
   readonly functionalRoles: FunctionalRoleAnalysisReport;
   readonly yogas: YogaAnalysisReport;
-  readonly natalGrahaDrishti: NatalGrahaDrishtiReport;
+  readonly natalGrahaDrishti: NatalGrahaDrishtiComputed;
   readonly dashaInterpretation: DashaInterpretationReport;
   readonly divisionalInterpretation: DivisionalInterpretationReport;
 }

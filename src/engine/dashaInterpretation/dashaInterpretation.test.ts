@@ -10,7 +10,7 @@ import {
   PlanetFact,
   PlanetAnalysisReport,
   HouseAnalysisReport,
-  NatalGrahaDrishtiReport,
+  NatalGrahaDrishtiComputed,
   NatalGrahaDrishti,
   PlanetaryStrengthReport,
   ShadbalaAggregationStatus,
@@ -141,7 +141,11 @@ function createDashaFixture(overrides?: {
   };
 
   const houseLordship = analyzeHouseLordship(Sign.ARIES);
-  const natalGrahaDrishti: NatalGrahaDrishtiReport = { aspects: overrides?.aspects ?? [] };
+  const natalGrahaDrishti: NatalGrahaDrishtiComputed = {
+    aspects: overrides?.aspects ?? [],
+    computationStatus: 'COMPLETE',
+    diagnostics: []
+  };
   const yogas: YogaAnalysisReport = { yogas: overrides?.yogas ?? [] };
   const planetAnalysis = analyzePlanets({ planetFacts: planetFacts as any, natalGrahaDrishti });
   const houseAnalysis = analyzeHouses({ planetFacts: planetFacts as any, planetAnalysis, houseLordship });

@@ -42,6 +42,26 @@ interface CanonicalD10Fact {
   source: 'lord' | 'tenant' | 'planet';
 }
 
+/**
+ * Versioned D10 MODERATE role policy (CW-10O-v1):
+ * PRIMARY → NEUTRAL; SUPPORTING → SUPPORT; CHALLENGING → CHALLENGE.
+ */
+export const CAREER_D10_MODERATE_POLICY = Object.freeze({
+  version: 'CW-10O-v1',
+  directionByRole: Object.freeze({
+    PRIMARY: 'NEUTRAL',
+    SUPPORTING: 'SUPPORT',
+    CHALLENGING: 'CHALLENGE'
+  })
+} as const);
+
+export type CareerD10EvidenceTier = 'PRIMARY' | 'SECONDARY' | 'MODIFIER';
+
+export interface CareerD10DirectionAssessment {
+  readonly direction: CareerD10QualificationDirection;
+  readonly assessedTiers: readonly CareerD10EvidenceTier[];
+}
+
 function buildCanonicalD10Facts(
   context: CareerD10Context
 ): CanonicalD10Fact[] {
@@ -145,12 +165,34 @@ export function hasNatalCareerPromise(
   return natalDirection === 'SUPPORT' || natalDirection === 'MIXED' || natalDirection === 'CHALLENGE';
 }
 
-export function isD10DataAvailable(context: CareerD10Context): boolean {
+export function chartAvailable(context: CareerD10Context): boolean {
   return context.d10Available &&
     context.d10Houses.length > 0 &&
     context.d10Planets.some(planet =>
       planet.condition !== 'UNAVAILABLE' && planet.condition !== 'INSUFFICIENT_DATA'
     );
+}
+
+export const isD10DataAvailable = chartAvailable;
+
+function isUsableD10Condition(condition: CareerPlanetaryCondition): boolean {
+  return condition !== 'UNAVAILABLE' && condition !== 'INSUFFICIENT_DATA';
+}
+
+export function dimensionEvidenceAvailable(
+  mode: CareerManifestationMode,
+  context: CareerD10Context
+): boolean {
+  const factors = DIMENSION_FACTORS[mode];
+  if (!factors) {
+    return false;
+  }
+
+  return buildCanonicalD10Facts(context).some(fact =>
+    factors.houses.includes(fact.house) &&
+    factors.planets.includes(fact.planet) &&
+    isUsableD10Condition(fact.condition)
+  );
 }
 
 export function resolveD10PlanetDirection(
@@ -165,6 +207,13 @@ export function resolveD10PlanetDirection(
   const classifiedRole = classifyCareerHouse(d10House, CAREER_D10_HOUSE_PORTFOLIO);
   const houseRole = classifiedRole === 'SECONDARY' ? 'NEUTRAL' : classifiedRole;
 
+  if (condition === 'MODERATE') {
+    if (houseRole === 'PRIMARY' || houseRole === 'SUPPORTING' || houseRole === 'CHALLENGING') {
+      return CAREER_D10_MODERATE_POLICY.directionByRole[houseRole];
+    }
+    return 'NEUTRAL';
+  }
+
   let baseDirection: CareerD10QualificationDirection;
 
   if (condition === 'AFFLICTED') {
@@ -173,8 +222,6 @@ export function resolveD10PlanetDirection(
     baseDirection = 'CHALLENGE';
   } else if (condition === 'STRONG') {
     baseDirection = 'SUPPORT';
-  } else if (condition === 'MODERATE') {
-    baseDirection = 'NEUTRAL';
   } else {
     baseDirection = 'NEUTRAL';
   }
@@ -186,9 +233,6 @@ export function resolveD10PlanetDirection(
     if (baseDirection === 'CHALLENGE') {
       return 'CHALLENGE';
     }
-    if (condition === 'MODERATE') {
-      return 'NEUTRAL';
-    }
     return baseDirection;
   }
 
@@ -198,9 +242,6 @@ export function resolveD10PlanetDirection(
     }
     if (baseDirection === 'CHALLENGE') {
       return 'NEUTRAL';
-    }
-    if (condition === 'MODERATE') {
-      return 'SUPPORT';
     }
     return baseDirection;
   }
@@ -212,9 +253,6 @@ export function resolveD10PlanetDirection(
     if (baseDirection === 'SUPPORT') {
       return 'NEUTRAL';
     }
-    if (condition === 'MODERATE') {
-      return 'CHALLENGE';
-    }
     return baseDirection;
   }
 
@@ -224,142 +262,99 @@ export function resolveD10PlanetDirection(
 export function resolveD10Direction(
   context: CareerD10Context
 ): CareerD10QualificationDirection {
-  if (!isD10DataAvailable(context)) {
-    return 'UNAVAILABLE';
+  return resolveD10DirectionAssessment(context).direction;
+}
+
+export function resolveD10DirectionAssessment(
+  context: CareerD10Context
+): CareerD10DirectionAssessment {
+  if (!chartAvailable(context)) {
+    return Object.freeze({
+      direction: 'UNAVAILABLE',
+      assessedTiers: Object.freeze([])
+    });
   }
 
-  // Hierarchical evaluation: PRIMARY > SECONDARY > MODIFIER
-  const primaryDirection = evaluatePrimaryEvidence(context);
-  if (primaryDirection !== 'NEUTRAL') {
-    return primaryDirection;
+  const assessedTiers: CareerD10EvidenceTier[] = [];
+  const tierEvaluations = [
+    { tier: 'PRIMARY' as const, result: evaluatePrimaryEvidence(context) },
+    { tier: 'SECONDARY' as const, result: evaluateSecondaryEvidence(context) },
+    { tier: 'MODIFIER' as const, result: evaluateModifierEvidence(context) }
+  ];
+
+  for (const { tier, result } of tierEvaluations) {
+    if (!result.assessed) continue;
+    assessedTiers.push(tier);
+    if (result.direction !== 'NEUTRAL') {
+      return Object.freeze({
+        direction: result.direction,
+        assessedTiers: Object.freeze(assessedTiers)
+      });
+    }
   }
 
-  const secondaryDirection = evaluateSecondaryEvidence(context);
-  if (secondaryDirection !== 'NEUTRAL') {
-    return secondaryDirection;
+  return Object.freeze({
+    direction: assessedTiers.length > 0 ? 'NEUTRAL' : 'UNAVAILABLE',
+    assessedTiers: Object.freeze(assessedTiers)
+  });
+}
+
+function evaluateTier(
+  context: CareerD10Context,
+  included: (fact: CanonicalD10Fact) => boolean
+): { readonly direction: CareerD10QualificationDirection; readonly assessed: boolean } {
+  let supportCount = 0;
+  let challengeCount = 0;
+
+  const facts = buildCanonicalD10Facts(context)
+    .filter(fact => included(fact) && isUsableD10Condition(fact.condition));
+
+  for (const fact of facts) {
+    const direction = resolveD10PlanetDirection({
+      planet: fact.planet,
+      condition: fact.condition,
+      d10House: fact.house,
+      natalHouse: 0,
+      relatedHouses: []
+    });
+    if (direction === 'SUPPORT') {
+      supportCount++;
+    } else if (direction === 'CHALLENGE') {
+      challengeCount++;
+    }
   }
 
-  const modifierDirection = evaluateModifierEvidence(context);
-  if (modifierDirection !== 'NEUTRAL') {
-    return modifierDirection;
+  if (supportCount > challengeCount) {
+    return { direction: 'SUPPORT', assessed: facts.length > 0 };
   }
-
-  return 'NEUTRAL';
+  if (challengeCount > supportCount) {
+    return { direction: 'CHALLENGE', assessed: facts.length > 0 };
+  }
+  if (supportCount > 0 && challengeCount > 0) {
+    return { direction: 'MIXED', assessed: facts.length > 0 };
+  }
+  return { direction: 'NEUTRAL', assessed: facts.length > 0 };
 }
 
 function evaluatePrimaryEvidence(
   context: CareerD10Context
-): CareerD10QualificationDirection {
-  let supportCount = 0;
-  let challengeCount = 0;
-
-  const facts = buildCanonicalD10Facts(context);
-
-  for (const fact of facts) {
-    if (fact.role === 'PRIMARY') {
-      const direction = resolveD10PlanetDirection({
-        planet: fact.planet,
-        condition: fact.condition,
-        d10House: fact.house,
-        natalHouse: 0,
-        relatedHouses: []
-      });
-      if (direction === 'SUPPORT') {
-        supportCount++;
-      } else if (direction === 'CHALLENGE') {
-        challengeCount++;
-      }
-      // NEUTRAL is not counted as either support or challenge
-    }
-  }
-
-  if (supportCount > challengeCount) {
-    return 'SUPPORT';
-  }
-  if (challengeCount > supportCount) {
-    return 'CHALLENGE';
-  }
-  if (supportCount > 0 && challengeCount > 0) {
-    return 'MIXED';
-  }
-  return 'NEUTRAL';
+): { readonly direction: CareerD10QualificationDirection; readonly assessed: boolean } {
+  return evaluateTier(context, fact => fact.role === 'PRIMARY');
 }
 
 function evaluateSecondaryEvidence(
   context: CareerD10Context
-): CareerD10QualificationDirection {
-  let supportCount = 0;
-  let challengeCount = 0;
-
-  const facts = buildCanonicalD10Facts(context);
-
-  for (const fact of facts) {
-    if (fact.role === 'SUPPORTING') {
-      const direction = resolveD10PlanetDirection({
-        planet: fact.planet,
-        condition: fact.condition,
-        d10House: fact.house,
-        natalHouse: 0,
-        relatedHouses: []
-      });
-      if (direction === 'SUPPORT') {
-        supportCount++;
-      } else if (direction === 'CHALLENGE') {
-        challengeCount++;
-      }
-      // NEUTRAL is not counted as either support or challenge
-    }
-  }
-
-  if (supportCount > challengeCount) {
-    return 'SUPPORT';
-  }
-  if (challengeCount > supportCount) {
-    return 'CHALLENGE';
-  }
-  if (supportCount > 0 && challengeCount > 0) {
-    return 'MIXED';
-  }
-  return 'NEUTRAL';
+): { readonly direction: CareerD10QualificationDirection; readonly assessed: boolean } {
+  return evaluateTier(context, fact => fact.role === 'SUPPORTING');
 }
 
 function evaluateModifierEvidence(
   context: CareerD10Context
-): CareerD10QualificationDirection {
-  let supportCount = 0;
-  let challengeCount = 0;
-
-  const facts = buildCanonicalD10Facts(context);
-
-  for (const fact of facts) {
-    // MODIFIER evidence includes tenants (always MODIFIER) and planets in NEUTRAL/CHALLENGING houses
-    if (fact.role === 'MODIFIER' || fact.role === 'NEUTRAL' || fact.role === 'CHALLENGING') {
-      const direction = resolveD10PlanetDirection({
-        planet: fact.planet,
-        condition: fact.condition,
-        d10House: fact.house,
-        natalHouse: 0,
-        relatedHouses: []
-      });
-      if (direction === 'SUPPORT') {
-        supportCount++;
-      } else if (direction === 'CHALLENGE') {
-        challengeCount++;
-      }
-      // NEUTRAL is not counted as either support or challenge
-    }
-  }
-
-  if (supportCount > challengeCount) {
-    return 'SUPPORT';
-  }
-  if (challengeCount > supportCount) {
-    return 'CHALLENGE';
-  }
-  if (supportCount > 0 && challengeCount > 0) {
-    return 'MIXED';
-  }
-  return 'NEUTRAL';
+): { readonly direction: CareerD10QualificationDirection; readonly assessed: boolean } {
+  return evaluateTier(
+    context,
+    fact => fact.role === 'MODIFIER' || fact.role === 'NEUTRAL' || fact.role === 'CHALLENGING'
+  );
 }
 
 export function resolveD10Effect(
@@ -367,7 +362,7 @@ export function resolveD10Effect(
   d10Direction: CareerD10QualificationDirection,
   context: CareerD10Context
 ): CareerD10QualificationEffect {
-  if (!isD10DataAvailable(context)) {
+  if (!chartAvailable(context)) {
     return 'UNAVAILABLE';
   }
 
@@ -918,7 +913,7 @@ export function evaluateDimensionQualification(
   }
 
   const factors = DIMENSION_FACTORS[mode];
-  if (!factors) {
+  if (!factors || !dimensionEvidenceAvailable(mode, context)) {
     return {
       matched: false,
       direction: 'UNAVAILABLE',

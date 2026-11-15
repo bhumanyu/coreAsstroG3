@@ -80,6 +80,7 @@ function makePlanet(
     relevance,
     roles,
     condition,
+    expressionAnalysisStatus: 'EXECUTED',
     expressions,
     relatedHouses: Object.freeze([10]),
     relatedPlanets: Object.freeze([])
@@ -808,6 +809,37 @@ describe('Career Dasha Activation', () => {
       expect(result.md.effect).toBe('ACTIVATES');
       expect(result.md.direction).toBe('SUPPORT');
       expect(result.overallEffect).toBe('ACTIVATES');
+      expect(result.md.diagnostics).not.toContain(
+        'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
+      );
+    });
+
+    it('does not use the empty-expression fallback when C8 analysis is unavailable', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          Object.freeze({
+            ...makePlanet(
+              Planet.SATURN,
+              'PRIMARY',
+              Object.freeze(['CAREER_LORD']),
+              'STRONG',
+              Object.freeze([])
+            ),
+            expressionAnalysisStatus: 'UNAVAILABLE' as const
+          })
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.direction).toBe('NEUTRAL');
+      expect(result.md.effect).toBe('DOES_NOT_ACTIVATE');
+      expect(result.md.diagnostics).toContain(
+        'C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE'
+      );
+      expect(result.diagnosticTrace?.levels[0]).toMatchObject({
+        expressionAnalysisStatus: 'UNAVAILABLE'
+      });
     });
   });
 

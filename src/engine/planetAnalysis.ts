@@ -5,7 +5,7 @@ import {
   PlanetFacts,
   DignityStatus,
   PlanetCondition,
-  NatalGrahaDrishtiReport,
+  NatalGrahaDrishtiComputed,
   PlanetAnalysisReport,
   PlanetAnalysis,
   PlanetAnalysisEvidence,
@@ -14,7 +14,7 @@ import {
 
 export interface PlanetAnalysisInput {
   readonly planetFacts: Readonly<Record<Planet, PlanetFact>> | Readonly<PlanetFacts>;
-  readonly natalGrahaDrishti: NatalGrahaDrishtiReport;
+  readonly natalGrahaDrishti: NatalGrahaDrishtiComputed;
 }
 
 function formatTitleCase(str: string | any): string {

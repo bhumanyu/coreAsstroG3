@@ -9,10 +9,13 @@ import {
 } from './careerD10Qualification';
 
 import {
+  chartAvailable,
+  dimensionEvidenceAvailable,
   hasNatalCareerPromise,
   isD10DataAvailable,
   resolveD10PlanetDirection,
   resolveD10Direction,
+  resolveD10DirectionAssessment,
   resolveD10Effect,
   resolveD10Strength,
   qualifyNatalCareerWithD10,
@@ -266,6 +269,23 @@ describe('careerD10QualificationRules', () => {
       };
       expect(resolveD10PlanetDirection(planetContext)).toBe('CHALLENGE');
     });
+
+    it.each([
+      ['PRIMARY', 10, 'NEUTRAL'],
+      ['SUPPORTING', 6, 'SUPPORT'],
+      ['CHALLENGING', 8, 'CHALLENGE']
+    ] as const)(
+      'pins the versioned MODERATE mapping for %s role',
+      (_role, house, expected) => {
+        expect(resolveD10PlanetDirection({
+          planet: Planet.SUN,
+          condition: 'MODERATE',
+          d10House: house,
+          natalHouse: 1,
+          relatedHouses: [house]
+        })).toBe(expected);
+      }
+    );
   });
 
   describe('resolveD10Direction', () => {
@@ -281,6 +301,76 @@ describe('careerD10QualificationRules', () => {
         expressions: emptyExpressions
       };
       expect(resolveD10Direction(context)).toBe('UNAVAILABLE');
+    });
+
+    it('does not resolve all-missing evidence as NEUTRAL', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'UNAVAILABLE', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'INSUFFICIENT_DATA', d10House: 10, natalHouse: 1, relatedHouses: [10] }
+        ],
+        expressions: emptyExpressions
+      };
+
+      expect(resolveD10DirectionAssessment(context)).toEqual({
+        direction: 'UNAVAILABLE',
+        assessedTiers: []
+      });
+    });
+
+    it('resolves assessed no-direction evidence to NEUTRAL', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'NEUTRAL', tenants: [], tenantConditions: [] },
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'NEUTRAL', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'NEUTRAL', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          { planet: Planet.MOON, condition: 'NEUTRAL', d10House: 6, natalHouse: 4, relatedHouses: [6] }
+        ],
+        expressions: emptyExpressions
+      };
+
+      expect(resolveD10DirectionAssessment(context)).toEqual({
+        direction: 'NEUTRAL',
+        assessedTiers: ['PRIMARY', 'SECONDARY']
+      });
+    });
+
+    it('records assessed secondary-neutral evidence when primary evidence is missing', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'UNAVAILABLE', tenants: [], tenantConditions: [] },
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'NEUTRAL', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'UNAVAILABLE', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          { planet: Planet.MOON, condition: 'NEUTRAL', d10House: 6, natalHouse: 4, relatedHouses: [6] }
+        ],
+        expressions: emptyExpressions
+      };
+
+      expect(resolveD10DirectionAssessment(context)).toEqual({
+        direction: 'NEUTRAL',
+        assessedTiers: ['SECONDARY']
+      });
     });
 
     it('PRIMARY evidence overrides SECONDARY/MODIFIER (hierarchical)', () => {
@@ -1372,6 +1462,49 @@ describe('resolveCareerD10Qualification', () => {
       expect(result.matched).toBe(true);
       expect(result.direction).toBe('SUPPORT');
       expect(result.strength).toBe('VERY_STRONG');
+    });
+
+    it('requires dimension-matched usable evidence and preserves natal direction otherwise', () => {
+      const expression: CareerExpression = {
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: [],
+        supportingEvidenceIds: ['leadership-evidence'],
+        statement: 'Leadership is supported.',
+        conditional: false
+      };
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 1, role: 'NEUTRAL', occupied: true, lord: Planet.VENUS, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.VENUS, condition: 'STRONG', d10House: 1, natalHouse: 1, relatedHouses: [1] }
+        ],
+        expressions: [expression]
+      };
+
+      expect(chartAvailable(context)).toBe(true);
+      expect(isD10DataAvailable(context)).toBe(true);
+      expect(dimensionEvidenceAvailable('LEADERSHIP', context)).toBe(false);
+      expect(evaluateDimensionQualification('LEADERSHIP', context)).toMatchObject({
+        matched: false,
+        direction: 'UNAVAILABLE'
+      });
+
+      const result = resolveCareerD10Qualification(context);
+      expect(result.natalPromisePreserved).toBe(true);
+      expect(result.qualifiedDirection).toBe('SUPPORT');
+      expect(result.expressionQualifications[0]).toMatchObject({
+        qualified: false,
+        direction: 'SUPPORT',
+        effect: 'INSUFFICIENT_DATA'
+      });
     });
 
     it('dimension qualification: TECHNICAL with 6H Mercury STRONG', () => {

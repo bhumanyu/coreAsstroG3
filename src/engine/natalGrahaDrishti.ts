@@ -1,6 +1,6 @@
 import {
   Planet,
-  NatalGrahaDrishtiComputedReport,
+  NatalGrahaDrishtiComputed,
   NatalGrahaDrishtiReport,
   PlanetFact,
   PlanetFacts
@@ -48,7 +48,7 @@ function formatPlanetName(p: Planet): string {
  */
 export function analyzeNatalGrahaDrishti(
   planetFacts: Readonly<Record<Planet, PlanetFact>> | Readonly<Record<Planet, PlanetFacts>> | any
-): NatalGrahaDrishtiComputedReport {
+): NatalGrahaDrishtiComputed {
   if (!planetFacts) {
     throw new Error('planetFacts must not be null or undefined.');
   }

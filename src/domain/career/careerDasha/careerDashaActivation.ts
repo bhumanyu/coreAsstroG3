@@ -62,6 +62,7 @@ interface CareerDashaLevelDiagnosticCapture {
   condition?: CareerDashaPlanetContext['condition'];
   conditionAssessment?: CareerDashaPlanetContext['conditionAssessment'];
   afflictionAssessed?: boolean;
+  expressionAnalysisStatus?: CareerDashaPlanetContext['expressionAnalysisStatus'];
   expressionCount?: number;
   expressionEvidenceCount?: number;
   evidenceBasis?: CareerDashaEvidenceBasis;
@@ -171,6 +172,12 @@ function resolveLevel(
     ...(conditionAssessment === 'PARTIAL' && (effect === 'ACTIVATES' || effect === 'CHALLENGES')
       ? ['C9_EFFECTS_BASED_ON_PARTIAL_CONDITION_ASSESSMENT' as const]
       : []),
+    ...(actualPlanetContext.relevance === 'PRIMARY' &&
+        (actualPlanetContext.condition === 'STRONG' || actualPlanetContext.condition === 'MODERATE') &&
+        actualPlanetContext.expressions.length === 0 &&
+        actualPlanetContext.expressionAnalysisStatus === 'UNAVAILABLE'
+      ? ['C9_PRIMARY_FALLBACK_EXPRESSION_ANALYSIS_UNAVAILABLE' as const]
+      : []),
     'C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE'
   ]);
   if (diagnostic) {
@@ -178,6 +185,7 @@ function resolveLevel(
     diagnostic.condition = actualPlanetContext.condition;
     diagnostic.conditionAssessment = conditionMetadata.conditionAssessment;
     diagnostic.afflictionAssessed = conditionMetadata.afflictionAssessed;
+    diagnostic.expressionAnalysisStatus = actualPlanetContext.expressionAnalysisStatus;
     diagnostic.expressionCount = actualPlanetContext.expressions.length;
     diagnostic.expressionEvidenceCount = expressionEvidenceCount;
     diagnostic.evidenceBasis = evidenceBasis;

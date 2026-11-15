@@ -19,6 +19,9 @@ import type {
  * It maps C5/C6 results to qualification-level assessments and classifies structural
  * dimensions based on pattern topology and participant data.
  *
+ * A fully assessed WEAK/AFFLICTED condition on any participant disqualifies the pattern;
+ * a partially assessed WEAK condition blocks qualification as MISSING_INPUT instead.
+ *
  * BOUNDARY ENFORCEMENT: This module must NOT import from:
  * - careerDasha
  * - careerD10

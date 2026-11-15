@@ -90,7 +90,13 @@ export function resolveCareerDashaPlanetDirection(
       return 'NEUTRAL';
     }
 
-    if (relevance === 'PRIMARY' && hasStrongCondition && expressions.length === 0) {
+    // An empty expression list is evidence of absence only after C8 ran successfully.
+    if (
+      relevance === 'PRIMARY' &&
+      hasStrongCondition &&
+      expressions.length === 0 &&
+      planetContext.expressionAnalysisStatus === 'EXECUTED'
+    ) {
       return 'SUPPORT';
     }
 

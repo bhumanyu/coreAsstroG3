@@ -481,7 +481,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       expect(screen.getByText('Refinement')).toBeInTheDocument();
     });
 
-    it('shows a partial-assessment badge only for activating or challenging periods', () => {
+    it('shows a partial-assessment badge for every partially assessed period', () => {
       const dasha: CareerDashaViewModel = {
         status: 'AVAILABLE',
         periods: [
@@ -512,7 +512,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
 
       render(<CareerDashaSection dasha={dasha} />);
 
-      expect(screen.getAllByText('Partially assessed')).toHaveLength(1);
+      expect(screen.getAllByText('Partially assessed')).toHaveLength(2);
     });
 
     it('renders the canonical C9 challenge verdict without a conflicting legacy verdict', () => {

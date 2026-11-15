@@ -5,7 +5,7 @@ import {
   Pada,
   PlanetFact,
   PlanetFacts,
-  NatalGrahaDrishtiReport,
+  NatalGrahaDrishtiComputed,
   PlanetAnalysisReport,
   PlanetaryStrengthReport,
   ShadbalaAggregationStatus,
@@ -134,7 +134,7 @@ export interface PlanetInterpretationInput {
   readonly planetFacts: Readonly<Record<Planet, PlanetFact>> | Readonly<PlanetFacts>;
   readonly planetAnalysis: PlanetAnalysisReport;
   readonly functionalRoles: FunctionalRoleAnalysisReport;
-  readonly natalGrahaDrishti: NatalGrahaDrishtiReport;
+  readonly natalGrahaDrishti: NatalGrahaDrishtiComputed;
   readonly yogas: YogaAnalysisReport;
   readonly planetaryStrength?: PlanetaryStrengthReport;
 }

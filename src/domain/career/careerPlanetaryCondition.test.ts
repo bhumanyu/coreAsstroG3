@@ -113,6 +113,31 @@ describe('Career Planetary Condition (C6)', () => {
       expect(result.negativeFactors).toEqual([]);
     });
 
+    it('partial assessment with directional factors preserves a provisional direction', () => {
+      const result = interpretCareerPlanetaryCondition({
+        planet: Planet.MERCURY,
+        relevance: 'PRIMARY',
+        dignity: 'OWN_SIGN',
+        affliction: 'UNAVAILABLE',
+        motion: 'UNKNOWN',
+        combustion: 'NOT_COMBUST',
+        beneficSupport: false,
+        maleficPressure: false,
+        dataAvailable: true,
+        assessmentStatus: 'PARTIAL',
+        assessmentMissingFactors: ['motion']
+      });
+
+      expect(result.condition).toBe('STRONG');
+      expect(result.assessment).toBe('PARTIAL');
+      expect(result.positiveFactors).toContainEqual(expect.objectContaining({
+        type: 'DIGNITY',
+        effect: 'SUPPORT'
+      }));
+      expect(result.positiveFactors).not.toContainEqual(expect.objectContaining({ type: 'MOTION' }));
+      expect(result.negativeFactors).not.toContainEqual(expect.objectContaining({ type: 'MOTION' }));
+    });
+
     it('A5: NEUTRAL → UNAVAILABLE', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.VENUS,
@@ -174,6 +199,8 @@ describe('Career Planetary Condition (C6)', () => {
 
       expect(result.condition).toBe('INSUFFICIENT_DATA');
       expect(result.condition).not.toBe('NEUTRAL');
+      expect(result.positiveFactors).not.toContainEqual(expect.objectContaining({ type: 'MOTION' }));
+      expect(result.negativeFactors).not.toContainEqual(expect.objectContaining({ type: 'MOTION' }));
     });
 
     it('affliction is optional when all required evidence dimensions are resolved', () => {
@@ -202,7 +229,7 @@ describe('Career Planetary Condition (C6)', () => {
       expect(result.statement).toContain('no affliction-based challenge is inferred');
     });
 
-    it('PRIMARY + dataAvailable=true + combustion=UNAVAILABLE → INSUFFICIENT_DATA', () => {
+    it('PARTIAL with positive dignity remains directionally STRONG when combustion is unavailable', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
@@ -217,11 +244,11 @@ describe('Career Planetary Condition (C6)', () => {
 
       const result = interpretCareerPlanetaryCondition(context);
 
-      expect(result.condition).toBe('INSUFFICIENT_DATA');
-      expect(result.condition).not.toBe('NEUTRAL');
+      expect(result.condition).toBe('STRONG');
+      expect(result.assessment).toBe('PARTIAL');
     });
 
-    it('PRIMARY + dataAvailable=true + motion=UNKNOWN → INSUFFICIENT_DATA', () => {
+    it('PARTIAL with positive dignity remains directionally STRONG when motion is unknown', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
@@ -236,8 +263,10 @@ describe('Career Planetary Condition (C6)', () => {
 
       const result = interpretCareerPlanetaryCondition(context);
 
-      expect(result.condition).toBe('INSUFFICIENT_DATA');
-      expect(result.condition).not.toBe('NEUTRAL');
+      expect(result.condition).toBe('STRONG');
+      expect(result.assessment).toBe('PARTIAL');
+      expect(result.positiveFactors).not.toContainEqual(expect.objectContaining({ type: 'MOTION' }));
+      expect(result.negativeFactors).not.toContainEqual(expect.objectContaining({ type: 'MOTION' }));
     });
   });
 
