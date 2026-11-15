@@ -89,6 +89,27 @@ describe('Career Planetary Condition (C6)', () => {
       expect(result.relevance).toBe('CONDITIONAL');
     });
 
+    it('partial assessment with no directional factors is unavailable, not neutral', () => {
+      const result = interpretCareerPlanetaryCondition({
+        planet: Planet.MERCURY,
+        relevance: 'PRIMARY',
+        dignity: 'NEUTRAL_SIGN',
+        affliction: 'UNAVAILABLE',
+        motion: 'DIRECT',
+        combustion: 'NOT_COMBUST',
+        beneficSupport: false,
+        maleficPressure: false,
+        dataAvailable: true,
+        assessmentStatus: 'PARTIAL',
+        assessmentMissingFactors: ['career.affliction']
+      });
+
+      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.assessment).toBe('PARTIAL');
+      expect(result.positiveFactors).toEqual([]);
+      expect(result.negativeFactors).toEqual([]);
+    });
+
     it('A5: NEUTRAL → UNAVAILABLE', () => {
       const context: CareerPlanetaryConditionContext = Object.freeze({
         planet: Planet.VENUS,

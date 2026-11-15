@@ -82,6 +82,8 @@ export interface YogaEvidence {
   readonly ruleId: string;
   readonly reason: string;
   readonly planets: readonly Planet[];
+  readonly evidenceId?: string;
+  readonly occurrenceId?: string;
   readonly houses: readonly (number | undefined)[];
   readonly relativeHouseDistance?: number;
   readonly dignity?: YogaDignity;

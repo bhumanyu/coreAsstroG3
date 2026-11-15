@@ -338,8 +338,8 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planet: 'MERCURY',
         contextResolved: true,
         relevance: 'SUPPORTING',
-        condition: 'NEUTRAL',
-        conditionAssessment: 'PARTIAL',
+        condition: 'UNAVAILABLE',
+        conditionAssessment: 'UNAVAILABLE',
         afflictionAssessed: false,
         expressionCount: 0,
         expressionEvidenceCount: 0,
@@ -349,7 +349,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planetActivates: false,
         planetChallenges: false,
         isRelevant: true,
-        direction: 'NEUTRAL',
+        direction: 'UNAVAILABLE',
         effect: 'DOES_NOT_ACTIVATE'
       },
       {
@@ -357,8 +357,8 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planet: 'VENUS',
         contextResolved: true,
         relevance: 'SUPPORTING',
-        condition: 'NEUTRAL',
-        conditionAssessment: 'PARTIAL',
+        condition: 'UNAVAILABLE',
+        conditionAssessment: 'UNAVAILABLE',
         afflictionAssessed: false,
         expressionCount: 0,
         expressionEvidenceCount: 0,
@@ -368,7 +368,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planetActivates: false,
         planetChallenges: false,
         isRelevant: true,
-        direction: 'NEUTRAL',
+        direction: 'UNAVAILABLE',
         effect: 'DOES_NOT_ACTIVATE'
       }
     ]);
@@ -390,7 +390,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     })).sort((a, b) => a.level.localeCompare(b.level))).toEqual([
       {
         level: 'AD',
-        conditionAssessment: 'PARTIAL',
+        conditionAssessment: 'UNAVAILABLE',
         afflictionAssessed: false,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
@@ -409,7 +409,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
       },
       {
         level: 'PD',
-        conditionAssessment: 'PARTIAL',
+        conditionAssessment: 'UNAVAILABLE',
         afflictionAssessed: false,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
@@ -469,13 +469,13 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           },
           {
             "afflictionAssessed": false,
-            "condition": "NEUTRAL",
-            "conditionAssessment": "PARTIAL",
+            "condition": "UNAVAILABLE",
+            "conditionAssessment": "UNAVAILABLE",
             "contextResolved": true,
             "diagnostics": [
               "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
             ],
-            "direction": "NEUTRAL",
+            "direction": "UNAVAILABLE",
             "effect": "DOES_NOT_ACTIVATE",
             "evidenceBasis": "CONDITION_AND_RELEVANCE",
             "expressionCount": 0,
@@ -490,13 +490,13 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           },
           {
             "afflictionAssessed": false,
-            "condition": "NEUTRAL",
-            "conditionAssessment": "PARTIAL",
+            "condition": "UNAVAILABLE",
+            "conditionAssessment": "UNAVAILABLE",
             "contextResolved": true,
             "diagnostics": [
               "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
             ],
-            "direction": "NEUTRAL",
+            "direction": "UNAVAILABLE",
             "effect": "DOES_NOT_ACTIVATE",
             "evidenceBasis": "CONDITION_AND_RELEVANCE",
             "expressionCount": 0,

@@ -122,7 +122,7 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
           aspects: [{
             sourcePlanet: sourceCase.planet,
             targetPlanet: Planet.MERCURY,
-            aspectType: 'CW-10J_MATRIX',
+            aspectType: 'FULL_7TH',
             houseOffset: 7
           }]
         };
@@ -203,9 +203,29 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
     const natal = buildCareerNatalAnalysis({ horoscope });
     const venus = natal.condition.find((item) => item.planet === Planet.VENUS)!;
 
-    expect(horoscope.natalGrahaDrishti?.aspects.filter((item: any) =>
-      item.targetPlanet === Planet.MERCURY || item.target === Planet.MERCURY
-    )).toHaveLength(0);
+    const actualAspectSet = (horoscope.natalGrahaDrishti?.aspects ?? [])
+      .map((item: any) => ({
+        sourcePlanet: item.sourcePlanet,
+        targetPlanet: item.targetPlanet,
+        aspectType: item.aspectType,
+        houseOffset: item.houseOffset
+      }))
+      .sort((a: any, b: any) =>
+        `${a.sourcePlanet}->${a.targetPlanet}:${a.aspectType}:${a.houseOffset}`
+          .localeCompare(`${b.sourcePlanet}->${b.targetPlanet}:${b.aspectType}:${b.houseOffset}`)
+      );
+    expect(actualAspectSet).toEqual([
+      { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.KETU, aspectType: 'SPECIAL_5TH', houseOffset: 4 },
+      { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.SATURN, aspectType: 'SPECIAL_9TH', houseOffset: 8 },
+      { sourcePlanet: Planet.KETU, targetPlanet: Planet.RAHU, aspectType: 'FULL_7TH', houseOffset: 6 },
+      { sourcePlanet: Planet.MARS, targetPlanet: Planet.JUPITER, aspectType: 'SPECIAL_4TH', houseOffset: 3 },
+      { sourcePlanet: Planet.MARS, targetPlanet: Planet.KETU, aspectType: 'SPECIAL_8TH', houseOffset: 7 },
+      { sourcePlanet: Planet.MARS, targetPlanet: Planet.SUN, aspectType: 'SPECIAL_4TH', houseOffset: 3 },
+      { sourcePlanet: Planet.RAHU, targetPlanet: Planet.KETU, aspectType: 'FULL_7TH', houseOffset: 6 },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.RAHU, aspectType: 'SPECIAL_3RD', houseOffset: 2 },
+      { sourcePlanet: Planet.SATURN, targetPlanet: Planet.VENUS, aspectType: 'FULL_7TH', houseOffset: 6 },
+      { sourcePlanet: Planet.VENUS, targetPlanet: Planet.SATURN, aspectType: 'FULL_7TH', houseOffset: 6 }
+    ]);
     expect(mercury.environmentalInfluence).toMatchObject({
       beneficAspectSources: [],
       maleficAspectSources: [],
@@ -214,14 +234,17 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
     });
     expect(mercury.calculationContext).toEqual({
       zodiac: 'SIDEREAL',
-      ayanamsa: 'LAHIRI',
-      houseSystem: 'WHOLE_SIGN',
+      ayanamsa: { value: 'LAHIRI', status: 'DECLARED' },
+      houseSystem: { value: 'WHOLE_SIGN', status: 'DEFAULTED' },
       engineVersion: 'P-21-v1',
       aspectSource: 'natalGrahaDrishti'
     });
-    expect(mercury.assessment.factors.aspectSources.status).toBe('AVAILABLE');
+    expect(mercury.evidenceAvailability.factors.aspectSources).toMatchObject({
+      status: 'AVAILABLE',
+      producerStatus: 'ASSUMED_COMPLETE'
+    });
     expect(venus).toMatchObject({
-      condition: 'NEUTRAL',
+      condition: 'UNAVAILABLE',
       dignity: 'NEUTRAL_SIGN',
       affliction: 'UNAVAILABLE',
       motion: 'DIRECT',
@@ -230,8 +253,65 @@ describe('CW-10J planetary influence career end-to-end matrix', () => {
       negativeFactors: [],
       assessmentDetails: {
         status: 'PARTIAL',
-        missingFactors: ['shadbala', 'coLocatedPlanets', 'career.affliction']
+        missingFactors: ['career.affliction']
       }
     });
+  });
+
+  it('derives functional classification from distinct ascendants at different birth times', () => {
+    const sameLocation = {
+      latitude: CANONICAL_BIRTH_DETAILS.latitude,
+      longitude: CANONICAL_BIRTH_DETAILS.longitude,
+      timeZone: CANONICAL_BIRTH_DETAILS.timeZone,
+      ayanamsa: CANONICAL_BIRTH_DETAILS.ayanamsa
+    };
+    const earlyChart = calculateHoroscope({
+      ...sameLocation,
+      dateTimeStr: '1988-05-08T03:30:00+05:30'
+    });
+    const lateChart = calculateHoroscope({
+      ...sameLocation,
+      dateTimeStr: '1988-05-08T09:30:00+05:30'
+    });
+    const earlyAscendant = earlyChart.rasiChart?.ascendantSign;
+    const lateAscendant = lateChart.rasiChart?.ascendantSign;
+    const earlyNature = earlyChart.functionalNatureIntegration?.planets?.[Planet.MERCURY]
+      ?.functionalNature;
+    const lateNature = lateChart.functionalNatureIntegration?.planets?.[Planet.MERCURY]
+      ?.functionalNature;
+    const aspect = [{
+      sourcePlanet: Planet.MERCURY,
+      targetPlanet: Planet.JUPITER,
+      aspectType: 'FULL_7TH'
+    }];
+    earlyChart.natalGrahaDrishti = { ...earlyChart.natalGrahaDrishti, aspects: aspect };
+    lateChart.natalGrahaDrishti = { ...lateChart.natalGrahaDrishti, aspects: aspect };
+    const earlyJupiter = buildPlanetaryInfluenceTrace(earlyChart).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+    const lateJupiter = buildPlanetaryInfluenceTrace(lateChart).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+
+    expect(earlyAscendant).toBeDefined();
+    expect(lateAscendant).toBeDefined();
+    expect(earlyAscendant).not.toBe(lateAscendant);
+    expect(earlyNature).not.toBe(lateNature);
+    expect(
+      [
+        ...earlyJupiter.environmentalInfluence.beneficAspectSources,
+        ...earlyJupiter.environmentalInfluence.maleficAspectSources,
+        ...earlyJupiter.environmentalInfluence.mixedAspectSources,
+        ...earlyJupiter.environmentalInfluence.unassessedAspectSources
+      ].find((item) => item.sourcePlanet === Planet.MERCURY)?.functionalNature
+    ).toBe(earlyNature);
+    expect(
+      [
+        ...lateJupiter.environmentalInfluence.beneficAspectSources,
+        ...lateJupiter.environmentalInfluence.maleficAspectSources,
+        ...lateJupiter.environmentalInfluence.mixedAspectSources,
+        ...lateJupiter.environmentalInfluence.unassessedAspectSources
+      ].find((item) => item.sourcePlanet === Planet.MERCURY)?.functionalNature
+    ).toBe(lateNature);
   });
 });

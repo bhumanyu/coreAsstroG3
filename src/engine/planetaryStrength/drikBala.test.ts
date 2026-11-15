@@ -86,11 +86,13 @@ describe('Drik Bala Engine (P-10 Aspectual Strength Calculation)', () => {
       expect(isNaturalBenefic(Planet.VENUS, facts)).toBe(true);
     });
 
-    it('should classify Sun, Mars, and Saturn as always Malefic', () => {
+    it('should classify Sun, Mars, Saturn, Rahu, and Ketu as not natural benefics', () => {
       const facts = createMockPlanetFacts();
       expect(isNaturalBenefic(Planet.SUN, facts)).toBe(false);
       expect(isNaturalBenefic(Planet.MARS, facts)).toBe(false);
       expect(isNaturalBenefic(Planet.SATURN, facts)).toBe(false);
+      expect(isNaturalBenefic(Planet.RAHU, facts)).toBe(false);
+      expect(isNaturalBenefic(Planet.KETU, facts)).toBe(false);
     });
 
     it('should classify Moon as Benefic during waxing phase and Malefic during waning phase', () => {

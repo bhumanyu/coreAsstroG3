@@ -13,8 +13,9 @@ The engine matrix uses synthetic charts for dignity, combustion, motion,
 benefic/malefic/mixed/multiple/no aspects, conjunction provenance, structural
 relationships, and incomplete inputs. It also checks cross-dimension isolation,
 two ascendant-dependent functional classifications, and the live chart as one
-fixture. The Cartesian portion covers 2,592 combinations. Missing inputs remain
-distinguishable from resolved-empty inputs.
+fixture. The Cartesian portion covers 2,592 combinations as combinatorial
+coverage, not astrological validation. Missing inputs remain distinguishable
+from resolved-empty inputs.
 
 ## CW-10G–10J integrity follow-up
 
@@ -27,13 +28,20 @@ retained as non-consumed provenance and cannot create C6 support or pressure.
 
 Trace completeness is reported for the stable factors `dignity`, `combustion`,
 `motion`, `shadbala`, `ownedHouses`, `occupiedHouse`, `aspectSources`,
-`coLocatedPlanets`, `relationships`, and `yogas`. Resolved-empty relationship
-inputs remain available. Complete Shadbala totals must be finite and
-non-negative. Relationship participant data is validated and deduplicated;
-exchanges are marked `OBSERVED` unless independent ownership and placement
-facts confirm them. Co-location uses position-level house/sign together, or
-fact-level house/sign only when the position object is absent. Angular
-separation is geometric provenance, not an effect classification.
+`coLocationByHouseSign`, `angularSeparation`, `relationships`, and `yogas`.
+Resolved-empty relationship inputs remain available. Empty aspect arrays are
+annotated as `ASSUMED_COMPLETE` because the producer exposes no computation
+status. Complete Shadbala totals must be finite, non-negative, and consistent
+with the 1-rupa-to-60-shastiamsa ratio; `meetsMinimum` must match the
+producer-supplied or authoritative threshold. Relationship participant data is
+validated and deduplicated by producer ID or semantic identity; sign-lordship
+exchanges are marked
+`SIGN_EXCHANGE_VALIDATED` only when canonical occupied signs reciprocally name
+the other planet as ruler. Co-location uses position-level house/sign together,
+or fact-level house/sign only when the position object is absent. Angular
+separation is geometric provenance, not an effect classification. Aspect
+geometry is asserted by the natal Graha Drishti producer and is not recomputed
+in the influence trace.
 
 Each trace carries only calculation methodology and engine version metadata;
 it contains no birth details. The end-to-end regression matrix exercises three
@@ -58,5 +66,8 @@ not provide outcome evidence for changing C6 thresholds. Therefore:
 - Missing combustion, aspects, or other inputs remain explicitly incomplete;
   they do not produce negative evidence.
 
-No C6 threshold or C9 verdict predicate was changed. A policy change would
-require outcome-level validation beyond this provenance and isolation matrix.
+Functional nature remains provenance only in C6 pending a domain policy
+decision. A partially assessed C6 condition with no directional factors is
+reported as unavailable rather than confidently neutral. No C6 threshold or
+C9 verdict predicate was changed. A policy change would require outcome-level
+validation beyond this provenance and isolation matrix.

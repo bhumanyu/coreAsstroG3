@@ -4,7 +4,10 @@ import type {
   CareerPlanetRelevance
 } from './careerPlanetaryRelevance';
 import type { PlanetaryInfluenceTrace } from '../../engine/planetaryInfluence/planetaryInfluenceTrace';
-import type { PlanetaryAspectInfluence } from '../../engine/planetaryInfluence/aspectInfluence';
+import type {
+  PlanetaryAspectConsumerId,
+  PlanetaryAspectInfluence
+} from '../../engine/planetaryInfluence/aspectInfluence';
 
 export type CareerPlanetaryCondition =
   | 'STRONG'
@@ -66,9 +69,19 @@ export interface CareerPlanetaryConditionFactors {
   readonly neutral: readonly CareerPlanetaryConditionFactor[];
 }
 
+/** Functional nature remains provenance only until a C6 policy explicitly consumes it. */
 export interface CareerNonConsumedInfluence {
   readonly record: PlanetaryAspectInfluence;
   readonly reason: 'MIXED_CLASSIFICATION' | 'UNASSESSED_CLASSIFICATION' | 'FUNCTIONAL_ONLY';
+  readonly notConsumedReason:
+    | 'FUNCTIONAL_NATURE_PENDING_C6_POLICY'
+    | 'NATURAL_FUNCTIONAL_CONFLICT'
+    | 'CLASSIFICATION_UNAVAILABLE';
+  readonly futurePolicyDimension:
+    | 'FUNCTIONAL_NATURE'
+    | 'NATURAL_FUNCTIONAL_RECONCILIATION'
+    | 'NONE';
+  readonly candidateConsumer?: PlanetaryAspectConsumerId;
 }
 
 export interface CareerPlanetaryConditionContext {
@@ -93,6 +106,8 @@ export interface CareerPlanetaryConditionContext {
   readonly planetaryInfluenceTrace?: PlanetaryInfluenceTrace;
 
   readonly nonConsumedInfluence?: readonly CareerNonConsumedInfluence[];
+
+  readonly assessmentStatus?: CareerPlanetaryConditionAssessment;
 
   readonly assessmentMissingFactors?: readonly string[];
 }
@@ -321,9 +336,19 @@ function hasRequiredConditionData(
 }
 
 function resolveCondition(
-  context: CareerPlanetaryConditionContext
+  context: CareerPlanetaryConditionContext,
+  assessment: CareerPlanetaryConditionAssessment,
+  factors: CareerPlanetaryConditionFactors
 ): CareerPlanetaryCondition {
   if (!hasRequiredConditionData(context)) {
+    return 'UNAVAILABLE';
+  }
+
+  if (
+    assessment === 'PARTIAL' &&
+    factors.positive.length === 0 &&
+    factors.negative.length === 0
+  ) {
     return 'UNAVAILABLE';
   }
 
@@ -466,8 +491,9 @@ export function interpretCareerPlanetaryCondition(
   }
 
   const factors = createConditionFactors(context);
-
-  const condition = resolveCondition(context);
+  const assessment = context.assessmentStatus ??
+    (context.affliction === 'UNAVAILABLE' ? 'PARTIAL' : 'FULL');
+  const condition = resolveCondition(context, assessment, factors);
 
   const statement = createConditionStatement(
     context,
@@ -475,11 +501,6 @@ export function interpretCareerPlanetaryCondition(
     factors
   );
 
-  const assessment = condition === 'UNAVAILABLE'
-    ? 'UNAVAILABLE'
-    : context.affliction === 'UNAVAILABLE'
-      ? 'PARTIAL'
-      : 'FULL';
   return Object.freeze({
     planet: context.planet,
     relevance: context.relevance,

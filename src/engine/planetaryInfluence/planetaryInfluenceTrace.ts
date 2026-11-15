@@ -1,5 +1,8 @@
 import {
+  CANONICAL_METHODOLOGY,
+  SHADBALA_MINIMUM_REQUIREMENTS,
   ShadbalaAggregationStatus,
+  ShadbalaComponent,
   Planet,
   DignityStatus,
   PlanetStateCondition,
@@ -22,7 +25,6 @@ import {
   type PlanetaryRelationshipEvidence,
   type PlanetaryYogaParticipation
 } from './planetaryRelationships';
-import { METHODOLOGY } from '../fullNatalAnalysis/fullNatalAnalysisMetadata';
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
   Planet.SUN,
@@ -36,7 +38,7 @@ const PLANET_ORDER: readonly Planet[] = Object.freeze([
   Planet.KETU
 ]);
 
-export type PlanetaryInfluenceAssessmentStatus = 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
+export type EvidenceAvailabilityStatus = 'FULL' | 'PARTIAL' | 'UNAVAILABLE';
 
 export const PLANETARY_INFLUENCE_FACTOR_ORDER = Object.freeze([
   'dignity',
@@ -46,7 +48,8 @@ export const PLANETARY_INFLUENCE_FACTOR_ORDER = Object.freeze([
   'ownedHouses',
   'occupiedHouse',
   'aspectSources',
-  'coLocatedPlanets',
+  'coLocationByHouseSign',
+  'angularSeparation',
   'relationships',
   'yogas'
 ] as const);
@@ -61,14 +64,20 @@ export interface PlanetaryInfluenceDiagnostic {
     | PlanetaryRelationshipDiagnostic['reason']
     | 'INVALID_SHADBALA_TOTALS'
     | 'INVALID_SHADBALA_RECORD';
+  readonly detail?: string;
+}
+
+export interface MethodologyValue {
+  readonly value?: string;
+  readonly status: 'DECLARED' | 'DEFAULTED' | 'UNKNOWN';
 }
 
 export interface PlanetaryInfluenceTrace {
   readonly planet: Planet;
   readonly calculationContext: {
     readonly zodiac: 'SIDEREAL';
-    readonly ayanamsa: string;
-    readonly houseSystem: string;
+    readonly ayanamsa: MethodologyValue;
+    readonly houseSystem: MethodologyValue;
     readonly engineVersion: string;
     readonly aspectSource: 'natalGrahaDrishti';
   };
@@ -98,8 +107,8 @@ export interface PlanetaryInfluenceTrace {
     readonly unassessedAspectSources: readonly PlanetaryAspectInfluence[];
     readonly coLocatedPlanets: readonly PlanetaryCoLocation[];
   };
-  readonly assessment: {
-    readonly status: PlanetaryInfluenceAssessmentStatus;
+  readonly evidenceAvailability: {
+    readonly status: EvidenceAvailabilityStatus;
     readonly factors: Readonly<Record<PlanetaryInfluenceFactor, FactorAvailability>>;
     readonly missingFactors: readonly PlanetaryInfluenceFactor[];
   };
@@ -109,7 +118,7 @@ export interface PlanetaryInfluenceTrace {
 interface ShadbalaResolution {
   readonly value?: PlanetaryInfluenceTrace['intrinsicStrength']['shadbala'];
   readonly availability: InfluenceFactorStatus;
-  readonly diagnostic?: PlanetaryInfluenceDiagnostic;
+  readonly diagnostics: readonly PlanetaryInfluenceDiagnostic[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -153,6 +162,7 @@ function getOccupiedHouse(horoscope: Horoscope, planet: Planet): number | undefi
 
 function getShadbala(horoscope: Horoscope, planet: Planet): ShadbalaResolution {
   const raw: unknown = horoscope.planetaryStrength?.planets?.[planet]?.shadbala;
+  const diagnostics: PlanetaryInfluenceDiagnostic[] = [];
   if (!isRecord(raw) ||
       typeof raw.status !== 'string' ||
       !Object.values(ShadbalaAggregationStatus).includes(
@@ -160,62 +170,123 @@ function getShadbala(horoscope: Horoscope, planet: Planet): ShadbalaResolution {
       )) {
     return {
       availability: raw === undefined ? 'UNAVAILABLE' : 'PARTIAL',
-      ...(raw !== undefined
-        ? {
-            diagnostic: Object.freeze({
-              factor: 'shadbala',
-              record: raw,
-              reason: 'INVALID_SHADBALA_RECORD'
-            })
-          }
-        : {})
+      diagnostics: raw === undefined
+        ? Object.freeze([])
+        : Object.freeze([Object.freeze({
+            factor: 'shadbala',
+            record: raw,
+            reason: 'INVALID_SHADBALA_RECORD'
+          })])
     };
   }
 
+  const addDiagnostic = (detail: string) => diagnostics.push(Object.freeze({
+    factor: 'shadbala',
+    record: raw,
+    reason: 'INVALID_SHADBALA_TOTALS',
+    detail
+  }));
   const totalRupa = raw.totalRupa;
   const totalShastiamsa = raw.totalShastiamsa;
-  const hasInvalidTotal =
-    (totalRupa !== undefined &&
-      (typeof totalRupa !== 'number' || !Number.isFinite(totalRupa) || totalRupa < 0)) ||
-    (totalShastiamsa !== undefined &&
-      (typeof totalShastiamsa !== 'number' ||
-        !Number.isFinite(totalShastiamsa) ||
-        totalShastiamsa < 0));
   const isComplete = raw.status === ShadbalaAggregationStatus.COMPLETE;
-  const completeTotalsPresent =
-    typeof totalRupa === 'number' &&
-    Number.isFinite(totalRupa) &&
-    totalRupa >= 0 &&
-    typeof totalShastiamsa === 'number' &&
-    Number.isFinite(totalShastiamsa) &&
-    totalShastiamsa >= 0;
+  const validRupa = typeof totalRupa === 'number' &&
+    Number.isFinite(totalRupa) && totalRupa >= 0;
+  const validShastiamsa = typeof totalShastiamsa === 'number' &&
+    Number.isFinite(totalShastiamsa) && totalShastiamsa >= 0;
+  if (totalRupa !== undefined && !validRupa) addDiagnostic('INVALID_TOTAL_RUPA');
+  if (totalShastiamsa !== undefined && !validShastiamsa) {
+    addDiagnostic('INVALID_TOTAL_SHASTIAMSA');
+  }
+  if (isComplete && !validRupa) addDiagnostic('COMPLETE_TOTAL_RUPA_REQUIRED');
+  if (isComplete && !validShastiamsa) {
+    addDiagnostic('COMPLETE_TOTAL_SHASTIAMSA_REQUIRED');
+  }
 
-  if (hasInvalidTotal || (isComplete && !completeTotalsPresent)) {
+  if (validRupa && validShastiamsa &&
+      Math.abs(totalRupa - totalShastiamsa / 60) > 0.005000001) {
+    addDiagnostic('RUPA_SHASTIAMSA_RATIO_MISMATCH');
+  }
+
+  const minimumRequirement = isRecord(raw.minimumRequirement)
+    ? raw.minimumRequirement.requiredRupa
+    : raw.minimumRequiredRupa;
+  const authoritativeMinimum = typeof minimumRequirement === 'number' &&
+      Number.isFinite(minimumRequirement) &&
+      minimumRequirement >= 0
+    ? minimumRequirement
+    : SHADBALA_MINIMUM_REQUIREMENTS[planet]?.requiredRupa;
+  if (
+    raw.meetsMinimum !== undefined &&
+    typeof raw.meetsMinimum !== 'boolean'
+  ) {
+    addDiagnostic('INVALID_MEETS_MINIMUM');
+  } else if (
+    typeof raw.meetsMinimum === 'boolean' &&
+    validRupa &&
+    authoritativeMinimum !== undefined &&
+    raw.meetsMinimum !== (totalRupa >= authoritativeMinimum)
+  ) {
+    addDiagnostic('MEETS_MINIMUM_MISMATCH');
+  }
+
+  if (isComplete && raw.components !== undefined) {
+    if (!Array.isArray(raw.components)) {
+      addDiagnostic('INVALID_COMPONENTS_RECORD');
+    } else {
+      const presentComponents = new Set(
+        raw.components.flatMap((component: unknown) =>
+          isRecord(component) &&
+          Object.values(ShadbalaComponent).includes(component.component as ShadbalaComponent)
+            ? [component.component as ShadbalaComponent]
+            : []
+        )
+      );
+      for (const component of Object.values(ShadbalaComponent)) {
+        if (!presentComponents.has(component)) {
+          addDiagnostic(`COMPLETE_COMPONENT_REQUIRED:${component}`);
+        }
+      }
+    }
+  }
+  if (isComplete && Array.isArray(raw.missingComponents)) {
+    for (const component of raw.missingComponents) {
+      addDiagnostic(`COMPLETE_RECORD_HAS_MISSING_COMPONENT:${String(component)}`);
+    }
+  }
+
+  if (diagnostics.length > 0) {
     return {
       availability: 'PARTIAL',
-      diagnostic: Object.freeze({
-        factor: 'shadbala',
-        record: raw,
-        reason: 'INVALID_SHADBALA_TOTALS'
-      })
+      diagnostics: Object.freeze(diagnostics)
     };
   }
 
   const status = raw.status as ShadbalaAggregationStatus;
   const value = Object.freeze({
     status,
-    ...(typeof totalRupa === 'number' ? { totalRupa } : {}),
-    ...(typeof totalShastiamsa === 'number' ? { totalShastiamsa } : {}),
+    ...(validRupa ? { totalRupa } : {}),
+    ...(validShastiamsa ? { totalShastiamsa } : {}),
     ...(typeof raw.meetsMinimum === 'boolean' ? { meetsMinimum: raw.meetsMinimum } : {})
   });
   return {
     value,
+    diagnostics: Object.freeze([]),
     availability: status === ShadbalaAggregationStatus.COMPLETE
       ? 'AVAILABLE'
       : status === ShadbalaAggregationStatus.UNAVAILABLE
         ? 'UNAVAILABLE'
         : 'PARTIAL'
   };
+}
+
+function methodologyValue(value: unknown, fallback: unknown): MethodologyValue {
+  if (typeof value === 'string' && value.length > 0) {
+    return Object.freeze({ value, status: 'DECLARED' });
+  }
+  if (typeof fallback === 'string' && fallback.length > 0) {
+    return Object.freeze({ value: fallback, status: 'DEFAULTED' });
+  }
+  return Object.freeze({ status: 'UNKNOWN' });
 }
 
 function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTrace {
@@ -273,9 +344,13 @@ function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTra
         : aspects.availability === 'PARTIAL' || incompleteAspectClassification
           ? 'PARTIAL'
           : 'AVAILABLE',
-      source: 'natalGrahaDrishti.aspects'
+      source: 'natalGrahaDrishti.aspects',
+      ...(aspects.producerStatus
+        ? { producerStatus: aspects.producerStatus }
+        : {})
     }),
-    coLocatedPlanets: relationships.availability.coLocatedPlanets,
+    coLocationByHouseSign: relationships.availability.coLocationByHouseSign,
+    angularSeparation: relationships.availability.angularSeparation,
     relationships: relationships.availability.relationships,
     yogas: relationships.availability.yogas
   };
@@ -285,7 +360,7 @@ function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTra
   const availableCount = PLANETARY_INFLUENCE_FACTOR_ORDER.filter(
     (factor) => factors[factor].status !== 'UNAVAILABLE'
   ).length;
-  const status: PlanetaryInfluenceAssessmentStatus =
+  const status: EvidenceAvailabilityStatus =
     missingFactors.length === 0
       ? 'FULL'
       : availableCount === 0
@@ -298,24 +373,29 @@ function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTra
     })),
     ...relationships.diagnostics.map((diagnostic) => Object.freeze({
       factor: diagnostic.reason === 'POSITION_HOUSE_MISMATCH'
-        ? 'coLocatedPlanets' as const
+        ? 'coLocationByHouseSign' as const
         : 'relationships' as const,
       ...diagnostic
     })),
-    ...(shadbala.diagnostic ? [shadbala.diagnostic] : [])
+    ...shadbala.diagnostics
   ];
 
-  const methodology = horoscope.fullNatalAnalysis?.methodology;
-  const ayanamsa = horoscope.birthDetails?.ayanamsa ?? methodology?.ayanamsa ?? METHODOLOGY.ayanamsa;
-  const houseSystem = methodology?.houseSystem ?? METHODOLOGY.houseSystem;
+  const ayanamsa = methodologyValue(
+    horoscope.birthDetails?.ayanamsa,
+    CANONICAL_METHODOLOGY.ayanamsa
+  );
+  const houseSystem = methodologyValue(
+    undefined,
+    CANONICAL_METHODOLOGY.houseSystem
+  );
   const engineVersion = horoscope.fullNatalAnalysis?.version ?? 'UNKNOWN';
 
   return Object.freeze({
     planet,
     calculationContext: Object.freeze({
       zodiac: 'SIDEREAL',
-      ayanamsa: String(ayanamsa),
-      houseSystem: String(houseSystem),
+      ayanamsa,
+      houseSystem,
       engineVersion,
       aspectSource: 'natalGrahaDrishti'
     }),
@@ -342,7 +422,7 @@ function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTra
       unassessedAspectSources: aspects.unassessedSources,
       coLocatedPlanets: relationships.coLocatedPlanets
     }),
-    assessment: Object.freeze({
+    evidenceAvailability: Object.freeze({
       status,
       factors: Object.freeze(factors),
       missingFactors: Object.freeze(missingFactors)

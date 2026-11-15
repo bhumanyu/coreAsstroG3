@@ -158,7 +158,15 @@ function makeHoroscope(options: SyntheticOptions = {}): Horoscope {
           planets: Object.fromEntries(
             PLANETS.map((planet) => [
               planet,
-              { shadbala: { status: 'COMPLETE', totalRupa: 6, totalShastiamsa: 360, meetsMinimum: true } }
+              {
+                shadbala: {
+                  status: 'COMPLETE',
+                  totalRupa: 6,
+                  totalShastiamsa: 360,
+                  meetsMinimum: true,
+                  minimumRequirement: { requiredRupa: 6 }
+                }
+              }
             ])
           )
         }
@@ -218,7 +226,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       aspects: [{
         sourcePlanet,
         targetPlanet: Planet.MERCURY,
-        aspectType: 'SPECIAL',
+        aspectType: 'FULL_7TH',
         houseOffset: 4,
         description: 'Synthetic aspect provenance'
       }],
@@ -226,7 +234,8 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     });
 
     expect(sourceFor(horoscope, sourcePlanet)?.sourceNature).toBe(expectedNature);
-    expect(sourceFor(horoscope, sourcePlanet)?.aspectType).toBe('SPECIAL');
+    expect(sourceFor(horoscope, sourcePlanet)?.aspectType).toBe('FULL_7TH');
+    expect(sourceFor(horoscope, sourcePlanet)?.geometricValidation).toBe('PRODUCER_ASSERTED');
     expect(sourceFor(horoscope, sourcePlanet)?.houseOffset).toBe(4);
     expect(sourceFor(horoscope, sourcePlanet)?.classificationBasis).toMatchObject({
       naturalRule: 'NATURAL_BENEFIC_TABLE',
@@ -237,9 +246,9 @@ describe('CW-10E synthetic planetary influence matrix', () => {
   it('preserves multiple benefic, malefic, and mixed aspect sources independently', () => {
     const horoscope = makeHoroscope({
       aspects: [
-        { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'FULL' },
-        { sourcePlanet: Planet.VENUS, targetPlanet: Planet.MERCURY, aspectType: 'FULL' },
-        { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SPECIAL' }
+        { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' },
+        { sourcePlanet: Planet.VENUS, targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' },
+        { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'SPECIAL_3RD' }
       ],
       functionalNature: { [Planet.SATURN]: 'BENEFIC' }
     });
@@ -258,7 +267,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       aspects: [{
         sourcePlanet: Planet.MOON,
         targetPlanet: Planet.MERCURY,
-        aspectType: 'SYNTHETIC'
+        aspectType: 'FULL_7TH'
       }],
       functionalNature: { [Planet.MOON]: 'BENEFIC' }
     });
@@ -302,11 +311,12 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       aspects: [{
         sourcePlanet: Planet.SATURN,
         targetPlanet: Planet.MERCURY,
-        aspectType: 'SYNTHETIC'
+        aspectType: 'FULL_7TH'
       }]
     };
 
     expect(noAspects.availability).toBe('AVAILABLE');
+    expect(noAspects.producerStatus).toBe('ASSUMED_COMPLETE');
     expect(noAspects.beneficSources).toEqual([]);
     expect(noAspects.ignoredRecords).toEqual([]);
     expect(unavailable.availability).toBe('UNAVAILABLE');
@@ -319,7 +329,8 @@ describe('CW-10E synthetic planetary influence matrix', () => {
         { sourcePlanet: 'PLUTO', targetPlanet: Planet.MERCURY, aspectType: 'INVALID' },
         { sourcePlanet: Planet.JUPITER, targetPlanet: 'PLUTO', aspectType: 'INVALID' },
         { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY },
-        { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'VALID' }
+        { sourcePlanet: Planet.VENUS, targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' },
+        { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' }
       ]
     }), Planet.MERCURY);
 
@@ -329,7 +340,10 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       'INVALID_TARGET',
       'MISSING_FIELDS'
     ]);
-    expect(result.beneficSources.map((item) => item.sourcePlanet)).toEqual([Planet.JUPITER]);
+    expect(result.beneficSources.map((item) => item.sourcePlanet)).toEqual([
+      Planet.JUPITER,
+      Planet.VENUS
+    ]);
   });
 
   it.each([
@@ -346,6 +360,23 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       .toBe(true);
     expect(result.coLocatedPlanets.every((item) => typeof item.angularSeparation === 'number'))
       .toBe(true);
+  });
+
+  it('reports house-sign co-location independently from angular separation availability', () => {
+    const horoscope = makeHoroscope({ coLocated: [Planet.MERCURY, Planet.JUPITER] });
+    horoscope.planetFacts[Planet.JUPITER].position.eclipticLongitude = undefined as never;
+    horoscope.planetFacts[Planet.JUPITER].position.longitude = undefined as never;
+
+    const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.MERCURY
+    )!;
+
+    expect(trace.environmentalInfluence.coLocatedPlanets).toEqual([
+      expect.objectContaining({ planet: Planet.JUPITER, house: 1, sign: Sign.ARIES })
+    ]);
+    expect(trace.evidenceAvailability.factors.coLocationByHouseSign.status).toBe('AVAILABLE');
+    expect(trace.evidenceAvailability.factors.angularSeparation.status).toBe('UNAVAILABLE');
+    expect(trace.environmentalInfluence.coLocatedPlanets[0]).not.toHaveProperty('angularSeparation');
   });
 
   it('uses one canonical placement source and diagnoses conflicting fact-level houses', () => {
@@ -368,7 +399,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
         })
       })
     ]));
-    expect(positioned.availability.coLocatedPlanets.status).toBe('PARTIAL');
+    expect(positioned.availability.coLocationByHouseSign.status).toBe('PARTIAL');
 
     jupiter.position.house = undefined as never;
     const missingPositionHouse = resolvePlanetaryRelationships(horoscope, Planet.MERCURY);
@@ -415,7 +446,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     });
   });
 
-  it('validates observed exchanges only when independent house ownership and placement confirm them', () => {
+  it('validates observed exchanges only when occupied signs reciprocally confirm sign rulership', () => {
     const horoscope = makeHoroscope({
       yogaEvidence: [{
         relationship: 'EXCHANGE',
@@ -424,11 +455,11 @@ describe('CW-10E synthetic planetary influence matrix', () => {
         reason: 'Existing engine relationship evidence'
       }]
     });
-    horoscope.functionalNatureIntegration.planets[Planet.MERCURY].ownedHouses = [5];
-    horoscope.functionalNatureIntegration.planets[Planet.JUPITER].ownedHouses = [4];
+    horoscope.planetFacts[Planet.MERCURY].position.sign = Sign.SAGITTARIUS;
+    horoscope.planetFacts[Planet.JUPITER].position.sign = Sign.GEMINI;
 
     expect(resolvePlanetaryRelationships(horoscope, Planet.MERCURY).exchanges[0])
-      .toMatchObject({ validationStatus: 'VALIDATED' });
+      .toMatchObject({ validationStatus: 'SIGN_EXCHANGE_VALIDATED' });
   });
 
   it('validates relationship participant arrays, deduplicates identity, and does not throw', () => {
@@ -445,9 +476,16 @@ describe('CW-10E synthetic planetary influence matrix', () => {
           planets: [Planet.JUPITER, Planet.MERCURY],
           ruleId: 'DUPLICATE_RELATION',
           reason: 'Duplicate observation'
+        },
+        {
+          relationship: 'EXCHANGE',
+          planets: [Planet.MERCURY, Planet.JUPITER],
+          ruleId: 'DUPLICATE_RELATION',
+          reason: 'Different relationship semantics'
         }
       ]
     });
+
     const yogaReport = horoscope.yogas as unknown as {
       yogas: Array<{ evidence: unknown[] }>;
     };
@@ -460,11 +498,100 @@ describe('CW-10E synthetic planetary influence matrix', () => {
 
     const result = resolvePlanetaryRelationships(horoscope, Planet.MERCURY);
 
-    expect(result.relationshipEvidence).toHaveLength(1);
+    expect(result.relationshipEvidence).toHaveLength(2);
+    expect(result.relationshipEvidence.map((item) => item.relationship)).toEqual([
+      'CONJUNCTION',
+      'EXCHANGE'
+    ]);
     expect(result.availability.relationships.status).toBe('PARTIAL');
     expect(result.diagnostics).toEqual(expect.arrayContaining([
       expect.objectContaining({ reason: 'INVALID_PLANETS' })
     ]));
+  });
+
+  it('accepts relationship evidence independently from yoga participation', () => {
+    const result = resolvePlanetaryRelationships(
+      makeHoroscope({ missingAspects: true }),
+      Planet.MERCURY,
+      {
+        relationshipEvidence: {
+          records: [{
+            relationship: 'MUTUAL_ASPECT',
+            planets: [Planet.MERCURY, Planet.JUPITER],
+            ruleId: 'EXTERNAL_RELATIONSHIP_1',
+            reason: 'Independent relationship producer'
+          }]
+        },
+        yogaParticipation: { records: [] }
+      }
+    );
+
+    expect(result.relationshipEvidence).toEqual([
+      expect.objectContaining({
+        ruleId: 'EXTERNAL_RELATIONSHIP_1',
+        yogaType: 'UNSPECIFIED'
+      })
+    ]);
+    expect(result.yogas).toEqual([]);
+    expect(result.availability.relationships.status).toBe('AVAILABLE');
+    expect(result.availability.yogas.status).toBe('AVAILABLE');
+  });
+
+  it('keeps relationship occurrences distinct by yoga provenance and producer identity', () => {
+    const yogaSourced = makeHoroscope({
+      yogaEvidence: [{
+        relationship: 'CONJUNCTION',
+        planets: [Planet.MERCURY, Planet.JUPITER],
+        ruleId: 'SAME_RULE',
+        reason: 'Shared relationship rule'
+      }]
+    });
+    const yogaReport = yogaSourced.yogas as unknown as {
+      yogas: Array<Record<string, unknown>>;
+    };
+    yogaReport.yogas.push({
+      ...yogaReport.yogas[0],
+      type: 'ANOTHER_YOGA'
+    });
+    const yogaResult = resolvePlanetaryRelationships(yogaSourced, Planet.MERCURY);
+    expect(yogaResult.relationshipEvidence.map((item) => item.yogaType)).toEqual([
+      'ANOTHER_YOGA',
+      'SYNTHETIC_RELATIONSHIP'
+    ]);
+
+    const identifiedResult = resolvePlanetaryRelationships(
+      makeHoroscope(),
+      Planet.MERCURY,
+      {
+        relationshipEvidence: {
+          records: [
+            {
+              relationship: 'CONJUNCTION',
+              planets: [Planet.MERCURY, Planet.JUPITER],
+              ruleId: 'SAME_RULE',
+              reason: 'Occurrence one',
+              evidenceId: 'occurrence-1'
+            },
+            {
+              relationship: 'CONJUNCTION',
+              planets: [Planet.MERCURY, Planet.JUPITER],
+              ruleId: 'SAME_RULE',
+              reason: 'Occurrence two',
+              evidenceId: 'occurrence-2'
+            },
+            {
+              relationship: 'CONJUNCTION',
+              planets: [Planet.MERCURY, Planet.JUPITER],
+              ruleId: 'SAME_RULE',
+              reason: 'Duplicate occurrence',
+              evidenceId: 'occurrence-1'
+            }
+          ]
+        }
+      }
+    );
+    expect(identifiedResult.relationshipEvidence.map((item) => item.producerEvidenceId))
+      .toEqual(['evidenceId:occurrence-1', 'evidenceId:occurrence-2']);
   });
 
   it('builds nine traces in canonical order and exposes all five independent dimensions', () => {
@@ -472,7 +599,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       aspects: [{
         sourcePlanet: Planet.JUPITER,
         targetPlanet: Planet.MERCURY,
-        aspectType: 'SYNTHETIC'
+        aspectType: 'FULL_7TH'
       }],
       coLocated: [Planet.MERCURY, Planet.VENUS],
       yogaEvidence: [{
@@ -499,7 +626,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     const aspect = [{
       sourcePlanet: Planet.MERCURY,
       targetPlanet: Planet.JUPITER,
-      aspectType: 'FULL'
+      aspectType: 'FULL_7TH'
     }];
     const aries = makeHoroscope({ aspects: aspect });
     const taurus = makeHoroscope({ aspects: aspect });
@@ -535,7 +662,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       aspects: [{
         sourcePlanet: Planet.MERCURY,
         targetPlanet: Planet.JUPITER,
-        aspectType: 'SYNTHETIC'
+        aspectType: 'FULL_7TH'
       }]
     }), Planet.JUPITER).beneficSources[0];
 
@@ -547,7 +674,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       aspects: [{
         sourcePlanet: Planet.JUPITER,
         targetPlanet: Planet.MERCURY,
-        aspectType: 'SYNTHETIC'
+        aspectType: 'FULL_7TH'
       }],
       missingCombustion: Planet.MERCURY
     });
@@ -556,7 +683,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     )!;
 
     expect(trace.intrinsicStrength.combustion).toBeUndefined();
-    expect(trace.assessment.missingFactors).toContain('combustion');
+    expect(trace.evidenceAvailability.missingFactors).toContain('combustion');
     expect(trace.environmentalInfluence.beneficAspectSources).toHaveLength(1);
   });
 
@@ -568,7 +695,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       aspects: [{
         sourcePlanet: Planet.SATURN,
         targetPlanet: Planet.MERCURY,
-        aspectType: 'SYNTHETIC'
+        aspectType: 'FULL_7TH'
       }]
     })).find((item) => item.planet === Planet.MERCURY)!;
 
@@ -593,12 +720,12 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       (trace) => trace.planet === Planet.MERCURY
     )!;
 
-    expect(partial.assessment.status).toBe('PARTIAL');
-    expect(partial.assessment.missingFactors).toEqual(expect.arrayContaining([
+    expect(partial.evidenceAvailability.status).toBe('PARTIAL');
+    expect(partial.evidenceAvailability.missingFactors).toEqual(expect.arrayContaining([
       'combustion',
       'aspectSources'
     ]));
-    expect(unavailable.assessment.status).toBe('UNAVAILABLE');
+    expect(unavailable.evidenceAvailability.status).toBe('UNAVAILABLE');
     expect(unavailable.environmentalInfluence.maleficAspectSources).toEqual([]);
   });
 
@@ -623,10 +750,10 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       includeShadbala: false
     })).find((trace) => trace.planet === Planet.MERCURY)!;
 
-    expect(fullTrace.assessment).toMatchObject({ status: 'FULL', missingFactors: [] });
-    expect(partialTrace.assessment.status).toBe('PARTIAL');
-    expect(partialTrace.assessment.missingFactors).toContain('shadbala');
-    expect(Object.keys(fullTrace.assessment.factors)).toEqual([
+    expect(fullTrace.evidenceAvailability).toMatchObject({ status: 'FULL', missingFactors: [] });
+    expect(partialTrace.evidenceAvailability.status).toBe('PARTIAL');
+    expect(partialTrace.evidenceAvailability.missingFactors).toContain('shadbala');
+    expect(Object.keys(fullTrace.evidenceAvailability.factors)).toEqual([
       'dignity',
       'combustion',
       'motion',
@@ -634,7 +761,8 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       'ownedHouses',
       'occupiedHouse',
       'aspectSources',
-      'coLocatedPlanets',
+      'coLocationByHouseSign',
+      'angularSeparation',
       'relationships',
       'yogas'
     ]);
@@ -657,14 +785,39 @@ describe('CW-10E synthetic planetary influence matrix', () => {
       (item) => item.planet === Planet.MERCURY
     )!;
 
-    expect(trace.assessment.factors.shadbala.status).toBe('PARTIAL');
-    expect(trace.assessment.missingFactors).toContain('shadbala');
+    expect(trace.evidenceAvailability.factors.shadbala.status).toBe('PARTIAL');
+    expect(trace.evidenceAvailability.missingFactors).toContain('shadbala');
     expect(trace.diagnostics).toEqual(expect.arrayContaining([
       expect.objectContaining({
         factor: 'shadbala',
         reason: 'INVALID_SHADBALA_TOTALS'
       })
     ]));
+  });
+
+  it('diagnoses Shadbala threshold, component, and unit-ratio inconsistencies independently', () => {
+    const horoscope = makeHoroscope();
+    horoscope.planetaryStrength.planets[Planet.MERCURY].shadbala = {
+      status: 'COMPLETE',
+      totalRupa: 6.1,
+      totalShastiamsa: 360,
+      meetsMinimum: true,
+      minimumRequirement: { requiredRupa: 7 },
+      components: []
+    } as never;
+
+    const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.MERCURY
+    )!;
+    const details = trace.diagnostics
+      .filter((diagnostic) => diagnostic.factor === 'shadbala')
+      .map((diagnostic) => diagnostic.detail);
+
+    expect(details).toContain('RUPA_SHASTIAMSA_RATIO_MISMATCH');
+    expect(details).toContain('MEETS_MINIMUM_MISMATCH');
+    expect(details).toContain('COMPLETE_COMPONENT_REQUIRED:STHANA_BALA');
+    expect(details).toContain('COMPLETE_COMPONENT_REQUIRED:DRIK_BALA');
+    expect(trace.evidenceAvailability.factors.shadbala.status).toBe('PARTIAL');
   });
 
   it('covers the Cartesian influence matrix across all independent dimensions', () => {
@@ -721,7 +874,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
                     aspects: aspectCase.sources.map((sourcePlanet) => ({
                       sourcePlanet,
                       targetPlanet: Planet.MERCURY,
-                      aspectType: 'MATRIX'
+                      aspectType: 'FULL_7TH'
                     })),
                     ...(aspectCase.functional
                       ? { functionalNature: { [Planet.SATURN]: aspectCase.functional } }
@@ -752,7 +905,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
                   expect(trace.environmentalInfluence.maleficAspectSources).toHaveLength(aspectCase.malefic);
                   expect(trace.environmentalInfluence.mixedAspectSources).toHaveLength(aspectCase.mixed);
                   expect(trace.environmentalInfluence.unassessedAspectSources).toHaveLength(aspectCase.unassessed);
-                  expect(trace.assessment.status).toBe(
+                  expect(trace.evidenceAvailability.status).toBe(
                     completeness === 'PARTIAL' || aspectCase.unassessed > 0 ? 'PARTIAL' : 'FULL'
                   );
                 }
@@ -772,7 +925,7 @@ describe('CW-10E synthetic planetary influence matrix', () => {
 
     expect(traces).toHaveLength(9);
     expect(traces.map((trace) => trace.planet)).toEqual(PLANETS);
-    expect(traces.find((trace) => trace.planet === Planet.MERCURY)?.assessment.status)
+    expect(traces.find((trace) => trace.planet === Planet.MERCURY)?.evidenceAvailability.status)
       .not.toBe('UNAVAILABLE');
   });
 });

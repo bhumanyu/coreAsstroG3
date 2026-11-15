@@ -1,5 +1,28 @@
-import { Planet, type Horoscope } from '../../types';
+import { AspectType, Planet, type Horoscope } from '../../types';
 import { isNaturalBenefic } from '../planetaryStrength/drikBala';
+
+export type PlanetaryAspectConsumerId =
+  | 'CAREER_C6_BENEFIC_SUPPORT'
+  | 'CAREER_C6_MALEFIC_PRESSURE';
+
+export type CanonicalNatalAspectType =
+  | AspectType.FULL_7TH
+  | AspectType.SPECIAL_3RD
+  | AspectType.SPECIAL_4TH
+  | AspectType.SPECIAL_5TH
+  | AspectType.SPECIAL_8TH
+  | AspectType.SPECIAL_9TH
+  | AspectType.SPECIAL_10TH;
+
+const CANONICAL_NATAL_ASPECT_TYPES: ReadonlySet<string> = new Set([
+  AspectType.FULL_7TH,
+  AspectType.SPECIAL_3RD,
+  AspectType.SPECIAL_4TH,
+  AspectType.SPECIAL_5TH,
+  AspectType.SPECIAL_8TH,
+  AspectType.SPECIAL_9TH,
+  AspectType.SPECIAL_10TH
+]);
 
 export type PlanetarySourceNature =
   | 'NATURAL_BENEFIC'
@@ -12,8 +35,9 @@ export type PlanetarySourceNature =
 export interface PlanetaryAspectInfluence {
   readonly sourcePlanet: Planet;
   readonly targetPlanet: Planet;
-  readonly aspectType: string;
+  readonly aspectType: CanonicalNatalAspectType;
   readonly houseOffset?: number;
+  readonly geometricValidation: 'PRODUCER_ASSERTED';
   readonly sourceNature: PlanetarySourceNature;
   readonly classificationBasis: {
     readonly naturalRule: 'NATURAL_BENEFIC_TABLE' | 'MERCURY_ASSOCIATION' | 'MOON_PHASE';
@@ -21,7 +45,7 @@ export interface PlanetaryAspectInfluence {
       | 'FUNCTIONAL_NATURE_INTEGRATION'
       | 'FUNCTIONAL_ROLES'
       | 'NONE';
-    readonly consumedBy: readonly string[];
+    readonly consumedBy: readonly PlanetaryAspectConsumerId[];
   };
   readonly naturalNature?: 'BENEFIC' | 'MALEFIC';
   readonly functionalNature?: 'BENEFIC' | 'MALEFIC' | 'MIXED' | 'NEUTRAL';
@@ -44,6 +68,7 @@ export interface PlanetaryAspectInfluenceResult {
   readonly mixedSources: readonly PlanetaryAspectInfluence[];
   readonly unassessedSources: readonly PlanetaryAspectInfluence[];
   readonly availability: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+  readonly producerStatus?: 'ASSUMED_COMPLETE';
   readonly ignoredRecords: readonly AspectDiagnostic[];
 }
 
@@ -52,7 +77,7 @@ interface CanonicalAspectRecord {
   readonly aspectingPlanet?: Planet;
   readonly targetPlanet?: Planet;
   readonly target?: Planet;
-  readonly aspectType?: string;
+  readonly aspectType?: CanonicalNatalAspectType;
   readonly houseOffset?: number;
   readonly sourceHouse?: number;
   readonly targetHouse?: number;
@@ -176,10 +201,18 @@ function isHouse(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 12;
 }
 
+function isCanonicalNatalAspectType(value: unknown): value is CanonicalNatalAspectType {
+  return typeof value === 'string' && CANONICAL_NATAL_ASPECT_TYPES.has(value);
+}
+
 function readAspectRecord(
   value: unknown
 ):
-  | { readonly sourcePlanet: Planet; readonly targetPlanet: Planet; readonly aspectType: string }
+  | {
+      readonly sourcePlanet: Planet;
+      readonly targetPlanet: Planet;
+      readonly aspectType: CanonicalNatalAspectType;
+    }
   | AspectDiagnostic['reason'] {
   if (!isRecord(value)) return 'MISSING_FIELDS';
   const sourcePlanet = value.sourcePlanet ?? value.aspectingPlanet;
@@ -188,7 +221,7 @@ function readAspectRecord(
   if (!isPlanet(sourcePlanet)) return 'INVALID_SOURCE_PLANET';
   if (targetPlanet === undefined || targetPlanet === null) return 'MISSING_FIELDS';
   if (!isPlanet(targetPlanet)) return 'INVALID_TARGET';
-  if (typeof value.aspectType !== 'string' || value.aspectType.trim().length === 0) {
+  if (!isCanonicalNatalAspectType(value.aspectType)) {
     return 'MISSING_FIELDS';
   }
   if (value.houseOffset !== undefined &&
@@ -253,6 +286,7 @@ export function resolvePlanetaryAspects(
       sourcePlanet: parsed.sourcePlanet,
       targetPlanet: parsed.targetPlanet,
       aspectType: parsed.aspectType,
+      geometricValidation: 'PRODUCER_ASSERTED',
       ...(record.houseOffset !== undefined ? { houseOffset: record.houseOffset } : {}),
       ...classifySource(parsed.sourcePlanet, horoscope),
       ...(record.sourceHouse !== undefined ? { sourceHouse: record.sourceHouse } : {}),
@@ -288,6 +322,7 @@ export function resolvePlanetaryAspects(
     mixedSources: Object.freeze(result.mixedSources),
     unassessedSources: Object.freeze(result.unassessedSources),
     availability: ignoredRecords.length === 0 ? 'AVAILABLE' : 'PARTIAL',
+    producerStatus: 'ASSUMED_COMPLETE',
     ignoredRecords: Object.freeze(ignoredRecords)
   });
 }
