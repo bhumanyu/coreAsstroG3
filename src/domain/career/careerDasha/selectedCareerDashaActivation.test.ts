@@ -393,7 +393,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: sharedEvidenceId,
@@ -436,7 +436,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-002']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: sharedEvidenceId,
@@ -491,7 +491,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -507,7 +507,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-002',
         patternId: 'PATTERN-002',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-002']),
@@ -1589,7 +1589,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: unqualifiedEvidenceId,
@@ -1644,7 +1644,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -1725,7 +1725,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: qualifiedEvidenceId,
@@ -1768,7 +1768,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-002']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: unqualifiedEvidenceId,
@@ -1823,7 +1823,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -1839,7 +1839,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-002',
         patternId: 'PATTERN-002',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-002']),
@@ -1944,7 +1944,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: evidenceId1,
@@ -2006,7 +2006,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -2090,7 +2090,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: evidenceId1,
@@ -2159,7 +2159,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -2254,7 +2254,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: sharedEvidenceId,
@@ -2304,7 +2304,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-002']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: sharedEvidenceId,
@@ -2366,7 +2366,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -2382,7 +2382,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-002',
         patternId: 'PATTERN-002',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-002']),
@@ -2465,7 +2465,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: evidenceId1,
@@ -2527,7 +2527,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -2602,7 +2602,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: callerEvidenceId,
@@ -2657,7 +2657,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -2723,7 +2723,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           mechanismIds: Object.freeze(['MECH-001']),
@@ -2792,7 +2792,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -2832,7 +2832,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           mechanismIds: Object.freeze(['MECH-001']),
@@ -2900,7 +2900,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           mechanismIds: Object.freeze(['MECH-001']),
@@ -2948,7 +2948,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -2988,7 +2988,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           mechanismIds: Object.freeze(['MECH-001']),
@@ -3034,7 +3034,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -3103,7 +3103,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: callerEvidenceId, // Match caller's evidence ID (full containment)
@@ -3158,7 +3158,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -3230,7 +3230,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: canonicalEvidenceId, // Different from caller's evidence ID
@@ -3285,7 +3285,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -3371,7 +3371,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: qualifiedEvidenceId, // Only the qualified evidence ID
@@ -3426,7 +3426,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -3498,7 +3498,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: callerEvidenceId,
@@ -3553,7 +3553,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -3620,7 +3620,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: canonicalEvidenceId,
@@ -3675,7 +3675,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -3744,7 +3744,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: canonicalEvidenceId, // Different from caller's evidence ID
@@ -3799,7 +3799,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -3982,7 +3982,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['mech-1']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: 'qualified-evidence',
@@ -4038,7 +4038,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           candidateId: 'mech-1',
           patternId: 'pattern-1',
           mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway,
+          pathway: 'PLANETARY' as CareerMechanismPathway,
           evidence: Object.freeze([]),
           provenance: Object.freeze({
             patternIds: Object.freeze(['pattern-1']),
@@ -4086,7 +4086,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['mech-1']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: 'candidate-evidence',
@@ -4142,7 +4142,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           candidateId: 'mech-1',
           patternId: 'pattern-1',
           mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway,
+          pathway: 'PLANETARY' as CareerMechanismPathway,
           evidence: Object.freeze([]),
           provenance: Object.freeze({
             patternIds: Object.freeze(['pattern-1']),
@@ -4206,7 +4206,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['mech-1']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: 'evidence-1',
@@ -4248,7 +4248,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['mech-2']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: 'evidence-2',
@@ -4304,7 +4304,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           candidateId: 'mech-1',
           patternId: 'pattern-1',
           mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway,
+          pathway: 'PLANETARY' as CareerMechanismPathway,
           evidence: Object.freeze([]),
           provenance: Object.freeze({
             patternIds: Object.freeze(['pattern-1']),
@@ -4319,7 +4319,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           candidateId: 'mech-2',
           patternId: 'pattern-2',
           mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway,
+          pathway: 'PLANETARY' as CareerMechanismPathway,
           evidence: Object.freeze([]),
           provenance: Object.freeze({
             patternIds: Object.freeze(['pattern-2']),
@@ -4398,7 +4398,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: canonicalEvidenceId, // Different from caller's evidence ID
@@ -4453,7 +4453,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-001',
         patternId: 'PATTERN-001',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([]),
         provenance: Object.freeze({
           patternIds: Object.freeze(['PATTERN-001']),
@@ -4530,7 +4530,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-001']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: 'evidence-1',
@@ -4572,7 +4572,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-002']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: 'evidence-2',
@@ -4614,7 +4614,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         sourceMechanismIds: Object.freeze(['MECH-003']),
         mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
         status: 'CANDIDATE',
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([
           Object.freeze({
             evidenceId: 'evidence-3',
@@ -4670,7 +4670,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           candidateId: 'MECH-001',
           patternId: 'PATTERN-001',
           mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway,
+          pathway: 'PLANETARY' as CareerMechanismPathway,
           evidence: Object.freeze([]),
           provenance: Object.freeze({
             patternIds: Object.freeze(['PATTERN-001']),
@@ -4685,7 +4685,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           candidateId: 'MECH-002',
           patternId: 'PATTERN-002',
           mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway,
+          pathway: 'PLANETARY' as CareerMechanismPathway,
           evidence: Object.freeze([]),
           provenance: Object.freeze({
             patternIds: Object.freeze(['PATTERN-002']),
@@ -4700,7 +4700,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           candidateId: 'MECH-003',
           patternId: 'PATTERN-003',
           mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway,
+          pathway: 'PLANETARY' as CareerMechanismPathway,
           evidence: Object.freeze([]),
           provenance: Object.freeze({
             patternIds: Object.freeze(['PATTERN-003']),
@@ -4753,7 +4753,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       sourceMechanismIds: Object.freeze([...sourceMechanismIds]),
       mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
       status: 'CANDIDATE',
-      pathway: 'PRIMARY' as CareerMechanismPathway,
+      pathway: 'PLANETARY' as CareerMechanismPathway,
       evidence: Object.freeze([...evidence]),
       provenance: Object.freeze({
         mechanismIds: Object.freeze([...sourceMechanismIds]),
@@ -4827,13 +4827,13 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       const mechanismCandidates: readonly CareerMechanismCandidate[] = Object.freeze([
         {
           candidateId: 'MECH-2', patternId: 'PATTERN-2', mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway, evidence: Object.freeze([]),
+          pathway: 'PLANETARY' as CareerMechanismPathway, evidence: Object.freeze([]),
           provenance: Object.freeze({ patternIds: Object.freeze([]), relationshipIds: Object.freeze([]), participantIds: Object.freeze([]), evidenceIds: Object.freeze([]), sourceStages: Object.freeze([]) }),
           explanation: 'Second mechanism'
         },
         {
           candidateId: 'MECH-1', patternId: 'PATTERN-1', mechanismType: 'AUTHORITY' as CareerMechanismType,
-          pathway: 'PRIMARY' as CareerMechanismPathway, evidence: Object.freeze([]),
+          pathway: 'PLANETARY' as CareerMechanismPathway, evidence: Object.freeze([]),
           provenance: Object.freeze({ patternIds: Object.freeze([]), relationshipIds: Object.freeze([]), participantIds: Object.freeze([]), evidenceIds: Object.freeze([]), sourceStages: Object.freeze([]) }),
           explanation: 'First mechanism'
         }
@@ -4841,7 +4841,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       const legacyCandidate: CareerExpressionCandidate = Object.freeze({
         expressionId: 'LEGACY-1', expressionType: 'LEADERSHIP_EXPRESSION',
         sourceMechanismIds: Object.freeze(['MECH-2', 'MECH-1']), mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
-        status: 'CANDIDATE', pathway: 'PRIMARY' as CareerMechanismPathway, evidence: Object.freeze([]),
+        status: 'CANDIDATE', pathway: 'PLANETARY' as CareerMechanismPathway, evidence: Object.freeze([]),
         provenance: Object.freeze({ mechanismIds: Object.freeze(['MECH-2', 'MECH-1']), patternIds: Object.freeze([]), relationshipIds: Object.freeze([]), evidenceIds: Object.freeze([]), sourceStages: Object.freeze([]) })
       });
       const legacyResult: CareerExpressionAnalysisResult = Object.freeze({
@@ -4884,7 +4884,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId,
         patternId: `PATTERN-${candidateId}`,
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([Object.freeze({
           evidenceId: candidateId === 'MECH-2' ? 'SOURCE-M2' : `SOURCE-${candidateId}`,
           mechanismType: 'AUTHORITY' as CareerMechanismType,
@@ -4949,7 +4949,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-1',
         patternId: 'PATTERN-1',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([Object.freeze({
           evidenceId: 'SOURCE-EVIDENCE',
           mechanismType: 'AUTHORITY' as CareerMechanismType,
@@ -5009,7 +5009,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         candidateId: 'MECH-1',
         patternId: 'PATTERN-1',
         mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway,
+        pathway: 'PLANETARY' as CareerMechanismPathway,
         evidence: Object.freeze([Object.freeze({
           evidenceId: 'OTHER-EVIDENCE',
           mechanismType: 'AUTHORITY' as CareerMechanismType,

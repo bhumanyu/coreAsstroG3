@@ -111,7 +111,8 @@ export const STAGE1_GOLDEN_WEALTH = Object.freeze(
 export const STAGE1_GOLDEN_INPUT: Stage1IntegrationInput = Object.freeze({
   horoscope: STAGE1_GOLDEN_HOROSCOPE,
   task: 'CHART_SYNTHESIS',
-  requestId: 'stage1-golden-request-001'
+  requestId: 'stage1-golden-request-001',
+  context: STAGE1_GOLDEN_CONTEXT
 });
 
 export const STAGE1_GOLDEN_EXPECTATION: Stage1GoldenExpectation = Object.freeze({
