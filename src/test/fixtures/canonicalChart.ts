@@ -36,6 +36,23 @@ export const VAISHALI_BIRTH_DETAILS: BirthDetails = Object.freeze({
 } as const);
 
 /**
+ * Bokaro, Jharkhand birth details — the "new live chart" used for the
+ * Virgo-lagna pattern-detection audit. Produces Virgo lagna with
+ * Moon/Venus in Gemini (house 10), Sun/Mercury/Jupiter/Ketu in Cancer
+ * (house 11, Jupiter exalted at ~0.25° Cancer and combust), and Mars in
+ * Aries (house 8).
+ */
+export const BOKARO_BIRTH_DETAILS: BirthDetails = Object.freeze({
+  name: 'Bokaro chart',
+  placeOfBirth: 'Bokaro, Jharkhand, India',
+  latitude: 23.6693,
+  longitude: 86.1511,
+  timeZone: 'Asia/Kolkata',
+  ayanamsa: AyanamsaType.LAHIRI,
+  dateTimeStr: '1990-07-21T10:00:00+05:30'
+} as const);
+
+/**
  * Repository engine golden baseline snapshot — current engine output, NOT an externally validated ephemeris benchmark.
  */
 export const CANONICAL_GOLDEN_EXPECTED = Object.freeze({

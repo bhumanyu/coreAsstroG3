@@ -51,7 +51,14 @@ function resolveC6Assessment(
 ): {
   readonly status: CareerPlanetaryConditionAssessment;
   readonly missingFactors: readonly CareerC6RequiredEvidenceDimension[];
+  readonly partiallyResolvedFactors: readonly CareerC6RequiredEvidenceDimension[];
 } {
+  const aspectRecordCount = trace
+    ? trace.environmentalInfluence.beneficAspectSources.length +
+      trace.environmentalInfluence.maleficAspectSources.length +
+      trace.environmentalInfluence.mixedAspectSources.length +
+      trace.environmentalInfluence.unassessedAspectSources.length
+    : 0;
   const statuses: Array<readonly [
     CareerC6RequiredEvidenceDimension,
     'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE'
@@ -64,17 +71,28 @@ function resolveC6Assessment(
       : traceStatus;
     return [factor, c6Status] as const;
   });
-  const missingFactors = statuses
-    .filter(([, status]) => status !== 'AVAILABLE')
-    .map(([factor]) => factor);
+  const missingFactors: CareerC6RequiredEvidenceDimension[] = [];
+  const partiallyResolvedFactors: CareerC6RequiredEvidenceDimension[] = [];
+  for (const [factor, status] of statuses) {
+    if (status === 'AVAILABLE') continue;
+    // Resolved aspect records whose classification is indeterminate (MIXED /
+    // unassessed / functional-only) are partially resolved evidence, not missing
+    // evidence. Only a genuinely absent or unproduced aspect feed stays missing.
+    if (factor === 'aspectSources' && status === 'PARTIAL' && aspectRecordCount > 0) {
+      partiallyResolvedFactors.push(factor);
+    } else {
+      missingFactors.push(factor);
+    }
+  }
   const resolvedCount = statuses.filter(([, status]) => status !== 'UNAVAILABLE').length;
   return Object.freeze({
-    status: missingFactors.length === 0
+    status: missingFactors.length === 0 && partiallyResolvedFactors.length === 0
       ? 'FULL'
       : resolvedCount === 0
         ? 'UNAVAILABLE'
         : 'PARTIAL',
-    missingFactors: Object.freeze(missingFactors)
+    missingFactors: Object.freeze(missingFactors),
+    partiallyResolvedFactors: Object.freeze(partiallyResolvedFactors)
   });
 }
 
@@ -283,7 +301,8 @@ function buildCareerPlanetaryConditionContext(
       ...(careerTrace ? { planetaryInfluenceTrace: careerTrace } : {}),
       nonConsumedInfluence: aspectInfluence.nonConsumedInfluence,
       assessmentStatus: c6Assessment.status,
-      assessmentMissingFactors: c6Assessment.missingFactors
+      assessmentMissingFactors: c6Assessment.missingFactors,
+      assessmentPartiallyResolvedFactors: c6Assessment.partiallyResolvedFactors
     });
   }
 
@@ -313,7 +332,8 @@ function buildCareerPlanetaryConditionContext(
     ...(careerTrace ? { planetaryInfluenceTrace: careerTrace } : {}),
     nonConsumedInfluence: aspectInfluence.nonConsumedInfluence,
     assessmentStatus: c6Assessment.status,
-    assessmentMissingFactors: c6Assessment.missingFactors
+    assessmentMissingFactors: c6Assessment.missingFactors,
+    assessmentPartiallyResolvedFactors: c6Assessment.partiallyResolvedFactors
   });
 }
 
@@ -362,7 +382,8 @@ function buildCareerPlanetaryConditionContexts(
           ...(trace ? { planetaryInfluenceTrace: trace } : {}),
           nonConsumedInfluence: aspectInfluence.nonConsumedInfluence,
           assessmentStatus: c6Assessment.status,
-          assessmentMissingFactors: c6Assessment.missingFactors
+          assessmentMissingFactors: c6Assessment.missingFactors,
+          assessmentPartiallyResolvedFactors: c6Assessment.partiallyResolvedFactors
         })
       );
     } else {

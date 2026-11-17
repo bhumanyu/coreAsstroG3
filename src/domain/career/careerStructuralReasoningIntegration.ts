@@ -12,7 +12,7 @@ export interface CareerStructuralReasoningInput {
   readonly horoscope: Horoscope;
 }
 
-function createCareerHouseRelationshipContextFromHoroscope(
+export function createCareerHouseRelationshipContextFromHoroscope(
   horoscope: Horoscope
 ): CareerHouseRelationshipContext {
   return {

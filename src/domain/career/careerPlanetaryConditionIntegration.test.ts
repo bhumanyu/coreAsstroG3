@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Planet, DignityStatus, PlanetStateCondition, Sign } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
+import { calculateDignity } from '../../engine/planetaryDignity';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import {
   buildCareerPlanetaryCondition,
@@ -468,7 +469,8 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       expect(mercury.positiveFactors.some((factor) => factor.type === 'BENEFIC_SUPPORT')).toBe(true);
       expect(mercury.assessmentDetails).toMatchObject({
         status: 'PARTIAL',
-        missingFactors: ['aspectSources']
+        missingFactors: [],
+        partiallyResolvedFactors: ['aspectSources']
       });
     });
 
@@ -1019,6 +1021,84 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const sunResult = result.find(r => r.planet === Planet.SUN);
       expect(sunResult!.relevance).toBe('NEUTRAL');
       expect(sunResult!.condition).toBe('UNAVAILABLE');
+    });
+  });
+
+  // Group O — canonical dignity resolver parity
+  describe('Group O — canonical dignity resolver parity', () => {
+    function jupiterAtCancerPoint25(horoscope: any): void {
+      const jupiter = horoscope.planetFacts[Planet.JUPITER];
+      jupiter.sign = Sign.CANCER;
+      jupiter.position = {
+        ...jupiter.position,
+        sign: Sign.CANCER,
+        eclipticLongitude: 90.25,
+        longitude: 90.25,
+        signLongitude: 0.25
+      };
+      jupiter.state = {
+        ...jupiter.state,
+        condition: PlanetStateCondition.COMBUST
+      };
+    }
+
+    it.each([
+      ['absent dignity record', undefined],
+      ['unrecognized dignity status', { planet: Planet.JUPITER, sign: Sign.CANCER, status: 'LEGACY_UNKNOWN' }],
+      ['bare-string dignity record', 'STRONG' as any]
+    ] as const)(
+      'Jupiter at 0.25° Cancer resolves EXALTED via the canonical resolver (%s) and keeps COMBUST as a separate factor',
+      (_label, dignityRecord) => {
+        const horoscope = createMockHoroscope();
+        jupiterAtCancerPoint25(horoscope);
+        horoscope.planetFacts[Planet.JUPITER].dignity = dignityRecord;
+
+        // The resolver the Planetary Analysis UI uses must agree with C6.
+        const uiDignity = calculateDignity(Planet.JUPITER, Sign.CANCER, 0.25).status;
+        expect(uiDignity).toBe(DignityStatus.EXALTED);
+
+        const result = buildCareerPlanetaryCondition({
+          horoscope,
+          relevance: [createMockRelevance(Planet.JUPITER, 'PRIMARY')]
+        });
+        const jupiter = result.find(r => r.planet === Planet.JUPITER)!;
+
+        expect(jupiter.planetaryInfluenceTrace?.intrinsicStrength.dignity)
+          .toBe(DignityStatus.EXALTED);
+        expect(jupiter.dignity).toBe('EXALTED');
+        // COMBUST is preserved as its own factor and does not overwrite dignity.
+        expect(jupiter.combustion).toBe('COMBUST');
+        expect(jupiter.positiveFactors).toContainEqual(
+          expect.objectContaining({ type: 'DIGNITY', effect: 'SUPPORT' })
+        );
+        expect(jupiter.negativeFactors).toContainEqual(
+          expect.objectContaining({ type: 'COMBUSTION', effect: 'CHALLENGE' })
+        );
+        // EXALTED support + COMBUST challenge → MODERATE, neither factor erased.
+        expect(jupiter.condition).toBe('MODERATE');
+      }
+    );
+
+    it('recorded valid dignity still wins over positional recomputation', () => {
+      const horoscope = createMockHoroscope();
+      jupiterAtCancerPoint25(horoscope);
+      horoscope.planetFacts[Planet.JUPITER].dignity = {
+        planet: Planet.JUPITER,
+        sign: Sign.CANCER,
+        status: DignityStatus.NEUTRAL
+      };
+
+      const result = buildCareerPlanetaryCondition({
+        horoscope,
+        relevance: [createMockRelevance(Planet.JUPITER, 'PRIMARY')]
+      });
+      const jupiter = result.find(r => r.planet === Planet.JUPITER)!;
+
+      expect(jupiter.planetaryInfluenceTrace?.intrinsicStrength.dignity)
+        .toBe(DignityStatus.NEUTRAL);
+      expect(jupiter.dignity).toBe('NEUTRAL_SIGN');
+      expect(jupiter.combustion).toBe('COMBUST');
+      expect(jupiter.condition).toBe('WEAK');
     });
   });
 });

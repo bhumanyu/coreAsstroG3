@@ -6,10 +6,14 @@ import {
   Planet,
   DignityStatus,
   PlanetStateCondition,
+  Sign,
   NatalGrahaDrishtiComputationMethod,
   type Horoscope,
+  type PlanetFact,
   type PlanetMotion
 } from '../../types';
+import { calculateDignity } from '../planetaryDignity';
+import { calculateSign } from '../chartMath';
 import {
   resolvePlanetaryAspects,
   type AspectDiagnostic,
@@ -140,6 +144,54 @@ function isMotion(value: unknown): value is PlanetMotion {
 function isCondition(value: unknown): value is PlanetStateCondition {
   return typeof value === 'string' &&
     Object.values(PlanetStateCondition).includes(value as PlanetStateCondition);
+}
+
+function isSign(value: unknown): value is Sign {
+  return typeof value === 'string' &&
+    Object.values(Sign).includes(value as Sign);
+}
+
+interface DignityResolution {
+  readonly status?: DignityStatus;
+  readonly resolvedBy: 'RECORDED' | 'CANONICAL_RESOLVER';
+}
+
+/**
+ * Resolves planetary dignity for the trace. The recorded planetFact dignity is
+ * authoritative when it carries a recognized DignityStatus (it is itself produced
+ * by calculateDignity). When the record is missing, serialized as a bare string,
+ * or carries an unrecognized status, the trace falls back to the same canonical
+ * resolver the Planetary Analysis UI uses so C6 and the UI can never diverge.
+ */
+function resolveDignity(
+  planet: Planet,
+  planetFact: PlanetFact | undefined
+): DignityResolution {
+  const recorded = typeof planetFact?.dignity === 'string'
+    ? planetFact.dignity
+    : planetFact?.dignity?.status;
+  if (isDignityStatus(recorded)) {
+    return { status: recorded, resolvedBy: 'RECORDED' };
+  }
+
+  const factSign = planetFact?.sign ?? planetFact?.position?.sign;
+  const longitude = planetFact?.position?.eclipticLongitude ??
+    planetFact?.position?.longitude ??
+    planetFact?.position?.siderealLongitude;
+  const hasLongitude = typeof longitude === 'number' && Number.isFinite(longitude);
+  const sign = isSign(factSign)
+    ? factSign
+    : hasLongitude && longitude !== undefined
+      ? calculateSign(longitude)
+      : undefined;
+  if (sign === undefined || !hasLongitude || longitude === undefined) {
+    return { resolvedBy: 'CANONICAL_RESOLVER' };
+  }
+  const degreeInSign = ((longitude % 30) + 30) % 30;
+  return {
+    status: calculateDignity(planet, sign, degreeInSign).status,
+    resolvedBy: 'CANONICAL_RESOLVER'
+  };
 }
 
 function getOwnedHouses(horoscope: Horoscope, planet: Planet): readonly number[] | undefined {
@@ -293,10 +345,10 @@ function methodologyValue(value: unknown, fallback: unknown): MethodologyValue {
 
 function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTrace {
   const planetFact = horoscope.planetFacts?.[planet];
-  const dignity = planetFact?.dignity?.status;
+  const dignityResolution = resolveDignity(planet, planetFact);
+  const resolvedDignity = dignityResolution.status;
   const combustion = planetFact?.state?.condition;
   const motion = planetFact?.state?.motion;
-  const resolvedDignity = isDignityStatus(dignity) ? dignity : undefined;
   const resolvedCombustion = isCondition(combustion) ? combustion : undefined;
   const resolvedMotion = isMotion(motion) ? motion : undefined;
   const shadbala = getShadbala(horoscope, planet);
@@ -318,7 +370,9 @@ function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTra
   const factors: Record<PlanetaryInfluenceFactor, FactorAvailability> = {
     dignity: Object.freeze({
       status: resolvedDignity ? 'AVAILABLE' : 'UNAVAILABLE',
-      source: 'planetFacts.dignity.status'
+      source: dignityResolution.resolvedBy === 'RECORDED'
+        ? 'planetFacts.dignity.status'
+        : 'planetaryDignity.calculateDignity'
     }),
     combustion: Object.freeze({
       status: resolvedCombustion ? 'AVAILABLE' : 'UNAVAILABLE',

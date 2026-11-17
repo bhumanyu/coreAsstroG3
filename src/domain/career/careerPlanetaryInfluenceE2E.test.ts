@@ -349,7 +349,8 @@ describe('CW-10N independent multi-chart verification', () => {
       negativeFactors: [],
       assessmentDetails: {
         status: 'PARTIAL',
-        missingFactors: ['aspectSources']
+        missingFactors: [],
+        partiallyResolvedFactors: ['aspectSources']
       }
     });
     expect(venus.planetaryInfluenceTrace?.environmentalInfluence.mixedAspectSources)
@@ -459,7 +460,10 @@ describe('CW-10N independent multi-chart verification', () => {
       expect(venus).toMatchObject({
         condition: 'INSUFFICIENT_DATA',
         assessment: 'PARTIAL',
-        assessmentDetails: { missingFactors: ['aspectSources'] }
+        assessmentDetails: {
+          missingFactors: [],
+          partiallyResolvedFactors: ['aspectSources']
+        }
       });
       expect(expression.expressions.map((item) => ({
         mode: item.mode,

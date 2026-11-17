@@ -127,11 +127,19 @@ export interface CareerPlanetaryConditionContext {
   readonly assessmentStatus?: CareerPlanetaryConditionAssessment;
 
   readonly assessmentMissingFactors?: readonly CareerC6RequiredEvidenceDimension[];
+
+  /**
+   * Required dimensions whose evidence records exist but whose classification is
+   * indeterminate (e.g. aspect sources resolved but only MIXED/unassessed).
+   * These are partially resolved, not missing, and never count as negative evidence.
+   */
+  readonly assessmentPartiallyResolvedFactors?: readonly CareerC6RequiredEvidenceDimension[];
 }
 
 export interface CareerPlanetaryConditionAssessmentDetails {
   readonly status: CareerPlanetaryConditionAssessment;
   readonly missingFactors: readonly CareerC6RequiredEvidenceDimension[];
+  readonly partiallyResolvedFactors?: readonly CareerC6RequiredEvidenceDimension[];
 }
 
 export interface CareerPlanetaryConditionResult {
@@ -358,12 +366,16 @@ function resolveConditionAssessment(
 ): {
   readonly status: CareerPlanetaryConditionAssessment;
   readonly missingFactors: readonly CareerC6RequiredEvidenceDimension[];
+  readonly partiallyResolvedFactors: readonly CareerC6RequiredEvidenceDimension[];
 } {
   if (context.assessmentStatus !== undefined) {
     return {
       status: context.assessmentStatus,
       missingFactors: Object.freeze([
         ...new Set(context.assessmentMissingFactors ?? [])
+      ]),
+      partiallyResolvedFactors: Object.freeze([
+        ...new Set(context.assessmentPartiallyResolvedFactors ?? [])
       ])
     };
   }
@@ -377,7 +389,8 @@ function resolveConditionAssessment(
     new Set(missingFactors).size;
   return {
     status: resolvedCount === 0 ? 'UNAVAILABLE' : 'PARTIAL',
-    missingFactors: Object.freeze([...new Set(missingFactors)])
+    missingFactors: Object.freeze([...new Set(missingFactors)]),
+    partiallyResolvedFactors: Object.freeze([])
   };
 }
 
@@ -569,7 +582,10 @@ export function interpretCareerPlanetaryCondition(
     assessment,
     assessmentDetails: Object.freeze({
       status: assessment,
-      missingFactors: resolvedAssessment.missingFactors
+      missingFactors: resolvedAssessment.missingFactors,
+      ...(resolvedAssessment.partiallyResolvedFactors.length > 0
+        ? { partiallyResolvedFactors: resolvedAssessment.partiallyResolvedFactors }
+        : {})
     }),
     ...(context.planetaryInfluenceTrace
       ? { planetaryInfluenceTrace: context.planetaryInfluenceTrace }
