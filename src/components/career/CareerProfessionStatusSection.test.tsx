@@ -421,6 +421,7 @@ describe('CareerProfessionStatusSection', () => {
     render(<CareerProfessionStatusSection profession={profession} />);
 
     const funnel = screen.getByRole('list', { name: 'Profession analysis stages' });
+    expect(screen.getByRole('heading', { name: 'Profession engine stage counts' })).toBeInTheDocument();
     const stages = [...funnel.querySelectorAll('li')];
     expect(stages.map(item => item.querySelector('span:last-child')?.textContent))
       .toEqual(Object.values(engineStageCounts).map(String));
@@ -445,6 +446,7 @@ describe('CareerProfessionStatusSection', () => {
   it.each([
     ['negative count', { ...engineStageCounts, matchedRules: -1 }],
     ['fractional count', { ...engineStageCounts, generatedCandidates: 1.5 }],
+    ['inconsistent D10 totals', { ...engineStageCounts, d10RemovedCandidates: 0 }],
     ['incomplete counts', {
       inputExpressions: 8,
       matchedRules: 5,
@@ -469,7 +471,14 @@ describe('CareerProfessionStatusSection', () => {
       'No profession rule matched the resolved expressions.'
     ],
     [
-      { ...engineStageCounts, generatedCandidates: 0 },
+      {
+        ...engineStageCounts,
+        generatedCandidates: 0,
+        d10QualifiedCandidates: 0,
+        d10RemovedCandidates: 0,
+        rankingEligibleCandidates: 0,
+        rankedCandidates: 0
+      },
       'Rules matched, but no profession candidates were generated.'
     ],
     [
@@ -477,7 +486,9 @@ describe('CareerProfessionStatusSection', () => {
         ...engineStageCounts,
         generatedCandidates: 4,
         d10QualifiedCandidates: 0,
-        d10RemovedCandidates: 4
+        d10RemovedCandidates: 4,
+        rankingEligibleCandidates: 0,
+        rankedCandidates: 0
       },
       'Candidates were generated, but none passed D10 qualification.'
     ],
@@ -485,7 +496,8 @@ describe('CareerProfessionStatusSection', () => {
       {
         ...engineStageCounts,
         d10QualifiedCandidates: 3,
-        rankingEligibleCandidates: 0
+        rankingEligibleCandidates: 0,
+        rankedCandidates: 0
       },
       'Candidates passed D10, but none met the full evidence-linkage requirement for ranking'
     ]
@@ -531,6 +543,92 @@ describe('CareerProfessionStatusSection', () => {
     expect(screen.queryByText(/No resolved career mechanisms were available/)).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['missing inputs', ['domainEvidence'], []],
+    ['missing-input diagnostic', [], ['PROFESSION_INPUTS_MISSING']]
+  ])('uses the generic explanation for %s but keeps factual stage counts', (_case, missingInputs, diagnostics) => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      missingInputs,
+      diagnostics,
+      stageCounts: { ...engineStageCounts, matchedRules: 0 }
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
+    expect(screen.queryByText(/No profession rule matched the resolved expressions/)).not.toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Profession analysis stages' })).toBeInTheDocument();
+  });
+
+  it('explains that zero expressions prevented profession rules from being evaluated', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      stageCounts: {
+        inputExpressions: 0,
+        matchedRules: 0,
+        generatedCandidates: 0,
+        d10QualifiedCandidates: 0,
+        d10RemovedCandidates: 0,
+        rankingEligibleCandidates: 0,
+        rankedCandidates: 0
+      }
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText(/No career expressions were produced upstream, so the profession engine had no inputs to evaluate/))
+      .toBeInTheDocument();
+  });
+
+  it('renders upstream coverage counts when no expressions reached the profession engine', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      stageCounts: {
+        inputExpressions: 0,
+        matchedRules: 0,
+        generatedCandidates: 0,
+        d10QualifiedCandidates: 0,
+        d10RemovedCandidates: 0,
+        rankingEligibleCandidates: 0,
+        rankedCandidates: 0
+      },
+      coverageSummary: {
+        mechanismCandidateCount: 0,
+        patternCandidateCount: 2,
+        patternCandidateRecordCount: 2,
+        distinctCandidateIdCount: 2,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
+        qualificationResultMissingCount: 0,
+        qualifiedPatternCount: 1,
+        eligiblePatternCount: 1,
+        invalidRolePatternCount: 0,
+        roleAssignmentSkippedPatternCount: 0,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'RESOLVED' as const,
+        expressionCount: 0,
+        expressionsWithEvidenceCount: 0,
+        evidenceCount: 0,
+        evidenceWithPlanetAttributionCount: 0
+      }
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText(
+      'Upstream coverage: 2 patterns detected → 1 qualified → 1 eligible → 0 mechanisms resolved → 0 expressions.'
+    )).toBeInTheDocument();
+  });
+
+  it('allows matched-rule counts to exceed input-expression counts', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      stageCounts: { ...engineStageCounts, inputExpressions: 2 }
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByRole('list', { name: 'Profession analysis stages' })).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+  });
+
   it('localizes all funnel labels and stage explanations in Hindi', async () => {
     await i18n.changeLanguage('hi');
     const makeProfession = (stageCounts: NonNullable<CareerProfessionViewModel['stageCounts']>) => ({
@@ -548,10 +646,18 @@ describe('CareerProfessionStatusSection', () => {
     expect(funnel).toHaveTextContent('D10 से हटाए गए');
     expect(funnel).toHaveTextContent('क्रम निर्धारण के योग्य');
     expect(funnel).toHaveTextContent('क्रमबद्ध');
+    expect(screen.getByRole('heading', { name: 'व्यवसाय इंजन के चरणों की गणना' })).toBeInTheDocument();
     expect(screen.getByText(/समाधान की गई अभिव्यक्तियों से कोई व्यवसाय नियम मेल नहीं खाया/)).toBeInTheDocument();
     expect(screen.getByText(/यह नकारात्मक करियर पूर्वानुमान नहीं है/)).toBeInTheDocument();
 
-    rerender(<CareerProfessionStatusSection profession={makeProfession({ ...engineStageCounts, generatedCandidates: 0 })} />);
+    rerender(<CareerProfessionStatusSection profession={makeProfession({
+      ...engineStageCounts,
+      generatedCandidates: 0,
+      d10QualifiedCandidates: 0,
+      d10RemovedCandidates: 0,
+      rankingEligibleCandidates: 0,
+      rankedCandidates: 0
+    })} />);
     expect(screen.getByText(/नियम मेल खाए, लेकिन कोई व्यवसाय उम्मीदवार नहीं बना/)).toBeInTheDocument();
     expect(screen.getByText(/यह नकारात्मक करियर पूर्वानुमान नहीं है/)).toBeInTheDocument();
 
@@ -559,17 +665,55 @@ describe('CareerProfessionStatusSection', () => {
       ...engineStageCounts,
       generatedCandidates: 4,
       d10QualifiedCandidates: 0,
-      d10RemovedCandidates: 4
+      d10RemovedCandidates: 4,
+      rankingEligibleCandidates: 0,
+      rankedCandidates: 0
     })} />);
     expect(screen.getByText(/उम्मीदवार बने, लेकिन कोई भी D10 योग्यता में सफल नहीं हुआ/)).toBeInTheDocument();
     expect(screen.getByText(/यह नकारात्मक करियर पूर्वानुमान नहीं है/)).toBeInTheDocument();
 
     rerender(<CareerProfessionStatusSection profession={makeProfession({
       ...engineStageCounts,
-      rankingEligibleCandidates: 0
+      rankingEligibleCandidates: 0,
+      rankedCandidates: 0
     })} />);
     expect(screen.getByText(/क्रम निर्धारण के लिए पूर्ण साक्ष्य-संबंध आवश्यकता पूरी नहीं कर सका/)).toBeInTheDocument();
     expect(screen.getByText(/यह नकारात्मक करियर पूर्वानुमान नहीं है/)).toBeInTheDocument();
+
+    rerender(<CareerProfessionStatusSection profession={{
+      ...makeProfession({
+        inputExpressions: 0,
+        matchedRules: 0,
+        generatedCandidates: 0,
+        d10QualifiedCandidates: 0,
+        d10RemovedCandidates: 0,
+        rankingEligibleCandidates: 0,
+        rankedCandidates: 0
+      }),
+      coverageSummary: {
+        mechanismCandidateCount: 0,
+        patternCandidateCount: 2,
+        patternCandidateRecordCount: 2,
+        distinctCandidateIdCount: 2,
+        conflictedCandidateCount: 0,
+        conflictedQualificationCount: 0,
+        qualificationResultMissingCount: 0,
+        qualifiedPatternCount: 1,
+        eligiblePatternCount: 1,
+        invalidRolePatternCount: 0,
+        roleAssignmentSkippedPatternCount: 0,
+        resolvedMechanismCount: 0,
+        networkResolutionStatus: 'RESOLVED' as const,
+        expressionCount: 0,
+        expressionsWithEvidenceCount: 0,
+        evidenceCount: 0,
+        evidenceWithPlanetAttributionCount: 0
+      }
+    }} />);
+    expect(screen.getByText(/ऊपरी चरण में कोई करियर अभिव्यक्ति नहीं बनी/)).toBeInTheDocument();
+    expect(screen.getByText(
+      'पूर्ववर्ती कवरेज: 2 पैटर्न मिले → 1 योग्य → 1 पात्र → 0 तंत्र हल हुए → 0 अभिव्यक्तियाँ।'
+    )).toBeInTheDocument();
   });
 });
 

@@ -16,7 +16,7 @@ const isValidStageCounts = (
     return false;
   }
 
-  return [
+  const countsAreNonNegativeIntegers = [
     stageCounts.inputExpressions,
     stageCounts.matchedRules,
     stageCounts.generatedCandidates,
@@ -25,6 +25,12 @@ const isValidStageCounts = (
     stageCounts.rankingEligibleCandidates,
     stageCounts.rankedCandidates
   ].every(count => Number.isInteger(count) && count >= 0);
+
+  return countsAreNonNegativeIntegers &&
+    stageCounts.d10QualifiedCandidates + stageCounts.d10RemovedCandidates === stageCounts.generatedCandidates &&
+    stageCounts.d10QualifiedCandidates <= stageCounts.generatedCandidates &&
+    stageCounts.rankingEligibleCandidates <= stageCounts.d10QualifiedCandidates &&
+    stageCounts.rankedCandidates <= stageCounts.rankingEligibleCandidates;
 };
 
 export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSectionProps> = ({ profession }) => {
@@ -66,23 +72,30 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     coverage?.resolvedMechanismCount === 0;
   const stageCounts = profession.stageCounts;
   const hasValidStageCounts = isValidStageCounts(stageCounts);
-  const stageExplanationKey = hasValidStageCounts
-    ? stageCounts.matchedRules === 0
-      ? 'noMatchedRulesExplanation'
-      : stageCounts.generatedCandidates === 0
-        ? 'noGeneratedCandidatesExplanation'
-        : stageCounts.d10QualifiedCandidates === 0 &&
-            stageCounts.d10RemovedCandidates === stageCounts.generatedCandidates
-          ? 'noD10QualifiedCandidatesExplanation'
-          : stageCounts.d10QualifiedCandidates > 0 && stageCounts.rankingEligibleCandidates === 0
-            ? 'noRankingEligibleCandidatesExplanation'
-            : undefined
+  const hasMissingProfessionInputs =
+    profession.missingInputs.length > 0 ||
+    profession.diagnostics.includes('PROFESSION_INPUTS_MISSING');
+  const stageExplanationKey = hasValidStageCounts && !hasMissingProfessionInputs
+    ? stageCounts.inputExpressions === 0
+      ? 'noInputExpressionsExplanation'
+      : stageCounts.matchedRules === 0
+        ? 'noMatchedRulesExplanation'
+        : stageCounts.generatedCandidates === 0
+          ? 'noGeneratedCandidatesExplanation'
+          : stageCounts.d10QualifiedCandidates === 0 &&
+              stageCounts.d10RemovedCandidates === stageCounts.generatedCandidates
+            ? 'noD10QualifiedCandidatesExplanation'
+            : stageCounts.d10QualifiedCandidates > 0 && stageCounts.rankingEligibleCandidates === 0
+              ? 'noRankingEligibleCandidatesExplanation'
+              : undefined
     : undefined;
-  const statusExplanation = stageExplanationKey
-    ? t(`ui.profession.${stageExplanationKey}`)
-    : hasNoResolvedMechanisms
-      ? t('ui.profession.noResolvedMechanismsExplanation')
-      : t(`ui.profession.${statusCopyKey}Explanation`);
+  const statusExplanation = hasMissingProfessionInputs
+    ? t(`ui.profession.${statusCopyKey}Explanation`)
+    : stageExplanationKey
+      ? t(`ui.profession.${stageExplanationKey}`)
+      : hasNoResolvedMechanisms
+        ? t('ui.profession.noResolvedMechanismsExplanation')
+        : t(`ui.profession.${statusCopyKey}Explanation`);
   const stageLabels = [
     ['inputExpressions', 'stageInputExpressions'],
     ['matchedRules', 'stageMatchedRules'],
@@ -112,15 +125,29 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
       </span>
     </div>
     <p className="text-xs leading-relaxed text-slate-400">{statusExplanation}</p>
+    {hasCompleteCoverage && hasValidStageCounts && stageCounts.inputExpressions === 0 && coverage && (
+      <p className="text-[11px] leading-relaxed text-slate-500">
+        {t('ui.profession.upstreamCoverageSummary', {
+          patternsDetected: coverage.patternCandidateCount,
+          qualifiedPatterns: coverage.qualifiedPatternCount,
+          eligiblePatterns: coverage.eligiblePatternCount,
+          mechanismsResolved: coverage.resolvedMechanismCount,
+          expressions: coverage.expressionCount
+        })}
+      </p>
+    )}
     {hasValidStageCounts && (
-      <ol aria-label={t('ui.profession.stageCountsAria')} className="grid gap-2 pt-2 sm:grid-cols-2">
-        {stageLabels.map(([countKey, labelKey], index) => (
-          <li key={countKey} className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-xs">
-            <span className="text-slate-400">{index + 1}. {t(`ui.profession.${labelKey}`)}</span>
-            <span className="font-semibold tabular-nums text-slate-100">{stageCounts[countKey]}</span>
-          </li>
-        ))}
-      </ol>
+      <div className="space-y-2 pt-2">
+        <h3 className="text-xs font-semibold text-slate-300">{t('ui.profession.stageCountsHeading')}</h3>
+        <ol aria-label={t('ui.profession.stageCountsAria')} className="grid gap-2 sm:grid-cols-2">
+          {stageLabels.map(([countKey, labelKey], index) => (
+            <li key={countKey} className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-xs">
+              <span className="text-slate-400">{index + 1}. {t(`ui.profession.${labelKey}`)}</span>
+              <span className="font-semibold tabular-nums text-slate-100">{stageCounts[countKey]}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
     )}
     {profession.missingInputs.length > 0 && (
       <div className="space-y-1 pt-1">
