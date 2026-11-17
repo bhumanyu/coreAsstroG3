@@ -1287,6 +1287,65 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     )).toBe(true);
   });
 
+  it('derives dignity position from longitude over recorded sign fields and diagnoses the conflict', () => {
+    // Jupiter recorded EXALTED with recorded sign CANCER, but the canonical
+    // longitude places it at 10° Virgo. Longitude wins: the position resolves
+    // to Virgo (neutral for Jupiter), not Cancer (exaltation), so the recorded
+    // dignity is recomputed and both conflicts are diagnosed.
+    const horoscope = makeHoroscope({
+      dignity: { [Planet.JUPITER]: DignityStatus.EXALTED },
+      positions: { [Planet.JUPITER]: { longitude: 160 } } // Virgo 10°
+    });
+    const fact = horoscope.planetFacts[Planet.JUPITER];
+    fact.sign = Sign.CANCER;
+    fact.position.sign = Sign.CANCER;
+    fact.position.signLongitude = 25;
+    fact.dignity = { ...fact.dignity, sign: Sign.CANCER };
+
+    const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+
+    expect(trace.intrinsicStrength.dignity).toBe(DignityStatus.NEUTRAL);
+    expect(trace.evidenceAvailability.factors.dignity.source)
+      .toBe('planetaryDignity.calculateDignity');
+    expect(trace.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        factor: 'dignity',
+        reason: 'POSITION_FIELD_MISMATCH',
+        record: expect.objectContaining({
+          recordedSign: Sign.CANCER,
+          recordedSignLongitude: 25,
+          derivedSign: Sign.VIRGO,
+          derivedDegreeInSign: 10,
+          winningSource: 'CANONICAL_LONGITUDE'
+        })
+      }),
+      expect.objectContaining({
+        factor: 'dignity',
+        reason: 'DIGNITY_POSITION_MISMATCH',
+        record: expect.objectContaining({
+          recorded: DignityStatus.EXALTED,
+          sign: Sign.VIRGO,
+          recomputed: DignityStatus.NEUTRAL
+        })
+      })
+    ]));
+  });
+
+  it('does not emit POSITION_FIELD_MISMATCH when recorded sign fields agree with longitude', () => {
+    const horoscope = makeHoroscope({
+      positions: { [Planet.JUPITER]: { longitude: 160 } }
+    });
+    const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+
+    expect(trace.diagnostics.some(
+      (diagnostic) => diagnostic.reason === 'POSITION_FIELD_MISMATCH'
+    )).toBe(false);
+  });
+
   it('keeps relationship-based dignity statuses authoritative without positional checks', () => {
     const horoscope = makeHoroscope({
       dignity: { [Planet.JUPITER]: DignityStatus.FRIEND_SIGN }

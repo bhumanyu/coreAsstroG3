@@ -75,7 +75,8 @@ export interface PlanetaryInfluenceDiagnostic {
     | PlanetaryRelationshipDiagnostic['reason']
     | 'INVALID_SHADBALA_TOTALS'
     | 'INVALID_SHADBALA_RECORD'
-    | 'DIGNITY_POSITION_MISMATCH';
+    | 'DIGNITY_POSITION_MISMATCH'
+    | 'POSITION_FIELD_MISMATCH';
   readonly detail?: string;
 }
 
@@ -194,33 +195,80 @@ function isDignityCompatibleWithPosition(
   return calculateDignity(planet, position.sign, position.degreeInSign).status === status;
 }
 
+interface DignityPositionResolution {
+  readonly position?: CanonicalDignityPosition;
+  readonly diagnostics: readonly PlanetaryInfluenceDiagnostic[];
+}
+
+const DEGREE_IN_SIGN_TOLERANCE = 1e-6;
+
+/**
+ * Resolves the canonical dignity position. A finite ecliptic longitude is
+ * authoritative: the sign and degree-in-sign are always derived from it via
+ * calculateSign/longitude modulo 30. Recorded sign fields are consulted only
+ * when no usable longitude exists, and only a valid recorded sign /
+ * signLongitude pair can stand in for the missing longitude.
+ *
+ * When longitude is present but a recorded sign or signLongitude disagrees
+ * with the longitude-derived values, a POSITION_FIELD_MISMATCH diagnostic
+ * records the conflict; longitude still wins and resolution is not blocked.
+ */
 function resolveCanonicalDignityPosition(
   planetFact: PlanetFact | undefined
-): CanonicalDignityPosition | undefined {
+): DignityPositionResolution {
   const position = planetFact?.position;
   const longitude = position?.eclipticLongitude ??
     position?.longitude ??
     position?.siderealLongitude;
   const hasLongitude = typeof longitude === 'number' && Number.isFinite(longitude);
-  const factSign = planetFact?.sign ?? position?.sign;
-  const sign = isSign(factSign)
-    ? factSign
-    : hasLongitude && longitude !== undefined
-      ? calculateSign(longitude)
-      : undefined;
-  if (sign === undefined) {
-    return undefined;
+  const recordedSign: unknown = planetFact?.sign ?? position?.sign;
+  const recordedDegreeInSign: unknown = position?.signLongitude;
+
+  if (hasLongitude && longitude !== undefined) {
+    const sign = calculateSign(longitude);
+    const degreeInSign = ((longitude % 30) + 30) % 30;
+    const signMismatch = isSign(recordedSign) && recordedSign !== sign;
+    const degreeMismatch =
+      typeof recordedDegreeInSign === 'number' &&
+      Number.isFinite(recordedDegreeInSign) &&
+      Math.abs(recordedDegreeInSign - degreeInSign) > DEGREE_IN_SIGN_TOLERANCE;
+    if (!signMismatch && !degreeMismatch) {
+      return { position: { sign, degreeInSign }, diagnostics: Object.freeze([]) };
+    }
+    return {
+      position: { sign, degreeInSign },
+      diagnostics: Object.freeze([Object.freeze({
+        factor: 'dignity' as const,
+        record: Object.freeze({
+          recordedSign: recordedSign ?? null,
+          recordedSignLongitude:
+            typeof recordedDegreeInSign === 'number' &&
+            Number.isFinite(recordedDegreeInSign)
+              ? recordedDegreeInSign
+              : null,
+          derivedSign: sign,
+          derivedDegreeInSign: degreeInSign,
+          winningSource: 'CANONICAL_LONGITUDE' as const
+        }),
+        reason: 'POSITION_FIELD_MISMATCH' as const,
+        detail: `recordedSign=${String(recordedSign)} recordedSignLongitude=${String(recordedDegreeInSign)} derived=${sign}@${degreeInSign} winningSource=CANONICAL_LONGITUDE`
+      })])
+    };
   }
-  const degreeInSign = typeof position?.signLongitude === 'number' &&
-      Number.isFinite(position.signLongitude)
-    ? position.signLongitude
-    : hasLongitude && longitude !== undefined
-      ? ((longitude % 30) + 30) % 30
+
+  const sign = isSign(recordedSign) ? recordedSign : undefined;
+  const degreeInSign =
+    typeof recordedDegreeInSign === 'number' &&
+    Number.isFinite(recordedDegreeInSign)
+      ? recordedDegreeInSign
       : undefined;
-  if (degreeInSign === undefined) {
-    return undefined;
+  if (sign === undefined || degreeInSign === undefined) {
+    return { diagnostics: Object.freeze([]) };
   }
-  return { sign, degreeInSign };
+  return {
+    position: { sign, degreeInSign },
+    diagnostics: Object.freeze([])
+  };
 }
 
 /**
@@ -237,7 +285,9 @@ function resolveDignity(
   planet: Planet,
   planetFact: PlanetFact | undefined
 ): DignityResolution {
-  const position = resolveCanonicalDignityPosition(planetFact);
+  const resolution = resolveCanonicalDignityPosition(planetFact);
+  const position = resolution.position;
+  const positionDiagnostics = resolution.diagnostics;
   const recompute = (): DignityStatus | undefined =>
     position === undefined
       ? undefined
@@ -253,7 +303,7 @@ function resolveDignity(
       return {
         status: recomputed,
         resolvedBy: 'CANONICAL_RESOLVER',
-        diagnostics: Object.freeze([Object.freeze({
+        diagnostics: Object.freeze([...positionDiagnostics, Object.freeze({
           factor: 'dignity' as const,
           record: Object.freeze({
             recorded,
@@ -266,14 +316,18 @@ function resolveDignity(
         })])
       };
     }
-    return { status: recorded, resolvedBy: 'RECORDED', diagnostics: Object.freeze([]) };
+    return {
+      status: recorded,
+      resolvedBy: 'RECORDED',
+      diagnostics: positionDiagnostics
+    };
   }
 
   const recomputed = recompute();
   return {
     status: recomputed,
     resolvedBy: 'CANONICAL_RESOLVER',
-    diagnostics: Object.freeze([])
+    diagnostics: positionDiagnostics
   };
 }
 
