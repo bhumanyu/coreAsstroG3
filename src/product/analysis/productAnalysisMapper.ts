@@ -14,6 +14,7 @@
 import type { BirthDetails, Horoscope } from '../../types';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import type { DomainInterpretation } from '../../domain/interpretation/DomainInterpretation';
+import { getCareerConclusionData } from '../../domain/interpretation';
 import { Planet } from '../../types';
 import type {
   LifeAnalysisViewModel,
@@ -49,6 +50,7 @@ import type {
   ProductCareerPathwayAnalysis,
   ProductCareerEventTimeline,
   ProductCareerProfessionRanking,
+  ProductCareerPatternQualification,
   ProductConfidence,
   ActivationEffect,
   ConclusionStatus,
@@ -77,6 +79,7 @@ import type { CareerAnalyticalAxes } from '../../domain/career/careerFinalSynthe
 import type { CareerOutcomeAnalysis } from '../../domain/career/careerOutcomeQualification/careerOutcomeTypes';
 import type { CareerEventTimelineAnalysis } from '../../domain/career/careerEventTimeline/careerEventTimelineTypes';
 import type { CareerProfessionAnalysis, CareerProfessionRanking } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type { CanonicalCareerFoundation } from '../../domain/career/orchestration/canonicalCareerContracts';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type {
@@ -995,7 +998,8 @@ function mapCareerPathwayAnalysis(source: CareerPathwayAnalysis): ProductCareerP
 
 function mapCareer(
   viewModel: LifeAnalysisViewModel,
-  explicitEvidence?: readonly ProductEvidence[]
+  explicitEvidence?: readonly ProductEvidence[],
+  canonicalCareerFoundation?: CanonicalCareerFoundation
 ): CareerProductAnalysis {
   const detail = viewModel.careerDetail;
   const summary = viewModel.domains.find((d) => d.domain === 'CAREER');
@@ -1010,6 +1014,36 @@ function mapCareer(
           : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'CAREER'), 'CAREER');
 
   const dashaPeriods = mapDashaPeriods(detail?.timing);
+  const quarantinedPatternIds = new Set(
+    canonicalCareerFoundation?.quarantineRecords.map(record => record.patternId) ?? []
+  );
+  const patternQualifications: readonly ProductCareerPatternQualification[] | undefined =
+    canonicalCareerFoundation
+      ? canonicalCareerFoundation.patternQualifications
+          .filter(({ qualifiedPattern }) => !quarantinedPatternIds.has(qualifiedPattern.patternId))
+          .map(({ qualifiedPattern }) => ({
+            patternId: qualifiedPattern.patternId,
+            classification: qualifiedPattern.classification,
+            name: qualifiedPattern.name,
+            status: qualifiedPattern.status,
+            decisionBlockingReasons: qualifiedPattern.decisionBlockingReasons,
+            deferredDimensions: qualifiedPattern.deferredDimensions,
+            participants: qualifiedPattern.participants.map(participant => {
+              const conditionSource = participant.conditionSource;
+              return {
+                planet: participant.planet,
+                relevance: participant.relevance,
+                condition: participant.condition,
+                conditionAssessment: conditionSource?.assessment,
+                combustion: conditionSource?.combustion,
+                affliction: conditionSource?.affliction,
+                dignity: conditionSource?.dignity,
+                positiveFactorLabels: conditionSource?.positiveFactors.map(factor => factor.type) ?? [],
+                negativeFactorLabels: conditionSource?.negativeFactors.map(factor => factor.type) ?? []
+              };
+            })
+          }))
+      : undefined;
 
   const rawStatus =
     detail?.canonicalFinalSynthesis?.finalStatus ??
@@ -1126,6 +1160,7 @@ function mapCareer(
       diagnostics: detail.profession.diagnostics ?? [],
       d10Status: deriveAggregateD10Status(detail.profession.candidates),
       stageCounts: detail.profession.stageCounts,
+      ...(patternQualifications !== undefined ? { patternQualifications } : {}),
       ranking: mapCareerProfessionRanking(detail.profession.ranking)
     } : undefined,
     d10: {
@@ -1991,7 +2026,11 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
   const rulesVersion = input.context.rulesVersion;
   const chart = mapChartSummary(input.horoscope);
 
-  const career = mapCareer(input.lifeAnalysisViewModel, input.careerEvidence);
+  const careerInterpretation = input.domainInterpretations?.find(
+    interpretation => interpretation.domain === 'CAREER'
+  );
+  const careerFoundation = getCareerConclusionData(careerInterpretation)?.canonicalCareerFoundation;
+  const career = mapCareer(input.lifeAnalysisViewModel, input.careerEvidence, careerFoundation);
   const wealth = mapWealth(input.lifeAnalysisViewModel, input.wealthEvidence, input.wealthFinancialData, input.wealthLifecycle);
 
   const dasha = mapDashaState(input.horoscope, career, wealth, asOf, input.temporalState);

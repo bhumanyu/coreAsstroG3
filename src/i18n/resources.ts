@@ -686,6 +686,20 @@ export const resources = {
           stageRankingEligibleCandidates: 'Ranking-eligible',
           stageRankedCandidates: 'Ranked',
           upstreamCoverageSummary: 'Upstream coverage: {{patternsDetected}} patterns detected → {{qualifiedPatterns}} qualified → {{eligiblePatterns}} eligible → {{mechanismsResolved}} mechanisms resolved → {{expressions}} expressions.',
+          patternQualificationBreakdown: 'Pattern Qualification Breakdown',
+          patternQualificationsAria: 'Pattern qualification breakdown',
+          patternBlockingReasons: 'Decision-blocking reasons',
+          patternParticipantEvidence: 'Pattern participant evidence',
+          patternBlockingReasonLine: '{{kind}}: {{reason}}',
+          patternDeferredDimensions: 'Deferred dimensions: {{dimensions}}',
+          patternParticipantEvidenceLine: '{{planet}} — {{relevance}} relevance, {{condition}} condition ({{assessment}} assessment): {{factors}}',
+          patternParticipantCombustion: 'combustion: {{value}}',
+          patternParticipantAffliction: 'affliction: {{value}}',
+          patternParticipantDignity: 'dignity: {{value}}',
+          patternParticipantPositiveFactors: 'positive factors: {{factors}}',
+          patternParticipantNegativeFactors: 'negative factors: {{factors}}',
+          patternParticipantNoFactors: 'no firing factors recorded',
+          patternAssessmentUnavailable: 'unavailable',
           noInputExpressionsExplanation: 'No career expressions were produced upstream, so the profession engine had no inputs to evaluate. This is not a negative career prediction.',
           noMatchedRulesExplanation: 'No profession rule matched the resolved expressions. This is not a negative career prediction.',
           noGeneratedCandidatesExplanation: 'Rules matched, but no profession candidates were generated. This is not a negative career prediction.',
@@ -2013,6 +2027,94 @@ export const resources = {
         INTERNATIONAL_BUSINESS: 'International business',
         DISTRIBUTED_TEAMWORK: 'Distributed teamwork'
       },
+      careerPatternClassification: {
+        CAREER_HOUSE_NETWORK: 'Career-house network',
+        WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS: 'Wealth through service to profession and gains',
+        COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS: 'Communication through work to profession and gains',
+        CREATIVE_DHARMA_TO_PROFESSION: 'Creative dharma to profession',
+        DHARMA_KARMA_ALIGNMENT: 'Dharma-karma alignment',
+        SERVICE_TO_PROFESSION_TO_GAINS: 'Service to profession and gains',
+        PROFESSION_TO_GAINS: 'Profession to gains',
+        UPACHAYA_PROGRESSION: 'Upachaya progression',
+        PARIVARTANA_YOGA: 'Parivartana yoga',
+        DUSTHANA_CAREER_TRANSFORMATION: 'Dusthana career transformation',
+        CAREER_YOGA_STRUCTURE: 'Career yoga structure',
+        AUTHORITY_PATTERN: 'Authority pattern',
+        PROFESSIONAL_RISE_PATTERN: 'Professional rise pattern'
+      },
+      careerPatternQualificationStatus: {
+        QUALIFIED: 'Qualified',
+        UNQUALIFIED: 'Unqualified',
+        INSUFFICIENT_DATA: 'Insufficient data',
+        DEFERRED: 'Deferred'
+      },
+      careerPatternBlockingReasonKind: {
+        MISSING_INPUT: 'Missing input',
+        METHODOLOGY_NOT_FROZEN: 'Methodology not frozen',
+        INSUFFICIENT_STRUCTURAL_EVIDENCE: 'Insufficient structural evidence'
+      },
+      careerPatternParticipantPlanet: {
+        SUN: 'Sun',
+        MOON: 'Moon',
+        MARS: 'Mars',
+        MERCURY: 'Mercury',
+        JUPITER: 'Jupiter',
+        VENUS: 'Venus',
+        SATURN: 'Saturn',
+        RAHU: 'Rahu',
+        KETU: 'Ketu'
+      },
+      careerPatternRelevance: {
+        PRIMARY: 'Primary',
+        SUPPORTING: 'Supporting',
+        MIXED: 'Mixed',
+        NEUTRAL: 'Neutral',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerPatternCondition: {
+        STRONG: 'Strong',
+        MODERATE: 'Moderate',
+        WEAK: 'Weak',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerPatternConditionAssessment: {
+        FULL: 'Full',
+        PARTIAL: 'Partial',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerPatternCombustion: {
+        NOT_COMBUST: 'Not combust',
+        COMBUST: 'Combust',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerPatternAffliction: {
+        NONE: 'None',
+        MILD: 'Mild',
+        MODERATE: 'Moderate',
+        SEVERE: 'Severe',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerPatternDignity: {
+        EXALTED: 'Exalted',
+        OWN_SIGN: 'Own sign',
+        FRIENDLY_SIGN: 'Friendly sign',
+        NEUTRAL_SIGN: 'Neutral sign',
+        ENEMY_SIGN: 'Enemy sign',
+        DEBILITATED: 'Debilitated',
+        UNAVAILABLE: 'Unavailable'
+      },
+      careerPatternFactor: {
+        DIGNITY: 'Dignity',
+        AFFLICTION: 'Affliction',
+        MOTION: 'Motion',
+        COMBUSTION: 'Combustion',
+        BENEFIC_SUPPORT: 'Benefic support',
+        MALEFIC_PRESSURE: 'Malefic pressure'
+      },
+      careerPatternDeferredDimension: {
+        ACTIVATION_POTENTIAL: 'Activation potential',
+        DIVISIONAL_CONFIRMATION: 'Divisional confirmation'
+      },
       professionBasis: {
         EXPRESSION: 'Career expression',
         MECHANISM: 'Career mechanism',
@@ -3290,6 +3392,20 @@ export const resources = {
           stageRankingEligibleCandidates: 'क्रम निर्धारण के योग्य',
           stageRankedCandidates: 'क्रमबद्ध',
           upstreamCoverageSummary: 'पूर्ववर्ती कवरेज: {{patternsDetected}} पैटर्न मिले → {{qualifiedPatterns}} योग्य → {{eligiblePatterns}} पात्र → {{mechanismsResolved}} तंत्र हल हुए → {{expressions}} अभिव्यक्तियाँ।',
+          patternQualificationBreakdown: 'पैटर्न योग्यता विवरण',
+          patternQualificationsAria: 'पैटर्न योग्यता विवरण',
+          patternBlockingReasons: 'निर्णय रोकने वाले कारण',
+          patternParticipantEvidence: 'पैटर्न प्रतिभागी साक्ष्य',
+          patternBlockingReasonLine: '{{kind}}: {{reason}}',
+          patternDeferredDimensions: 'स्थगित आयाम: {{dimensions}}',
+          patternParticipantEvidenceLine: '{{planet}} — {{relevance}} प्रासंगिकता, {{condition}} स्थिति ({{assessment}} आकलन): {{factors}}',
+          patternParticipantCombustion: 'दहन: {{value}}',
+          patternParticipantAffliction: 'पीड़ा: {{value}}',
+          patternParticipantDignity: 'गरिमा: {{value}}',
+          patternParticipantPositiveFactors: 'सकारात्मक कारक: {{factors}}',
+          patternParticipantNegativeFactors: 'नकारात्मक कारक: {{factors}}',
+          patternParticipantNoFactors: 'कोई सक्रिय कारक दर्ज नहीं',
+          patternAssessmentUnavailable: 'अनुपलब्ध',
           noInputExpressionsExplanation: 'ऊपरी चरण में कोई करियर अभिव्यक्ति नहीं बनी, इसलिए व्यवसाय इंजन के पास मूल्यांकन के लिए इनपुट नहीं थे। यह नकारात्मक करियर पूर्वानुमान नहीं है।',
           noMatchedRulesExplanation: 'समाधान की गई अभिव्यक्तियों से कोई व्यवसाय नियम मेल नहीं खाया। यह नकारात्मक करियर पूर्वानुमान नहीं है।',
           noGeneratedCandidatesExplanation: 'नियम मेल खाए, लेकिन कोई व्यवसाय उम्मीदवार नहीं बना। यह नकारात्मक करियर पूर्वानुमान नहीं है।',
@@ -4616,6 +4732,94 @@ export const resources = {
         GOVERNMENT_ADMINISTRATION: 'सरकारी प्रशासन',
         INTERNATIONAL_BUSINESS: 'अंतरराष्ट्रीय व्यवसाय',
         DISTRIBUTED_TEAMWORK: 'वितरित टीम कार्य'
+      },
+      careerPatternClassification: {
+        CAREER_HOUSE_NETWORK: 'करियर भावों का नेटवर्क',
+        WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS: 'धन से सेवा, व्यवसाय और लाभ तक',
+        COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS: 'संचार से कार्य, व्यवसाय और लाभ तक',
+        CREATIVE_DHARMA_TO_PROFESSION: 'सृजनात्मक धर्म से व्यवसाय तक',
+        DHARMA_KARMA_ALIGNMENT: 'धर्म-कर्म संरेखण',
+        SERVICE_TO_PROFESSION_TO_GAINS: 'सेवा से व्यवसाय और लाभ तक',
+        PROFESSION_TO_GAINS: 'व्यवसाय से लाभ तक',
+        UPACHAYA_PROGRESSION: 'उपचय प्रगति',
+        PARIVARTANA_YOGA: 'परिवर्तन योग',
+        DUSTHANA_CAREER_TRANSFORMATION: 'दुष्थान करियर रूपांतरण',
+        CAREER_YOGA_STRUCTURE: 'करियर योग संरचना',
+        AUTHORITY_PATTERN: 'अधिकार पैटर्न',
+        PROFESSIONAL_RISE_PATTERN: 'व्यावसायिक उन्नति पैटर्न'
+      },
+      careerPatternQualificationStatus: {
+        QUALIFIED: 'योग्य',
+        UNQUALIFIED: 'अयोग्य',
+        INSUFFICIENT_DATA: 'अपर्याप्त डेटा',
+        DEFERRED: 'स्थगित'
+      },
+      careerPatternBlockingReasonKind: {
+        MISSING_INPUT: 'अनुपलब्ध इनपुट',
+        METHODOLOGY_NOT_FROZEN: 'पद्धति अभी निर्धारित नहीं',
+        INSUFFICIENT_STRUCTURAL_EVIDENCE: 'अपर्याप्त संरचनात्मक साक्ष्य'
+      },
+      careerPatternParticipantPlanet: {
+        SUN: 'सूर्य',
+        MOON: 'चंद्रमा',
+        MARS: 'मंगल',
+        MERCURY: 'बुध',
+        JUPITER: 'बृहस्पति',
+        VENUS: 'शुक्र',
+        SATURN: 'शनि',
+        RAHU: 'राहु',
+        KETU: 'केतु'
+      },
+      careerPatternRelevance: {
+        PRIMARY: 'प्राथमिक',
+        SUPPORTING: 'सहायक',
+        MIXED: 'मिश्रित',
+        NEUTRAL: 'तटस्थ',
+        UNAVAILABLE: 'अनुपलब्ध'
+      },
+      careerPatternCondition: {
+        STRONG: 'मजबूत',
+        MODERATE: 'मध्यम',
+        WEAK: 'कमज़ोर',
+        UNAVAILABLE: 'अनुपलब्ध'
+      },
+      careerPatternConditionAssessment: {
+        FULL: 'पूर्ण',
+        PARTIAL: 'आंशिक',
+        UNAVAILABLE: 'अनुपलब्ध'
+      },
+      careerPatternCombustion: {
+        NOT_COMBUST: 'अदग्ध',
+        COMBUST: 'दग्ध',
+        UNAVAILABLE: 'अनुपलब्ध'
+      },
+      careerPatternAffliction: {
+        NONE: 'कोई नहीं',
+        MILD: 'हल्की',
+        MODERATE: 'मध्यम',
+        SEVERE: 'तीव्र',
+        UNAVAILABLE: 'अनुपलब्ध'
+      },
+      careerPatternDignity: {
+        EXALTED: 'उच्च',
+        OWN_SIGN: 'स्वराशि',
+        FRIENDLY_SIGN: 'मित्र राशि',
+        NEUTRAL_SIGN: 'सम राशि',
+        ENEMY_SIGN: 'शत्रु राशि',
+        DEBILITATED: 'नीच',
+        UNAVAILABLE: 'अनुपलब्ध'
+      },
+      careerPatternFactor: {
+        DIGNITY: 'गरिमा',
+        AFFLICTION: 'पीड़ा',
+        MOTION: 'गति',
+        COMBUSTION: 'दहन',
+        BENEFIC_SUPPORT: 'शुभ प्रभाव का समर्थन',
+        MALEFIC_PRESSURE: 'पाप प्रभाव का दबाव'
+      },
+      careerPatternDeferredDimension: {
+        ACTIVATION_POTENTIAL: 'सक्रियता की संभावना',
+        DIVISIONAL_CONFIRMATION: 'वर्ग कुंडली की पुष्टि'
       },
       professionBasis: {
         EXPRESSION: 'करियर अभिव्यक्ति',
