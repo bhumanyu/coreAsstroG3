@@ -20,6 +20,22 @@ export const CANONICAL_BIRTH_DETAILS: BirthDetails = Object.freeze({
 export const CANONICAL_UTC_INSTANT = '1988-05-08T04:00:00Z';
 
 /**
+ * Vaishali, Bihar birth details — same instant/methodology as CANONICAL_BIRTH_DETAILS
+ * but anchored to the Vaishali location (~25.98°N, 85.21°E) instead of Patna.
+ * Produces the Taurus-Mercury chart: Mercury in Taurus (house 12),
+ * Saturn in Sagittarius (house 7), Mars exalted in Capricorn (house 8).
+ */
+export const VAISHALI_BIRTH_DETAILS: BirthDetails = Object.freeze({
+  name: 'Vaishali chart',
+  placeOfBirth: 'Vaishali, Bihar',
+  latitude: 25.98,
+  longitude: 85.21,
+  timeZone: 'Asia/Kolkata',
+  ayanamsa: AyanamsaType.LAHIRI,
+  dateTimeStr: '1988-05-08T09:30:00+05:30'
+} as const);
+
+/**
  * Repository engine golden baseline snapshot — current engine output, NOT an externally validated ephemeris benchmark.
  */
 export const CANONICAL_GOLDEN_EXPECTED = Object.freeze({
