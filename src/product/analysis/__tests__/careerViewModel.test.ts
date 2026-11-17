@@ -116,6 +116,52 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     expect(selectCareerViewModel(analysis).expression.coverageSummary).toEqual(coverageSummary);
   });
 
+  it('forwards profession stage counts unchanged and leaves legacy counts absent', () => {
+    const stageCounts = Object.freeze({
+      inputExpressions: 5,
+      matchedRules: 3,
+      generatedCandidates: 2,
+      d10QualifiedCandidates: 1,
+      d10RemovedCandidates: 1,
+      rankingEligibleCandidates: 1,
+      rankedCandidates: 1
+    });
+    const profession = {
+      available: true,
+      status: 'PARTIAL' as const,
+      candidates: [],
+      unresolvedExpressionTypes: [],
+      mappedTypes: [],
+      missingInputs: [],
+      diagnostics: [],
+      d10Status: 'QUALIFIED',
+      ranking: {
+        policyVersion: 'B04-PROFESSION-RANKING-v1' as const,
+        status: 'PARTIAL' as const,
+        rankedCandidates: [],
+        diagnostics: []
+      }
+    };
+    const legacyAnalysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        profession: {
+          ...profession,
+          stageCounts: undefined
+        }
+      }
+    });
+    const analysisWithCounts = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        profession: { ...profession, stageCounts }
+      }
+    });
+
+    expect(selectCareerViewModel(legacyAnalysis).profession.stageCounts).toBeUndefined();
+    expect(selectCareerViewModel(analysisWithCounts).profession.stageCounts).toBe(stageCounts);
+  });
+
   it('keeps canonical promise fields localized and excludes enum tokens from headline and statement', () => {
     const base = createProductAnalysis();
     const analysis = createProductAnalysis({

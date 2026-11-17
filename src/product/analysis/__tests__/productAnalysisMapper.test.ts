@@ -1001,6 +1001,15 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   });
 
   it('4.6. Profession with candidates maps correctly with available status and d10Status derivation', () => {
+    const stageCounts = Object.freeze({
+      inputExpressions: 5,
+      matchedRules: 3,
+      generatedCandidates: 2,
+      d10QualifiedCandidates: 1,
+      d10RemovedCandidates: 1,
+      rankingEligibleCandidates: 1,
+      rankedCandidates: 1
+    });
     // Test COMPLETE status with candidates
     const viewModelWithCompleteProfession: LifeAnalysisViewModel = {
       ...sampleViewModel,
@@ -1063,6 +1072,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
           unresolvedExpressionTypes: [],
           mappedTypes: ['TECHNICAL_SPECIALIZATION'],
           missingInputs: [],
+          stageCounts,
           ranking: {
             policyVersion: 'B04-PROFESSION-RANKING-v1',
             status: 'AVAILABLE',
@@ -1105,6 +1115,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     // Aggregate d10Status should be QUALIFIED (any candidate qualified)
     expect(analysisComplete.career.profession!.d10Status).toBe('QUALIFIED');
     expect(analysisComplete.career.profession!.ranking.status).toBe('AVAILABLE');
+    expect(analysisComplete.career.profession!.stageCounts).toBe(stageCounts);
 
     // Test PARTIAL status with candidates
     const viewModelWithPartialProfession: LifeAnalysisViewModel = {

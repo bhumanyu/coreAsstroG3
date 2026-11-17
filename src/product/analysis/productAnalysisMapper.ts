@@ -1125,6 +1125,7 @@ function mapCareer(
       missingInputs: detail.profession.missingInputs,
       diagnostics: detail.profession.diagnostics ?? [],
       d10Status: deriveAggregateD10Status(detail.profession.candidates),
+      stageCounts: detail.profession.stageCounts,
       ranking: mapCareerProfessionRanking(detail.profession.ranking)
     } : undefined,
     d10: {

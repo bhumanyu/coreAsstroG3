@@ -24,6 +24,7 @@ import type {
   CareerDashaActivationDiagnosticCode,
   CareerDashaExpressionAnalysisStatus
 } from '../../domain/career/careerDasha/careerDashaActivationTypes';
+import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 
 export type ProductStatus = 'READY' | 'PARTIAL' | 'ERROR';
 export type ProductAnalysisStatus = ProductStatus;
@@ -696,6 +697,7 @@ export interface CareerProductAnalysis {
     readonly missingInputs: readonly string[];
     readonly diagnostics?: readonly string[];
     readonly d10Status: string;
+    readonly stageCounts?: CareerProfessionAnalysis['stageCounts'];
     readonly ranking: ProductCareerProfessionRanking;
   };
 }

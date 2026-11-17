@@ -25,6 +25,7 @@ import type {
   TransitEffect,
   DashaEvidenceTally
 } from './productAnalysisTypes';
+import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 import {
   getCareerProfessionStatusCopy,
   type CareerProfessionStatus,
@@ -193,6 +194,7 @@ export interface CareerProfessionViewModel {
   readonly diagnostics: readonly string[];
   readonly d10Status: string;
   readonly coverageSummary?: ProductCareerExpressionCoverageSummary;
+  readonly stageCounts?: CareerProfessionAnalysis['stageCounts'];
   readonly ranking: ProductCareerProfessionRanking;
 }
 
@@ -469,6 +471,7 @@ export function selectCareerViewModel(
       ...(career.expression?.coverageSummary
         ? { coverageSummary: career.expression.coverageSummary }
         : {}),
+      stageCounts: professionData.stageCounts,
       ranking: professionData.ranking
     };
   })();

@@ -9,6 +9,24 @@ export interface CareerProfessionStatusSectionProps {
   readonly profession: CareerProfessionViewModel;
 }
 
+const isValidStageCounts = (
+  stageCounts: CareerProfessionViewModel['stageCounts']
+): stageCounts is NonNullable<CareerProfessionViewModel['stageCounts']> => {
+  if (!stageCounts || typeof stageCounts !== 'object') {
+    return false;
+  }
+
+  return [
+    stageCounts.inputExpressions,
+    stageCounts.matchedRules,
+    stageCounts.generatedCandidates,
+    stageCounts.d10QualifiedCandidates,
+    stageCounts.d10RemovedCandidates,
+    stageCounts.rankingEligibleCandidates,
+    stageCounts.rankedCandidates
+  ].every(count => Number.isInteger(count) && count >= 0);
+};
+
 export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSectionProps> = ({ profession }) => {
   const { t } = useTranslation('career');
   const { t: tEnum } = useTranslation('enums');
@@ -46,9 +64,34 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     coverage?.conflictedQualificationCount === 0 &&
     coverage?.qualificationResultMissingCount === 0 &&
     coverage?.resolvedMechanismCount === 0;
-  const statusExplanation = hasNoResolvedMechanisms
-    ? t('ui.profession.noResolvedMechanismsExplanation')
-    : t(`ui.profession.${statusCopyKey}Explanation`);
+  const stageCounts = profession.stageCounts;
+  const hasValidStageCounts = isValidStageCounts(stageCounts);
+  const stageExplanationKey = hasValidStageCounts
+    ? stageCounts.matchedRules === 0
+      ? 'noMatchedRulesExplanation'
+      : stageCounts.generatedCandidates === 0
+        ? 'noGeneratedCandidatesExplanation'
+        : stageCounts.d10QualifiedCandidates === 0 &&
+            stageCounts.d10RemovedCandidates === stageCounts.generatedCandidates
+          ? 'noD10QualifiedCandidatesExplanation'
+          : stageCounts.d10QualifiedCandidates > 0 && stageCounts.rankingEligibleCandidates === 0
+            ? 'noRankingEligibleCandidatesExplanation'
+            : undefined
+    : undefined;
+  const statusExplanation = stageExplanationKey
+    ? t(`ui.profession.${stageExplanationKey}`)
+    : hasNoResolvedMechanisms
+      ? t('ui.profession.noResolvedMechanismsExplanation')
+      : t(`ui.profession.${statusCopyKey}Explanation`);
+  const stageLabels = [
+    ['inputExpressions', 'stageInputExpressions'],
+    ['matchedRules', 'stageMatchedRules'],
+    ['generatedCandidates', 'stageGeneratedCandidates'],
+    ['d10QualifiedCandidates', 'stageD10QualifiedCandidates'],
+    ['d10RemovedCandidates', 'stageD10RemovedCandidates'],
+    ['rankingEligibleCandidates', 'stageRankingEligibleCandidates'],
+    ['rankedCandidates', 'stageRankedCandidates']
+  ] as const;
   const missingInputKeys: Record<string, string> = {
     career10HFoundation: 'missingCareer10H',
     career10LFoundation: 'missingCareer10L',
@@ -69,6 +112,16 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
       </span>
     </div>
     <p className="text-xs leading-relaxed text-slate-400">{statusExplanation}</p>
+    {hasValidStageCounts && (
+      <ol aria-label={t('ui.profession.stageCountsAria')} className="grid gap-2 pt-2 sm:grid-cols-2">
+        {stageLabels.map(([countKey, labelKey], index) => (
+          <li key={countKey} className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-xs">
+            <span className="text-slate-400">{index + 1}. {t(`ui.profession.${labelKey}`)}</span>
+            <span className="font-semibold tabular-nums text-slate-100">{stageCounts[countKey]}</span>
+          </li>
+        ))}
+      </ol>
+    )}
     {profession.missingInputs.length > 0 && (
       <div className="space-y-1 pt-1">
         <h3 className="text-xs font-semibold text-slate-300">{t('ui.profession.missingInputs')}</h3>
