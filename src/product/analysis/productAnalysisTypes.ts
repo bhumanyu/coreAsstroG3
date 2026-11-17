@@ -25,6 +25,14 @@ import type {
   CareerDashaExpressionAnalysisStatus
 } from '../../domain/career/careerDasha/careerDashaActivationTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerPatternClassification } from '../../domain/career/careerPattern/careerPatternTypes';
+import type {
+  CareerPatternDeferredDimension,
+  CareerPatternParticipantQualification,
+  CareerPatternQualificationStatus,
+  DecisionBlockingReason
+} from '../../domain/career/careerPatternQualification/careerPatternQualificationTypes';
+import type { CareerPlanetaryConditionResult } from '../../domain/career/careerPlanetaryCondition';
 
 export type ProductStatus = 'READY' | 'PARTIAL' | 'ERROR';
 export type ProductAnalysisStatus = ProductStatus;
@@ -623,6 +631,28 @@ export interface ProductCareerProfessionRanking {
   readonly diagnostics: readonly string[];
 }
 
+export interface ProductCareerPatternQualificationParticipant {
+  readonly planet: CareerPatternParticipantQualification['planet'];
+  readonly relevance: CareerPatternParticipantQualification['relevance'];
+  readonly condition: CareerPatternParticipantQualification['condition'];
+  readonly conditionAssessment?: CareerPlanetaryConditionResult['assessment'];
+  readonly combustion?: CareerPlanetaryConditionResult['combustion'];
+  readonly affliction?: CareerPlanetaryConditionResult['affliction'];
+  readonly dignity?: CareerPlanetaryConditionResult['dignity'];
+  readonly positiveFactorLabels: readonly CareerPlanetaryConditionResult['positiveFactors'][number]['type'][];
+  readonly negativeFactorLabels: readonly CareerPlanetaryConditionResult['negativeFactors'][number]['type'][];
+}
+
+export interface ProductCareerPatternQualification {
+  readonly patternId: string;
+  readonly classification: CareerPatternClassification;
+  readonly name: string;
+  readonly status: CareerPatternQualificationStatus | 'DEFERRED';
+  readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
+  readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
+  readonly participants: readonly ProductCareerPatternQualificationParticipant[];
+}
+
 export interface CareerProductAnalysis {
   readonly status?: ConclusionStatus | string;
   /** B01: Independent, evidence-traceable analytical axes; not a parallel final score. */
@@ -698,6 +728,7 @@ export interface CareerProductAnalysis {
     readonly diagnostics?: readonly string[];
     readonly d10Status: string;
     readonly stageCounts?: CareerProfessionAnalysis['stageCounts'];
+    readonly patternQualifications?: readonly ProductCareerPatternQualification[];
     readonly ranking: ProductCareerProfessionRanking;
   };
 }

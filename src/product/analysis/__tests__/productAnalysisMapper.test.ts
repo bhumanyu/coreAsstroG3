@@ -62,8 +62,10 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf });
     const temporalState = resolveAnalysisTemporalState(horoscope, context);
     const careerInterpretation = interpretCareerV2(horoscope, { context, temporalState });
-    const canonicalDasha = getCareerConclusionData(careerInterpretation)
-      ?.internalArtifacts?.canonicalDashaAnalysis;
+    const careerConclusion = getCareerConclusionData(careerInterpretation);
+    const canonicalDasha = careerConclusion?.internalArtifacts?.canonicalDashaAnalysis;
+    const canonicalFoundation = careerConclusion?.canonicalCareerFoundation;
+    const professionAnalysis = careerConclusion?.careerProfessionAnalysis;
     const activeDasha = temporalState.dashaInterpretation?.current;
     const normalizedTiming = buildNormalizedCareerTiming(careerInterpretation, asOf);
     const timingWithUnavailableExpression = normalizedTiming?.mahadasha
@@ -78,13 +80,16 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       : normalizedTiming;
 
     expect(canonicalDasha).toBeDefined();
+    expect(canonicalFoundation).toBeDefined();
+    expect(professionAnalysis).toBeDefined();
     expect(activeDasha).toBeDefined();
 
     const lifeAnalysisViewModel: LifeAnalysisViewModel = {
       ...sampleViewModel,
       careerDetail: {
         ...sampleViewModel.careerDetail!,
-        timing: timingWithUnavailableExpression
+        timing: timingWithUnavailableExpression,
+        profession: professionAnalysis
       }
     };
     const product = mapProductAnalysis({
@@ -92,8 +97,55 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       horoscope,
       lifeAnalysisViewModel,
       context,
-      temporalState
+      temporalState,
+      domainInterpretations: [careerInterpretation]
     });
+    const nonQuarantinedQualifications = canonicalFoundation!.patternQualifications.filter(
+      ({ qualifiedPattern }) => !canonicalFoundation!.quarantineRecords.some(
+        record => record.patternId === qualifiedPattern.patternId
+      )
+    );
+    const productQualifications = product.career.profession?.patternQualifications;
+    expect(nonQuarantinedQualifications.length).toBeGreaterThan(0);
+    expect(productQualifications).toHaveLength(nonQuarantinedQualifications.length);
+    const sourceQualification = nonQuarantinedQualifications[0];
+    if (!sourceQualification) {
+      throw new Error('Expected at least one non-quarantined pattern qualification.');
+    }
+    const sourcePattern = sourceQualification.qualifiedPattern;
+    const projectedPattern = productQualifications?.find(
+      qualification => qualification.patternId === sourcePattern.patternId
+    );
+    const sourceParticipant = sourcePattern.participants[0];
+    if (!sourceParticipant) {
+      throw new Error('Expected the projected pattern to include a participant.');
+    }
+    expect(projectedPattern).toMatchObject({
+      patternId: sourcePattern.patternId,
+      classification: sourcePattern.classification,
+      name: sourcePattern.name,
+      status: sourcePattern.status,
+      decisionBlockingReasons: sourcePattern.decisionBlockingReasons,
+      deferredDimensions: sourcePattern.deferredDimensions
+    });
+    expect(projectedPattern?.participants[0]).toEqual({
+      planet: sourceParticipant.planet,
+      relevance: sourceParticipant.relevance,
+      condition: sourceParticipant.condition,
+      conditionAssessment: sourceParticipant.conditionSource?.assessment,
+      combustion: sourceParticipant.conditionSource?.combustion,
+      affliction: sourceParticipant.conditionSource?.affliction,
+      dignity: sourceParticipant.conditionSource?.dignity,
+      positiveFactorLabels: sourceParticipant.conditionSource?.positiveFactors.map(factor => factor.type) ?? [],
+      negativeFactorLabels: sourceParticipant.conditionSource?.negativeFactors.map(factor => factor.type) ?? []
+    });
+    expect(projectedPattern?.decisionBlockingReasons).toBe(sourcePattern.decisionBlockingReasons);
+    expect(projectedPattern?.deferredDimensions).toBe(sourcePattern.deferredDimensions);
+    expect(productQualifications?.some(
+      qualification => canonicalFoundation!.quarantineRecords.some(
+        record => record.patternId === qualification.patternId
+      )
+    )).toBe(false);
     const dashaViewModel = selectDashaViewModel(product);
     const lifeDasha = buildDashaInterpretationProduct(activeDasha, canonicalDasha);
     const lifePeriods = [

@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { selectCareerViewModel } from '../careerViewModel';
 import { createProductAnalysis } from './testHelpers';
-import type { ProductDashaPeriod } from '../productAnalysisTypes';
+import type {
+  ProductCareerPatternQualification,
+  ProductDashaPeriod
+} from '../productAnalysisTypes';
 import {
   ENGLISH_USER_FACING_COPY,
   HINDI_USER_FACING_COPY
@@ -160,6 +163,44 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
 
     expect(selectCareerViewModel(legacyAnalysis).profession.stageCounts).toBeUndefined();
     expect(selectCareerViewModel(analysisWithCounts).profession.stageCounts).toBe(stageCounts);
+  });
+
+  it('forwards pattern qualifications unchanged and leaves legacy projections absent', () => {
+    const patternQualifications: readonly ProductCareerPatternQualification[] = [{
+      patternId: 'PATTERN_1',
+      classification: 'CAREER_HOUSE_NETWORK',
+      name: 'Career-house network',
+      status: 'UNQUALIFIED',
+      decisionBlockingReasons: [{
+        kind: 'INSUFFICIENT_STRUCTURAL_EVIDENCE',
+        reason: 'Structural evidence was insufficient.'
+      }],
+      deferredDimensions: ['ACTIVATION_POTENTIAL'],
+      participants: [{
+        planet: 'JUPITER',
+        relevance: 'PRIMARY',
+        condition: 'WEAK',
+        conditionAssessment: 'FULL',
+        combustion: 'COMBUST',
+        affliction: 'MILD',
+        dignity: 'ENEMY_SIGN',
+        positiveFactorLabels: ['DIGNITY'],
+        negativeFactorLabels: ['COMBUSTION', 'MALEFIC_PRESSURE']
+      }]
+    }];
+    const base = createProductAnalysis();
+    const analysis = createProductAnalysis({
+      career: {
+        ...base.career,
+        profession: {
+          ...base.career.profession!,
+          patternQualifications
+        }
+      }
+    });
+
+    expect(selectCareerViewModel(analysis).profession.patternQualifications).toBe(patternQualifications);
+    expect(selectCareerViewModel(base).profession.patternQualifications).toBeUndefined();
   });
 
   it('keeps canonical promise fields localized and excludes enum tokens from headline and statement', () => {

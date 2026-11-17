@@ -6,6 +6,7 @@ import { CareerExpressionSection } from './CareerExpressionSection';
 import { getCareerProfessionStatusCopy, type CareerProfessionStatus } from '../../product/analysis/careerQualificationPresentation';
 import { selectCareerViewModel } from '../../product/analysis/careerViewModel';
 import type { CareerProfessionViewModel } from '../../product/analysis/careerViewModel';
+import type { ProductCareerPatternQualification } from '../../product/analysis/productAnalysisTypes';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 import i18n from '../../i18n/i18n';
 
@@ -18,6 +19,29 @@ const engineStageCounts: NonNullable<CareerProfessionViewModel['stageCounts']> =
   rankingEligibleCandidates: 2,
   rankedCandidates: 2
 });
+
+const unqualifiedPattern: ProductCareerPatternQualification = {
+  patternId: 'PATTERN_UNQUALIFIED_1',
+  classification: 'CAREER_HOUSE_NETWORK',
+  name: 'Career-house network',
+  status: 'UNQUALIFIED',
+  decisionBlockingReasons: [{
+    kind: 'INSUFFICIENT_STRUCTURAL_EVIDENCE',
+    reason: 'The required structural evidence was not established.'
+  }],
+  deferredDimensions: ['ACTIVATION_POTENTIAL'],
+  participants: [{
+    planet: 'JUPITER',
+    relevance: 'PRIMARY',
+    condition: 'WEAK',
+    conditionAssessment: 'FULL',
+    combustion: 'COMBUST',
+    affliction: 'MILD',
+    dignity: 'ENEMY_SIGN',
+    positiveFactorLabels: ['DIGNITY'],
+    negativeFactorLabels: ['COMBUSTION', 'MALEFIC_PRESSURE']
+  }]
+};
 
 const statuses: readonly CareerProfessionStatus[] = [
   'COMPLETE',
@@ -434,6 +458,79 @@ describe('CareerProfessionStatusSection', () => {
       '6. Ranking-eligible',
       '7. Ranked'
     ]);
+  });
+
+  it('renders unqualified pattern reasons and participant factors with localized labels', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [unqualifiedPattern]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const breakdown = screen.getByRole('list', { name: 'Pattern qualification breakdown' });
+    expect(screen.getByRole('heading', { name: 'Pattern Qualification Breakdown' })).toBeInTheDocument();
+    expect(breakdown).toHaveTextContent('Career-house network · Career-house network');
+    expect(breakdown).toHaveTextContent('Unqualified');
+    expect(screen.getByRole('list', { name: 'Decision-blocking reasons' }))
+      .toHaveTextContent('Insufficient structural evidence: The required structural evidence was not established.');
+    expect(screen.getByRole('list', { name: 'Pattern participant evidence' }))
+      .toHaveTextContent('Jupiter — Primary relevance, Weak condition (Full assessment): combustion: Combust; affliction: Mild; dignity: Enemy sign; positive factors: Dignity; negative factors: Combustion, Malefic pressure');
+    expect(breakdown).toHaveTextContent('Deferred dimensions: Activation potential');
+  });
+
+  it('renders INSUFFICIENT_DATA distinctly from UNQUALIFIED in mixed pattern results', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [
+        unqualifiedPattern,
+        {
+          ...unqualifiedPattern,
+          patternId: 'PATTERN_INSUFFICIENT_1',
+          name: 'Incomplete pattern',
+          status: 'INSUFFICIENT_DATA' as const,
+          decisionBlockingReasons: [{
+            kind: 'MISSING_INPUT' as const,
+            reason: 'Condition evidence was unavailable.'
+          }]
+        }
+      ]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const breakdown = screen.getByRole('list', { name: 'Pattern qualification breakdown' });
+    expect(breakdown).toHaveTextContent('Unqualified');
+    expect(breakdown).toHaveTextContent('Insufficient data');
+    expect(breakdown.children).toHaveLength(2);
+  });
+
+  it('hides the pattern qualification section when legacy records omit the projection', () => {
+    const profession = selectCareerViewModel(createProductAnalysis()).profession;
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.queryByRole('list', { name: 'Pattern qualification breakdown' })).not.toBeInTheDocument();
+  });
+
+  it('renders pattern qualification labels and evidence in Hindi', async () => {
+    await i18n.changeLanguage('hi');
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        status: 'INSUFFICIENT_DATA' as const,
+        decisionBlockingReasons: [{
+          kind: 'MISSING_INPUT' as const,
+          reason: 'Condition evidence was unavailable.'
+        }]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const breakdown = screen.getByRole('list', { name: 'पैटर्न योग्यता विवरण' });
+    expect(screen.getByRole('heading', { name: 'पैटर्न योग्यता विवरण' })).toBeInTheDocument();
+    expect(breakdown).toHaveTextContent('अपर्याप्त डेटा');
+    expect(breakdown).toHaveTextContent('अनुपलब्ध इनपुट');
+    expect(breakdown).toHaveTextContent('बृहस्पति — प्राथमिक प्रासंगिकता, कमज़ोर स्थिति (पूर्ण आकलन)');
+    expect(breakdown).toHaveTextContent('नकारात्मक कारक: दहन, पाप प्रभाव का दबाव');
   });
 
   it('hides the stage funnel when legacy records omit stage counts', () => {

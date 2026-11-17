@@ -136,6 +136,112 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
         })}
       </p>
     )}
+    {profession.patternQualifications && profession.patternQualifications.length > 0 && (
+      <div className="space-y-2 pt-2">
+        <h3 className="text-xs font-semibold text-slate-300">
+          {t('ui.profession.patternQualificationBreakdown')}
+        </h3>
+        <ol
+          aria-label={t('ui.profession.patternQualificationsAria')}
+          className="space-y-3"
+        >
+          {profession.patternQualifications.map(pattern => (
+            <li
+              key={pattern.patternId}
+              className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h4 className="text-xs font-medium text-slate-100">
+                  {tEnum(`careerPatternClassification.${pattern.classification}`)} · {pattern.name}
+                </h4>
+                <span className="rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300">
+                  {tEnum(`careerPatternQualificationStatus.${pattern.status}`)}
+                </span>
+              </div>
+              {pattern.decisionBlockingReasons.length > 0 && (
+                <ul
+                  aria-label={t('ui.profession.patternBlockingReasons')}
+                  className="list-disc space-y-1 pl-5 text-xs text-slate-400"
+                >
+                  {pattern.decisionBlockingReasons.map((reason, index) => (
+                    <li key={`${reason.kind}-${index}`}>
+                      {t('ui.profession.patternBlockingReasonLine', {
+                        kind: tEnum(`careerPatternBlockingReasonKind.${reason.kind}`),
+                        reason: reason.reason
+                      })}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {pattern.deferredDimensions.length > 0 && (
+                <p className="text-xs text-slate-500">
+                  {t('ui.profession.patternDeferredDimensions', {
+                    dimensions: pattern.deferredDimensions
+                      .map(dimension => tEnum(`careerPatternDeferredDimension.${dimension}`))
+                      .join(', ')
+                  })}
+                </p>
+              )}
+              {pattern.participants.length > 0 && (
+                <ul
+                  aria-label={t('ui.profession.patternParticipantEvidence')}
+                  className="space-y-1 text-xs text-slate-400"
+                >
+                  {pattern.participants.map((participant, index) => {
+                    const factors = [
+                      participant.combustion
+                        ? t('ui.profession.patternParticipantCombustion', {
+                            value: tEnum(`careerPatternCombustion.${participant.combustion}`)
+                          })
+                        : undefined,
+                      participant.affliction
+                        ? t('ui.profession.patternParticipantAffliction', {
+                            value: tEnum(`careerPatternAffliction.${participant.affliction}`)
+                          })
+                        : undefined,
+                      participant.dignity
+                        ? t('ui.profession.patternParticipantDignity', {
+                            value: tEnum(`careerPatternDignity.${participant.dignity}`)
+                          })
+                        : undefined,
+                      participant.positiveFactorLabels.length > 0
+                        ? t('ui.profession.patternParticipantPositiveFactors', {
+                            factors: participant.positiveFactorLabels
+                              .map(factor => tEnum(`careerPatternFactor.${factor}`))
+                              .join(', ')
+                          })
+                        : undefined,
+                      participant.negativeFactorLabels.length > 0
+                        ? t('ui.profession.patternParticipantNegativeFactors', {
+                            factors: participant.negativeFactorLabels
+                              .map(factor => tEnum(`careerPatternFactor.${factor}`))
+                              .join(', ')
+                          })
+                        : undefined
+                    ].filter((factor): factor is string => factor !== undefined);
+                    return (
+                      <li key={`${pattern.patternId}-participant-${index}`}>
+                        {t('ui.profession.patternParticipantEvidenceLine', {
+                          planet: tEnum(`careerPatternParticipantPlanet.${participant.planet}`),
+                          relevance: tEnum(`careerPatternRelevance.${participant.relevance}`),
+                          condition: tEnum(`careerPatternCondition.${participant.condition}`),
+                          assessment: participant.conditionAssessment
+                            ? tEnum(`careerPatternConditionAssessment.${participant.conditionAssessment}`)
+                            : t('ui.profession.patternAssessmentUnavailable'),
+                          factors: factors.length > 0
+                            ? factors.join('; ')
+                            : t('ui.profession.patternParticipantNoFactors')
+                        })}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+    )}
     {hasValidStageCounts && (
       <div className="space-y-2 pt-2">
         <h3 className="text-xs font-semibold text-slate-300">{t('ui.profession.stageCountsHeading')}</h3>

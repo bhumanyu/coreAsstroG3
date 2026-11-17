@@ -20,6 +20,7 @@ import type {
   ProductCareerPathwayAnalysis,
   ProductCareerEventTimeline,
   ProductCareerProfessionRanking,
+  ProductCareerPatternQualification,
   PromiseStrength,
   ActivationEffect,
   TransitEffect,
@@ -195,6 +196,7 @@ export interface CareerProfessionViewModel {
   readonly d10Status: string;
   readonly coverageSummary?: ProductCareerExpressionCoverageSummary;
   readonly stageCounts?: CareerProfessionAnalysis['stageCounts'];
+  readonly patternQualifications?: readonly ProductCareerPatternQualification[];
   readonly ranking: ProductCareerProfessionRanking;
 }
 
@@ -472,6 +474,9 @@ export function selectCareerViewModel(
         ? { coverageSummary: career.expression.coverageSummary }
         : {}),
       stageCounts: professionData.stageCounts,
+      ...(career.profession?.patternQualifications !== undefined
+        ? { patternQualifications: career.profession.patternQualifications }
+        : {}),
       ranking: professionData.ranking
     };
   })();
