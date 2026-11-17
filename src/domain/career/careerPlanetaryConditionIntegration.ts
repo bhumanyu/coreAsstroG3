@@ -45,6 +45,39 @@ const CANONICAL_PLANET_ORDER: readonly Planet[] = Object.freeze([
   Planet.KETU
 ] as const);
 
+type C6FactorStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+
+/**
+ * Resolves the C6 aspectSources status from validated aspect records and the
+ * producer's completeness status. The trace's four aspect arrays contain only
+ * records that passed structural validation (valid source planet, valid aspect
+ * type, resolvable fields); rejected records surface as diagnostics and never
+ * enter the count.
+ *
+ *   producer UNAVAILABLE or zero validated records -> UNAVAILABLE
+ *   producer COMPLETE + every validated record consumed + clean trace -> AVAILABLE
+ *   otherwise (COMPLETE/PARTIAL/UNKNOWN producer with >=1 validated record) -> PARTIAL
+ */
+function resolveAspectSourcesStatus(
+  trace: PlanetaryInfluenceTrace | undefined,
+  validatedRecordCount: number,
+  nonConsumedCount: number
+): C6FactorStatus {
+  const factor = trace?.evidenceAvailability.factors.aspectSources;
+  const producerStatus = factor?.producerStatus;
+  if (producerStatus === 'UNAVAILABLE' || validatedRecordCount === 0) {
+    return 'UNAVAILABLE';
+  }
+  if (
+    producerStatus === 'COMPLETE' &&
+    nonConsumedCount === 0 &&
+    factor?.status === 'AVAILABLE'
+  ) {
+    return 'AVAILABLE';
+  }
+  return 'PARTIAL';
+}
+
 function resolveC6Assessment(
   trace: PlanetaryInfluenceTrace | undefined,
   nonConsumedInfluence: readonly CareerNonConsumedInfluence[]
@@ -53,21 +86,26 @@ function resolveC6Assessment(
   readonly missingFactors: readonly CareerC6RequiredEvidenceDimension[];
   readonly partiallyResolvedFactors: readonly CareerC6RequiredEvidenceDimension[];
 } {
-  const aspectRecordCount = trace
+  // Only structurally validated aspect records reach the trace's four arrays;
+  // malformed records are rejected upstream into diagnostics.
+  const validatedAspectRecordCount = trace
     ? trace.environmentalInfluence.beneficAspectSources.length +
       trace.environmentalInfluence.maleficAspectSources.length +
       trace.environmentalInfluence.mixedAspectSources.length +
       trace.environmentalInfluence.unassessedAspectSources.length
     : 0;
+  const aspectSourcesStatus = resolveAspectSourcesStatus(
+    trace,
+    validatedAspectRecordCount,
+    nonConsumedInfluence.length
+  );
   const statuses: Array<readonly [
     CareerC6RequiredEvidenceDimension,
-    'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE'
+    C6FactorStatus
   ]> = CAREER_C6_REQUIRED_EVIDENCE_DIMENSIONS.map((factor) => {
     const traceStatus = trace?.evidenceAvailability.factors[factor].status ?? 'UNAVAILABLE';
-    const c6Status = factor === 'aspectSources' &&
-        nonConsumedInfluence.length > 0 &&
-        traceStatus === 'AVAILABLE'
-      ? 'PARTIAL'
+    const c6Status = factor === 'aspectSources'
+      ? aspectSourcesStatus
       : traceStatus;
     return [factor, c6Status] as const;
   });
@@ -78,7 +116,7 @@ function resolveC6Assessment(
     // Resolved aspect records whose classification is indeterminate (MIXED /
     // unassessed / functional-only) are partially resolved evidence, not missing
     // evidence. Only a genuinely absent or unproduced aspect feed stays missing.
-    if (factor === 'aspectSources' && status === 'PARTIAL' && aspectRecordCount > 0) {
+    if (factor === 'aspectSources' && status === 'PARTIAL' && validatedAspectRecordCount > 0) {
       partiallyResolvedFactors.push(factor);
     } else {
       missingFactors.push(factor);

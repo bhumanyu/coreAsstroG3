@@ -336,8 +336,8 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planet: 'MERCURY',
         contextResolved: true,
         relevance: 'SUPPORTING',
-        condition: 'NEUTRAL',
-        conditionAssessment: 'FULL',
+        condition: 'INSUFFICIENT_DATA',
+        conditionAssessment: 'PARTIAL',
         afflictionAssessed: false,
         expressionAnalysisStatus: 'UNAVAILABLE',
         expressionCount: 0,
@@ -348,7 +348,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
         planetActivates: false,
         planetChallenges: false,
         isRelevant: true,
-        direction: 'NEUTRAL',
+        direction: 'UNAVAILABLE',
         effect: 'DOES_NOT_ACTIVATE'
       },
       {
@@ -390,7 +390,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     })).sort((a, b) => a.level.localeCompare(b.level))).toEqual([
       {
         level: 'AD',
-        conditionAssessment: 'FULL',
+        conditionAssessment: 'PARTIAL',
         afflictionAssessed: false,
         expressionEvidenceCount: 0,
         evidenceBasis: 'CONDITION_AND_RELEVANCE',
@@ -467,13 +467,13 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
           },
           {
             "afflictionAssessed": false,
-            "condition": "NEUTRAL",
-            "conditionAssessment": "FULL",
+            "condition": "INSUFFICIENT_DATA",
+            "conditionAssessment": "PARTIAL",
             "contextResolved": true,
             "diagnostics": [
               "C9_PROVENANCE_INCOMPLETE_UPSTREAM_IDS_UNAVAILABLE",
             ],
-            "direction": "NEUTRAL",
+            "direction": "UNAVAILABLE",
             "effect": "DOES_NOT_ACTIVATE",
             "evidenceBasis": "CONDITION_AND_RELEVANCE",
             "expressionAnalysisStatus": "UNAVAILABLE",

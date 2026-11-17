@@ -12,6 +12,12 @@ import {
   type PlanetFact,
   type PlanetMotion
 } from '../../types';
+import {
+  EXALTATION_DATA,
+  DEBILITATION_DATA,
+  MOOLATRIKONA_DATA,
+  OWN_SIGNS_DATA
+} from '../../data/astroData';
 import { calculateDignity } from '../planetaryDignity';
 import { calculateSign } from '../chartMath';
 import {
@@ -68,7 +74,8 @@ export interface PlanetaryInfluenceDiagnostic {
     | AspectDiagnostic['reason']
     | PlanetaryRelationshipDiagnostic['reason']
     | 'INVALID_SHADBALA_TOTALS'
-    | 'INVALID_SHADBALA_RECORD';
+    | 'INVALID_SHADBALA_RECORD'
+    | 'DIGNITY_POSITION_MISMATCH';
   readonly detail?: string;
 }
 
@@ -154,43 +161,119 @@ function isSign(value: unknown): value is Sign {
 interface DignityResolution {
   readonly status?: DignityStatus;
   readonly resolvedBy: 'RECORDED' | 'CANONICAL_RESOLVER';
+  readonly diagnostics: readonly PlanetaryInfluenceDiagnostic[];
 }
 
-/**
- * Resolves planetary dignity for the trace. The recorded planetFact dignity is
- * authoritative when it carries a recognized DignityStatus (it is itself produced
- * by calculateDignity). When the record is missing, serialized as a bare string,
- * or carries an unrecognized status, the trace falls back to the same canonical
- * resolver the Planetary Analysis UI uses so C6 and the UI can never diverge.
- */
-function resolveDignity(
-  planet: Planet,
-  planetFact: PlanetFact | undefined
-): DignityResolution {
-  const recorded = typeof planetFact?.dignity === 'string'
-    ? planetFact.dignity
-    : planetFact?.dignity?.status;
-  if (isDignityStatus(recorded)) {
-    return { status: recorded, resolvedBy: 'RECORDED' };
-  }
+interface CanonicalDignityPosition {
+  readonly sign: Sign;
+  readonly degreeInSign: number;
+}
 
-  const factSign = planetFact?.sign ?? planetFact?.position?.sign;
-  const longitude = planetFact?.position?.eclipticLongitude ??
-    planetFact?.position?.longitude ??
-    planetFact?.position?.siderealLongitude;
+const CANONICAL_DIGNITY_STATUSES: ReadonlySet<DignityStatus> = new Set([
+  DignityStatus.EXALTED,
+  DignityStatus.DEBILITATED,
+  DignityStatus.MOOLATRIKONA,
+  DignityStatus.OWN_SIGN,
+  DignityStatus.NEUTRAL
+]);
+
+/**
+ * Checks whether a recorded dignity status is positionally compatible with the
+ * canonical sign/degree. Only the statuses produced by calculateDignity carry a
+ * positional claim; relationship-based statuses (FRIEND_SIGN, ENEMY_SIGN, ...)
+ * are produced by a different system and are always treated as consistent.
+ */
+function isDignityCompatibleWithPosition(
+  planet: Planet,
+  status: DignityStatus,
+  position: CanonicalDignityPosition
+): boolean {
+  if (!CANONICAL_DIGNITY_STATUSES.has(status)) {
+    return true;
+  }
+  return calculateDignity(planet, position.sign, position.degreeInSign).status === status;
+}
+
+function resolveCanonicalDignityPosition(
+  planetFact: PlanetFact | undefined
+): CanonicalDignityPosition | undefined {
+  const position = planetFact?.position;
+  const longitude = position?.eclipticLongitude ??
+    position?.longitude ??
+    position?.siderealLongitude;
   const hasLongitude = typeof longitude === 'number' && Number.isFinite(longitude);
+  const factSign = planetFact?.sign ?? position?.sign;
   const sign = isSign(factSign)
     ? factSign
     : hasLongitude && longitude !== undefined
       ? calculateSign(longitude)
       : undefined;
-  if (sign === undefined || !hasLongitude || longitude === undefined) {
-    return { resolvedBy: 'CANONICAL_RESOLVER' };
+  if (sign === undefined) {
+    return undefined;
   }
-  const degreeInSign = ((longitude % 30) + 30) % 30;
+  const degreeInSign = typeof position?.signLongitude === 'number' &&
+      Number.isFinite(position.signLongitude)
+    ? position.signLongitude
+    : hasLongitude && longitude !== undefined
+      ? ((longitude % 30) + 30) % 30
+      : undefined;
+  if (degreeInSign === undefined) {
+    return undefined;
+  }
+  return { sign, degreeInSign };
+}
+
+/**
+ * Resolves planetary dignity for the trace. The recorded planetFact dignity is
+ * authoritative when it carries a recognized DignityStatus that is
+ * positionally consistent with the canonical position. When the record is
+ * missing, serialized as a bare string, or carries an unrecognized status, the
+ * trace falls back to the same canonical resolver the Planetary Analysis UI
+ * uses; a recognized status that contradicts the canonical position emits a
+ * DIGNITY_POSITION_MISMATCH diagnostic and is likewise replaced by the
+ * resolver result.
+ */
+function resolveDignity(
+  planet: Planet,
+  planetFact: PlanetFact | undefined
+): DignityResolution {
+  const position = resolveCanonicalDignityPosition(planetFact);
+  const recompute = (): DignityStatus | undefined =>
+    position === undefined
+      ? undefined
+      : calculateDignity(planet, position.sign, position.degreeInSign).status;
+
+  const recorded = typeof planetFact?.dignity === 'string'
+    ? planetFact.dignity
+    : planetFact?.dignity?.status;
+  if (isDignityStatus(recorded)) {
+    if (position !== undefined &&
+        !isDignityCompatibleWithPosition(planet, recorded, position)) {
+      const recomputed = recompute();
+      return {
+        status: recomputed,
+        resolvedBy: 'CANONICAL_RESOLVER',
+        diagnostics: Object.freeze([Object.freeze({
+          factor: 'dignity' as const,
+          record: Object.freeze({
+            recorded,
+            sign: position.sign,
+            degreeInSign: position.degreeInSign,
+            recomputed
+          }),
+          reason: 'DIGNITY_POSITION_MISMATCH' as const,
+          detail: `recorded=${recorded} position=${position.sign}@${position.degreeInSign} recomputed=${recomputed ?? 'UNAVAILABLE'}`
+        })])
+      };
+    }
+    return { status: recorded, resolvedBy: 'RECORDED', diagnostics: Object.freeze([]) };
+  }
+
+  const recomputed = recompute();
   return {
-    status: calculateDignity(planet, sign, degreeInSign).status,
-    resolvedBy: 'CANONICAL_RESOLVER'
+    status: recomputed,
+    resolvedBy: 'CANONICAL_RESOLVER',
+    diagnostics: Object.freeze([])
   };
 }
 
@@ -423,6 +506,7 @@ function buildTrace(horoscope: Horoscope, planet: Planet): PlanetaryInfluenceTra
         ? 'UNAVAILABLE'
         : 'PARTIAL';
   const diagnostics: PlanetaryInfluenceDiagnostic[] = [
+    ...dignityResolution.diagnostics,
     ...aspects.diagnostics.map((diagnostic) => Object.freeze({
       factor: 'aspectSources' as const,
       ...diagnostic

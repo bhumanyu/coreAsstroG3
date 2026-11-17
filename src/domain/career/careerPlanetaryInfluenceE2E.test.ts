@@ -482,14 +482,16 @@ describe('CW-10N independent multi-chart verification', () => {
       ]).toEqual([
         { level: 'MD', effect: 'DOES_NOT_ACTIVATE', direction: 'NEUTRAL' },
         { level: 'AD', effect: 'CHALLENGES', direction: 'CHALLENGE' },
-        { level: 'PD', effect: 'ACTIVATES', direction: 'NEUTRAL' }
+        // Mercury has zero validated aspect records on this chart, so its
+        // aspectSources evidence is UNAVAILABLE and the PD direction degrades.
+        { level: 'PD', effect: 'DOES_NOT_ACTIVATE', direction: 'UNAVAILABLE' }
       ]);
       expect([dasha.md, dasha.ad, dasha.pd].map((period) =>
         dasha.evidence.find((item) => item.level === period.level)?.id
       )).toEqual([
         'CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER:DOES_NOT_ACTIVATE',
         'CAREER_DASHA:AD:JUPITER:MODIFIER:CHALLENGES',
-        'CAREER_DASHA:PD:MERCURY:REFINEMENT:ACTIVATES'
+        'CAREER_DASHA:PD:MERCURY:REFINEMENT:DOES_NOT_ACTIVATE'
       ]);
     });
 

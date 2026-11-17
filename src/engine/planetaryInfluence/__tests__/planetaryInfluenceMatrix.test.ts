@@ -9,6 +9,8 @@ import {
   type NatalGrahaDrishtiComputationStatus
 } from '../../../types';
 import { calculateHoroscope } from '../../astroEngine';
+import { calculateDignity } from '../../planetaryDignity';
+import { calculateSign } from '../../chartMath';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import {
   resolvePlanetaryAspects,
@@ -38,6 +40,8 @@ type SyntheticOptions = {
   readonly missingPlanet?: Planet;
   readonly missingCombustion?: Planet;
   readonly dignity?: Partial<Record<Planet, DignityStatus>>;
+  readonly positions?: Partial<Record<Planet, { readonly longitude: number }>>;
+  readonly coLocatedBaseLongitude?: number;
   readonly functionalNature?: Partial<Record<Planet, 'BENEFIC' | 'MALEFIC' | 'MIXED' | 'NEUTRAL'>>;
   readonly coLocated?: readonly Planet[];
   readonly yogaEvidence?: readonly {
@@ -58,24 +62,30 @@ type SyntheticOptions = {
 };
 
 function makePlanetFact(planet: Planet, house: number, longitude: number): PlanetFact {
+  const sign = calculateSign(longitude);
+  const signLongitude = ((longitude % 30) + 30) % 30;
   return {
     planet,
     position: {
       planet,
       longitude,
       eclipticLongitude: longitude,
-      sign: Sign.ARIES,
+      sign,
       house,
-      signLongitude: longitude % 30,
+      signLongitude,
       motion: { speed: 1, retrograde: false, stationary: false }
     },
-    dignity: { planet, sign: Sign.ARIES, status: DignityStatus.NEUTRAL },
+    dignity: {
+      planet,
+      sign,
+      status: calculateDignity(planet, sign, signLongitude).status
+    },
     state: {
       planet,
       condition: PlanetStateCondition.NORMAL,
       motion: { speed: 1, retrograde: false, stationary: false }
     },
-    sign: Sign.ARIES,
+    sign,
     house
   };
 }
@@ -87,8 +97,25 @@ function makeHoroscope(options: SyntheticOptions = {}): Horoscope {
       const house = options.coLocated
         ? options.coLocated.includes(planet) ? 1 : index + 2
         : index + 1;
-      const longitude = options.coLocated?.includes(planet) ? index * 2 : index * 40;
+      const coLocatedBase = options.coLocatedBaseLongitude ?? 0;
+      const longitude = options.coLocated?.includes(planet)
+        ? coLocatedBase + index * 2
+        : index * 40;
       const fact = makePlanetFact(planet, house, longitude);
+      const positionOverride = options.positions?.[planet];
+      if (positionOverride) {
+        const overrideLongitude = positionOverride.longitude;
+        const overrideSign = calculateSign(overrideLongitude);
+        fact.position = {
+          ...fact.position,
+          longitude: overrideLongitude,
+          eclipticLongitude: overrideLongitude,
+          sign: overrideSign,
+          signLongitude: ((overrideLongitude % 30) + 30) % 30
+        };
+        fact.sign = overrideSign;
+        fact.dignity = { ...fact.dignity, sign: overrideSign };
+      }
       if (options.missingCombustion === planet) {
         fact.state = {
           ...fact.state,
@@ -204,8 +231,21 @@ describe('CW-10E synthetic planetary influence matrix', () => {
   ] as const)(
     'retains dignity, combustion, and motion independently (%s / %s)',
     (dignity, combustion, retrograde, stationary) => {
+      const dignityLongitudes: Record<DignityStatus, number> = {
+        [DignityStatus.EXALTED]: 95,    // Jupiter exalted in Cancer
+        [DignityStatus.DEBILITATED]: 275, // Jupiter debilitated in Capricorn
+        [DignityStatus.OWN_SIGN]: 255,  // Jupiter owns Sagittarius (outside moolatrikona 0-10)
+        [DignityStatus.MOOLATRIKONA]: 245,
+        [DignityStatus.NEUTRAL]: 160,
+        [DignityStatus.GREAT_FRIEND_SIGN]: 160,
+        [DignityStatus.FRIEND_SIGN]: 160,
+        [DignityStatus.NEUTRAL_SIGN]: 160,
+        [DignityStatus.ENEMY_SIGN]: 160,
+        [DignityStatus.GREAT_ENEMY_SIGN]: 160
+      };
       const horoscope = makeHoroscope({
         dignity: { [Planet.JUPITER]: dignity },
+        positions: { [Planet.JUPITER]: { longitude: dignityLongitudes[dignity] } },
         includeShadbala: true
       });
       const fact = horoscope.planetFacts[Planet.JUPITER];
@@ -1111,8 +1151,23 @@ describe('CW-10E synthetic planetary influence matrix', () => {
               for (const ownedHouses of structuralRoles) {
                 for (const completeness of completenessCases) {
                   scenarioCount += 1;
+                  const dignityLongitudes: Record<DignityStatus, number> = {
+                    // Mercury: exalted in Virgo, debilitated in Pisces, neutral in Aries.
+                    [DignityStatus.EXALTED]: 150,
+                    [DignityStatus.DEBILITATED]: 330,
+                    [DignityStatus.NEUTRAL]: 0,
+                    [DignityStatus.MOOLATRIKONA]: 0,
+                    [DignityStatus.OWN_SIGN]: 0,
+                    [DignityStatus.GREAT_FRIEND_SIGN]: 0,
+                    [DignityStatus.FRIEND_SIGN]: 0,
+                    [DignityStatus.NEUTRAL_SIGN]: 0,
+                    [DignityStatus.ENEMY_SIGN]: 0,
+                    [DignityStatus.GREAT_ENEMY_SIGN]: 0
+                  };
                   const horoscope = makeHoroscope({
                     dignity: { [Planet.MERCURY]: dignity },
+                    coLocated: [Planet.MERCURY, ...conjunction],
+                    coLocatedBaseLongitude: dignityLongitudes[dignity],
                     combustion,
                     motion,
                     aspects: aspectCase.sources.map((sourcePlanet) => ({
@@ -1126,7 +1181,6 @@ describe('CW-10E synthetic planetary influence matrix', () => {
                     ...(aspectCase.unassessedNaturalSource
                       ? { unassessedNaturalSource: aspectCase.unassessedNaturalSource }
                       : {}),
-                    coLocated: [Planet.MERCURY, ...conjunction],
                     ownedHouses,
                     includeShadbala: completeness === 'FULL',
                     includeStructuralRoles: true
@@ -1171,5 +1225,106 @@ describe('CW-10E synthetic planetary influence matrix', () => {
     expect(traces.map((trace) => trace.planet)).toEqual(PLANETS);
     expect(traces.find((trace) => trace.planet === Planet.MERCURY)?.evidenceAvailability.status)
       .not.toBe('UNAVAILABLE');
+  });
+
+  it('emits DIGNITY_POSITION_MISMATCH and uses the canonical recomputation when a recorded status contradicts the position', () => {
+    // Jupiter recorded EXALTED but positioned in Aries (neutral sign).
+    const horoscope = makeHoroscope({
+      dignity: { [Planet.JUPITER]: DignityStatus.EXALTED }
+    });
+    const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+
+    expect(trace.intrinsicStrength.dignity).toBe(DignityStatus.NEUTRAL);
+    expect(trace.evidenceAvailability.factors.dignity.source)
+      .toBe('planetaryDignity.calculateDignity');
+    const mismatch = trace.diagnostics.find(
+      (diagnostic) => diagnostic.reason === 'DIGNITY_POSITION_MISMATCH'
+    );
+    expect(mismatch).toMatchObject({
+      factor: 'dignity',
+      record: {
+        recorded: DignityStatus.EXALTED,
+        sign: Sign.VIRGO,
+        recomputed: DignityStatus.NEUTRAL
+      }
+    });
+    expect(mismatch?.detail).toContain('EXALTED');
+  });
+
+  it('keeps a positionally consistent recorded dignity authoritative without diagnostics', () => {
+    // Mars moolatrikona in Aries 0-12: recorded MOOLATRIKONA at 5° Aries agrees.
+    const horoscope = makeHoroscope({
+      dignity: { [Planet.MARS]: DignityStatus.MOOLATRIKONA },
+      positions: { [Planet.MARS]: { longitude: 5 } }
+    });
+    const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.MARS
+    )!;
+
+    expect(trace.intrinsicStrength.dignity).toBe(DignityStatus.MOOLATRIKONA);
+    expect(trace.evidenceAvailability.factors.dignity.source)
+      .toBe('planetFacts.dignity.status');
+    expect(trace.diagnostics.some(
+      (diagnostic) => diagnostic.reason === 'DIGNITY_POSITION_MISMATCH'
+    )).toBe(false);
+  });
+
+  it('treats recorded NEUTRAL on an exaltation sign as a mismatch and recomputes', () => {
+    // Jupiter in Cancer is exalted; a recorded NEUTRAL contradicts the position.
+    const horoscope = makeHoroscope({
+      dignity: { [Planet.JUPITER]: DignityStatus.NEUTRAL },
+      positions: { [Planet.JUPITER]: { longitude: 95 } } // 5° Cancer
+    });
+    const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+
+    expect(trace.intrinsicStrength.dignity).toBe(DignityStatus.EXALTED);
+    expect(trace.diagnostics.some(
+      (diagnostic) => diagnostic.reason === 'DIGNITY_POSITION_MISMATCH'
+    )).toBe(true);
+  });
+
+  it('keeps relationship-based dignity statuses authoritative without positional checks', () => {
+    const horoscope = makeHoroscope({
+      dignity: { [Planet.JUPITER]: DignityStatus.FRIEND_SIGN }
+    });
+    const trace = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+
+    expect(trace.intrinsicStrength.dignity).toBe(DignityStatus.FRIEND_SIGN);
+    expect(trace.evidenceAvailability.factors.dignity.source)
+      .toBe('planetFacts.dignity.status');
+    expect(trace.diagnostics.some(
+      (diagnostic) => diagnostic.reason === 'DIGNITY_POSITION_MISMATCH'
+    )).toBe(false);
+  });
+
+  it('falls back to the canonical resolver for missing or malformed dignity records without a mismatch diagnostic', () => {
+    const horoscope = makeHoroscope();
+    const fact = horoscope.planetFacts[Planet.JUPITER];
+    // Jupiter default position: index 4 -> longitude 160 (Virgo 10°), neutral.
+    fact.dignity = { ...fact.dignity, status: 'NOT_A_STATUS' as DignityStatus };
+    const malformed = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+    expect(malformed.intrinsicStrength.dignity).toBe(DignityStatus.NEUTRAL);
+    expect(malformed.evidenceAvailability.factors.dignity.source)
+      .toBe('planetaryDignity.calculateDignity');
+    expect(malformed.diagnostics.some(
+      (diagnostic) => diagnostic.reason === 'DIGNITY_POSITION_MISMATCH'
+    )).toBe(false);
+
+    fact.dignity = undefined as never;
+    const missing = buildPlanetaryInfluenceTrace(horoscope).find(
+      (item) => item.planet === Planet.JUPITER
+    )!;
+    expect(missing.intrinsicStrength.dignity).toBe(DignityStatus.NEUTRAL);
+    expect(missing.diagnostics.some(
+      (diagnostic) => diagnostic.reason === 'DIGNITY_POSITION_MISMATCH'
+    )).toBe(false);
   });
 });

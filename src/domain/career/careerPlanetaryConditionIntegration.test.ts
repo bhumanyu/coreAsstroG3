@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Planet, DignityStatus, PlanetStateCondition, Sign } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { calculateDignity } from '../../engine/planetaryDignity';
+import { calculateSign } from '../../engine/chartMath';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import {
   buildCareerPlanetaryCondition,
@@ -15,6 +16,20 @@ import type { CareerPlanetaryRelevance } from './careerPlanetaryRelevance';
 // Test Factories
 // ============================================================================
 
+// Default longitudes place every planet in a sign where its canonical dignity
+// is NEUTRAL, so recorded NEUTRAL dignity stays positionally consistent.
+const NEUTRAL_LONGITUDES: Record<Planet, number> = {
+  [Planet.SUN]: 60,     // Gemini
+  [Planet.MOON]: 0,     // Aries
+  [Planet.MARS]: 120,   // Leo
+  [Planet.MERCURY]: 0,  // Aries
+  [Planet.JUPITER]: 0,  // Aries
+  [Planet.VENUS]: 0,    // Aries
+  [Planet.SATURN]: 150, // Virgo
+  [Planet.RAHU]: 0,     // Aries
+  [Planet.KETU]: 0      // Aries
+};
+
 function createMockPlanetFact(
   planet: Planet,
   overrides: Partial<{
@@ -23,17 +38,21 @@ function createMockPlanetFact(
     retrograde: boolean;
     stationary: boolean;
     house: number;
+    longitude: number;
   }> = {}
 ): any {
+  const longitude = overrides.longitude ?? NEUTRAL_LONGITUDES[planet];
+  const sign = calculateSign(longitude);
+  const signLongitude = ((longitude % 30) + 30) % 30;
   return {
     planet,
     position: {
       planet,
-      longitude: 0,
-      eclipticLongitude: 0,
-      sign: Sign.ARIES,
+      longitude,
+      eclipticLongitude: longitude,
+      sign,
       house: overrides.house ?? 1,
-      signLongitude: 0,
+      signLongitude,
       motion: {
         speed: overrides.stationary ? 0 : (overrides.retrograde ? -0.5 : 1.0),
         retrograde: overrides.retrograde ?? false,
@@ -42,7 +61,7 @@ function createMockPlanetFact(
     },
     dignity: {
       planet,
-      sign: Sign.ARIES,
+      sign,
       status: overrides.dignityStatus ?? DignityStatus.NEUTRAL,
       score: 0
     },
@@ -55,7 +74,7 @@ function createMockPlanetFact(
         stationary: overrides.stationary ?? false
       }
     },
-    sign: Sign.ARIES,
+    sign,
     house: overrides.house ?? 1
   };
 }
@@ -73,12 +92,28 @@ function createMockHoroscope(planetFactsOverrides: Partial<Record<Planet, any>> 
     [Planet.KETU]: createMockPlanetFact(Planet.KETU)
   };
 
+  const allPlanets = [
+    Planet.SUN, Planet.MOON, Planet.MARS, Planet.MERCURY, Planet.JUPITER,
+    Planet.VENUS, Planet.SATURN, Planet.RAHU, Planet.KETU
+  ];
   return {
     planetFacts: { ...defaultFacts, ...planetFactsOverrides },
     natalGrahaDrishti: {
-      aspects: [],
+      // One structurally valid, fully consumed benefic aspect record per planet
+      // so aspectSources resolves as AVAILABLE under validated-record counting.
+      aspects: allPlanets.map((targetPlanet) => ({
+        sourcePlanet: Planet.JUPITER,
+        targetPlanet,
+        aspectType: 'FULL_7TH'
+      })),
       computationStatus: 'COMPLETE',
       diagnostics: []
+    },
+    functionalNatureIntegration: {
+      planets: Object.fromEntries(allPlanets.map((planet) => [
+        planet,
+        { planet, functionalNature: 'NEUTRAL', ownedHouses: [1] }
+      ]))
     }
   };
 }
@@ -118,7 +153,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const saturnResult = result.find(r => r.planet === Planet.SATURN);
       expect(saturnResult).toBeDefined();
       expect(saturnResult!.relevance).toBe('PRIMARY');
-      expect(saturnResult!.condition).toBe('NEUTRAL');
+      expect(saturnResult!.condition).toBe('MODERATE');
       expect(saturnResult!.assessment).toBe('FULL');
       expect(saturnResult!.afflictionAssessed).toBe(false);
       expect(saturnResult!.negativeFactors).toEqual([]);
@@ -134,7 +169,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
       expect(mercuryResult).toBeDefined();
       expect(mercuryResult!.relevance).toBe('SUPPORTING');
-      expect(mercuryResult!.condition).toBe('NEUTRAL');
+      expect(mercuryResult!.condition).toBe('MODERATE');
       expect(mercuryResult!.assessment).toBe('FULL');
       expect(mercuryResult!.afflictionAssessed).toBe(false);
     });
@@ -149,7 +184,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const jupiterResult = result.find(r => r.planet === Planet.JUPITER);
       expect(jupiterResult).toBeDefined();
       expect(jupiterResult!.relevance).toBe('SECONDARY');
-      expect(jupiterResult!.condition).toBe('NEUTRAL');
+      expect(jupiterResult!.condition).toBe('MODERATE');
       expect(jupiterResult!.assessment).toBe('FULL');
     });
 
@@ -163,7 +198,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const marsResult = result.find(r => r.planet === Planet.MARS);
       expect(marsResult).toBeDefined();
       expect(marsResult!.relevance).toBe('CONDITIONAL');
-      expect(marsResult!.condition).toBe('NEUTRAL');
+      expect(marsResult!.condition).toBe('MODERATE');
       expect(marsResult!.assessment).toBe('FULL');
     });
 
@@ -185,7 +220,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
   describe('Group B — dignity mapping', () => {
     it('EXALTED → EXALTED', () => {
       const horoscope = createMockHoroscope({
-        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { dignityStatus: DignityStatus.EXALTED })
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { dignityStatus: DignityStatus.EXALTED, longitude: 200 }) // Libra: Saturn exalted
       });
       const relevance = [createMockRelevance(Planet.SATURN, 'PRIMARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -198,7 +233,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
 
     it('MOOLATRIKONA → OWN_SIGN (compatibility mapping)', () => {
       const horoscope = createMockHoroscope({
-        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { dignityStatus: DignityStatus.MOOLATRIKONA })
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { dignityStatus: DignityStatus.MOOLATRIKONA, longitude: 300 }) // Aquarius 0-20: Saturn moolatrikona
       });
       const relevance = [createMockRelevance(Planet.SATURN, 'PRIMARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -211,7 +246,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
 
     it('OWN_SIGN → OWN_SIGN', () => {
       const horoscope = createMockHoroscope({
-        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { dignityStatus: DignityStatus.OWN_SIGN })
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { dignityStatus: DignityStatus.OWN_SIGN, longitude: 280 }) // Capricorn: Saturn own sign
       });
       const relevance = [createMockRelevance(Planet.SATURN, 'PRIMARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -302,7 +337,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
 
     it('DEBILITATED → DEBILITATED', () => {
       const horoscope = createMockHoroscope({
-        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { dignityStatus: DignityStatus.DEBILITATED })
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { dignityStatus: DignityStatus.DEBILITATED, longitude: 10 }) // Aries: Saturn debilitated
       });
       const relevance = [createMockRelevance(Planet.SATURN, 'PRIMARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -447,6 +482,8 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
           houseOffset: 4
         }] as any[]
       };
+      // No functional classification source → functionalSource 'NONE' → PARTIAL.
+      horoscope.functionalNatureIntegration = undefined;
 
       const result = buildCareerPlanetaryCondition({
         horoscope,
@@ -480,10 +517,6 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       });
       horoscope.planetaryStrength = undefined as never;
       horoscope.yogas = undefined as never;
-      horoscope.natalGrahaDrishti = {
-        ...horoscope.natalGrahaDrishti,
-        aspects: []
-      };
 
       const result = buildCareerPlanetaryCondition({
         horoscope,
@@ -705,12 +738,9 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
     it('records conjunction provenance without adding a C6 conjunction condition factor', () => {
       const horoscope = createMockHoroscope({
         [Planet.JUPITER]: createMockPlanetFact(Planet.JUPITER, { house: 1 }),
-        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { house: 1 })
+        // Same sign (Aries) and house as Jupiter so house-sign co-location holds.
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { house: 1, longitude: 0 })
       });
-      horoscope.natalGrahaDrishti = {
-        ...horoscope.natalGrahaDrishti,
-        aspects: []
-      };
 
       const result = buildCareerPlanetaryCondition({
         horoscope,
@@ -722,7 +752,9 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
         .toEqual(expect.arrayContaining([
           expect.objectContaining({ planet: Planet.SATURN })
         ]));
-      expect(jupiter.condition).toBe('NEUTRAL');
+      // Consumed benefic aspect support resolves the condition as MODERATE;
+      // conjunction itself adds no condition factor.
+      expect(jupiter.condition).toBe('MODERATE');
       expect(jupiter.negativeFactors.some((factor) => factor.type === 'MALEFIC_PRESSURE'))
         .toBe(false);
     });
@@ -828,9 +860,19 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
     it('PRIMARY relevance + DEBILITATED dignity → weak condition with affliction unassessed', () => {
       const horoscope = createMockHoroscope({
         [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, {
-          dignityStatus: DignityStatus.DEBILITATED
+          dignityStatus: DignityStatus.DEBILITATED,
+          longitude: 10 // Aries: Saturn debilitated
         })
       });
+      // Malefic aspect pressure keeps the condition WEAK (benefic support would moderate it).
+      horoscope.natalGrahaDrishti = {
+        ...horoscope.natalGrahaDrishti,
+        aspects: [{
+          sourcePlanet: Planet.SATURN,
+          targetPlanet: Planet.SATURN,
+          aspectType: 'FULL_7TH'
+        }]
+      };
       const relevance = [createMockRelevance(Planet.SATURN, 'PRIMARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
 
@@ -1079,9 +1121,10 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       }
     );
 
-    it('recorded valid dignity still wins over positional recomputation', () => {
+    it('recorded dignity contradicting the canonical position is recomputed with a diagnostic', () => {
       const horoscope = createMockHoroscope();
       jupiterAtCancerPoint25(horoscope);
+      // NEUTRAL is positionally inconsistent at 0.25° Cancer (exaltation sign).
       horoscope.planetFacts[Planet.JUPITER].dignity = {
         planet: Planet.JUPITER,
         sign: Sign.CANCER,
@@ -1095,10 +1138,96 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const jupiter = result.find(r => r.planet === Planet.JUPITER)!;
 
       expect(jupiter.planetaryInfluenceTrace?.intrinsicStrength.dignity)
-        .toBe(DignityStatus.NEUTRAL);
-      expect(jupiter.dignity).toBe('NEUTRAL_SIGN');
+        .toBe(DignityStatus.EXALTED);
+      expect(jupiter.dignity).toBe('EXALTED');
       expect(jupiter.combustion).toBe('COMBUST');
-      expect(jupiter.condition).toBe('WEAK');
+      expect(jupiter.planetaryInfluenceTrace?.diagnostics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ reason: 'DIGNITY_POSITION_MISMATCH' })
+        ])
+      );
+      // EXALTED support + COMBUST challenge → MODERATE.
+      expect(jupiter.condition).toBe('MODERATE');
+    });
+  });
+
+  // Group P — aspect coverage semantics (validated-record counting)
+  describe('Group P — aspect coverage semantics', () => {
+    function mercuryWithAspects(
+      aspects: readonly unknown[],
+      computationStatus: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE' = 'COMPLETE'
+    ) {
+      const horoscope = createMockHoroscope({
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 9 })
+      });
+      horoscope.natalGrahaDrishti = {
+        computationStatus,
+        diagnostics: [],
+        aspects: [...aspects]
+      };
+      return buildCareerPlanetaryCondition({
+        horoscope,
+        relevance: [createMockRelevance(Planet.MERCURY, 'PRIMARY')]
+      }).find((item) => item.planet === Planet.MERCURY)!;
+    }
+
+    it('mixed valid+invalid records: validated record is consumed, rejected record is diagnostic-only → PARTIAL', () => {
+      const mercury = mercuryWithAspects([
+        { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' },
+        { sourcePlanet: 'NOT_A_PLANET', targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' },
+        { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY, aspectType: 'NOT_AN_ASPECT' }
+      ]);
+
+      expect(mercury.positiveFactors.some((f) => f.type === 'BENEFIC_SUPPORT')).toBe(true);
+      expect(mercury.assessmentDetails).toMatchObject({
+        status: 'PARTIAL',
+        missingFactors: [],
+        partiallyResolvedFactors: ['aspectSources']
+      });
+      expect(mercury.planetaryInfluenceTrace?.diagnostics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ reason: 'INVALID_SOURCE_PLANET' }),
+          expect.objectContaining({ reason: 'MISSING_FIELDS' })
+        ])
+      );
+    });
+
+    it('single valid record with producer PARTIAL → PARTIAL (partially resolved, not missing)', () => {
+      const mercury = mercuryWithAspects([
+        { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' }
+      ], 'PARTIAL');
+
+      expect(mercury.assessmentDetails).toMatchObject({
+        status: 'PARTIAL',
+        missingFactors: [],
+        partiallyResolvedFactors: ['aspectSources']
+      });
+    });
+
+    it('all-invalid records → aspectSources UNAVAILABLE (missing), not PARTIAL', () => {
+      const mercury = mercuryWithAspects([
+        { sourcePlanet: 'NOT_A_PLANET', targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' },
+        { sourcePlanet: Planet.SATURN, aspectType: 'FULL_7TH' } // missing target
+      ]);
+
+      expect(mercury.positiveFactors).toEqual([]);
+      expect(mercury.negativeFactors).toEqual([]);
+      expect(mercury.assessmentDetails).toMatchObject({
+        status: 'PARTIAL',
+        missingFactors: ['aspectSources']
+      });
+      expect(mercury.assessmentDetails?.partiallyResolvedFactors).toBeUndefined();
+      expect(mercury.condition).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('producer UNAVAILABLE with otherwise valid records → UNAVAILABLE', () => {
+      const mercury = mercuryWithAspects([
+        { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY, aspectType: 'FULL_7TH' }
+      ], 'UNAVAILABLE');
+
+      expect(mercury.assessmentDetails).toMatchObject({
+        missingFactors: expect.arrayContaining(['aspectSources'])
+      });
     });
   });
 });

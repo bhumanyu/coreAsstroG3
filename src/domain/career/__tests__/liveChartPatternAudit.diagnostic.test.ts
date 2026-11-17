@@ -31,6 +31,10 @@ import {
   classifyGenericCareerNetwork,
   type CareerPatternRuleMatch
 } from '../careerPattern/careerPatternClassificationRules';
+import { classifyCareerPatterns } from '../careerPattern/careerPatternClassification';
+import { buildCareerPlanetaryRelevance } from '../careerPlanetaryRelevanceIntegration';
+import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegration';
+import { buildCanonicalCareerFoundation } from '../orchestration/canonicalCareerFoundationBuilder';
 import { detectDusthanaPatterns } from '../careerPattern/dusthanaTransformationDetector';
 import { detectCareerYogaPatterns } from '../careerPattern/careerYogaDetector';
 import { detectKendraTrikonaPatterns } from '../careerPattern/kendraTrikonaDetector';
@@ -91,6 +95,10 @@ function evaluateNetworkFamilies(network: CareerHouseNetwork): {
   };
 }
 
+// Report-only audit for the frozen Bokaro/Virgo-lagna fixture. The fixture is
+// deterministic, so the audit ASSERTS the observed zero-network outcome rather
+// than leaving it ambiguous: no planet touches two or more career houses in the
+// SHARED_PARTICIPANT projection, so no connected component of >=2 houses forms.
 describe('Career pattern detection — live-chart report-only audit (Bokaro/Virgo lagna)', () => {
   it('dumps C4 relationships, detected networks, and per-network pattern-family outcomes', () => {
     const horoscope = calculateHoroscope(BOKARO_BIRTH_DETAILS);
@@ -215,7 +223,30 @@ describe('Career pattern detection — live-chart report-only audit (Bokaro/Virg
       console.log(`    house-involved edges: ${houseEdges.length}/${network.relationships.length}`);
     }
 
-    // Report-only audit: assert the pipeline ran, not a specific network count.
+    // (d) Canonical pipeline comparison: run the same horoscope through the
+    // canonical foundation builder's precomputed-input path and assert the
+    // audit's manually assembled networks/patterns match canonical output.
+    console.log('\n===== (d) CANONICAL PIPELINE COMPARISON =====');
+    const relevance = buildCareerPlanetaryRelevance({ horoscope, structural });
+    const condition = buildCareerPlanetaryCondition({ horoscope, relevance });
+    const foundation = buildCanonicalCareerFoundation({
+      horoscope,
+      preComputedInputs: { structural, relevance, condition }
+    });
+    const canonicalPatterns = classifyCareerPatterns({ networks });
+    const auditPatternIds = canonicalPatterns.patterns.map((p) => p.patternId).sort();
+    const foundationPatternIds = foundation.patternCandidates.map((c) => c.patternId).sort();
+    console.log(`audit networks: ${networks.length}, canonical patterns: ${canonicalPatterns.patterns.length}`);
+    console.log(`foundation patternCandidates: ${foundation.patternCandidates.length}, totalPatterns: ${foundation.metadata.totalPatterns}`);
+    console.log(`foundation networkResolutionStatus: ${foundation.c8StageDiagnostics.networkResolutionStatus}`);
+
+    // Frozen-fixture assertion: the Bokaro chart produces zero career networks.
+    expect(networks).toHaveLength(0);
+    // The audit's manual assembly must not drift from the canonical pipeline.
+    expect(auditPatternIds).toEqual(foundationPatternIds);
+    expect(canonicalPatterns.patterns.length).toBe(foundation.metadata.totalPatterns);
+    expect(foundation.patternCandidates).toHaveLength(0);
+    // Sanity: the pipeline actually ran and produced structural evidence.
     expect(relationships.length).toBeGreaterThan(0);
     expect(graph.edges.length).toBeGreaterThan(0);
   });

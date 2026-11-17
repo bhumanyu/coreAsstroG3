@@ -271,6 +271,61 @@ describe('Career Pattern Qualification', () => {
       });
     });
 
+    it('PARTIAL-assessed WEAK participant blocks as MISSING_INPUT, not UNQUALIFIED (established-negatives vs missing-inputs boundary)', () => {
+      const pattern = makePattern();
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'PRIMARY'),
+          makeRelevance(Planet.JUPITER, 'PRIMARY')
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'WEAK', { assessment: 'PARTIAL' }),
+          makeCondition(Planet.MERCURY, 'STRONG'),
+          makeCondition(Planet.JUPITER, 'MODERATE')
+        ]
+      };
+
+      const qualified = qualifyCareerPatterns(input).qualifiedPatterns[0];
+
+      // Missing evidence is never negative evidence: a WEAK verdict whose
+      // assessment is only PARTIAL cannot disqualify — it blocks instead.
+      expect(qualified.status).toBe('INSUFFICIENT_DATA');
+      expect(qualified.status).not.toBe('UNQUALIFIED');
+      expect(qualified.decisionBlockingReasons).toContainEqual({
+        reason: 'planetary condition is only partially assessed',
+        kind: 'MISSING_INPUT'
+      });
+    });
+
+    it('FULL-assessed WEAK participant disqualifies as UNQUALIFIED (contrast case)', () => {
+      const pattern = makePattern();
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'PRIMARY'),
+          makeRelevance(Planet.JUPITER, 'PRIMARY')
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'WEAK'),
+          makeCondition(Planet.MERCURY, 'STRONG'),
+          makeCondition(Planet.JUPITER, 'MODERATE')
+        ]
+      };
+
+      const qualified = qualifyCareerPatterns(input).qualifiedPatterns[0];
+
+      // Same participant set with full assessment: the WEAK is established
+      // negative evidence and disqualifies.
+      expect(qualified.status).toBe('UNQUALIFIED');
+      expect(qualified.status).not.toBe('INSUFFICIENT_DATA');
+      expect(qualified.decisionBlockingReasons).not.toContainEqual(
+        expect.objectContaining({ kind: 'MISSING_INPUT' })
+      );
+    });
+
     it('returns INSUFFICIENT_DATA when structuralStrength is NOT_ASSESSED', () => {
       const pattern = makePattern();
 
