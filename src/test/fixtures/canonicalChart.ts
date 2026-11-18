@@ -53,6 +53,20 @@ export const BOKARO_BIRTH_DETAILS: BirthDetails = Object.freeze({
 } as const);
 
 /**
+ * Varun birth details — Kolkata anchor (~22.57°N, 88.36°E), 9 Nov 1984 01:50 IST.
+ * Used for the Rahu-Ketu node condition / pattern-qualification audit.
+ */
+export const VARUN_BIRTH_DETAILS: BirthDetails = Object.freeze({
+  name: 'Varun chart',
+  placeOfBirth: 'Kolkata, West Bengal, India',
+  latitude: 22.57,
+  longitude: 88.36,
+  timeZone: 'Asia/Kolkata',
+  ayanamsa: AyanamsaType.LAHIRI,
+  dateTimeStr: '1984-11-09T01:50:00+05:30'
+} as const);
+
+/**
  * Repository engine golden baseline snapshot — current engine output, NOT an externally validated ephemeris benchmark.
  */
 export const CANONICAL_GOLDEN_EXPECTED = Object.freeze({
