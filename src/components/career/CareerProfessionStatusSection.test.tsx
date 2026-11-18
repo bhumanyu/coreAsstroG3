@@ -8,6 +8,7 @@ import { selectCareerViewModel } from '../../product/analysis/careerViewModel';
 import type { CareerProfessionViewModel } from '../../product/analysis/careerViewModel';
 import type { ProductCareerPatternQualification } from '../../product/analysis/productAnalysisTypes';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
+import { Planet } from '../../types';
 import i18n from '../../i18n/i18n';
 
 const engineStageCounts: NonNullable<CareerProfessionViewModel['stageCounts']> = Object.freeze({
@@ -31,7 +32,7 @@ const unqualifiedPattern: ProductCareerPatternQualification = {
   }],
   deferredDimensions: ['ACTIVATION_POTENTIAL'],
   participants: [{
-    planet: 'JUPITER',
+    planet: Planet.JUPITER,
     relevance: 'PRIMARY',
     condition: 'WEAK',
     conditionAssessment: 'FULL',

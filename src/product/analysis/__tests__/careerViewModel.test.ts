@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { selectCareerViewModel } from '../careerViewModel';
 import { createProductAnalysis } from './testHelpers';
+import { Planet } from '../../../types';
 import type {
   ProductCareerPatternQualification,
   ProductDashaPeriod
@@ -11,6 +12,23 @@ import {
 } from '../../life-analysis/userFacingInterpretation';
 
 describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
+  const profession = {
+    available: true,
+    status: 'PARTIAL' as const,
+    candidates: [],
+    unresolvedExpressionTypes: [],
+    mappedTypes: [],
+    missingInputs: [],
+    diagnostics: [],
+    d10Status: 'QUALIFIED',
+    ranking: {
+      policyVersion: 'B04-PROFESSION-RANKING-v1' as const,
+      status: 'PARTIAL' as const,
+      rankedCandidates: [],
+      diagnostics: []
+    }
+  };
+
   it('1. natal promise preserves strength and confidence while formatting its statement', () => {
     const analysis = createProductAnalysis();
     const vm = selectCareerViewModel(analysis);
@@ -129,22 +147,6 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
       rankingEligibleCandidates: 1,
       rankedCandidates: 1
     });
-    const profession = {
-      available: true,
-      status: 'PARTIAL' as const,
-      candidates: [],
-      unresolvedExpressionTypes: [],
-      mappedTypes: [],
-      missingInputs: [],
-      diagnostics: [],
-      d10Status: 'QUALIFIED',
-      ranking: {
-        policyVersion: 'B04-PROFESSION-RANKING-v1' as const,
-        status: 'PARTIAL' as const,
-        rankedCandidates: [],
-        diagnostics: []
-      }
-    };
     const legacyAnalysis = createProductAnalysis({
       career: {
         ...createProductAnalysis().career,
@@ -177,7 +179,7 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
       }],
       deferredDimensions: ['ACTIVATION_POTENTIAL'],
       participants: [{
-        planet: 'JUPITER',
+        planet: Planet.JUPITER,
         relevance: 'PRIMARY',
         condition: 'WEAK',
         conditionAssessment: 'FULL',
@@ -192,10 +194,7 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     const analysis = createProductAnalysis({
       career: {
         ...base.career,
-        profession: {
-          ...base.career.profession!,
-          patternQualifications
-        }
+        profession: { ...profession, patternQualifications }
       }
     });
 
