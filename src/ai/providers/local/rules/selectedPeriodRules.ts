@@ -48,12 +48,13 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
       );
 
       const baseStatement = `For the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period, ${activatingExprs.length} career expressions show activating indicators and ${challengingExprs.length} show challenging indicators.`;
+      const caveat = ' This is an unweighted indicator count, not a prediction of career outcomes; expression strength, natal promise, and D10 confirmation are not factored in.';
 
       if (activatingExprs.length > challengingExprs.length) {
         return {
           triggered: true,
           effect: 'SUPPORT' as LocalRuleEffect,
-          statement: `${baseStatement} Overall, ${activatingExprs.length} expressions show activating indicators versus ${challengingExprs.length} challenging.`,
+          statement: `${baseStatement} At the indicator level, activating career expressions currently outweigh challenging ones.${caveat}`,
           supportingEvidenceIds: activatingExprs.flatMap(e => [
             ...e.expressionEvidenceIds,
             ...e.qualifiedEvidenceIds,
@@ -67,7 +68,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         return {
           triggered: true,
           effect: 'CHALLENGE' as LocalRuleEffect,
-          statement: `${baseStatement} Overall, ${challengingExprs.length} expressions show challenging indicators versus ${activatingExprs.length} activating.`,
+          statement: `${baseStatement} At the indicator level, challenging career expressions currently outweigh activating ones.${caveat}`,
           challengingEvidenceIds: challengingExprs.flatMap(e => [
             ...e.expressionEvidenceIds,
             ...e.unqualifiedEvidenceIds,
@@ -80,7 +81,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
       return {
         triggered: true,
         effect: 'MIXED' as LocalRuleEffect,
-        statement: `${baseStatement} The available indicators are balanced.`,
+        statement: `${baseStatement} The available career indicators are balanced.${caveat}`,
         supportingEvidenceIds: activatingExprs.flatMap(e => e.expressionEvidenceIds),
         challengingEvidenceIds: challengingExprs.flatMap(e => e.expressionEvidenceIds)
       };
@@ -132,7 +133,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         return {
           triggered: true,
           effect: 'SUPPORT' as LocalRuleEffect,
-          statement: `Wealth dimensions show predominantly activating indicators in ${activatingDims.length} areas (${dimNames}) for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period.`,
+          statement: `Wealth dimensions show predominantly activating indicators in ${activatingDims.length} areas (${dimNames}) for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period. This is an unweighted indicator read, not a prediction of financial outcomes.`,
           supportingEvidenceIds: activatingDims.flatMap(d => d.promiseEvidenceIds)
         };
       }
@@ -142,7 +143,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         return {
           triggered: true,
           effect: 'CHALLENGE' as LocalRuleEffect,
-          statement: `Wealth dimensions show predominantly challenging indicators in ${challengingDims.length} areas (${dimNames}) for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period.`,
+          statement: `Wealth dimensions show predominantly challenging indicators in ${challengingDims.length} areas (${dimNames}) for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period. This is an unweighted indicator read, not a prediction of financial outcomes.`,
           challengingEvidenceIds: challengingDims.flatMap(d => d.promiseEvidenceIds)
         };
       }
@@ -150,7 +151,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
       return {
         triggered: true,
         effect: 'MIXED' as LocalRuleEffect,
-        statement: `Wealth dimensions show balanced activation with ${activatingDims.length} activating and ${challengingDims.length} challenging areas for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period.`,
+        statement: `Wealth dimensions show balanced activation with ${activatingDims.length} activating and ${challengingDims.length} challenging areas for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period. This is an unweighted indicator read, not a prediction of financial outcomes.`,
         supportingEvidenceIds: activatingDims.flatMap(d => d.promiseEvidenceIds),
         challengingEvidenceIds: challengingDims.flatMap(d => d.promiseEvidenceIds)
       };

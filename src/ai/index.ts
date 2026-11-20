@@ -174,4 +174,16 @@ export type {
   RuntimeBoundary
 } from './security/remoteProviderPolicy';
 
+export {
+  createServerAiComposition,
+  serverAiConfigurationFromEnv
+} from './server';
+
+export type {
+  ServerAiComposition,
+  ServerAiConfiguration,
+  ServerAiEnvironment,
+  ServerAiRemoteStatus
+} from './server';
+
 
