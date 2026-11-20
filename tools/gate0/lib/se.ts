@@ -20,10 +20,13 @@
  *    @kuntay/swisseph@0.2.2, SwissEph.calc() calls swe_calc_ut(), which
  *    accepts UT and applies deltaT internally; do not add deltaT to this JD.
  */
-import { createSwissEph, Body, Flag, Ayanamsa, HouseSystem, type SwissEph, type Position } from '@kuntay/swisseph';
+import { createSwissEph, Flag, Ayanamsa, HouseSystem, type SwissEph, type Position } from '@kuntay/swisseph';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { SE_BODY_MAP } from './seBodyMap.ts';
 import { sha256Hex } from './util.ts';
+
+export { SE_BODY_MAP } from './seBodyMap.ts';
 
 export const SE_PACKAGE = '@kuntay/swisseph';
 export const SE_PACKAGE_VERSION = '0.2.2';
@@ -67,19 +70,6 @@ export interface SeInstantCapture {
   readonly ephemerisModelsObserved: readonly string[];
   readonly warnings: readonly string[];
 }
-
-/** Planet -> Swiss Ephemeris body id. KETU is derived (mean node + 180). */
-export const SE_BODY_MAP: Readonly<Record<string, number>> = {
-  SUN: Body.Sun,
-  MOON: Body.Moon,
-  MARS: Body.Mars,
-  MERCURY: Body.Mercury,
-  JUPITER: Body.Jupiter,
-  VENUS: Body.Venus,
-  SATURN: Body.Saturn,
-  RAHU: Body.NorthNodeMean,
-  KETU: Body.NorthNodeMean
-};
 
 const NORM = (d: number) => ((d % 360) + 360) % 360;
 

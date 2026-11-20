@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { auditCohort, type CohortCapture } from '../audit-cohort.ts';
+import {
+  auditCohort,
+  loadCohortCaptures,
+  renderCohortAudit,
+  type CohortCapture
+} from '../audit-cohort.ts';
 
 interface CaptureOptions {
   readonly utcInstant?: string;
@@ -37,6 +42,7 @@ function capture(id: string, longitude: number, options: CaptureOptions = {}): C
         }
       },
       capture: {
+        ascendantTropicalDeg: null,
         ascendantSiderealDeg: null,
         bodies: Object.fromEntries(
           ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU']
@@ -59,6 +65,20 @@ describe('cohort stratification audit', () => {
     expect(audit.moonBoundaryBrackets[0].bracketed).toBe(true);
     expect(audit.missingMoonBrackets).toHaveLength(26);
     expect(audit.proximity[0].total).toBe(18);
+  });
+
+  it('reports null ascendants as unavailable, not as successful measurements', () => {
+    const audit = auditCohort([capture('NO-ASCENDANT', 10)]);
+
+    expect(audit.ascendantUnavailableCount).toBe(1);
+    expect(renderCohortAudit(audit)).toContain('Ascendant unavailable: 1');
+  });
+
+  it('asserts the current cohort has no unavailable ascendants and reports zero', () => {
+    const audit = auditCohort(loadCohortCaptures());
+
+    expect(audit.ascendantUnavailableCount).toBe(0);
+    expect(renderCohortAudit(audit)).toContain('Ascendant unavailable: 0');
   });
 
   it('does not count one exact-boundary capture as a two-sided bracket', () => {

@@ -92,6 +92,23 @@ records `deltaTDays` separately. Tropical and sidereal calls both request
 longitude are preserved separately in each artifact for discrepancy
 attribution.
 
+## Cohort capture validation scope
+
+The numeric sanity bounds in `lib/captureManifest.ts` are scoped to the
+declared 1900–2099 cohort, not universal astronomical limits. Across that era
+ΔT is roughly −2 to +100 seconds; the validator's `[-0.001, 0.01]` day range
+allows margin and rejects implausible capture data. `julianDayUt > 0` is valid
+because all cohort dates are after 4713 BCE. Positive geocentric distance is a
+physical invariant, and `|ayanamsaResidualDeg| < 0.01°` checks frame
+consistency between the tropical and sidereal calls, not ayanamsa accuracy.
+Revisit these bounds if the cohort date range expands.
+
+A `null` tropical or sidereal ascendant means the value is unavailable (for
+example, if house computation fails at an extreme latitude); it is not a
+successful measurement. The cohort audit reports unavailable ascendants
+separately from measured cases. The current cohort is expected to have zero
+unavailable ascendants, and the audit test asserts that count.
+
 ## Swiss Ephemeris conformance vectors
 
 `tests/seConformance.test.ts` pins the wrapper contract against two instants:

@@ -1,7 +1,7 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-20T17:08:31.572Z
-Engine commit: `5388fc7952a29282296b4db4376180f7a0fb8cb0`
+Generated: 2026-11-20T17:38:14.981Z
+Engine commit: `f72f68167175fad5c0605dabcd09089f693d5027`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
 RG-09 approval: **MISSING**
@@ -34,6 +34,7 @@ per cohort artifact). Engine output appears only as the measured side.
 ## Ascendant (parity measurement, not a fixture kind)
 
 - cases: 86, pass(<=0.01°): 86, fail: 0
+- ascendant unavailable in cohort captures: 0 (excluded from measurement coverage)
 - max |Δ| = 6.209e-3°, mean = 2.714e-3° (tolerance 0.01° = 36″)
 
 ## Dasha error decomposition
@@ -64,6 +65,7 @@ per cohort artifact). Engine output appears only as the measured side.
 ## Cohort stratification audit (§3a)
 
 Captured cases: 86; captured planet positions: 774.
+Ascendant unavailable: 0 (not counted as successful measurements).
 Moon-anchor cases: 67; bracket threshold: ±0.01° per side.
 Bracket pairs require distinct captures at the same site, ordered within 2 minutes.
 Nakshatra boundaries bracketed on both sides: 27/27.

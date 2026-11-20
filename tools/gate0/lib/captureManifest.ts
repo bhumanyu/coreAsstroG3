@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { SE_BODY_MAP } from './seBodyMap.ts';
 import { sha256Hex } from './util.ts';
 
 export const CAPTURE_MANIFEST_SCHEMA_VERSION = 1;
@@ -109,9 +110,18 @@ function validateLongitude(value: unknown, caseId: string, field: string): void 
 }
 
 function validateNullableLongitude(value: unknown, caseId: string, field: string): void {
+  // Null means the ascendant is unavailable, not that it was successfully measured.
   if (value !== null) validateLongitude(value, caseId, field);
 }
 
+// These are cohort-era sanity checks, not universal astronomical limits:
+// - ΔT is roughly -2 s to +100 s across the cohort's 1900–2099 dates; the
+//   [-0.001, 0.01] day bounds allow margin and reject implausible capture data.
+// - Julian day > 0 holds because all cohort dates are after 4713 BCE.
+// - Positive geocentric distance is a physical invariant.
+// - |ayanamsaResidualDeg| < 0.01° checks frame consistency between swe.calc
+//   calls; it is not a claim about ayanamsa accuracy.
+// Revisit these checks if the declared cohort date range expands.
 function validateCohortCaptureNumbers(
   artifact: unknown,
   caseId: string,
@@ -178,6 +188,12 @@ function validateCohortCaptureNumbers(
     if (!Number.isSafeInteger(sweBody) || sweBody < 0) {
       throw new Error(
         `capture ${caseId}: capture.bodies.${bodyName}.sweBody must be a non-negative integer`
+      );
+    }
+    if (SE_BODY_MAP[bodyName] === undefined || sweBody !== SE_BODY_MAP[bodyName]) {
+      throw new Error(
+        `capture ${caseId}: capture.bodies.${bodyName}.sweBody must match the canonical ` +
+        `Swiss Ephemeris body ID ${String(SE_BODY_MAP[bodyName])}`
       );
     }
     const residual = finiteNumberField(

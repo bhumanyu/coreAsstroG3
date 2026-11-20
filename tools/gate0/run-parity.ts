@@ -305,7 +305,8 @@ const ascMeasurements: AscMeasurement[] = [];
 
 function measureAscendants(captures: readonly CohortCapture[]) {
   for (const { definition, artifact } of captures) {
-    if (artifact.capture.ascendantSiderealDeg === null) continue;
+    if (artifact.capture.ascendantTropicalDeg === null
+      || artifact.capture.ascendantSiderealDeg === null) continue;
     const birth: BirthDetails = {
       latitude: artifact.site.latitude,
       longitude: artifact.site.longitude,
@@ -451,6 +452,7 @@ export function runParity() {
   const ascStats = stats(ascErrs);
   const ascPass = ascMeasurements.filter(a => a.pass).length;
   lines.push(`- cases: ${ascMeasurements.length}, pass(<=0.01°): ${ascPass}, fail: ${ascMeasurements.length - ascPass}`);
+  lines.push(`- ascendant unavailable in cohort captures: ${cohortAudit.ascendantUnavailableCount} (excluded from measurement coverage)`);
   lines.push(`- max |Δ| = ${fmt(ascStats.max)}°, mean = ${fmt(ascStats.mean)}° (tolerance 0.01° = ${(0.01 * ARCSEC_PER_DEG).toFixed(0)}″)`);
   lines.push('');
   renderDashaDecomposition(lines);

@@ -44,6 +44,7 @@ export interface CohortArtifact {
     };
   };
   readonly capture: {
+    readonly ascendantTropicalDeg: number | null;
     readonly ascendantSiderealDeg: number | null;
     readonly bodies: Readonly<Record<string, {
       readonly tropical: { readonly longitude: number; readonly longitudeSpeed: number };
@@ -77,6 +78,7 @@ export interface MoonBoundaryBracket {
 export interface CohortAudit {
   readonly captureCount: number;
   readonly bodyCount: number;
+  readonly ascendantUnavailableCount: number;
   readonly proximity: readonly BoundaryProximitySummary[];
   readonly moonAnchorCount: number;
   readonly moonBracketLimitDegrees: number;
@@ -92,6 +94,14 @@ function norm360(value: number): number {
 function distanceToGridBoundary(longitude: number, gridStep: number): number {
   const offset = norm360(longitude) % gridStep;
   return Math.min(offset, gridStep - offset);
+}
+
+function hasAscendantMeasurements(capture: CohortCapture): boolean {
+  const { ascendantTropicalDeg, ascendantSiderealDeg } = capture.artifact.capture;
+  return typeof ascendantTropicalDeg === 'number'
+    && Number.isFinite(ascendantTropicalDeg)
+    && typeof ascendantSiderealDeg === 'number'
+    && Number.isFinite(ascendantSiderealDeg);
 }
 
 export function loadCohortCaptures(): readonly CohortCapture[] {
@@ -151,6 +161,7 @@ export function auditCohort(captures: readonly CohortCapture[]): CohortAudit {
   });
 
   const anchors = captures.filter(capture => capture.definition.dasha);
+  const ascendantUnavailableCount = captures.filter(capture => !hasAscendantMeasurements(capture)).length;
   const moonBoundaryBrackets = Array.from({ length: 27 }, (_, boundaryIndex) => {
     const boundaryLongitude = boundaryIndex * NAKSHATRA_SPAN;
     let bestPair: {
@@ -224,6 +235,7 @@ export function auditCohort(captures: readonly CohortCapture[]): CohortAudit {
   return {
     captureCount: captures.length,
     bodyCount: proximity[0]?.total ?? 0,
+    ascendantUnavailableCount,
     proximity,
     moonAnchorCount: anchors.length,
     moonBracketLimitDegrees: MOON_BRACKET_LIMIT_DEG,
@@ -238,6 +250,7 @@ export function auditCohort(captures: readonly CohortCapture[]): CohortAudit {
 export function renderCohortAudit(audit: CohortAudit): string {
   const lines = [
     `Captured cases: ${audit.captureCount}; captured planet positions: ${audit.bodyCount}.`,
+    `Ascendant unavailable: ${audit.ascendantUnavailableCount} (not counted as successful measurements).`,
     `Moon-anchor cases: ${audit.moonAnchorCount}; bracket threshold: ±${audit.moonBracketLimitDegrees}° per side.`,
     `Bracket pairs require distinct captures at the same site, ordered within ${audit.moonBracketMaxSeparationMinutes} minutes.`,
     `Nakshatra boundaries bracketed on both sides: ${27 - audit.missingMoonBrackets.length}/27.`,

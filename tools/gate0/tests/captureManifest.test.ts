@@ -3,10 +3,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  auditCohort,
+  renderCohortAudit,
+  type CohortCapture
+} from '../audit-cohort.ts';
+import {
   assertCohortManifestComplete,
   validateCaptureArtifact,
   type CaptureManifest
 } from '../lib/captureManifest.ts';
+import { SE_BODY_MAP } from '../lib/seBodyMap.ts';
 import { sha256Hex } from '../lib/util.ts';
 
 const tempDirs: string[] = [];
@@ -262,6 +268,101 @@ describe('validateCaptureArtifact', () => {
       caseId: 'CASE-001',
       expectedBodies: ['SUN']
     })).toThrow(new RegExp(`CASE-001.*${field.replaceAll('.', '\\.')}`));
+  });
+
+  it.each([
+    ['lower ΔT bound', { deltaTDays: -0.001 }],
+    ['upper ΔT bound', { deltaTDays: 0.01 }],
+    ['positive Julian day', { julianDayUt: Number.MIN_VALUE }],
+    ['positive distance', { tropicalDistance: Number.MIN_VALUE }],
+    ['residual within frame tolerance', { ayanamsaResidualDeg: 0.009 }]
+  ])('accepts %s', (_label, overrides) => {
+    const artifact = numericArtifact(overrides);
+    const { artifactPath, manifest } = writeArtifact(artifact);
+
+    const validated = validateCaptureArtifact<CohortCapture['artifact']>({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001',
+      expectedBodies: ['SUN']
+    });
+    const audit = auditCohort([{
+      definition: {
+        id: 'CASE-001',
+        latitude: 0,
+        longitude: 0,
+        ianaTimeZone: 'UTC',
+        utcInstant: '2000-01-01T00:00:00Z',
+        dasha: false
+      },
+      artifact: validated.artifact,
+      sha256: validated.sha256
+    }]);
+
+    expect(audit.ascendantUnavailableCount).toBe(1);
+    expect(renderCohortAudit(audit)).toContain('Ascendant unavailable: 1');
+  });
+
+  it.each([
+    ['ΔT just below its lower bound', { deltaTDays: -0.0010001 }, 'capture.deltaTDays'],
+    ['ΔT just above its upper bound', { deltaTDays: 0.0100001 }, 'capture.deltaTDays'],
+    ['zero Julian day', { julianDayUt: 0 }, 'capture.julianDayUt'],
+    ['zero distance', { tropicalDistance: 0 }, 'tropical.distance'],
+    ['residual above frame tolerance', { ayanamsaResidualDeg: 0.011 }, 'ayanamsaResidualDeg']
+  ])('rejects %s', (_label, overrides, field) => {
+    const artifact = numericArtifact(overrides);
+    const { artifactPath, manifest } = writeArtifact(artifact);
+
+    expect(() => validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001',
+      expectedBodies: ['SUN']
+    })).toThrow(new RegExp(`CASE-001.*${field.replaceAll('.', '\\.')}`));
+  });
+
+  it('rejects a body name paired with a different canonical Swiss Ephemeris ID', () => {
+    const base = numericArtifact();
+    const artifact = {
+      ...base,
+      capture: {
+        ...base.capture,
+        bodies: {
+          MARS: {
+            ...base.capture.bodies.SUN,
+            body: 'MARS',
+            sweBody: SE_BODY_MAP.JUPITER
+          }
+        }
+      }
+    };
+    const { artifactPath, manifest } = writeArtifact(artifact);
+
+    expect(() => validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001',
+      expectedBodies: ['MARS']
+    })).toThrow(/CASE-001.*MARS\.sweBody.*canonical/);
+  });
+
+  it('accepts null ascendants as unavailable fields', () => {
+    const artifact = numericArtifact({
+      ascendantTropicalDeg: null,
+      ascendantSiderealDeg: null
+    });
+    const { artifactPath, manifest } = writeArtifact(artifact);
+
+    expect(() => validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001',
+      expectedBodies: ['SUN']
+    })).not.toThrow();
   });
 
   it('rejects non-finite sidereal values and both speed frames must be numeric', () => {
