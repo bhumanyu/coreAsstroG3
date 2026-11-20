@@ -19,6 +19,7 @@ import { gitCommitSha, readJsonFile, repoRoot, GATE0_ROOT } from './lib/util.ts'
 import {
   assertCohortManifestComplete,
   validateCaptureArtifact,
+  validateCohortCaptureArtifact,
   type CaptureManifest,
   type CohortCaptureTimeMath
 } from './lib/captureManifest.ts';
@@ -327,7 +328,7 @@ function main(timeMath: CohortCaptureTimeMath) {
   // --- cohort: planetary longitudes, motion, Rahu/Ketu opposition ---------
   for (const c of activeCases) {
     const artifactPath = join(cohortDir, `${c.id}.json`);
-    const validated = validateCaptureArtifact<CohortArtifact>({
+    const validated = validateCohortCaptureArtifact<CohortArtifact>({
       manifest,
       relativePath: `cohort/${c.id}.json`,
       artifactPath,

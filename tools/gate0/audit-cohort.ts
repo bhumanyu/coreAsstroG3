@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { GATE0_ROOT, readJsonFile } from './lib/util.ts';
 import {
   assertCohortManifestComplete,
-  validateCaptureArtifact,
+  validateCohortCaptureArtifact,
   type CaptureManifest,
   type CohortCaptureTimeMath,
   type CohortCaptureDefinition
@@ -121,7 +121,7 @@ export function loadCohortCaptures(timeMath: CohortCaptureTimeMath): readonly Co
   const captures: CohortCapture[] = [];
   for (const definition of activeCases) {
     const path = join(GATE0_ROOT, 'captures/cohort', `${definition.id}.json`);
-    const validated = validateCaptureArtifact<CohortArtifact>({
+    const validated = validateCohortCaptureArtifact<CohortArtifact>({
       manifest,
       relativePath: `cohort/${definition.id}.json`,
       artifactPath: path,

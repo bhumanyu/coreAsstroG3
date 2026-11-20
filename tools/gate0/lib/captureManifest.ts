@@ -52,9 +52,12 @@ export interface CaptureArtifactValidationOptions {
   readonly artifactPath: string;
   readonly caseId: string;
   readonly expectedCaptureId?: string;
-  readonly expectedBodies?: readonly string[];
-  readonly expectedCohortDefinition?: CohortCaptureDefinition;
-  readonly timeMath?: CohortCaptureTimeMath;
+}
+
+export interface CohortCaptureArtifactValidationOptions extends CaptureArtifactValidationOptions {
+  readonly expectedBodies: readonly string[];
+  readonly expectedCohortDefinition: CohortCaptureDefinition;
+  readonly timeMath: CohortCaptureTimeMath;
 }
 
 interface CohortCaptureMetadata {
@@ -346,8 +349,9 @@ export function assertCohortManifestComplete(
   }
 }
 
-export function validateCaptureArtifact<T extends { captureId?: unknown; capture?: unknown }>(
-  options: CaptureArtifactValidationOptions
+function validateCaptureArtifactInternal<T extends { captureId?: unknown; capture?: unknown }>(
+  options: CaptureArtifactValidationOptions,
+  cohortOptions?: CohortCaptureArtifactValidationOptions
 ): ValidatedCapture<T> {
   const manifestPath = options.relativePath.replace(/\\/g, '/');
   const manifest = objectField(options.manifest, options.caseId, 'manifest');
@@ -426,10 +430,10 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
       `manifest=${entry.captureId}, artifact=${String(artifact.captureId)}`
     );
   }
-  if (options.expectedCohortDefinition) {
+  if (cohortOptions) {
     validateCohortCaptureMetadata(
       artifact as unknown as CohortCaptureMetadata,
-      options.expectedCohortDefinition
+      cohortOptions.expectedCohortDefinition
     );
   }
   if (options.expectedCaptureId && entry.captureId !== options.expectedCaptureId) {
@@ -438,7 +442,7 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
       `expected ${options.expectedCaptureId}`
     );
   }
-  if (options.expectedBodies) {
+  if (cohortOptions) {
     const root = artifact as Record<string, unknown>;
     const capture = root.capture as { bodies?: unknown } | undefined;
     const bodies = capture?.bodies;
@@ -446,7 +450,7 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
       throw new Error(`capture ${options.caseId}: ${manifestPath} has no captured body set`);
     }
     const bodySet = bodies as Record<string, unknown>;
-    const missing = options.expectedBodies.filter(name => {
+    const missing = cohortOptions.expectedBodies.filter(name => {
       const body = bodySet[name];
       if (!body || typeof body !== 'object') return true;
       const record = body as Record<string, unknown>;
@@ -457,18 +461,30 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
         `capture ${options.caseId}: ${manifestPath} is missing expected bodies: ${missing.join(', ')}`
       );
     }
-    if (!options.timeMath) {
-      throw new Error(
-        `capture ${options.caseId}: Swiss Ephemeris time math is required for cohort validation`
-      );
-    }
     validateCohortCaptureNumbers(
       artifact,
       options.caseId,
       Object.keys(bodySet),
-      options.timeMath
+      cohortOptions.timeMath
     );
   }
 
   return { artifact, sha256: actualSha };
+}
+
+export function validateCaptureArtifact<T extends { captureId?: unknown; capture?: unknown }>(
+  options: CaptureArtifactValidationOptions
+): ValidatedCapture<T> {
+  return validateCaptureArtifactInternal<T>(options);
+}
+
+export function validateCohortCaptureArtifact<
+  T extends { captureId?: unknown; capture?: unknown }
+>(
+  options: CohortCaptureArtifactValidationOptions
+): ValidatedCapture<T> {
+  if (options.expectedBodies.length === 0) {
+    throw new Error(`capture ${options.caseId}: expectedBodies must not be empty`);
+  }
+  return validateCaptureArtifactInternal<T>(options, options);
 }

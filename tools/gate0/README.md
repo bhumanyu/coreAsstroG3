@@ -19,11 +19,14 @@ Run the pipeline in order:
    Failed cases are marked `BLOCKED` and the command exits nonzero.
 2. `npm run capture:boundary` validates the cohort captures, then records
    independent sign/nakshatra/pada triplets, D9/D10 vectors, whole-sign houses,
-   and Vimshottari anchors. Expected categorical and arithmetic values come
-   from `lib/grid.ts`, never from engine calls.
-3. `npm run generate:fixtures` verifies each artifact's manifest status,
-   existence, SHA-256, capture ID, and expected body set before emitting
-   `src/engine/validation/calculationReferenceFixtures.generated.ts`.
+   and Vimshottari anchors. Dasha-anchor source captures are checked against
+   the complete cohort definition, including exact UTC instant and timezone.
+   Expected categorical and arithmetic values come from `lib/grid.ts`, never
+   from engine calls.
+3. `npm run generate:fixtures` verifies each cohort artifact's manifest status,
+   existence, SHA-256, capture ID, and expected body set; it verifies the
+   constructed boundary-vector artifact's manifest and schema integrity before
+   emitting `src/engine/validation/calculationReferenceFixtures.generated.ts`.
 4. `npm run audit:cohort` reports measured distances to sign/nakshatra/pada/D9/D10
    boundaries and exits nonzero unless every nakshatra boundary has Moon-anchor
    captures on both sides within 0.01°.
@@ -109,6 +112,12 @@ within `1e-6` day. It also compares recorded `deltaTDays` with
 `swe.deltaT(capture.julianDayUt)` within `1e-6` day. These cohort-scoped checks
 protect evidence integrity and confirm the Swiss Ephemeris convention used by
 the capture; they are not independent time-scale or ΔT models.
+
+`validateCohortCaptureArtifact` is the required entry point for cohort records;
+its options require the expected body set, complete cohort definition, and
+Swiss Ephemeris time math together. `validateCaptureArtifact` performs only
+manifest, hash, and schema validation and is used for the separately
+constructed boundary-vector artifact.
 
 A `null` tropical or sidereal ascendant means the value is unavailable (for
 example, if house computation fails at an extreme latitude); it is not a

@@ -10,8 +10,10 @@ import {
 import {
   assertCohortManifestComplete,
   COHORT_JD_UT_TOLERANCE_DAYS,
-  validateCaptureArtifact as validateCaptureArtifactImpl,
-  type CaptureArtifactValidationOptions,
+  validateCaptureArtifact as validateManifestCaptureArtifact,
+  validateCohortCaptureArtifact as validateCohortCaptureArtifactImpl,
+  type CohortCaptureArtifactValidationOptions,
+  type CohortCaptureDefinition,
   type CohortCaptureTimeMath,
   type CaptureManifest
 } from '../lib/captureManifest.ts';
@@ -31,14 +33,74 @@ afterAll(() => {
   swissEphSession?.dispose();
 });
 
-function validateCaptureArtifact<T extends { captureId?: unknown; capture?: unknown }>(
-  options: CaptureArtifactValidationOptions
+const defaultCohortDefinition: CohortCaptureDefinition = {
+  id: 'CASE-001',
+  latitude: 0,
+  longitude: 0,
+  ianaTimeZone: 'UTC',
+  utcInstant: '2000-01-01T00:00:00Z'
+};
+
+type TestCohortValidationOptions =
+  Omit<CohortCaptureArtifactValidationOptions, 'expectedCohortDefinition' | 'timeMath'> & {
+    readonly expectedCohortDefinition?: CohortCaptureDefinition;
+    readonly timeMath?: CohortCaptureTimeMath;
+  };
+
+function validateCohortCaptureArtifact<T extends { captureId?: unknown; capture?: unknown }>(
+  options: TestCohortValidationOptions
 ) {
-  return validateCaptureArtifactImpl<T>({
+  return validateCohortCaptureArtifactImpl<T>({
     ...options,
+    expectedCohortDefinition: options.expectedCohortDefinition ?? defaultCohortDefinition,
     timeMath: options.timeMath ?? swissEphSession.swe
   });
 }
+
+function cohortDefinitionForNumericOverrides(overrides: unknown): CohortCaptureDefinition {
+  const values = overrides !== null && typeof overrides === 'object'
+    ? overrides as Record<string, unknown>
+    : {};
+  return {
+    ...defaultCohortDefinition,
+    latitude: typeof values.latitude === 'number'
+      ? values.latitude
+      : defaultCohortDefinition.latitude,
+    longitude: typeof values.siteLongitude === 'number'
+      ? values.siteLongitude
+      : defaultCohortDefinition.longitude,
+    utcInstant: typeof values.utcInstant === 'string'
+      ? values.utcInstant
+      : defaultCohortDefinition.utcInstant
+  };
+}
+
+function compileTimeCohortOptionsCheck(): void {
+  const baseOptions = {
+    manifest: {} as CaptureManifest,
+    relativePath: 'cohort/CASE-001.json',
+    artifactPath: 'capture.json',
+    caseId: 'CASE-001',
+    expectedBodies: ['SUN']
+  };
+  // @ts-expect-error The expected cohort definition is required.
+  validateCohortCaptureArtifactImpl({ ...baseOptions, timeMath: swissEphSession.swe });
+  // @ts-expect-error Swiss Ephemeris time math is required.
+  validateCohortCaptureArtifactImpl({
+    ...baseOptions,
+    expectedCohortDefinition: defaultCohortDefinition
+  });
+  // @ts-expect-error The expected body set is required.
+  validateCohortCaptureArtifactImpl({
+    manifest: baseOptions.manifest,
+    relativePath: baseOptions.relativePath,
+    artifactPath: baseOptions.artifactPath,
+    caseId: baseOptions.caseId,
+    expectedCohortDefinition: defaultCohortDefinition,
+    timeMath: swissEphSession.swe
+  });
+}
+void compileTimeCohortOptionsCheck;
 
 function julianDayFor(utcInstant: string): number {
   const date = new Date(utcInstant);
@@ -159,7 +221,7 @@ describe('validateCaptureArtifact', () => {
   it('accepts a captured artifact with an exact timestamp/JD pair', () => {
     const artifact = validArtifact();
     const { artifactPath, manifest } = writeArtifact(artifact);
-    const validated = validateCaptureArtifact({
+    const validated = validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -188,7 +250,7 @@ describe('validateCaptureArtifact', () => {
       }
     };
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateManifestCaptureArtifact({
       manifest: invalidManifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -212,7 +274,7 @@ describe('validateCaptureArtifact', () => {
       }
     };
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateManifestCaptureArtifact({
       manifest: invalidManifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -223,7 +285,7 @@ describe('validateCaptureArtifact', () => {
   it('rejects unsupported manifest and artifact schema versions', () => {
     const artifact = validArtifact();
     const { artifactPath, manifest } = writeArtifact(artifact);
-    expect(() => validateCaptureArtifact({
+    expect(() => validateManifestCaptureArtifact({
       manifest: { ...manifest, schemaVersion: 2 },
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -231,7 +293,7 @@ describe('validateCaptureArtifact', () => {
     })).toThrow(/CASE-001.*manifest\.schemaVersion/);
 
     const wrongArtifact = writeArtifact({ ...validArtifact(), schemaVersion: 2 });
-    expect(() => validateCaptureArtifact({
+    expect(() => validateManifestCaptureArtifact({
       manifest: wrongArtifact.manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath: wrongArtifact.artifactPath,
@@ -248,7 +310,7 @@ describe('validateCaptureArtifact', () => {
         'cohort/CASE-001.json': { ...manifest.files['cohort/CASE-001.json'], sha256: '0'.repeat(64) }
       }
     };
-    expect(() => validateCaptureArtifact({
+    expect(() => validateManifestCaptureArtifact({
       manifest: staleManifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -266,7 +328,7 @@ describe('validateCaptureArtifact', () => {
         }
       }
     };
-    expect(() => validateCaptureArtifact({
+    expect(() => validateManifestCaptureArtifact({
       manifest: blockedManifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -276,7 +338,7 @@ describe('validateCaptureArtifact', () => {
 
   it('rejects artifacts with missing expected bodies', () => {
     const { artifactPath, manifest } = writeArtifact(validArtifact());
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -308,11 +370,12 @@ describe('validateCaptureArtifact', () => {
     const artifact = numericArtifact(overrides);
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
       caseId: 'CASE-001',
+      expectedCohortDefinition: cohortDefinitionForNumericOverrides(overrides),
       expectedBodies: ['SUN']
     })).toThrow(new RegExp(`CASE-001.*${field.replaceAll('.', '\\.')}`));
   });
@@ -325,7 +388,7 @@ describe('validateCaptureArtifact', () => {
   ])('accepts %s', (_label, overrides, deltaTExpected) => {
     const artifact = numericArtifact(overrides);
     const { artifactPath, manifest } = writeArtifact(artifact);
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -345,7 +408,7 @@ describe('validateCaptureArtifact', () => {
     });
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -362,11 +425,15 @@ describe('validateCaptureArtifact', () => {
     });
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
       caseId: 'CASE-001',
+      expectedCohortDefinition: {
+        ...defaultCohortDefinition,
+        utcInstant
+      },
       expectedBodies: ['SUN']
     })).toThrow(/CASE-001.*julianDayUt does not match.*recorded=.*expected=/);
   });
@@ -379,11 +446,15 @@ describe('validateCaptureArtifact', () => {
     });
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
       caseId: 'CASE-001',
+      expectedCohortDefinition: {
+        ...defaultCohortDefinition,
+        utcInstant
+      },
       expectedBodies: ['SUN']
     })).toThrow(/CASE-001.*julianDayUt does not match.*recorded=.*expected=/);
   });
@@ -395,7 +466,7 @@ describe('validateCaptureArtifact', () => {
     });
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -414,7 +485,7 @@ describe('validateCaptureArtifact', () => {
     const artifact = numericArtifact(overrides);
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -440,7 +511,7 @@ describe('validateCaptureArtifact', () => {
     };
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -456,7 +527,7 @@ describe('validateCaptureArtifact', () => {
     });
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    const validated = validateCaptureArtifact<CohortCapture['artifact']>({
+    const validated = validateCohortCaptureArtifact<CohortCapture['artifact']>({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -483,7 +554,7 @@ describe('validateCaptureArtifact', () => {
   it('rejects non-finite sidereal values and both speed frames must be numeric', () => {
     const siderealLongitude = numericArtifact({ siderealLongitude: Infinity });
     const { artifactPath, manifest } = writeArtifact(siderealLongitude);
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -493,7 +564,7 @@ describe('validateCaptureArtifact', () => {
 
     const siderealSpeed = numericArtifact({ siderealSpeed: 'fast' });
     const second = writeArtifact(siderealSpeed);
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest: second.manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath: second.artifactPath,
@@ -505,7 +576,7 @@ describe('validateCaptureArtifact', () => {
   it('rejects non-finite ayanamsa values', () => {
     const artifact = numericArtifact({ ayanamsaDegrees: Number.POSITIVE_INFINITY });
     const { artifactPath, manifest } = writeArtifact(artifact);
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
@@ -529,16 +600,24 @@ describe('validateCaptureArtifact', () => {
     readonly ianaTimeZone?: string;
     readonly utcInstant?: string;
   } = {}) {
+    const utcInstant = overrides.utcInstant ?? cohortDefinition.utcInstant;
+    const baseArtifact = validArtifact();
+    const julianDayUt = julianDayFor(utcInstant);
     return {
-      ...validArtifact(),
+      ...baseArtifact,
       caseId: overrides.caseId ?? cohortDefinition.id,
       site: {
         latitude: overrides.latitude ?? cohortDefinition.latitude,
         longitude: overrides.longitude ?? cohortDefinition.longitude,
         instant: {
           ianaTimeZone: overrides.ianaTimeZone ?? cohortDefinition.ianaTimeZone,
-          utcInstant: overrides.utcInstant ?? cohortDefinition.utcInstant
+          utcInstant
         }
+      },
+      capture: {
+        ...baseArtifact.capture,
+        julianDayUt,
+        deltaTDays: swissEphSession.swe.deltaT(julianDayUt)
       }
     };
   }
@@ -641,11 +720,12 @@ describe('validateCaptureArtifact', () => {
   it('accepts cohort metadata that exactly matches the full case definition', () => {
     const artifact = cohortArtifact();
     const { artifactPath, manifest } = writeArtifact(artifact);
-    const validated = validateCaptureArtifact({
+    const validated = validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
       caseId: cohortDefinition.id,
+      expectedBodies: ['SUN'],
       expectedCohortDefinition: cohortDefinition
     });
 
@@ -656,16 +736,18 @@ describe('validateCaptureArtifact', () => {
     ['caseId', { caseId: 'OTHER-CASE' }, 'caseId'],
     ['latitude', { latitude: 28.614 }, 'site.latitude'],
     ['longitude', { longitude: 77.21 }, 'site.longitude'],
-    ['IANA timezone', { ianaTimeZone: 'Asia/Tokyo' }, 'site.instant.ianaTimeZone'],
-    ['full UTC instant', { utcInstant: '1905-04-12T04:31:00Z' }, 'site.instant.utcInstant']
+    ['same instant, different IANA timezone', { ianaTimeZone: 'Asia/Tokyo' }, 'site.instant.ianaTimeZone'],
+    ['same date, different UTC time', { utcInstant: '1905-04-12T04:31:00Z' }, 'site.instant.utcInstant'],
+    ['different date', { utcInstant: '1905-04-13T04:30:00Z' }, 'site.instant.utcInstant']
   ])('rejects mismatched cohort %s with a field-specific error', (_label, overrides, field) => {
     const { artifactPath, manifest } = writeArtifact(cohortArtifact(overrides));
 
-    expect(() => validateCaptureArtifact({
+    expect(() => validateCohortCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
       caseId: cohortDefinition.id,
+      expectedBodies: ['SUN'],
       expectedCohortDefinition: cohortDefinition
     })).toThrow(new RegExp(`CASE-001.*${field.replaceAll('.', '\\.')}`));
   });

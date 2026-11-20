@@ -19,8 +19,9 @@ import {
 } from './lib/grid.ts';
 import { canonicalJson, gitCommitSha, readJsonFile, repoRoot, sha256Hex, writeJsonFile, GATE0_ROOT } from './lib/util.ts';
 import {
-  validateCaptureArtifact,
+  validateCohortCaptureArtifact,
   type CaptureManifest,
+  type CohortCaptureDefinition,
   type CohortCaptureTimeMath
 } from './lib/captureManifest.ts';
 import { openSwissEph } from './lib/se.ts';
@@ -212,19 +213,20 @@ function buildDashaAnchors(
   timeMath: CohortCaptureTimeMath
 ): unknown[] {
   const cohortDir = join(GATE0_ROOT, 'captures/cohort');
-  const cases = readJsonFile<{ cases: { id: string; dasha: boolean; utcInstant: string }[] }>(
+  const cases = readJsonFile<{ cases: (CohortCaptureDefinition & { dasha: boolean })[] }>(
     join(GATE0_ROOT, 'cohort/cases.v1.json')
   ).cases.filter(c => c.dasha && !c.utcInstant.startsWith('TBD'));
   const out: unknown[] = [];
   for (const c of cases) {
     const path = join(cohortDir, `${c.id}.json`);
-    const { artifact } = validateCaptureArtifact<CohortArtifact>({
+    const { artifact } = validateCohortCaptureArtifact<CohortArtifact>({
       manifest,
       relativePath: `cohort/${c.id}.json`,
       artifactPath: path,
       caseId: c.id,
       expectedCaptureId: `CAPTURE-${c.id}-${c.utcInstant.slice(0, 10)}`,
       expectedBodies: ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU'],
+      expectedCohortDefinition: c,
       timeMath
     });
     const moonLon = artifact.capture.bodies.MOON.sidereal.longitude;
