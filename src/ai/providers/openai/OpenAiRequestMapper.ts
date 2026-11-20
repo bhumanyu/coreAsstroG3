@@ -4,7 +4,10 @@ import type {
   RemoteAiProviderConfig,
   RemoteAiRequestMapper
 } from '../remote';
-import { OPENAI_REASONING_SCHEMA } from './openAiStructuredSchema';
+import {
+  OPENAI_REASONING_SCHEMA,
+  OPENAI_SELECTED_PERIOD_REASONING_SCHEMA
+} from './openAiStructuredSchema';
 import type { OpenAiProviderOptions } from './OpenAiTypes';
 
 const DEFAULT_ENDPOINT = 'https://api.openai.com/v1/responses';
@@ -18,6 +21,9 @@ function buildSystemInstructions(request: AiRequest): string {
     'Do not invent astrological facts that are absent from the supplied CoreAstro context.',
     'Do not change planetary signs, planetary houses, ascendant, dasha periods, D9/D10 status, yoga status, or evidence statements.',
     'Use the supplied evidence IDs when making conclusions.',
+    'Keep raw evidence IDs, rule IDs, and provenance codes out of prose; cite evidence only in the structured evidence-ID fields.',
+    'An empty or unresolved evidence set is missing information, not negative evidence.',
+    'Do not invent a confidence level when the supplied context marks confidence as NOT_ASSESSED.',
     'Distinguish deterministic facts from interpretation.',
     'If evidence conflicts, explicitly acknowledge the conflict.',
     'If evidence is insufficient, say so instead of inventing information.',
@@ -41,7 +47,13 @@ function buildContextPayload(request: AiRequest): Record<string, unknown> {
     career: context.career,
     wealth: context.wealth,
     lifeThemes: context.lifeThemes,
-    evidence: context.evidence
+    evidence: context.evidence,
+    ...(context.selectedPeriod
+      ? {
+          selectedPeriod: context.selectedPeriod,
+          selectedPeriodEvidence: context.selectedPeriod.availableEvidence
+        }
+      : {})
   };
 }
 
@@ -84,7 +96,9 @@ export class OpenAiRequestMapper implements RemoteAiRequestMapper {
           type: 'json_schema',
           name: 'coreastro_reasoning',
           description: 'Structured CoreAstro reasoning result.',
-          schema: OPENAI_REASONING_SCHEMA,
+          schema: request.task === 'SELECTED_PERIOD_ANALYSIS'
+            ? OPENAI_SELECTED_PERIOD_REASONING_SCHEMA
+            : OPENAI_REASONING_SCHEMA,
           strict: true
         }
       };

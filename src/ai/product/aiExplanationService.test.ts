@@ -12,6 +12,7 @@ import { buildLifeAnalysis } from '../../domain/synthesis';
 import { buildProductAiContext } from '../context/aiContextFactory';
 import { AiProviderRegistry } from '../routing/AiProviderRegistry';
 import { AiRouter } from '../routing/AiRouter';
+import { createDefaultAiRouter } from '../routing/createDefaultAiRouter';
 import type { AiProvider } from '../types/aiProviderTypes';
 import type { AiRequest } from '../types/aiRequestTypes';
 import type { AiResponse } from '../types/aiResponseTypes';
@@ -40,6 +41,26 @@ function createTestOptions(
 }
 
 describe('runAiExplanation', () => {
+  it('uses a configured remote provider first and falls back to local rules on failure', async () => {
+    const remoteProvider: AiProvider = {
+      identity: { id: 'test-remote-primary', name: 'Test remote', kind: 'REMOTE_LLM' },
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT'],
+      getStatus: () => ({ availability: 'AVAILABLE' }),
+      generate: async () => { throw new Error('remote unavailable'); }
+    };
+    const result = await runAiExplanation(createTestOptions({
+      task: 'CHART_SYNTHESIS',
+      router: createDefaultAiRouter({ remoteProvider })
+    }));
+
+    expect(result.kind).toBe('SUCCESS');
+    if (result.kind === 'SUCCESS') {
+      expect(result.providerId).toBe('local-vedic-rules');
+      expect(result.routingMode).toBe('AUTO');
+      expect(result.fallbackUsed).toBe(true);
+    }
+  });
+
   it('builds a local chart synthesis explanation', async () => {
     const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS'
@@ -706,11 +727,13 @@ describe('runAiExplanation', () => {
       ]
     };
 
+    let groundedReasonEvidenceId: string | undefined;
     const mockRouter: any = {
       route: async (request: any) => {
         // Verify the request has the correct task and selectedPeriod context
         expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
         expect(request.context.selectedPeriod).toBeDefined();
+        groundedReasonEvidenceId = request.context.evidence[0]?.id;
 
         // Return evidence IDs that exist in availableEvidence plus one invented ID
         // The mock must NOT do the service's job - unresolvedQuestions is empty
@@ -723,7 +746,15 @@ describe('runAiExplanation', () => {
               supportingEvidenceIds: ['ev-1', 'ev-3', 'ev-invented'],
               challengingEvidenceIds: ['ev-4'],
               unresolvedQuestions: [],
-              warnings: []
+              warnings: [],
+              likelyThemes: ['Measured progress'],
+              supportingReasons: [
+                { text: 'A grounded reason.', evidenceIds: groundedReasonEvidenceId ? [groundedReasonEvidenceId] : [] },
+                { text: 'An unresolved reason.', evidenceIds: ['ev-invented'] }
+              ],
+              risks: ['Avoid overextension.'],
+              uncertainties: ['Some inputs remain incomplete.'],
+              practicalFocus: ['Review current commitments.']
             },
             warnings: []
           },
@@ -770,6 +801,17 @@ describe('runAiExplanation', () => {
       // The production message is plural-worded, so match on the ID substring
       const unresolvedText = result.unresolvedQuestions.join(' ');
       expect(unresolvedText).toContain('ev-invented');
+      expect(groundedReasonEvidenceId).toBeTruthy();
+      expect(result.likelyThemes).toEqual(['Measured progress']);
+      expect(result.supportingReasons).toEqual([
+        { text: 'A grounded reason.', evidenceIds: [groundedReasonEvidenceId] }
+      ]);
+      expect(result.warnings).toContain(
+        'One or more supporting reasons referenced unresolved evidence; those references were omitted.'
+      );
+      expect(result.risks).toEqual(['Avoid overextension.']);
+      expect(result.uncertainties).toEqual(['Some inputs remain incomplete.']);
+      expect(result.practicalFocus).toEqual(['Review current commitments.']);
     }
   });
 

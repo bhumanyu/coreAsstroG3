@@ -9,12 +9,25 @@ import type { AiProviderRegistry } from './AiProviderRegistry';
 import { AiProviderSelector } from './AiProviderSelector';
 import { AiRoutingError } from './AiRoutingError';
 import { decorateAiResponse } from './decorateAiResponse';
+import { requiredCapabilitiesForRequest } from './providerCapabilityMap';
 
 export class AiRouter {
   constructor(
     private readonly registry: AiProviderRegistry,
     private readonly selector: AiProviderSelector = new AiProviderSelector()
   ) {}
+
+  getConfiguredRemoteProviderId(request: AiRequest): string | undefined {
+    const requiredCapabilities = requiredCapabilitiesForRequest(request);
+    return this.registry.list()
+      .filter((provider) =>
+        provider.identity.kind === 'REMOTE_LLM' &&
+        provider.getStatus().availability !== 'UNAVAILABLE' &&
+        requiredCapabilities.every((capability) => provider.capabilities.includes(capability))
+      )
+      .map((provider) => provider.identity.id)
+      .sort((left, right) => left.localeCompare(right))[0];
+  }
 
   /**
    * Routes an AI request to the highest-ranking eligible provider,

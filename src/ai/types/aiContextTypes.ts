@@ -844,6 +844,14 @@ export interface AiSelectedPeriodContext {
   readonly interval: { readonly start: string; readonly end: string };
   readonly analysisAsOf: string;
   readonly temporalRelation: 'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN';
+  readonly confidence: { readonly status: 'NOT_ASSESSED' };
+  readonly limitations: readonly {
+    readonly domain: 'CAREER' | 'WEALTH';
+    readonly code: string;
+    readonly detail: string;
+  }[];
+  readonly strongestSupportingFactors: readonly AiEvidence[];
+  readonly strongestChallenges: readonly AiEvidence[];
   readonly career: {
     readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
     readonly expressions: readonly {

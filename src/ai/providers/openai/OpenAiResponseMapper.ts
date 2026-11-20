@@ -8,6 +8,7 @@ import type {
   OpenAiResponseEnvelope,
   OpenAiStructuredReasoning
 } from './OpenAiTypes';
+import { buildSelectedPeriodEvidenceIndex } from '../../context/selectedPeriodEvidenceHelper';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -82,7 +83,10 @@ function requireStringArray(
   return Object.freeze([...value]);
 }
 
-function parseStructuredOutput(text: string): OpenAiStructuredReasoning {
+function parseStructuredOutput(
+  text: string,
+  requireSelectedPeriodSections: boolean
+): OpenAiStructuredReasoning {
   let parsed: unknown;
 
   try {
@@ -103,7 +107,36 @@ function parseStructuredOutput(text: string): OpenAiStructuredReasoning {
     throw new Error('OpenAI structured output is missing conclusion.');
   }
 
-  return Object.freeze({
+  const optionalStringArray = (fieldName: string): readonly string[] | undefined => {
+    if (parsed[fieldName] === undefined && !requireSelectedPeriodSections) {
+      return undefined;
+    }
+    return requireStringArray(parsed[fieldName], fieldName);
+  };
+  const rawReasons = parsed.supportingReasons;
+  let supportingReasons: OpenAiStructuredReasoning['supportingReasons'];
+  if (rawReasons === undefined && !requireSelectedPeriodSections) {
+    supportingReasons = undefined;
+  } else {
+    if (!Array.isArray(rawReasons)) {
+      throw new Error('OpenAI structured output has invalid supportingReasons.');
+    }
+    supportingReasons = Object.freeze(rawReasons.map((reason) => {
+      if (!isRecord(reason) || typeof reason.text !== 'string') {
+        throw new Error('OpenAI structured output has invalid supportingReasons.');
+      }
+      const evidenceIds = requireStringArray(reason.evidenceIds, 'supportingReasons.evidenceIds');
+      if (evidenceIds.length === 0) {
+        throw new Error('OpenAI structured output has invalid supportingReasons.evidenceIds.');
+      }
+      return Object.freeze({
+        text: reason.text,
+        evidenceIds
+      });
+    }));
+  }
+
+  const parsedResult: OpenAiStructuredReasoning = {
     status: parsed.status,
     conclusion: parsed.conclusion,
     supportingEvidenceIds: requireStringArray(
@@ -121,28 +154,60 @@ function parseStructuredOutput(text: string): OpenAiStructuredReasoning {
     warnings: requireStringArray(
       parsed.warnings,
       'warnings'
-    )
-  });
+    ),
+    likelyThemes: optionalStringArray('likelyThemes'),
+    supportingReasons,
+    risks: optionalStringArray('risks'),
+    uncertainties: optionalStringArray('uncertainties'),
+    practicalFocus: optionalStringArray('practicalFocus')
+  };
+
+  return Object.freeze(parsedResult);
 }
 
 function validateEvidenceIds(
   request: AiRequest,
   result: OpenAiStructuredReasoning
-): void {
-  const knownIds = new Set(
-    (request.context?.evidence ?? []).map((evidence) => evidence.id)
-  );
-
-  const referencedIds = [
-    ...result.supportingEvidenceIds,
-    ...result.challengingEvidenceIds
-  ];
-
-  for (const id of referencedIds) {
-    if (!knownIds.has(id)) {
-      throw new Error('OpenAI response referenced an unknown evidence ID.');
+): { result: OpenAiStructuredReasoning } {
+  const selectedPeriodIndex = request.task === 'SELECTED_PERIOD_ANALYSIS'
+    ? buildSelectedPeriodEvidenceIndex(
+        request.context?.evidence ?? [],
+        request.context?.selectedPeriod
+      )
+    : undefined;
+  const knownIds = selectedPeriodIndex
+    ? selectedPeriodIndex.index
+    : new Map((request.context?.evidence ?? []).map((evidence) => [evidence.id, evidence]));
+  const ambiguousIds = new Set(selectedPeriodIndex?.ambiguousIds ?? []);
+  const invalidIds = new Set<string>();
+  const keepKnownIds = (ids: readonly string[]) => ids.filter((id) => {
+    if (!knownIds.has(id) || ambiguousIds.has(id)) {
+      invalidIds.add(id);
+      return false;
     }
-  }
+    return true;
+  });
+  const supportingEvidenceIds = keepKnownIds(result.supportingEvidenceIds);
+  const challengingEvidenceIds = keepKnownIds(result.challengingEvidenceIds);
+  const supportingReasons = result.supportingReasons?.flatMap((reason) => {
+    const evidenceIds = keepKnownIds(reason.evidenceIds);
+    return evidenceIds.length > 0
+      ? [Object.freeze({ ...reason, evidenceIds: Object.freeze(evidenceIds) })]
+      : [];
+  });
+  const warnings = invalidIds.size > 0
+    ? Object.freeze(['OpenAI response referenced unknown or ambiguous evidence IDs; unresolved references were omitted.'])
+    : Object.freeze([]);
+
+  return {
+    result: Object.freeze({
+      ...result,
+      supportingEvidenceIds: Object.freeze(supportingEvidenceIds),
+      challengingEvidenceIds: Object.freeze(challengingEvidenceIds),
+      ...(supportingReasons ? { supportingReasons: Object.freeze(supportingReasons) } : {}),
+      warnings: Object.freeze([...result.warnings, ...warnings])
+    })
+  };
 }
 
 export class OpenAiResponseMapper implements RemoteAiResponseMapper {
@@ -185,15 +250,18 @@ export class OpenAiResponseMapper implements RemoteAiResponseMapper {
       });
     }
 
-    const structured = parseStructuredOutput(text);
-    validateEvidenceIds(request, structured);
+    const structured = parseStructuredOutput(
+      text,
+      request.task === 'SELECTED_PERIOD_ANALYSIS'
+    );
+    const validated = validateEvidenceIds(request, structured);
 
     return Object.freeze({
       requestId: request.requestId,
-      content: structured.conclusion,
-      structuredOutput: structured,
+      content: validated.result.conclusion,
+      structuredOutput: validated.result,
       format: 'STRUCTURED',
-      warnings: structured.warnings,
+      warnings: validated.result.warnings,
       metadata: Object.freeze(metadata)
     });
   }

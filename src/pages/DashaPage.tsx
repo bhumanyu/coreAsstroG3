@@ -28,8 +28,7 @@ import {
   DashaUnavailableState,
   DashaErrorState,
   SelectedPeriodSection,
-  SelectedPeriodReport,
-  SelectedPeriodAiExplanation
+  SelectedPeriodReport
 } from '../components/dasha';
 
 export interface DashaPageProps {
@@ -259,11 +258,6 @@ export const DashaPage: React.FC<DashaPageProps> = ({
               synthesis={selectedPeriod.synthesis}
               domainToggle={domainToggle}
               onDomainToggle={setDomainToggle}
-            />
-            {/* Selected Period AI Explanation (PBA-09) */}
-            <SelectedPeriodAiExplanation
-              synthesis={selectedPeriod.synthesis}
-              submittedPeriod={submittedPeriod}
             />
           </>
         ) : null;

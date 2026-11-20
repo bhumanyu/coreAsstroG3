@@ -9,6 +9,7 @@ import { projectSelectedPeriodSynthesis } from './aiContextFactory';
 import type { SelectedPeriodSynthesisValue } from '../../domain/synthesis/selectedPeriodSynthesis';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
+import { createDomainEvidence } from '../../domain/interpretation/DomainEvidence';
 
 describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
   /**
@@ -211,6 +212,50 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
       expect(result.interval).toEqual(canonicalSynthesis.period.interval);
       expect(result.analysisAsOf).toBe('2026-01-01T00:00:00Z');
       expect(result.temporalRelation).toBe('CURRENT');
+    });
+
+    it('projects confidence state, explicit limitations, and strongest supplied factors', () => {
+      const synthesisWithFactors = {
+        ...canonicalSynthesis,
+        evidence: [
+          { ...canonicalSynthesis.evidence[0], evidenceId: 'weak-support' },
+          { ...canonicalSynthesis.evidence[0], evidenceId: 'strong-support' },
+          { ...canonicalSynthesis.evidence[1], evidenceId: 'strong-challenge', classification: 'CHALLENGING' as const }
+        ]
+      };
+      const result = projectSelectedPeriodSynthesis(synthesisWithFactors, {
+        careerEvidence: [
+          createDomainEvidence({
+            id: 'weak-support',
+            sourceType: 'PLANET',
+            role: 'PRIMARY',
+            strength: 'WEAK',
+            statement: 'A lower-priority supporting factor.'
+          }),
+          createDomainEvidence({
+            id: 'strong-support',
+            sourceType: 'PLANET',
+            role: 'PRIMARY',
+            strength: 'STRONG',
+            statement: 'A stronger supporting factor.'
+          }),
+          createDomainEvidence({
+            id: 'strong-challenge',
+            sourceType: 'PLANET',
+            role: 'PRIMARY',
+            polarity: 'CHALLENGING',
+            strength: 'STRONG',
+            statement: 'A challenging factor.'
+          })
+        ]
+      });
+
+      expect(result.confidence).toEqual({ status: 'NOT_ASSESSED' });
+      expect(result.limitations).toEqual(expect.arrayContaining([
+        { domain: 'CAREER', code: 'MISSING_INPUT_1', detail: 'Missing career input' }
+      ]));
+      expect(result.strongestSupportingFactors.map((item) => item.id)).toEqual(['strong-support', 'weak-support']);
+      expect(result.strongestChallenges.map((item) => item.id)).toEqual(['strong-challenge']);
     });
 
     it('preserves career expressions with full traceability', () => {

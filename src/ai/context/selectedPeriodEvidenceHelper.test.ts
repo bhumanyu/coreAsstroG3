@@ -40,6 +40,10 @@ describe('buildSelectedPeriodEvidenceIndex', () => {
     interval: { start: '2020-01-01T00:00:00.000Z', end: '2030-01-01T00:00:00.000Z' },
     analysisAsOf: '2024-01-01T00:00:00.000Z',
     temporalRelation: 'CURRENT',
+    confidence: { status: 'NOT_ASSESSED' },
+    limitations: [],
+    strongestSupportingFactors: [],
+    strongestChallenges: [],
     evidence: [],
     career: {
       qualificationBasis: 'CANONICAL_STATUS',

@@ -27,6 +27,15 @@ function createRequest(): AiRequest {
 }
 
 describe('OpenAiProvider', () => {
+  it('reports an empty-key provider as unavailable for routing', () => {
+    const provider = new OpenAiProvider({
+      apiKey: '',
+      endpoint: 'https://api.openai.com/v1/responses'
+    });
+
+    expect(provider.getStatus().availability).toBe('UNAVAILABLE');
+  });
+
   it('exposes REMOTE_LLM identity', () => {
     const provider = new OpenAiProvider({
       apiKey: 'secret',

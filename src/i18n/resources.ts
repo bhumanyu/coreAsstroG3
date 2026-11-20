@@ -365,6 +365,25 @@ export const resources = {
         supportingEvidence: 'Supporting Evidence ({{count}})',
         challengingEvidence: 'Challenging Evidence ({{count}})'
       },
+      selectedPeriodReport: {
+        summary: 'Selected-period summary',
+        conclusionUnavailable: 'A readable period summary is unavailable. The deterministic statuses and technical evidence remain available below.',
+        technicalEvidence: 'Technical evidence',
+        careerActivation: 'Career activation',
+        wealthActivation: 'Wealth activation',
+        noActivationStatus: 'No career activation status was provided.',
+        likelyThemes: 'Likely themes',
+        supportingReasons: 'Supporting reasons',
+        supportingFactors: 'Top supporting factors',
+        challengingFactors: 'Top challenging factors',
+        risks: 'Risks',
+        uncertainties: 'Uncertainties',
+        practicalFocus: 'Practical focus',
+        aiProvider: 'AI provider',
+        aiStatus: 'AI explanation status',
+        aiEvidenceReferences: 'AI evidence references',
+        triggeredRules: 'Triggered rules'
+      },
       status: {
         errorTitle: 'Dasha & Timing Computation Error',
         errorMessage: 'An error occurred while compiling the Vimshottari timing analysis. Please verify birth details and retry.',
@@ -3107,6 +3126,25 @@ export const resources = {
         unresolvedQuestions: 'अनसुलझे प्रश्न',
         supportingEvidence: 'समर्थक साक्ष्य ({{count}})',
         challengingEvidence: 'चुनौतीपूर्ण साक्ष्य ({{count}})'
+      },
+      selectedPeriodReport: {
+        summary: 'चयनित अवधि का सारांश',
+        conclusionUnavailable: 'अवधि का पठनीय सारांश उपलब्ध नहीं है। नियतात्मक स्थितियाँ और तकनीकी साक्ष्य नीचे उपलब्ध हैं।',
+        technicalEvidence: 'तकनीकी साक्ष्य',
+        careerActivation: 'करियर सक्रियता',
+        wealthActivation: 'धन सक्रियता',
+        noActivationStatus: 'करियर सक्रियता की स्थिति उपलब्ध नहीं कराई गई।',
+        likelyThemes: 'संभावित विषय',
+        supportingReasons: 'समर्थक कारण',
+        supportingFactors: 'शीर्ष सहायक कारक',
+        challengingFactors: 'शीर्ष चुनौतीपूर्ण कारक',
+        risks: 'जोखिम',
+        uncertainties: 'अनिश्चितताएँ',
+        practicalFocus: 'व्यावहारिक ध्यान',
+        aiProvider: 'AI प्रदाता',
+        aiStatus: 'AI व्याख्या की स्थिति',
+        aiEvidenceReferences: 'AI साक्ष्य संदर्भ',
+        triggeredRules: 'सक्रिय नियम'
       },
       status: {
         errorTitle: 'दशा और समय गणना में त्रुटि',

@@ -459,6 +459,10 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
   });
 
   describe('SelectedPeriodReport', () => {
+    const openTechnicalEvidence = () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Technical evidence' }));
+    };
+
     it('renders primary period information (MD/AD planets, interval, temporal relation)', () => {
       const synthesis = makeSynthesis();
 
@@ -473,7 +477,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       expect(screen.getByText(/Analysis as of:/i)).toBeInTheDocument();
     });
 
-    it('hides raw selectedPeriodId by default (in technical details)', () => {
+    it('hides raw selectedPeriodId by default (in technical evidence)', () => {
       const synthesis = makeSynthesis();
 
       render(<SelectedPeriodReport synthesis={synthesis} />);
@@ -482,7 +486,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       expect(screen.queryByText(/md-jupiter-2020-2036_ad-saturn-2020-2022/i)).not.toBeInTheDocument();
 
       // Technical details should be collapsible
-      const techDetailsButton = screen.getByText(/Technical details/i);
+      const techDetailsButton = screen.getByRole('button', { name: 'Technical evidence' });
       expect(techDetailsButton).toBeInTheDocument();
     });
 
@@ -492,7 +496,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       render(<SelectedPeriodReport synthesis={synthesis} />);
 
       // Click to expand technical details
-      const techDetailsButton = screen.getByText(/Technical details/i);
+      const techDetailsButton = screen.getByRole('button', { name: 'Technical evidence' });
       fireEvent.click(techDetailsButton);
 
       // Raw ID should now be visible
@@ -510,6 +514,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       render(<SelectedPeriodReport synthesis={synthesis} />);
+      openTechnicalEvidence();
 
       // Should show career limitation warning
       expect(screen.getByText(/Career qualification unavailable/i)).toBeInTheDocument();
@@ -527,6 +532,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       render(<SelectedPeriodReport synthesis={synthesis} />);
+      openTechnicalEvidence();
 
       // Should show career limitation warning
       expect(screen.getByText(/Career qualification unavailable/i)).toBeInTheDocument();
@@ -551,6 +557,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       render(<SelectedPeriodReport synthesis={synthesis} />);
+      openTechnicalEvidence();
 
       expect(screen.getByText(reason)).toBeInTheDocument();
       expect(screen.queryByText(/CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS/i)).not.toBeInTheDocument();
@@ -581,6 +588,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       render(<SelectedPeriodReport synthesis={synthesis} />);
+      openTechnicalEvidence();
 
       // Should show career limitation warning (friendly message)
       expect(screen.getByText(/Career qualification unavailable/i)).toBeInTheDocument();
@@ -612,6 +620,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       render(<SelectedPeriodReport synthesis={synthesis} />);
+      openTechnicalEvidence();
 
       // Should show career limitation warning
       expect(screen.getByText(/Career qualification unavailable/i)).toBeInTheDocument();
@@ -663,6 +672,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       render(<SelectedPeriodReport synthesis={synthesis} domainToggle="WEALTH" />);
+      openTechnicalEvidence();
 
       // The dimension diagnostic code should be rendered in the UI
       expect(screen.getByText(/WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE/i)).toBeInTheDocument();
@@ -727,13 +737,14 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       render(<SelectedPeriodReport synthesis={careerOnlySynthesis} />);
+      openTechnicalEvidence();
 
       // Career section should be visible with heading
       expect(screen.getByText(/Career Synthesis/i)).toBeInTheDocument();
 
       // Career expression should be rendered
       expect(screen.getByText(/CAREER_EXPR_1/i)).toBeInTheDocument();
-      expect(screen.getByText(/Activates/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Activates/i).length).toBeGreaterThan(0);
 
       // Wealth missing explanation should be visible via missingInputs
       expect(screen.getByText(/Missing Inputs/i)).toBeInTheDocument();
@@ -784,13 +795,14 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       render(<SelectedPeriodReport synthesis={wealthOnlySynthesis} />);
+      openTechnicalEvidence();
 
       // Wealth section should be visible with heading
       expect(screen.getByText(/Wealth Synthesis/i)).toBeInTheDocument();
 
       // ACCUMULATION dimension should be rendered with ACTIVATES effect
-      expect(screen.getByText(/ACCUMULATION/i)).toBeInTheDocument();
-      expect(screen.getByText(/Activates/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/ACCUMULATION/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Activates/i).length).toBeGreaterThan(0);
 
       // Career missing explanation should be visible via missingInputs
       expect(screen.getByText(/Missing Inputs/i)).toBeInTheDocument();
@@ -799,6 +811,103 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
       // Career Synthesis section should show unavailable state
       expect(screen.getByText(/Career activation unavailable/i)).toBeInTheDocument();
+    });
+
+    it('keeps raw references and evidence IDs behind the Technical evidence disclosure', () => {
+      const synthesis = makeSynthesis({
+        career: {
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: [{
+            expressionRefKey: 'RAW-EXPRESSION-REF',
+            status: 'ACTIVATES',
+            linkedLevels: ['MD'],
+            qualificationBasis: 'CANONICAL_STATUS',
+            diagnostics: [],
+            expressionEvidenceIds: ['RAW-EVIDENCE-ID'],
+            qualifiedEvidenceIds: [],
+            unqualifiedEvidenceIds: [],
+            mdDashaEvidenceIds: [],
+            adDashaEvidenceIds: [],
+            expressionSource: 'CALLER'
+          }],
+          diagnostics: []
+        },
+        evidence: [{
+          classification: 'SUPPORTING',
+          evidenceId: 'RAW-EVIDENCE-ID',
+          ruleId: 'RAW-RULE-ID',
+          stage: 'CAREER',
+          referenceKind: 'EVIDENCE'
+        }]
+      });
+
+      render(<SelectedPeriodReport synthesis={synthesis} />);
+
+      expect(screen.getByText('Selected-period summary')).toBeInTheDocument();
+      expect(screen.queryByText('RAW-EXPRESSION-REF')).not.toBeInTheDocument();
+      expect(screen.queryByText('RAW-EVIDENCE-ID')).not.toBeInTheDocument();
+      expect(screen.queryByText(/RAW-RULE-ID/)).not.toBeInTheDocument();
+      openTechnicalEvidence();
+      expect(screen.getByText('RAW-EXPRESSION-REF')).toBeInTheDocument();
+      expect(screen.getAllByText('RAW-EVIDENCE-ID').length).toBeGreaterThan(0);
+      expect(screen.getByText(/RAW-RULE-ID/)).toBeInTheDocument();
+    });
+
+    it('shows a plain-language local-provider summary and factors on the card face', () => {
+      const synthesis = makeSynthesis({
+        aiExplanation: {
+          kind: 'SUCCESS',
+          requestId: 'local-summary-request',
+          task: 'SELECTED_PERIOD_ANALYSIS',
+          status: 'SUCCESS',
+          conclusion: 'Local provider summary for this period.',
+          supportingEvidence: [{
+            evidence: {
+              id: 'local-evidence-id',
+              source: 'DASHA',
+              effect: 'SUPPORT',
+              strength: 'STRONG',
+              statement: 'A plain-language supporting factor.'
+            },
+            role: 'SUPPORTING'
+          }],
+          challengingEvidence: [],
+          unresolvedQuestions: [],
+          warnings: [],
+          triggeredRuleIds: ['LOCAL_RULE_ID'],
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'ONLY_ELIGIBLE_PROVIDER',
+          generatedAt: '2026-01-01T00:00:00.000Z'
+        },
+        evidence: [{
+          classification: 'SUPPORTING',
+          evidenceId: 'local-evidence-id',
+          stage: 'CAREER',
+          referenceKind: 'EVIDENCE'
+        }]
+      });
+
+      render(<SelectedPeriodReport synthesis={synthesis} />);
+
+      expect(screen.getByText('Local provider summary for this period.')).toBeInTheDocument();
+      expect(screen.getByText('A plain-language supporting factor.')).toBeInTheDocument();
+      expect(screen.queryByText('local-evidence-id')).not.toBeInTheDocument();
+      expect(screen.queryByText('LOCAL_RULE_ID')).not.toBeInTheDocument();
+      openTechnicalEvidence();
+      expect(screen.getAllByText(/local-evidence-id/).length).toBeGreaterThan(0);
+      expect(screen.getByText(/LOCAL_RULE_ID/)).toBeInTheDocument();
+    });
+
+    it('localizes the Technical evidence disclosure and summary in Hindi', async () => {
+      await i18n.changeLanguage('hi');
+      render(<SelectedPeriodReport synthesis={makeSynthesis()} />);
+
+      expect(screen.getByText('चयनित अवधि का सारांश')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'तकनीकी साक्ष्य' })).toBeInTheDocument();
     });
 
     it('SelectedPeriodSection: MD change clears AD and disables submit', () => {

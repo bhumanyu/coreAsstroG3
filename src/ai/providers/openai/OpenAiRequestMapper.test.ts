@@ -73,6 +73,52 @@ describe('OpenAiRequestMapper', () => {
     });
   });
 
+  it('projects selected period synthesis and its evidence set into remote input', () => {
+    const mapper = new OpenAiRequestMapper({ apiKey: 'secret' });
+    const selectedPeriodEvidence = [
+      { id: 'sp-evidence-1', source: 'DASHA', effect: 'SUPPORT', strength: 'STRONG', statement: 'Period activation evidence.' }
+    ];
+    const selectedPeriod = {
+      selectedPeriodId: 'period-1',
+      mahadashaPlanet: 'JUPITER',
+      antardashaPlanet: 'SATURN',
+      interval: { start: '2025-01-01', end: '2026-01-01' },
+      availableEvidence: selectedPeriodEvidence
+    } as unknown as AiContext['selectedPeriod'];
+    const request = mapper.map(
+      {
+        ...createRequest('STRUCTURED', { selectedPeriod }),
+        task: 'SELECTED_PERIOD_ANALYSIS'
+      },
+      createConfig()
+    );
+    const payload = JSON.parse(String((request.body as Record<string, unknown>).input));
+
+    expect(payload.context.selectedPeriod).toMatchObject({
+      selectedPeriodId: 'period-1',
+      mahadashaPlanet: 'JUPITER',
+      antardashaPlanet: 'SATURN',
+      interval: { start: '2025-01-01', end: '2026-01-01' }
+    });
+    expect(payload.context.selectedPeriodEvidence).toEqual(selectedPeriodEvidence);
+    const requestBody = request.body as {
+      readonly text: {
+        readonly format: {
+          readonly schema: { readonly required: readonly string[] };
+        };
+      };
+    };
+    expect(requestBody.text.format.schema.required).toEqual(
+      expect.arrayContaining([
+        'likelyThemes',
+        'supportingReasons',
+        'risks',
+        'uncertainties',
+        'practicalFocus'
+      ])
+    );
+  });
+
   it('does not add structured schema for narrative requests', () => {
     const mapper = new OpenAiRequestMapper({
       apiKey: 'secret'

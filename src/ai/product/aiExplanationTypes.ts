@@ -35,6 +35,14 @@ export interface AiExplanationViewModel {
   readonly fallbackUsed: boolean;
   readonly selectionReason: AiProviderSelectionReason;
   readonly generatedAt: string;
+  readonly likelyThemes?: readonly string[];
+  readonly supportingReasons?: readonly {
+    readonly text: string;
+    readonly evidenceIds: readonly string[];
+  }[];
+  readonly risks?: readonly string[];
+  readonly uncertainties?: readonly string[];
+  readonly practicalFocus?: readonly string[];
 }
 
 export interface AiExplanationErrorViewModel {
@@ -58,6 +66,14 @@ export interface AiExplanationStructuredOutput {
   readonly unresolvedQuestions: readonly string[];
   readonly warnings: readonly string[];
   readonly triggeredRuleIds?: readonly string[];
+  readonly likelyThemes?: readonly string[];
+  readonly supportingReasons?: readonly {
+    readonly text: string;
+    readonly evidenceIds: readonly string[];
+  }[];
+  readonly risks?: readonly string[];
+  readonly uncertainties?: readonly string[];
+  readonly practicalFocus?: readonly string[];
 }
 
 export function isAiExplanationStructuredOutput(
@@ -69,6 +85,18 @@ export function isAiExplanationStructuredOutput(
 
   const candidate = value as Record<string, unknown>;
 
+  const isStringArray = (item: unknown): item is readonly string[] =>
+    Array.isArray(item) && item.every((value) => typeof value === 'string');
+  const isSupportingReasonArray = (
+    item: unknown
+  ): item is AiExplanationStructuredOutput['supportingReasons'] =>
+    Array.isArray(item) && item.every((reason) =>
+      typeof reason === 'object' &&
+      reason !== null &&
+      typeof (reason as Record<string, unknown>).text === 'string' &&
+      isStringArray((reason as Record<string, unknown>).evidenceIds)
+    );
+
   return (
     (candidate.status === 'SUCCESS' ||
       candidate.status === 'PARTIAL' ||
@@ -78,12 +106,21 @@ export function isAiExplanationStructuredOutput(
     Array.isArray(candidate.challengingEvidenceIds) &&
     Array.isArray(candidate.unresolvedQuestions) &&
     Array.isArray(candidate.warnings) &&
-    candidate.supportingEvidenceIds.every((v) => typeof v === 'string') &&
-    candidate.challengingEvidenceIds.every((v) => typeof v === 'string') &&
-    candidate.unresolvedQuestions.every((v) => typeof v === 'string') &&
-    candidate.warnings.every((v) => typeof v === 'string') &&
+    isStringArray(candidate.supportingEvidenceIds) &&
+    isStringArray(candidate.challengingEvidenceIds) &&
+    isStringArray(candidate.unresolvedQuestions) &&
+    isStringArray(candidate.warnings) &&
     (candidate.triggeredRuleIds === undefined ||
-      (Array.isArray(candidate.triggeredRuleIds) &&
-        candidate.triggeredRuleIds.every((v) => typeof v === 'string')))
+      isStringArray(candidate.triggeredRuleIds)) &&
+    (candidate.likelyThemes === undefined ||
+      isStringArray(candidate.likelyThemes)) &&
+    (candidate.supportingReasons === undefined ||
+      isSupportingReasonArray(candidate.supportingReasons)) &&
+    (candidate.risks === undefined ||
+      isStringArray(candidate.risks)) &&
+    (candidate.uncertainties === undefined ||
+      isStringArray(candidate.uncertainties)) &&
+    (candidate.practicalFocus === undefined ||
+      isStringArray(candidate.practicalFocus))
   );
 }

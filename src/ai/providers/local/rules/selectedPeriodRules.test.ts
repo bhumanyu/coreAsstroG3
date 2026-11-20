@@ -59,16 +59,12 @@ describe('Selected Period Rules', () => {
 
         expect(result.triggered).toBe(true);
         expect(result.effect).toBe('NEUTRAL');
-        expect(result.statement).toContain('qualifies and describes the unchanged natal baseline');
-        expect(result.statement).toContain('Career baseline is PRESENT');
-        expect(result.statement).toContain('version PBA-04-v1');
-        expect(result.statement).toContain('qualification basis CANONICAL_STATUS');
-        expect(result.statement).toContain('Wealth baseline is PRESENT');
-        expect(result.statement).toContain('version PBA-05-v1');
-        expect(result.statement).toContain('JUPITER mahadasha');
-        expect(result.statement).toContain('VENUS antardasha');
-        expect(result.statement).toContain('2020-01-01T00:00:00Z');
-        expect(result.statement).toContain('2021-01-01T00:00:00Z');
+        expect(result.statement).toBe(
+          'Selected-period activation is considered relative to the unchanged natal baseline.'
+        );
+        expect(result.statement).not.toContain('PBA-04-v1');
+        expect(result.statement).not.toContain('CANONICAL_STATUS');
+        expect(result.statement).not.toContain('JUPITER mahadasha');
 
         // Ensure no score is emitted
         expect(result.statement).not.toMatch(/score|strength|confidence/i);
@@ -189,7 +185,9 @@ describe('Selected Period Rules', () => {
         const result = rule.evaluate(mockContext);
 
         expect(result.triggered).toBe(true);
-        expect(result.statement).toContain('qualifies and describes the unchanged natal baseline');
+        expect(result.statement).toBe(
+          'Selected-period activation is considered relative to the unchanged natal baseline.'
+        );
       }
     });
   });

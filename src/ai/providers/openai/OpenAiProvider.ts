@@ -15,11 +15,14 @@ const OPENAI_CAPABILITIES = Object.freeze([
 ] as const);
 
 export class OpenAiProvider extends RemoteAiProvider {
+  private readonly configured: boolean;
+
   constructor(
     options: OpenAiProviderOptions,
     transport?: RemoteAiTransport
   ) {
     const model = options.model ?? 'gpt-5.6';
+    const endpoint = options.endpoint ?? 'https://api.openai.com/v1/responses';
 
     super(
       {
@@ -30,7 +33,7 @@ export class OpenAiProvider extends RemoteAiProvider {
           version: model
         }),
         capabilities: OPENAI_CAPABILITIES,
-        endpoint: options.endpoint ?? 'https://api.openai.com/v1/responses',
+        endpoint,
         apiKey: options.apiKey,
         timeoutMs: options.timeoutMs
       },
@@ -38,5 +41,15 @@ export class OpenAiProvider extends RemoteAiProvider {
       new OpenAiResponseMapper(model),
       transport
     );
+    this.configured = options.apiKey.trim().length > 0 && endpoint.trim().length > 0;
+  }
+
+  getStatus() {
+    return this.configured
+      ? super.getStatus()
+      : Object.freeze({
+          availability: 'UNAVAILABLE' as const,
+          message: 'OpenAI provider requires an API key and endpoint configuration.'
+        });
   }
 }

@@ -71,6 +71,7 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
   domainToggle = 'BOTH',
   onDomainToggle
 }) => {
+  const { t } = useTranslation('dasha');
   const { t: tEnum } = useTranslation('enums');
   const showCareer = domainToggle === 'CAREER' || domainToggle === 'BOTH';
   const showWealth = domainToggle === 'WEALTH' || domainToggle === 'BOTH';
@@ -129,6 +130,7 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
           <div className="pt-2 border-t border-slate-800/60">
             <button
               onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+              aria-expanded={showTechnicalDetails}
               className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-400 transition-colors"
             >
               {showTechnicalDetails ? (
@@ -136,7 +138,7 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
               ) : (
                 <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
               )}
-              <span>Technical details</span>
+              <span>{t('selectedPeriodReport.technicalEvidence')}</span>
             </button>
 
             {showTechnicalDetails && (
@@ -179,6 +181,10 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
         )}
       </div>
 
+      <SelectedPeriodSummary synthesis={synthesis} showCareer={showCareer} showWealth={showWealth} />
+
+      {showTechnicalDetails && (
+      <div data-testid="selected-period-technical-evidence" className="space-y-6">
       {/* Career Section */}
       {showCareer && (
         <div className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 space-y-4">
@@ -351,6 +357,59 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
             <div className="text-xs text-slate-400 mt-1">
               Qualification Basis: {enumLabel(tEnum, 'synthesisQualificationBasis', synthesis.provenance.career.qualificationBasis)}
             </div>
+            {synthesis.aiExplanation && (
+              <div className="border-t border-slate-800/60 pt-3 space-y-1">
+                <div className="text-xs text-slate-400">
+                  {t('selectedPeriodReport.aiStatus')}: {enumLabel(
+                    tEnum,
+                    'selectedPeriodAiStatus',
+                    synthesis.aiExplanation.status
+                  )}
+                </div>
+                {synthesis.aiExplanation.kind === 'SUCCESS' ? (
+                  <div className="text-xs text-slate-400">
+                    {t('selectedPeriodReport.aiProvider')}: {synthesis.aiExplanation.providerName} ({synthesis.aiExplanation.providerKind})
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-400">{synthesis.aiExplanation.message}</div>
+                )}
+                {synthesis.aiExplanation.warnings.length > 0 && (
+                  <ul className="list-disc pl-5 text-xs text-slate-400">
+                    {synthesis.aiExplanation.warnings.map((warning, index) => <li key={`${index}:${warning}`}>{warning}</li>)}
+                  </ul>
+                )}
+                {synthesis.aiExplanation.kind === 'SUCCESS' && synthesis.aiExplanation.unresolvedQuestions.length > 0 && (
+                  <ul className="list-disc pl-5 text-xs text-slate-400">
+                    {synthesis.aiExplanation.unresolvedQuestions.map((question, index) => <li key={`${index}:${question}`}>{question}</li>)}
+                  </ul>
+                )}
+                {synthesis.aiExplanation.kind === 'SUCCESS' && (
+                  <>
+                    {synthesis.aiExplanation.triggeredRuleIds.length > 0 && (
+                      <div className="text-xs text-slate-400">
+                        {t('selectedPeriodReport.triggeredRules')}: {synthesis.aiExplanation.triggeredRuleIds.join(', ')}
+                      </div>
+                    )}
+                    {[...synthesis.aiExplanation.supportingEvidence, ...synthesis.aiExplanation.challengingEvidence].length > 0 && (
+                      <div className="text-xs text-slate-400">
+                        {t('selectedPeriodReport.aiEvidenceReferences')}: {[...synthesis.aiExplanation.supportingEvidence, ...synthesis.aiExplanation.challengingEvidence]
+                          .map((item) => item.referenceId ?? item.evidence.id)
+                          .join(', ')}
+                      </div>
+                    )}
+                    {synthesis.aiExplanation.supportingReasons && synthesis.aiExplanation.supportingReasons.length > 0 && (
+                      <ul className="list-disc pl-5 text-xs text-slate-400">
+                        {synthesis.aiExplanation.supportingReasons.map((reason, index) => (
+                          <li key={`${index}:${reason.text}`}>
+                            {reason.text}: {reason.evidenceIds.join(', ')}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-3">
@@ -364,9 +423,121 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
           </div>
         </div>
       </div>
+      </div>
+      )}
     </div>
   );
 };
+
+const SelectedPeriodSummary: React.FC<{
+  readonly synthesis: ProductSelectedPeriodSynthesis;
+  readonly showCareer: boolean;
+  readonly showWealth: boolean;
+}> = ({ synthesis, showCareer, showWealth }) => {
+  const { t } = useTranslation('dasha');
+  const { t: tEnum } = useTranslation('enums');
+  const explanation = synthesis.aiExplanation?.kind === 'SUCCESS'
+    ? synthesis.aiExplanation
+    : undefined;
+  const supportingReferenceIds = new Set(
+    synthesis.evidence
+      .filter((reference) => reference.classification === 'SUPPORTING')
+      .flatMap((reference) => reference.evidenceId ? [reference.evidenceId] : [])
+  );
+  const challengingReferenceIds = new Set(
+    synthesis.evidence
+      .filter((reference) => reference.classification === 'CHALLENGING')
+      .flatMap((reference) => reference.evidenceId ? [reference.evidenceId] : [])
+  );
+  const supportingFactors = explanation?.supportingEvidence
+    .filter((item) => supportingReferenceIds.has(item.evidence.id))
+    .slice(0, 3) ?? [];
+  const challengingFactors = explanation?.challengingEvidence
+    .filter((item) => challengingReferenceIds.has(item.evidence.id))
+    .slice(0, 3) ?? [];
+  const supportingReasons = explanation?.supportingReasons?.filter((reason) =>
+    reason.evidenceIds.length > 0 &&
+    reason.evidenceIds.every((id) => supportingReferenceIds.has(id))
+  ) ?? [];
+
+  return (
+    <section
+      aria-label={t('selectedPeriodReport.summary')}
+      className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 space-y-4"
+    >
+      <h2 className="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-300">
+        {t('selectedPeriodReport.summary')}
+      </h2>
+      <div className="text-sm text-slate-200 leading-relaxed">
+        {explanation?.conclusion ?? t('selectedPeriodReport.conclusionUnavailable')}
+      </div>
+
+      {explanation?.likelyThemes && explanation.likelyThemes.length > 0 && (
+        <SummaryList title={t('selectedPeriodReport.likelyThemes')} items={explanation.likelyThemes} />
+      )}
+      {supportingReasons.length > 0 && (
+        <SummaryList title={t('selectedPeriodReport.supportingReasons')} items={supportingReasons.map((reason) => reason.text)} />
+      )}
+      {supportingFactors.length > 0 && (
+        <SummaryList title={t('selectedPeriodReport.supportingFactors')} items={supportingFactors.map((item) => item.evidence.statement)} />
+      )}
+      {challengingFactors.length > 0 && (
+        <SummaryList title={t('selectedPeriodReport.challengingFactors')} items={challengingFactors.map((item) => item.evidence.statement)} />
+      )}
+      {explanation?.risks && explanation.risks.length > 0 && (
+        <SummaryList title={t('selectedPeriodReport.risks')} items={explanation.risks} />
+      )}
+      {explanation?.uncertainties && explanation.uncertainties.length > 0 && (
+        <SummaryList title={t('selectedPeriodReport.uncertainties')} items={explanation.uncertainties} />
+      )}
+      {explanation?.practicalFocus && explanation.practicalFocus.length > 0 && (
+        <SummaryList title={t('selectedPeriodReport.practicalFocus')} items={explanation.practicalFocus} />
+      )}
+
+      {(showCareer || showWealth) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-800/60 pt-3">
+          {showCareer && (
+            <div>
+              <div className="text-xs text-slate-400 font-mono-code">
+                {t('selectedPeriodReport.careerActivation')}
+              </div>
+              <div className="text-xs text-slate-300">
+                {synthesis.career.expressions.length > 0
+                  ? [...new Set(synthesis.career.expressions.map((expression) =>
+                    enumLabel(tEnum, 'activationEffect', expression.status)
+                  ))].join(', ')
+                  : t('selectedPeriodReport.noActivationStatus')}
+              </div>
+            </div>
+          )}
+          {showWealth && (
+            <div>
+              <div className="text-xs text-slate-400 font-mono-code">
+                {t('selectedPeriodReport.wealthActivation')}
+              </div>
+              <ul className="text-xs text-slate-300 space-y-1">
+                {Object.values(synthesis.wealth.dimensions).map((dimension) => (
+                  <li key={dimension.dimension}>
+                    {enumLabel(tEnum, 'wealthDimension', dimension.dimension)}: {enumLabel(tEnum, 'activationEffect', dimension.effect)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+};
+
+const SummaryList: React.FC<{ readonly title: string; readonly items: readonly string[] }> = ({ title, items }) => (
+  <div className="space-y-1">
+    <h3 className="text-xs font-mono-code text-slate-400">{title}</h3>
+    <ul className="list-disc pl-5 space-y-1 text-xs text-slate-300">
+      {items.map((item, index) => <li key={`${index}:${item}`}>{item}</li>)}
+    </ul>
+  </div>
+);
 
 const ExpressionRow: React.FC<{ readonly expression: ProductSynthesisCareerExpressionRow }> = ({ expression }) => {
   const { t: tEnum } = useTranslation('enums');

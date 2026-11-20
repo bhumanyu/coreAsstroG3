@@ -5,12 +5,13 @@ import type { AiContext } from '../../types/aiContextTypes';
 
 function createRequest(
   responseFormat: 'STRUCTURED' | 'NARRATIVE',
-  context?: Partial<AiContext>
+  context?: Partial<AiContext>,
+  task: AiRequest['task'] = 'CAREER_ANALYSIS'
 ): AiRequest {
   return {
     requestId: 'response-test-1',
     schemaVersion: '1.1.0',
-    task: 'CAREER_ANALYSIS',
+    task,
     context: (context ?? {}) as AiContext,
     responseFormat
   };
@@ -191,6 +192,101 @@ describe('OpenAiResponseMapper', () => {
     expect(response.content).toBe('Career is supported.');
   });
 
+  it('maps selected-period sections and their evidence citations', () => {
+    const mapper = new OpenAiResponseMapper();
+    const response = mapper.map(
+      createRequest('STRUCTURED', {
+        evidence: [
+          {
+            id: 'E001',
+            type: 'YOGA',
+            sourceRuleId: 'RULE_1',
+            status: 'PRESENT',
+            description: 'Supporting evidence'
+          }
+        ] as unknown as AiContext['evidence']
+      }, 'SELECTED_PERIOD_ANALYSIS'),
+      {
+        status: 200,
+        headers: {},
+        body: createRawResponse(JSON.stringify({
+          status: 'SUCCESS',
+          conclusion: 'A period summary.',
+          supportingEvidenceIds: ['E001'],
+          challengingEvidenceIds: [],
+          unresolvedQuestions: [],
+          warnings: [],
+          likelyThemes: ['Steady progress'],
+          supportingReasons: [{ text: 'A supported theme.', evidenceIds: ['E001'] }],
+          risks: ['Avoid overextension.'],
+          uncertainties: ['Timing details may be incomplete.'],
+          practicalFocus: ['Review commitments.']
+        }))
+      }
+    );
+
+    expect(response.structuredOutput).toMatchObject({
+      likelyThemes: ['Steady progress'],
+      supportingReasons: [{ text: 'A supported theme.', evidenceIds: ['E001'] }],
+      risks: ['Avoid overextension.'],
+      uncertainties: ['Timing details may be incomplete.'],
+      practicalFocus: ['Review commitments.']
+    });
+  });
+
+  it('warns and omits unknown evidence references instead of accepting them', () => {
+    const mapper = new OpenAiResponseMapper();
+    const response = mapper.map(
+      createRequest('STRUCTURED', {
+        evidence: [
+          {
+            id: 'E001',
+            type: 'YOGA',
+            sourceRuleId: 'RULE_1',
+            status: 'PRESENT',
+            description: 'Known evidence'
+          }
+        ] as unknown as AiContext['evidence']
+      }),
+      {
+        status: 200,
+        headers: {},
+        body: createRawResponse(JSON.stringify({
+          status: 'SUCCESS',
+          conclusion: 'Test',
+          supportingEvidenceIds: ['E999'],
+          challengingEvidenceIds: [],
+          unresolvedQuestions: [],
+          warnings: []
+        }))
+      }
+    );
+
+    expect(response.structuredOutput).toMatchObject({ supportingEvidenceIds: [] });
+    expect(response.warnings).toContain(
+      'OpenAI response referenced unknown or ambiguous evidence IDs; unresolved references were omitted.'
+    );
+  });
+
+  it('requires all grounded selected-period response sections', () => {
+    const mapper = new OpenAiResponseMapper();
+    expect(() => mapper.map(
+      createRequest('STRUCTURED', {}, 'SELECTED_PERIOD_ANALYSIS'),
+      {
+        status: 200,
+        headers: {},
+        body: createRawResponse(JSON.stringify({
+          status: 'SUCCESS',
+          conclusion: 'Missing selected-period sections.',
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          unresolvedQuestions: [],
+          warnings: []
+        }))
+      }
+    )).toThrow(/invalid supportingReasons/);
+  });
+
   it('rejects malformed structured JSON', () => {
     const mapper = new OpenAiResponseMapper();
 
@@ -308,7 +404,7 @@ describe('OpenAiResponseMapper', () => {
     ).toThrow(/incomplete/);
   });
 
-  it('rejects unknown evidence IDs', () => {
+  it('warns and omits unknown evidence IDs', () => {
     const mapper = new OpenAiResponseMapper();
 
     const requestWithEvidence = createRequest('STRUCTURED', {
@@ -323,24 +419,22 @@ describe('OpenAiResponseMapper', () => {
       ] as unknown as AiContext['evidence']
     });
 
-    expect(() =>
-      mapper.map(
-        requestWithEvidence,
-        {
-          status: 200,
-          headers: {},
-          body: createRawResponse(
-            JSON.stringify({
-              status: 'SUCCESS',
-              conclusion: 'Test',
-              supportingEvidenceIds: ['E999'],
-              challengingEvidenceIds: [],
-              unresolvedQuestions: [],
-              warnings: []
-            })
-          )
-        }
-      )
-    ).toThrow(/unknown evidence ID/);
+    const response = mapper.map(requestWithEvidence, {
+      status: 200,
+      headers: {},
+      body: createRawResponse(JSON.stringify({
+        status: 'SUCCESS',
+        conclusion: 'Test',
+        supportingEvidenceIds: ['E999'],
+        challengingEvidenceIds: [],
+        unresolvedQuestions: [],
+        warnings: []
+      }))
+    });
+
+    expect(response.structuredOutput).toMatchObject({ supportingEvidenceIds: [] });
+    expect(response.warnings).toContain(
+      'OpenAI response referenced unknown or ambiguous evidence IDs; unresolved references were omitted.'
+    );
   });
 });

@@ -66,6 +66,14 @@ export interface OpenAiStructuredReasoning {
   readonly challengingEvidenceIds: readonly string[];
   readonly unresolvedQuestions: readonly string[];
   readonly warnings: readonly string[];
+  readonly likelyThemes?: readonly string[];
+  readonly supportingReasons?: readonly {
+    readonly text: string;
+    readonly evidenceIds: readonly string[];
+  }[];
+  readonly risks?: readonly string[];
+  readonly uncertainties?: readonly string[];
+  readonly practicalFocus?: readonly string[];
 }
 
 export interface OpenAiProviderMetadata {

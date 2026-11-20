@@ -35,19 +35,10 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         return {
           triggered: true,
           effect: 'NEUTRAL' as LocalRuleEffect,
-          statement: `Career analysis for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period is based on qualification basis ${career.qualificationBasis}. No career expressions are linked to this period.`,
+          statement: `No career expressions are linked to the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period.`,
           unresolvedQuestions
         };
       }
-
-      // Build per-expression narrative quoting canonical status and qualificationBasis
-      const expressionNarratives = career.expressions.map(e => {
-        const statusNarrative = `expression ${e.expressionRefKey} shows canonical status ${e.status} with qualification basis ${e.qualificationBasis}`;
-        const diagNarrative = e.diagnostics.length > 0
-          ? ` (diagnostics: ${e.diagnostics.map(d => d.code).join(', ')})`
-          : '';
-        return statusNarrative + diagNarrative;
-      });
 
       const activatingExprs = career.expressions.filter(e =>
         e.status === 'ACTIVATES' || e.status === 'PARTIALLY_ACTIVATES'
@@ -56,7 +47,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         e.status === 'CHALLENGES' || e.status === 'DOES_NOT_ACTIVATE'
       );
 
-      const baseStatement = `Career analysis for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period is based on qualification basis ${career.qualificationBasis}. ${expressionNarratives.join('. ')}.`;
+      const baseStatement = `For the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period, ${activatingExprs.length} career expressions show activating indicators and ${challengingExprs.length} show challenging indicators.`;
 
       if (activatingExprs.length > challengingExprs.length) {
         return {
@@ -89,7 +80,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
       return {
         triggered: true,
         effect: 'MIXED' as LocalRuleEffect,
-        statement: `${baseStatement} Overall, ${activatingExprs.length} expressions show activating indicators and ${challengingExprs.length} show challenging indicators, indicating balanced activation.`,
+        statement: `${baseStatement} The available indicators are balanced.`,
         supportingEvidenceIds: activatingExprs.flatMap(e => e.expressionEvidenceIds),
         challengingEvidenceIds: challengingExprs.flatMap(e => e.expressionEvidenceIds)
       };
@@ -216,11 +207,10 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         return { triggered: false, effect: 'NEUTRAL' as LocalRuleEffect, statement: '' };
       }
 
-      const warningCodes = sp.diagnostics.map(d => d.code);
       return {
         triggered: true,
         effect: 'NEUTRAL' as LocalRuleEffect,
-        statement: `Selected-period synthesis reports ${sp.diagnostics.length} diagnostic codes: ${warningCodes.join(', ')}.`,
+        statement: `Selected-period synthesis includes ${sp.diagnostics.length} diagnostic notes.`,
         warnings: sp.diagnostics.map(d => `${d.code}: ${d.message}`)
       };
     }
@@ -307,36 +297,10 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
 
       const sp = context.selectedPeriod;
 
-      // Build baseline provenance narrative
-      const baselineParts: string[] = [];
-
-      // Career baseline status
-      if (sp.provenance.career) {
-        const careerStatus = sp.provenance.career.status;
-        const careerVersion = sp.provenance.career.version;
-        const careerQualification = sp.provenance.career.qualificationBasis;
-        baselineParts.push(`Career baseline is ${careerStatus} (version ${careerVersion}, qualification basis ${careerQualification})`);
-      }
-
-      // Wealth baseline status
-      if (sp.provenance.wealth) {
-        const wealthStatus = sp.provenance.wealth.status;
-        const wealthVersion = sp.provenance.wealth.version;
-        baselineParts.push(`Wealth baseline is ${wealthStatus} (version ${wealthVersion})`);
-      }
-
-      // Build the main statement
-      const baselineStatement = baselineParts.length > 0
-        ? `This selected-period activation qualifies and describes the unchanged natal baseline: ${baselineParts.join('; ')}.`
-        : `This selected-period activation qualifies and describes the unchanged natal baseline.`;
-
-      // Add period reference for provenance
-      const periodReference = `The analysis is based on the ${sp.mahadashaPlanet} mahadasha and ${sp.antardashaPlanet} antardasha period (${sp.interval.start} to ${sp.interval.end}).`;
-
       return {
         triggered: true,
         effect: 'NEUTRAL' as LocalRuleEffect,
-        statement: `${baselineStatement} ${periodReference}`
+        statement: 'Selected-period activation is considered relative to the unchanged natal baseline.'
       };
     }
   })

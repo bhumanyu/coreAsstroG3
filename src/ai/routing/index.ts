@@ -9,6 +9,7 @@ export { AiProviderRegistry } from './AiProviderRegistry';
 export { AiProviderSelector } from './AiProviderSelector';
 export { AiRouter } from './AiRouter';
 export { createDefaultAiRouter } from './createDefaultAiRouter';
+export type { DefaultAiRouterOptions } from './createDefaultAiRouter';
 export { decorateAiResponse } from './decorateAiResponse';
 export type { DecorateAiResponseOptions } from './decorateAiResponse';
 

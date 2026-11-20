@@ -65,6 +65,8 @@ export interface RunProductAiExplanationOptions {
   readonly lifeAnalysis: LifeAnalysis;
   readonly temporalState: AnalysisTemporalState;
   readonly router?: AiRouter;
+  /** Use local-only routing, or prefer a configured remote provider with local fallback. */
+  readonly routingMode?: 'LOCAL_ONLY' | 'REMOTE_PRIMARY';
   /** Maximum time allowed for the provider/router execution. */
   readonly providerTimeoutMs?: number;
   /**
@@ -129,18 +131,21 @@ export async function runAiExplanation(
     );
 
     const router = options.router ?? createDefaultAiRouter();
-
-    /**
-     * P-026 intentionally uses LOCAL_ONLY.
-     *
-     * This proves the complete product path
-     * without introducing network dependencies.
-     */
+    const remoteProviderId = options.routingMode === 'LOCAL_ONLY'
+      ? undefined
+      : getConfiguredRemoteProviderId(router, request);
+    const routingOptions = remoteProviderId
+      ? {
+          mode: 'AUTO' as const,
+          preferredProviderId: remoteProviderId,
+          fallbackPolicy: 'ALLOW_FALLBACK' as const
+        }
+      : {
+          mode: 'LOCAL_ONLY' as const,
+          fallbackPolicy: 'NO_FALLBACK' as const
+        };
     const routingResult = await withTimeout(
-      router.route(request, {
-        mode: 'LOCAL_ONLY',
-        fallbackPolicy: 'NO_FALLBACK'
-      }),
+      router.route(request, routingOptions),
       options.providerTimeoutMs ?? DEFAULT_AI_PROVIDER_TIMEOUT_MS
     );
 
@@ -217,11 +222,29 @@ function mapRoutingResultToViewModel(
       'CHALLENGING',
       canonicalIdentityIds
     );
+    const unresolvedReasonIds: string[] = [];
+    const supportingReasons = (structured.supportingReasons ?? []).flatMap((reason) => {
+      const resolved = resolveEvidence(
+        reason.evidenceIds,
+        evidence,
+        selectedPeriod,
+        task,
+        'SUPPORTING',
+        canonicalIdentityIds
+      );
+      unresolvedReasonIds.push(...resolved.unresolvedIds);
+      const unresolvedSet = new Set(resolved.unresolvedIds);
+      const evidenceIds = reason.evidenceIds.filter((id) => !unresolvedSet.has(id));
+      return evidenceIds.length > 0
+        ? [Object.freeze({ text: reason.text, evidenceIds: Object.freeze(evidenceIds) })]
+        : [];
+    });
 
     // Add unresolved IDs to unresolvedQuestions
     const unresolvedIds = [
       ...resolvedSupporting.unresolvedIds,
-      ...resolvedChallenging.unresolvedIds
+      ...resolvedChallenging.unresolvedIds,
+      ...unresolvedReasonIds
     ];
     const extendedUnresolvedQuestions = unresolvedIds.length > 0
       ? [
@@ -239,8 +262,18 @@ function mapRoutingResultToViewModel(
       supportingEvidence: resolvedSupporting.evidence,
       challengingEvidence: resolvedChallenging.evidence,
       unresolvedQuestions: Object.freeze(extendedUnresolvedQuestions),
-      warnings: mergedWarnings,
+      warnings: mergeWarnings(
+        mergedWarnings,
+        unresolvedReasonIds.length > 0
+          ? ['One or more supporting reasons referenced unresolved evidence; those references were omitted.']
+          : []
+      ),
       triggeredRuleIds: Object.freeze([...(structured.triggeredRuleIds ?? [])]),
+      ...(structured.likelyThemes ? { likelyThemes: Object.freeze([...structured.likelyThemes]) } : {}),
+      ...(structured.supportingReasons ? { supportingReasons: Object.freeze(supportingReasons) } : {}),
+      ...(structured.risks ? { risks: Object.freeze([...structured.risks]) } : {}),
+      ...(structured.uncertainties ? { uncertainties: Object.freeze([...structured.uncertainties]) } : {}),
+      ...(structured.practicalFocus ? { practicalFocus: Object.freeze([...structured.practicalFocus]) } : {}),
       providerId: result.providerId,
       providerName: result.providerName,
       providerKind: result.providerKind,
@@ -441,6 +474,19 @@ function createRequestId(): string {
   return `ai-ui-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 9)}`;
+}
+
+function getConfiguredRemoteProviderId(
+  router: AiRouter,
+  request: ReturnType<typeof createAiRequest>
+): string | undefined {
+  if (
+    'getConfiguredRemoteProviderId' in router &&
+    typeof router.getConfiguredRemoteProviderId === 'function'
+  ) {
+    return router.getConfiguredRemoteProviderId(request);
+  }
+  return undefined;
 }
 
 function extractTraceabilityIds(context: AiContext): readonly string[] {

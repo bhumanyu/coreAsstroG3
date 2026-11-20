@@ -107,6 +107,7 @@ import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type {
   SelectedPeriodSynthesisValue
 } from '../../domain/synthesis/selectedPeriodSynthesis';
+import { rankEvidence } from '../providers/local/utils/evidenceScorer';
 import type {
   AiSelectedPeriodContext
 } from '../types/aiContextTypes';
@@ -343,6 +344,19 @@ export function projectSelectedPeriodSynthesis(
   }
 
   const availableEvidence = Array.from(availableEvidenceMap.values());
+  const evidenceById = new Map(availableEvidence.map((item) => [item.id, item]));
+  const strongestEvidence = (ids: readonly string[]) => rankEvidence(
+    [...new Set(ids)]
+      .map((id) => evidenceById.get(id))
+      .filter((item): item is AiEvidence => item !== undefined)
+  ).slice(0, 3);
+  const limitations = [
+    ...value.missingInputs.map((input) => ({
+      domain: input.domain,
+      code: input.code,
+      detail: input.description
+    }))
+  ];
 
   return Object.freeze({
     selectedPeriodId: value.period.selectedPeriodId,
@@ -353,6 +367,10 @@ export function projectSelectedPeriodSynthesis(
     interval: value.period.interval,
     analysisAsOf: value.period.analysisAsOf,
     temporalRelation: value.period.temporalRelation,
+    confidence: Object.freeze({ status: 'NOT_ASSESSED' as const }),
+    limitations: Object.freeze(limitations),
+    strongestSupportingFactors: Object.freeze(strongestEvidence(supportingEvidenceIds)),
+    strongestChallenges: Object.freeze(strongestEvidence(challengingEvidenceIds)),
     career: Object.freeze({
       qualificationBasis: value.career.qualificationBasis,
       expressions: Object.freeze(careerExpressions)

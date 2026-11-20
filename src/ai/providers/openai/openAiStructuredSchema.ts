@@ -43,3 +43,50 @@ export const OPENAI_REASONING_SCHEMA = Object.freeze({
     'warnings'
   ]
 } as const);
+
+export const OPENAI_SELECTED_PERIOD_REASONING_SCHEMA = Object.freeze({
+  ...OPENAI_REASONING_SCHEMA,
+  properties: {
+    ...OPENAI_REASONING_SCHEMA.properties,
+    likelyThemes: {
+      type: 'array',
+      items: { type: 'string' }
+    },
+    supportingReasons: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          text: { type: 'string' },
+          evidenceIds: {
+            type: 'array',
+            minItems: 1,
+            items: { type: 'string' }
+          }
+        },
+        required: ['text', 'evidenceIds']
+      }
+    },
+    risks: {
+      type: 'array',
+      items: { type: 'string' }
+    },
+    uncertainties: {
+      type: 'array',
+      items: { type: 'string' }
+    },
+    practicalFocus: {
+      type: 'array',
+      items: { type: 'string' }
+    }
+  },
+  required: [
+    ...OPENAI_REASONING_SCHEMA.required,
+    'likelyThemes',
+    'supportingReasons',
+    'risks',
+    'uncertainties',
+    'practicalFocus'
+  ]
+} as const);
