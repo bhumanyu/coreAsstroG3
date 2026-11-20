@@ -118,6 +118,12 @@ export interface FixtureProvenance extends ReferenceSource {
   readonly capture: ReferenceCaptureRecord;
   readonly site: ObservationSite;
   readonly ephemeris: EphemerisConventions;
+  /**
+   * Must be `true` for boundary fixtures; builders verify at runtime and
+   * refuse to manufacture the flag. Optional here so invalid provenance can
+   * be expressed (and rejected) rather than being unrepresentable.
+   */
+  readonly expectedValuesProducedIndependently?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -143,27 +149,57 @@ export function isEpsilonWithinPolicy(
 /* Boundary triplet helpers                                            */
 /* ------------------------------------------------------------------ */
 
+export interface BoundaryEpsilonPolicy {
+  readonly min: number;
+  readonly max: number;
+}
+
 export interface BoundaryTripletSpec {
   readonly boundaryId: string;
   readonly boundaryKind: BoundaryKind;
-  /** Boundary longitude on the grid; 0 <= longitude < 360, sidereal or tropical per convention. */
+  /**
+   * Boundary longitude on the grid; must already satisfy 0 <= longitude < 360
+   * in the declared coordinate convention before any normalization.
+   */
   readonly boundaryLongitude: number;
   readonly definition: BoundaryDefinition;
-  /** Epsilon in degrees; must satisfy the release-policy range. */
+  /** Epsilon in degrees; must satisfy the caller-supplied policy range. */
   readonly epsilonDegrees: number;
+  /**
+   * Caller-supplied epsilon policy. Read from
+   * `docs/release/release-policy.json` → `calculationCoverage.boundaryEpsilonDegrees`;
+   * this module never hard-codes the range.
+   */
+  readonly policy: BoundaryEpsilonPolicy;
 }
 
 /**
  * Computes the three input longitudes for a boundary triplet
  * (EPSILON_BEFORE / EXACT / EPSILON_AFTER) around a grid boundary.
- * Returns `null` when the epsilon is non-finite or non-positive so callers
- * cannot silently emit malformed fixtures.
+ *
+ * @throws {RangeError} when `boundaryLongitude` is non-finite or outside
+ *   [0, 360), or when `epsilonDegrees` is non-finite, non-positive, or outside
+ *   `spec.policy`.
  */
 export function boundaryTripletLongitudes(
   spec: BoundaryTripletSpec
-): Readonly<Record<BoundaryPosition, number>> | null {
-  if (!Number.isFinite(spec.epsilonDegrees) || spec.epsilonDegrees <= 0) {
-    return null;
+): Readonly<Record<BoundaryPosition, number>> {
+  if (!Number.isFinite(spec.boundaryLongitude)
+    || spec.boundaryLongitude < 0
+    || spec.boundaryLongitude >= 360) {
+    throw new RangeError(
+      `boundaryTripletLongitudes: boundaryLongitude for ${spec.boundaryId} ` +
+      `must be finite and within [0, 360); got ${spec.boundaryLongitude}`
+    );
+  }
+  if (!Number.isFinite(spec.epsilonDegrees)
+    || spec.epsilonDegrees <= 0
+    || !isEpsilonWithinPolicy(spec.epsilonDegrees, spec.policy)) {
+    throw new RangeError(
+      `boundaryTripletLongitudes: epsilonDegrees for ${spec.boundaryId} ` +
+      `must be within policy [${spec.policy.min}, ${spec.policy.max}]; ` +
+      `got ${spec.epsilonDegrees}`
+    );
   }
   const normalize = (value: number): number => ((value % 360) + 360) % 360;
   return Object.freeze({
@@ -199,6 +235,16 @@ export interface PlanetaryLongitudeFixtureInput {
 export function buildPlanetaryLongitudeFixture(
   input: PlanetaryLongitudeFixtureInput
 ): PlanetaryLongitudeReference {
+  if (!Number.isFinite(input.expectedLongitudeDegrees)) {
+    throw new RangeError(
+      `buildPlanetaryLongitudeFixture: expectedLongitudeDegrees for ${input.id} must be finite`
+    );
+  }
+  if (!Number.isFinite(input.toleranceDegrees) || input.toleranceDegrees <= 0) {
+    throw new RangeError(
+      `buildPlanetaryLongitudeFixture: toleranceDegrees for ${input.id} must be > 0`
+    );
+  }
   return Object.freeze({
     id: input.id,
     kind: 'PLANETARY_LONGITUDE' satisfies CalculationReferenceKind,
@@ -284,6 +330,38 @@ export function buildRahuKetuOppositionFixture(
   });
 }
 
+/**
+ * Verifies that provenance genuinely asserts independent production.
+ * Builders never set this flag themselves; they only accept it when the
+ * caller's provenance already carries it plus a populated capture record.
+ *
+ * @throws {Error} when the flag is not `true` or the capture record is
+ *   missing/empty.
+ */
+function assertIndependentProvenance(
+  provenance: FixtureProvenance,
+  boundaryId: string
+): asserts provenance is FixtureProvenance & {
+  readonly expectedValuesProducedIndependently: true;
+} {
+  if (provenance.expectedValuesProducedIndependently !== true) {
+    throw new Error(
+      `provenance for ${boundaryId}: expectedValuesProducedIndependently ` +
+      `must be explicitly true; it is never manufactured by builders`
+    );
+  }
+  const capture = provenance.capture;
+  if (!capture
+    || typeof capture.captureId !== 'string' || capture.captureId.trim().length === 0
+    || typeof capture.sourceArtifactSha256 !== 'string' || capture.sourceArtifactSha256.trim().length === 0
+    || typeof capture.rawCapturedOutput !== 'string' || capture.rawCapturedOutput.length === 0) {
+    throw new Error(
+      `provenance for ${boundaryId}: capture record must populate ` +
+      `captureId, sourceArtifactSha256, and rawCapturedOutput`
+    );
+  }
+}
+
 export interface SignBoundaryFixtureInput {
   readonly spec: BoundaryTripletSpec;
   readonly position: BoundaryPosition;
@@ -296,22 +374,21 @@ export interface SignBoundaryFixtureInput {
 export function buildSignBoundaryFixture(
   input: SignBoundaryFixtureInput
 ): SignBoundaryReference {
-  const longitudes = boundaryTripletLongitudes(input.spec);
-  if (!longitudes) {
-    throw new RangeError(
-      `boundaryTripletLongitudes returned null for ${input.spec.boundaryId}: invalid epsilon`
+  if (input.spec.boundaryKind !== 'SIGN') {
+    throw new TypeError(
+      `buildSignBoundaryFixture: spec.boundaryKind for ${input.spec.boundaryId} ` +
+      `must be 'SIGN'; got '${input.spec.boundaryKind}'`
     );
   }
+  assertIndependentProvenance(input.provenance, input.spec.boundaryId);
+  const longitudes = boundaryTripletLongitudes(input.spec);
   return Object.freeze({
     id: `${input.spec.boundaryId}:${input.position}`,
     kind: 'SIGN_BOUNDARY' satisfies CalculationReferenceKind,
     entryPoint: 'calculateSign',
     description: `Sign boundary ${input.spec.boundaryId} at ${input.position}`,
     input: Object.freeze({ longitude: longitudes[input.position] }),
-    provenance: Object.freeze({
-      ...input.provenance,
-      expectedValuesProducedIndependently: true as const
-    }),
+    provenance: input.provenance,
     conventions: input.conventions,
     boundaryDefinition: input.spec.definition,
     boundaryLongitude: input.spec.boundaryLongitude,
@@ -335,22 +412,23 @@ export interface NakshatraBoundaryFixtureInput {
 export function buildNakshatraBoundaryFixture(
   input: NakshatraBoundaryFixtureInput
 ): NakshatraBoundaryReference {
-  const longitudes = boundaryTripletLongitudes(input.spec);
-  if (!longitudes) {
-    throw new RangeError(
-      `boundaryTripletLongitudes returned null for ${input.spec.boundaryId}: invalid epsilon`
+  if (input.spec.boundaryKind !== input.boundaryKind
+    || (input.boundaryKind !== 'NAKSHATRA' && input.boundaryKind !== 'PADA')) {
+    throw new TypeError(
+      `buildNakshatraBoundaryFixture: boundaryKind for ${input.spec.boundaryId} ` +
+      `must be 'NAKSHATRA' or 'PADA' and match spec.boundaryKind; ` +
+      `spec='${input.spec.boundaryKind}', input='${input.boundaryKind}'`
     );
   }
+  assertIndependentProvenance(input.provenance, input.spec.boundaryId);
+  const longitudes = boundaryTripletLongitudes(input.spec);
   return Object.freeze({
     id: `${input.spec.boundaryId}:${input.position}`,
     kind: 'NAKSHATRA_BOUNDARY' satisfies CalculationReferenceKind,
     entryPoint: 'calculateNakshatra',
     description: `${input.boundaryKind} boundary ${input.spec.boundaryId} at ${input.position}`,
     input: Object.freeze({ longitude: longitudes[input.position] }),
-    provenance: Object.freeze({
-      ...input.provenance,
-      expectedValuesProducedIndependently: true as const
-    }),
+    provenance: input.provenance,
     conventions: input.conventions,
     boundaryDefinition: input.spec.definition,
     boundaryKind: input.boundaryKind,
@@ -377,6 +455,13 @@ export interface HousePositionFixtureInput {
 export function buildHousePositionFixture(
   input: HousePositionFixtureInput
 ): HousePositionReference {
+  if (!Number.isInteger(input.expectedHouse)
+    || input.expectedHouse < 1
+    || input.expectedHouse > 12) {
+    throw new RangeError(
+      `buildHousePositionFixture: expectedHouse for ${input.id} must be an integer in [1, 12]`
+    );
+  }
   return Object.freeze({
     id: input.id,
     kind: 'HOUSE_POSITION' satisfies CalculationReferenceKind,
@@ -408,6 +493,16 @@ export interface VargaLongitudeFixtureInput {
 export function buildVargaLongitudeFixture(
   input: VargaLongitudeFixtureInput
 ): VargaLongitudeReference {
+  if (!Number.isFinite(input.expectedLongitudeDegrees)) {
+    throw new RangeError(
+      `buildVargaLongitudeFixture: expectedLongitudeDegrees for ${input.id} must be finite`
+    );
+  }
+  if (!Number.isFinite(input.toleranceDegrees) || input.toleranceDegrees <= 0) {
+    throw new RangeError(
+      `buildVargaLongitudeFixture: toleranceDegrees for ${input.id} must be > 0`
+    );
+  }
   return Object.freeze({
     id: input.id,
     kind: 'VARGA_LONGITUDE' satisfies CalculationReferenceKind,
@@ -458,6 +553,21 @@ export interface VimshottariDashaFixtureInput {
 export function buildVimshottariDashaFixture(
   input: VimshottariDashaFixtureInput
 ): VimshottariDashaReference {
+  if (!Number.isFinite(input.moonSiderealLongitude)
+    || input.moonSiderealLongitude < 0
+    || input.moonSiderealLongitude >= 360) {
+    throw new RangeError(
+      `buildVimshottariDashaFixture: moonSiderealLongitude for ${input.id} ` +
+      `must be finite and within [0, 360); got ${input.moonSiderealLongitude}`
+    );
+  }
+  if (!Number.isFinite(input.tolerance.fraction) || input.tolerance.fraction < 0
+    || !Number.isFinite(input.tolerance.boundaryMilliseconds)
+    || input.tolerance.boundaryMilliseconds < 0) {
+    throw new RangeError(
+      `buildVimshottariDashaFixture: tolerances for ${input.id} must be non-negative`
+    );
+  }
   return Object.freeze({
     id: input.id,
     kind: 'VIMSHOTTARI_DASHA' satisfies CalculationReferenceKind,

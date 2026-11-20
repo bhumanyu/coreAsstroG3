@@ -56,7 +56,11 @@ was validated against.
 
 ## 3. Stratified cohort specification
 
-Generate a cohort of **24–36 birth instants** spanning **1900–2100**, stratified across:
+The cohort has **two independent coverage tracks**; do not conflate their counts.
+
+### 3a. Birth-instant cohort — 24–36 births
+
+Generate **24–36 birth instants** spanning **1900–2100**, stratified across:
 
 - Both hemispheres (northern / southern latitude).
 - Varied UTC offsets (e.g. UTC−8, UTC, UTC+5:30, UTC+12) to exercise sidereal-time and
@@ -70,6 +74,17 @@ Generate a cohort of **24–36 birth instants** spanning **1900–2100**, strati
 - Moon longitudes bracketing nakshatra boundaries for `VIMSHOTTARI_DASHA` anchor
   fixtures (first-MD boundary cases).
 
+### 3b. Calculation-boundary vectors — constructed longitudes
+
+Boundary coverage is supplied by **constructed longitude vectors**, not additional
+births: for each required boundary kind (SIGN, NAKSHATRA, PADA), emit the
+EPSILON_BEFORE / EXACT / EPSILON_AFTER triplet at grid-aligned longitudes per
+`inspectBoundaryCoverage` rules. The vector count is independent of the birth cohort
+size — one boundary definition yields three fixture entries; the full policy requires
+every (kind × boundaryId × position) tuple to be unique and epsilon-conformant.
+House-position and varga fixtures similarly use constructed inputs
+(`referenceSign`/`targetSign`, `longitude`/`chartType`) rather than new births.
+
 ## 4. Per-track tolerances
 
 | Track | Tolerance | Rationale |
@@ -78,7 +93,7 @@ Generate a cohort of **24–36 birth instants** spanning **1900–2100**, strati
 | Ascendant | ≤ 0.01° | Depends on GMST/LST + obliquity accuracy; same class as planetary longitudes |
 | Mean nodes (Rahu/Ketu) | ≤ 0.005° | Mean-node series converge faster than planetary series; tighter bound is achievable |
 | Moon longitude (dasha-anchor fixtures) | ≤ 0.0001° (~0.36″) | Dasha timing is extremely sensitive to lunar longitude; this bound is required for second-level MD/AD/PD boundary checks |
-| MD/AD/PD boundary instants | ≤ 1 s, given a locked Moon longitude | Vimshottari fractions amplify longitude error; boundary checks assume the Moon input is fixed |
+| MD/AD/PD boundary instants | ≤ 1 s | **Conditional:** holds only when the reference and engine use the identical year-length convention (`yearLengthDays`), the identical locked Moon sidereal longitude, and a UTC-normalized `birthDateTime`; any divergence in those inputs voids the 1 s bound |
 | End-to-end first-MD-boundary | ≤ 2 h | Allows accumulated ephemeris + ayanamsa + time-standard drift while still catching gross errors |
 
 Boundary-epsilon fixtures use the policy range 1e-6 – 1e-4 degrees; choose a single
