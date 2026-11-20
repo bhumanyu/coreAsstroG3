@@ -661,6 +661,7 @@ export interface ProductCareerPatternQualification {
     readonly disposition?: 'ADVERSE' | 'SUPPORTIVE';
   }[];
   readonly decisionReasonCodes?: readonly {
+    /** Kept as a string to preserve retired or future codes in persisted records; the domain emits a typed union. */
     readonly code: string;
     readonly role: 'DECISIVE' | 'CONTRIBUTING';
     readonly detail?: string;

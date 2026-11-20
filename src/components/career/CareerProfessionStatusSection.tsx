@@ -6,17 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { enumLabel } from '../../i18n/enumLabels';
 import { selectPatternQualificationReasons, type PatternQualificationReason } from './patternQualificationReasons';
 
-const decisionReasonCopyKeys: Readonly<Record<string, string>> = {
-  NO_ESTABLISHING_RELATIONSHIPS: 'NO_ESTABLISHING_RELATIONSHIPS',
-  REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING: 'REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING',
-  FULLY_ASSESSED_WEAK_PARTICIPANT: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
-  NEUTRAL_CAREER_RELEVANCE: 'NEUTRAL_CAREER_RELEVANCE',
-  MISSING_INPUT: 'MISSING_INPUT',
-  METHODOLOGY_NOT_FROZEN: 'METHODOLOGY_NOT_FROZEN',
-  INSUFFICIENT_STRUCTURAL_EVIDENCE: 'INSUFFICIENT_STRUCTURAL_EVIDENCE',
-  INSUFFICIENT_INPUTS: 'INSUFFICIENT_INPUTS'
-};
-
 export interface CareerProfessionStatusSectionProps {
   readonly profession: CareerProfessionViewModel;
 }
@@ -168,12 +157,12 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
               ? classificationLabel
               : `${classificationLabel} · ${pattern.name.trim()}`;
             const reasonText = (reason: PatternQualificationReason): string => {
-              if (reason.code === 'STRUCTURAL_EVIDENCE') {
+              if (reason.category === 'STRUCTURAL_EVIDENCE') {
                 return t('ui.profession.patternReason.STRUCTURAL_EVIDENCE', {
                   explanation: reason.detail ?? ''
                 });
               }
-              if (reason.code === 'FULLY_ASSESSED_WEAK_PARTICIPANT') {
+              if (reason.category === 'FULLY_ASSESSED_WEAK_PARTICIPANT') {
                 const planet = reason.detail
                   ? tEnum(`careerPatternParticipantPlanet.${reason.detail}`)
                   : t('ui.profession.unknownParticipant');
@@ -185,7 +174,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                 }
                 return t('ui.profession.patternDecisionReason.FULLY_ASSESSED_WEAK_PARTICIPANT', { planet });
               }
-              return t(`ui.profession.patternDecisionReason.${decisionReasonCopyKeys[reason.code] ?? 'UNKNOWN'}`, {
+              return t(`ui.profession.patternDecisionReason.${reason.category}`, {
                 detail: reason.detail ?? ''
               });
             };
@@ -209,7 +198,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                   className="list-disc space-y-1 pl-5 text-xs text-slate-400"
                 >
                   {decisiveReasons.map((reason, index) => (
-                    <li key={`${reason.code}-${index}`}>{reasonText(reason)}</li>
+                    <li key={`${reason.category}-${reason.detail ?? ''}-${index}`}>{reasonText(reason)}</li>
                   ))}
                 </ul>
               )}
@@ -221,7 +210,7 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                     className="list-disc space-y-1 pl-5 text-xs text-slate-400"
                   >
                     {contributingReasons.map((reason, index) => (
-                      <li key={`${reason.code}-${index}`}>{reasonText(reason)}</li>
+                      <li key={`${reason.category}-${reason.detail ?? ''}-${index}`}>{reasonText(reason)}</li>
                     ))}
                   </ul>
                 </div>

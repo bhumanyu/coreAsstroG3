@@ -54,8 +54,15 @@ export interface DecisionBlockingReason {
 }
 
 /** Explanation provenance only; this record must not participate in qualification decisions. */
+export type QualificationDecisionReasonCodeValue =
+  | 'NO_ESTABLISHING_RELATIONSHIPS'
+  | 'REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING'
+  | 'FULLY_ASSESSED_WEAK_PARTICIPANT'
+  | 'NEUTRAL_CAREER_RELEVANCE'
+  | DecisionBlockingReasonKind;
+
 export interface QualificationDecisionReasonCode {
-  readonly code: string;
+  readonly code: QualificationDecisionReasonCodeValue;
   readonly role: 'DECISIVE' | 'CONTRIBUTING';
   readonly detail?: string;
 }

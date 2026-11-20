@@ -461,7 +461,7 @@ describe('CareerProfessionStatusSection', () => {
     ]);
   });
 
-  it('renders unqualified pattern reasons and participant factors with localized labels', () => {
+  it('uses legacy reason inference when decision reason codes are absent', () => {
     const profession = {
       ...selectCareerViewModel(createProductAnalysis()).profession,
       patternQualifications: [unqualifiedPattern]
@@ -716,6 +716,14 @@ describe('CareerProfessionStatusSection', () => {
       ...selectCareerViewModel(createProductAnalysis()).profession,
       patternQualifications: [{
         ...unqualifiedPattern,
+        dimensions: { careerRelevance: 'NEUTRAL' as const },
+        policyEvidence: [{
+          sourceType: 'STRUCTURAL_RELATIONSHIP',
+          dimension: 'structuralStrength',
+          relationshipIds: ['establishing-relationship-1'],
+          explanation: 'Structural evidence was adverse.',
+          disposition: 'ADVERSE' as const
+        }],
         decisionReasonCodes: [
           { code: 'NO_ESTABLISHING_RELATIONSHIPS', role: 'DECISIVE' as const },
           { code: 'FULLY_ASSESSED_WEAK_PARTICIPANT', role: 'CONTRIBUTING' as const, detail: Planet.JUPITER }
@@ -726,9 +734,70 @@ describe('CareerProfessionStatusSection', () => {
 
     const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
     expect(reasons).toHaveTextContent('No establishing structural relationships were found.');
+    expect(reasons).not.toHaveTextContent('Career relevance is neutral.');
+    expect(reasons).not.toHaveTextContent('Structural evidence was adverse.');
+    expect(reasons.children).toHaveLength(1);
     expect(reasons).not.toHaveTextContent('Jupiter');
     const observations = screen.getByRole('list', { name: 'Related observations' });
     expect(observations).toHaveTextContent('Jupiter has a fully assessed weak or afflicted condition.');
+    expect(observations.children).toHaveLength(1);
+  });
+
+  it('treats a present empty decision code list as authoritative', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        dimensions: { careerRelevance: 'NEUTRAL' as const },
+        policyEvidence: [{
+          sourceType: 'STRUCTURAL_RELATIONSHIP',
+          dimension: 'structuralStrength',
+          relationshipIds: [],
+          explanation: 'No establishing relationships.',
+          disposition: 'ADVERSE' as const
+        }],
+        decisionReasonCodes: []
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.queryByRole('list', { name: 'Pattern qualification reasons' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Related observations' })).not.toBeInTheDocument();
+  });
+
+  it('shows generic localized copy for unknown future reason codes', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        decisionReasonCodes: [{ code: 'FUTURE_REASON_CODE', role: 'DECISIVE' as const }]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
+    expect(reasons).toHaveTextContent('A qualification reason was recorded but could not be described.');
+    expect(reasons).not.toHaveTextContent('FUTURE_REASON_CODE');
+  });
+
+  it('deduplicates typed reasons by code and detail', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        decisionReasonCodes: [
+          { code: 'FULLY_ASSESSED_WEAK_PARTICIPANT', role: 'DECISIVE' as const, detail: Planet.JUPITER },
+          { code: 'FULLY_ASSESSED_WEAK_PARTICIPANT', role: 'DECISIVE' as const, detail: Planet.JUPITER },
+          { code: 'FULLY_ASSESSED_WEAK_PARTICIPANT', role: 'DECISIVE' as const, detail: Planet.SATURN }
+        ]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
+    expect(reasons.children).toHaveLength(2);
+    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak or afflicted condition.');
+    expect(reasons).toHaveTextContent('Saturn has a fully assessed weak or afflicted condition.');
   });
 
   it('localizes typed decisive reasons and related observations in Hindi', async () => {
@@ -740,7 +809,8 @@ describe('CareerProfessionStatusSection', () => {
         participants: [],
         decisionReasonCodes: [
           { code: 'NO_ESTABLISHING_RELATIONSHIPS', role: 'DECISIVE' as const },
-          { code: 'NEUTRAL_CAREER_RELEVANCE', role: 'CONTRIBUTING' as const }
+          { code: 'NEUTRAL_CAREER_RELEVANCE', role: 'CONTRIBUTING' as const },
+          { code: 'FUTURE_REASON_CODE', role: 'DECISIVE' as const }
         ]
       }]
     };
@@ -751,6 +821,8 @@ describe('CareerProfessionStatusSection', () => {
     expect(screen.getByRole('heading', { name: 'संबंधित अवलोकन' })).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'संबंधित अवलोकन' }))
       .toHaveTextContent('करियर प्रासंगिकता तटस्थ है।');
+    expect(screen.getByRole('list', { name: 'पैटर्न योग्यता के कारण' }))
+      .toHaveTextContent('योग्यता का कारण दर्ज है, लेकिन उसका विवरण उपलब्ध नहीं है।');
   });
 
   it('hides the stage funnel when legacy records omit stage counts', () => {

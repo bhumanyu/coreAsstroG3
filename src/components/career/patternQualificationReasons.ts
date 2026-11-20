@@ -1,17 +1,60 @@
 import type { ProductCareerPatternQualification } from '../../product/analysis/productAnalysisTypes';
 
+export type PatternQualificationReasonCategory =
+  | 'NO_ESTABLISHING_RELATIONSHIPS'
+  | 'REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING'
+  | 'FULLY_ASSESSED_WEAK_PARTICIPANT'
+  | 'NEUTRAL_CAREER_RELEVANCE'
+  | 'MISSING_INPUT'
+  | 'METHODOLOGY_NOT_FROZEN'
+  | 'INSUFFICIENT_STRUCTURAL_EVIDENCE'
+  | 'INSUFFICIENT_INPUTS'
+  | 'STRUCTURAL_EVIDENCE'
+  | 'UNKNOWN';
+
 export interface PatternQualificationReason {
-  readonly code: string;
+  readonly category: PatternQualificationReasonCategory;
   readonly role: 'DECISIVE' | 'CONTRIBUTING';
   readonly detail?: string;
   readonly condition?: 'WEAK' | 'AFFLICTED';
+}
+
+const categoryByDecisionCode: Readonly<Record<string, PatternQualificationReasonCategory>> = {
+  NO_ESTABLISHING_RELATIONSHIPS: 'NO_ESTABLISHING_RELATIONSHIPS',
+  REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING: 'REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING',
+  FULLY_ASSESSED_WEAK_PARTICIPANT: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+  NEUTRAL_CAREER_RELEVANCE: 'NEUTRAL_CAREER_RELEVANCE',
+  MISSING_INPUT: 'MISSING_INPUT',
+  METHODOLOGY_NOT_FROZEN: 'METHODOLOGY_NOT_FROZEN',
+  INSUFFICIENT_STRUCTURAL_EVIDENCE: 'INSUFFICIENT_STRUCTURAL_EVIDENCE',
+  INSUFFICIENT_INPUTS: 'INSUFFICIENT_INPUTS'
+};
+
+function deduplicateReasons(reasons: readonly PatternQualificationReason[]): readonly PatternQualificationReason[] {
+  const seen = new Set<string>();
+  return reasons.filter(reason => {
+    const key = JSON.stringify([reason.category, reason.detail]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function selectPatternQualificationReasons(
   pattern: ProductCareerPatternQualification
 ): readonly PatternQualificationReason[] {
   if (pattern.decisionReasonCodes !== undefined) {
-    return pattern.decisionReasonCodes.map(reason => ({ ...reason }));
+    const seen = new Set<string>();
+    return pattern.decisionReasonCodes.flatMap(reason => {
+      const key = JSON.stringify([reason.code, reason.detail]);
+      if (seen.has(key)) return [];
+      seen.add(key);
+      return [{
+        category: categoryByDecisionCode[reason.code] ?? 'UNKNOWN',
+        role: reason.role,
+        detail: reason.detail
+      }];
+    });
   }
 
   const reasons: PatternQualificationReason[] = [];
@@ -24,7 +67,7 @@ export function selectPatternQualificationReasons(
         (condition === 'WEAK' || condition === 'AFFLICTED')
       ) {
         reasons.push({
-          code: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+          category: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
           role: 'DECISIVE',
           detail: participant.planet,
           condition
@@ -33,13 +76,13 @@ export function selectPatternQualificationReasons(
     }
 
     if (pattern.dimensions?.careerRelevance === 'NEUTRAL') {
-      reasons.push({ code: 'NEUTRAL_CAREER_RELEVANCE', role: 'DECISIVE' });
+      reasons.push({ category: 'NEUTRAL_CAREER_RELEVANCE', role: 'DECISIVE' });
     }
 
     for (const evidence of pattern.policyEvidence ?? []) {
       if (evidence.dimension === 'structuralStrength' && evidence.disposition === 'ADVERSE') {
         reasons.push({
-          code: 'STRUCTURAL_EVIDENCE',
+          category: 'STRUCTURAL_EVIDENCE',
           role: 'DECISIVE',
           detail: evidence.explanation
         });
@@ -48,8 +91,8 @@ export function selectPatternQualificationReasons(
   }
 
   if (pattern.status === 'INSUFFICIENT_DATA' && pattern.decisionBlockingReasons.length > 0) {
-    reasons.push({ code: 'INSUFFICIENT_INPUTS', role: 'DECISIVE' });
+    reasons.push({ category: 'INSUFFICIENT_INPUTS', role: 'DECISIVE' });
   }
 
-  return reasons;
+  return deduplicateReasons(reasons);
 }
