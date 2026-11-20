@@ -55,6 +55,7 @@ export interface CareerPathwayAnalysis {
   readonly verdict: CareerPathwayVerdict;
   readonly employment: CareerPathwayModeAssessment;
   readonly independent: CareerPathwayModeAssessment;
+  readonly otherCareerCandidateCount: number;
   readonly confidence: {
     readonly status: 'NOT_ASSESSED';
     readonly reason: string;

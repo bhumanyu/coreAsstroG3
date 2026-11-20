@@ -688,6 +688,17 @@ export const resources = {
           upstreamCoverageSummary: 'Upstream coverage: {{patternsDetected}} patterns detected → {{qualifiedPatterns}} qualified → {{eligiblePatterns}} eligible → {{mechanismsResolved}} mechanisms resolved → {{expressions}} expressions.',
           patternQualificationBreakdown: 'Pattern Qualification Breakdown',
           patternQualificationsAria: 'Pattern qualification breakdown',
+          patternQualificationReasons: 'Pattern qualification reasons',
+          patternFullyAssessedWeakParticipant: '{{planet}} has a fully assessed {{condition}} condition, which weighs against this pattern.',
+          patternAdverseCondition: {
+            WEAK: 'weak',
+            AFFLICTED: 'afflicted'
+          },
+          patternReason: {
+            NEUTRAL_CAREER_RELEVANCE: 'Career relevance is neutral.',
+            NO_ESTABLISHING_RELATIONSHIPS: 'No establishing structural relationships were identified.',
+            INSUFFICIENT_INPUTS: 'Inputs are insufficient to complete this pattern assessment.'
+          },
           patternBlockingReasons: 'Decision-blocking reasons',
           patternParticipantEvidence: 'Pattern participant evidence',
           patternBlockingReasonLine: '{{kind}}: {{reason}}',
@@ -750,6 +761,21 @@ export const resources = {
         pathways: {
           title: 'Corporate & Independent Pathways',
           unavailable: 'B05 pathway comparison is unavailable because no canonical B02 outcome analysis is attached. No verdict is inferred from B04 profession families.',
+          incompleteAssessment: 'Assessment incomplete',
+          otherCareerCandidates: 'Other career candidates not classified to either pathway: {{count}}.',
+          diagnostics: 'Pathway diagnostics',
+          diagnosticCopy: {
+            NATAL_PROMISE_NOT_ESTABLISHED: 'A natal career promise has not been established.',
+            DASHA_ACTIVATION_NOT_ESTABLISHED: 'A linked dasha activation has not been established.',
+            NO_LINKED_P2_09B_OUTCOME_CANDIDATE: 'No linked P2-09B outcome candidate is available.',
+            EMPLOYMENT_SERVICE_CANDIDATE_NOT_IDENTIFIED: 'No employment or service candidate was identified.',
+            INDEPENDENT_BUSINESS_CANDIDATE_NOT_IDENTIFIED: 'No independent or business candidate was identified.',
+            B02_OUTCOME_ANALYSIS_NOT_PROVIDED: 'The canonical B02 outcome analysis was not provided.',
+            C11_FINAL_CONCLUSION_NOT_SUPPORTIVE: 'The final C11 conclusion does not support promoting this outcome candidate.',
+            P2_09B_CANDIDATE_NOT_PROMOTED_WITHOUT_BOTH_PROMISE_AND_ACTIVATION: 'An outcome candidate was not promoted without both natal promise and linked activation.',
+            OTHER_CAREER_CANDIDATE_NOT_CLASSIFIED_TO_EITHER_MODE: 'Some career candidates are not classified to either pathway.',
+            unknown: 'A pathway diagnostic was reported but is not yet described.'
+          },
           candidates: 'Candidates',
           supported: 'Supported',
           conditional: 'Conditional',
@@ -3394,6 +3420,17 @@ export const resources = {
           upstreamCoverageSummary: 'पूर्ववर्ती कवरेज: {{patternsDetected}} पैटर्न मिले → {{qualifiedPatterns}} योग्य → {{eligiblePatterns}} पात्र → {{mechanismsResolved}} तंत्र हल हुए → {{expressions}} अभिव्यक्तियाँ।',
           patternQualificationBreakdown: 'पैटर्न योग्यता विवरण',
           patternQualificationsAria: 'पैटर्न योग्यता विवरण',
+          patternQualificationReasons: 'पैटर्न योग्यता के कारण',
+          patternFullyAssessedWeakParticipant: '{{planet}} की स्थिति का पूर्ण आकलन {{condition}} है, जो इस पैटर्न के विरुद्ध जाता है।',
+          patternAdverseCondition: {
+            WEAK: 'कमजोर',
+            AFFLICTED: 'पीड़ित'
+          },
+          patternReason: {
+            NEUTRAL_CAREER_RELEVANCE: 'करियर प्रासंगिकता तटस्थ है।',
+            NO_ESTABLISHING_RELATIONSHIPS: 'कोई स्थापित करने वाला संरचनात्मक संबंध नहीं मिला।',
+            INSUFFICIENT_INPUTS: 'इस पैटर्न का आकलन पूरा करने के लिए इनपुट अपर्याप्त हैं।'
+          },
           patternBlockingReasons: 'निर्णय रोकने वाले कारण',
           patternParticipantEvidence: 'पैटर्न प्रतिभागी साक्ष्य',
           patternBlockingReasonLine: '{{kind}}: {{reason}}',
@@ -3456,6 +3493,21 @@ export const resources = {
         pathways: {
           title: 'नौकरी और स्वतंत्र कार्य-पथ',
           unavailable: 'प्रामाणिक B02 परिणाम विश्लेषण संलग्न न होने के कारण B05 कार्य-पथ तुलना उपलब्ध नहीं है। B04 पेशा समूहों से कोई निष्कर्ष नहीं निकाला गया है।',
+          incompleteAssessment: 'आकलन अधूरा है',
+          otherCareerCandidates: 'अन्य करियर उम्मीदवार किसी भी कार्य-पथ में वर्गीकृत नहीं: {{count}}।',
+          diagnostics: 'कार्य-पथ निदान',
+          diagnosticCopy: {
+            NATAL_PROMISE_NOT_ESTABLISHED: 'जन्मजात करियर संकेत स्थापित नहीं हुआ है।',
+            DASHA_ACTIVATION_NOT_ESTABLISHED: 'संबंधित दशा सक्रियता स्थापित नहीं हुई है।',
+            NO_LINKED_P2_09B_OUTCOME_CANDIDATE: 'कोई संबद्ध P2-09B परिणाम उम्मीदवार उपलब्ध नहीं है।',
+            EMPLOYMENT_SERVICE_CANDIDATE_NOT_IDENTIFIED: 'नौकरी या सेवा का कोई उम्मीदवार नहीं मिला।',
+            INDEPENDENT_BUSINESS_CANDIDATE_NOT_IDENTIFIED: 'स्वतंत्र कार्य या व्यवसाय का कोई उम्मीदवार नहीं मिला।',
+            B02_OUTCOME_ANALYSIS_NOT_PROVIDED: 'प्रामाणिक B02 परिणाम विश्लेषण उपलब्ध नहीं कराया गया।',
+            C11_FINAL_CONCLUSION_NOT_SUPPORTIVE: 'अंतिम C11 निष्कर्ष इस परिणाम उम्मीदवार को आगे बढ़ाने का समर्थन नहीं करता।',
+            P2_09B_CANDIDATE_NOT_PROMOTED_WITHOUT_BOTH_PROMISE_AND_ACTIVATION: 'जन्मजात संकेत और संबंधित सक्रियता दोनों के बिना परिणाम उम्मीदवार को आगे नहीं बढ़ाया गया।',
+            OTHER_CAREER_CANDIDATE_NOT_CLASSIFIED_TO_EITHER_MODE: 'कुछ करियर उम्मीदवार किसी भी कार्य-पथ में वर्गीकृत नहीं हैं।',
+            unknown: 'कार्य-पथ निदान दिया गया है, लेकिन उसका विवरण उपलब्ध नहीं है।'
+          },
           candidates: 'उम्मीदवार',
           supported: 'समर्थित',
           conditional: 'सशर्त',

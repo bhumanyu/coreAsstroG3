@@ -29,6 +29,7 @@ import type { CareerPatternClassification } from '../../domain/career/careerPatt
 import type {
   CareerPatternDeferredDimension,
   CareerPatternParticipantQualification,
+  CareerPatternQualificationDimensions,
   CareerPatternQualificationStatus,
   DecisionBlockingReason
 } from '../../domain/career/careerPatternQualification/careerPatternQualificationTypes';
@@ -500,6 +501,7 @@ export interface ProductCareerPathwayAnalysis {
   readonly verdict: ProductCareerPathwayVerdict;
   readonly employment: ProductCareerPathwayModeAssessment;
   readonly independent: ProductCareerPathwayModeAssessment;
+  readonly otherCareerCandidateCount?: number;
   readonly confidence: { readonly status: 'NOT_ASSESSED'; readonly reason: string };
   readonly guaranteedOutcomeAvailable: false;
   readonly numericProbabilityAvailable: false;
@@ -635,6 +637,7 @@ export interface ProductCareerPatternQualificationParticipant {
   readonly planet: CareerPatternParticipantQualification['planet'];
   readonly relevance: CareerPatternParticipantQualification['relevance'];
   readonly condition: CareerPatternParticipantQualification['condition'];
+  readonly sourceCondition?: CareerPlanetaryConditionResult['condition'];
   readonly conditionAssessment?: CareerPlanetaryConditionResult['assessment'];
   readonly combustion?: CareerPlanetaryConditionResult['combustion'];
   readonly affliction?: CareerPlanetaryConditionResult['affliction'];
@@ -648,6 +651,14 @@ export interface ProductCareerPatternQualification {
   readonly classification: CareerPatternClassification;
   readonly name: string;
   readonly status: CareerPatternQualificationStatus | 'DEFERRED';
+  readonly explanation?: string;
+  readonly dimensions?: Pick<CareerPatternQualificationDimensions, 'careerRelevance'>;
+  readonly policyEvidence?: readonly {
+    readonly sourceType: string;
+    readonly dimension: string;
+    readonly relationshipIds: readonly string[];
+    readonly explanation: string;
+  }[];
   readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly participants: readonly ProductCareerPatternQualificationParticipant[];

@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { CareerProfessionStatusSection } from './CareerProfessionStatusSection';
 import { CareerExpressionSection } from './CareerExpressionSection';
 import { getCareerProfessionStatusCopy, type CareerProfessionStatus } from '../../product/analysis/careerQualificationPresentation';
@@ -470,8 +470,11 @@ describe('CareerProfessionStatusSection', () => {
 
     const breakdown = screen.getByRole('list', { name: 'Pattern qualification breakdown' });
     expect(screen.getByRole('heading', { name: 'Pattern Qualification Breakdown' })).toBeInTheDocument();
-    expect(breakdown).toHaveTextContent('Career-house network · Career-house network');
+    expect(breakdown).toHaveTextContent('Career-house network');
+    expect(breakdown).not.toHaveTextContent('Career-house network · Career-house network');
     expect(breakdown).toHaveTextContent('Unqualified');
+    expect(screen.getByRole('list', { name: 'Pattern qualification reasons' }))
+      .toHaveTextContent('Jupiter has a fully assessed weak condition, which weighs against this pattern.');
     expect(screen.getByRole('list', { name: 'Decision-blocking reasons' }))
       .toHaveTextContent('Insufficient structural evidence: The required structural evidence was not established.');
     expect(screen.getByRole('list', { name: 'Pattern participant evidence' }))
@@ -532,6 +535,84 @@ describe('CareerProfessionStatusSection', () => {
     expect(breakdown).toHaveTextContent('अनुपलब्ध इनपुट');
     expect(breakdown).toHaveTextContent('बृहस्पति — प्राथमिक प्रासंगिकता, कमज़ोर स्थिति (पूर्ण आकलन)');
     expect(breakdown).toHaveTextContent('नकारात्मक कारक: दहन, पाप प्रभाव का दबाव');
+  });
+
+  it('renders all decisive pattern reasons without treating partial assessment as a disqualifier', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        participants: [
+          { ...unqualifiedPattern.participants[0]!, planet: Planet.JUPITER, conditionAssessment: 'FULL' as const, condition: 'WEAK' as const },
+          { ...unqualifiedPattern.participants[0]!, planet: Planet.MARS, conditionAssessment: 'FULL' as const, sourceCondition: 'AFFLICTED' as const },
+          { ...unqualifiedPattern.participants[0]!, planet: Planet.SATURN, conditionAssessment: 'PARTIAL' as const, condition: 'WEAK' as const }
+        ],
+        dimensions: { careerRelevance: 'NEUTRAL' as const },
+        policyEvidence: [{
+          sourceType: 'STRUCTURAL_RELATIONSHIP',
+          dimension: 'structuralStrength',
+          relationshipIds: [],
+          explanation: 'Diagnostic provenance is not rendered.'
+        }]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
+    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition');
+    expect(reasons).toHaveTextContent('Mars has a fully assessed afflicted condition');
+    expect(reasons).toHaveTextContent('Career relevance is neutral.');
+    expect(reasons).toHaveTextContent('No establishing structural relationships were identified.');
+    expect(reasons).not.toHaveTextContent('Saturn');
+    expect(screen.getByRole('list', { name: 'Pattern participant evidence' })).toHaveTextContent('Saturn');
+    expect(screen.queryByText('Diagnostic provenance is not rendered.')).not.toBeInTheDocument();
+  });
+
+  it('renders insufficient inputs only for INSUFFICIENT_DATA patterns', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [
+        {
+          ...unqualifiedPattern,
+          patternId: 'UNQUALIFIED_WITH_REASON',
+          decisionBlockingReasons: [{ kind: 'MISSING_INPUT' as const, reason: 'Internal reason prose' }]
+        },
+        {
+          ...unqualifiedPattern,
+          patternId: 'INSUFFICIENT_WITH_REASON',
+          status: 'INSUFFICIENT_DATA' as const,
+          decisionBlockingReasons: [{ kind: 'MISSING_INPUT' as const, reason: 'Internal reason prose' }]
+        }
+      ]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+    const breakdown = screen.getByRole('list', { name: 'Pattern qualification breakdown' });
+    expect(within(breakdown.children[0] as HTMLElement).queryByText('Inputs are insufficient to complete this pattern assessment.')).not.toBeInTheDocument();
+    expect(within(breakdown.children[1] as HTMLElement).getByText('Inputs are insufficient to complete this pattern assessment.')).toBeInTheDocument();
+  });
+
+  it('deduplicates classification and pattern name after trim and case normalization', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{ ...unqualifiedPattern, name: '  CAREER-HOUSE NETWORK  ' }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+    expect(screen.getByRole('heading', { name: 'Career-house network' })).toBeInTheDocument();
+  });
+
+  it('localizes decisive reasons in Hindi', async () => {
+    await i18n.changeLanguage('hi');
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        dimensions: { careerRelevance: 'NEUTRAL' as const }
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+    const reasons = screen.getByRole('list', { name: 'पैटर्न योग्यता के कारण' });
+    expect(reasons).toHaveTextContent('करियर प्रासंगिकता तटस्थ है।');
+    expect(reasons).toHaveTextContent('बृहस्पति की स्थिति का पूर्ण आकलन कमजोर है');
   });
 
   it('hides the stage funnel when legacy records omit stage counts', () => {

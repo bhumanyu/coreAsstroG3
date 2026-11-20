@@ -73,6 +73,7 @@ describe('B05 Career pathway comparison', () => {
     expect(result.status).toBe('AVAILABLE');
     expect(result.employment.status).toBe('SUPPORTED_CANDIDATE');
     expect(result.independent.status).toBe('SUPPORTED_CANDIDATE');
+    expect(result.otherCareerCandidateCount).toBe(0);
     expect(result.employment.supportingEvidenceOccurrenceIds).toEqual(['activation-evidence-employment-1', 'natal-employment-1']);
     expect(result.suitabilityAvailable).toBe(false);
     expect(result.guaranteedOutcomeAvailable).toBe(false);
@@ -122,6 +123,26 @@ describe('B05 Career pathway comparison', () => {
     expect(result.status).toBe('UNAVAILABLE');
     expect(result.employment.status).toBe('NOT_IDENTIFIED');
     expect(result.independent.status).toBe('NOT_IDENTIFIED');
+    expect(result.otherCareerCandidateCount).toBe(0);
+  });
+
+  it('counts outcomes outside the two modes without reclassifying them', () => {
+    const result = analyzeCareerPathways({
+      outcomeAnalysis: outcome([
+        candidate('employment-1', 'EMPLOYMENT_OR_SERVICE_OPPORTUNITY'),
+        candidate('business-1', 'INDEPENDENT_OR_BUSINESS_ACTIVITY'),
+        candidate('growth-1', 'CAREER_GROWTH_OR_EXPANSION'),
+        candidate('skill-1', 'TECHNICAL_SPECIALIZATION_OR_SKILL_DEVELOPMENT')
+      ])
+    });
+    expect(result.otherCareerCandidateCount).toBe(2);
+    expect(result.employment.candidateCount).toBe(1);
+    expect(result.independent.candidateCount).toBe(1);
+    expect(result.diagnostics).toContain('OTHER_CAREER_CANDIDATE_NOT_CLASSIFIED_TO_EITHER_MODE');
+  });
+
+  it('sets the other-candidate count to zero when no B02 analysis is supplied', () => {
+    expect(analyzeCareerPathways({}).otherCareerCandidateCount).toBe(0);
   });
 
   it('preserves unresolved and insufficient B02 states', () => {

@@ -125,6 +125,14 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       classification: sourcePattern.classification,
       name: sourcePattern.name,
       status: sourcePattern.status,
+      explanation: sourcePattern.explanation,
+      dimensions: { careerRelevance: sourcePattern.dimensions.careerRelevance },
+      policyEvidence: sourcePattern.policyEvidence.map(({ sourceType, dimension, relationshipIds, explanation }) => ({
+        sourceType,
+        dimension,
+        relationshipIds,
+        explanation
+      })),
       decisionBlockingReasons: sourcePattern.decisionBlockingReasons,
       deferredDimensions: sourcePattern.deferredDimensions
     });
@@ -132,6 +140,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       planet: sourceParticipant.planet,
       relevance: sourceParticipant.relevance,
       condition: sourceParticipant.condition,
+      sourceCondition: sourceParticipant.conditionSource?.condition,
       conditionAssessment: sourceParticipant.conditionSource?.assessment,
       combustion: sourceParticipant.conditionSource?.combustion,
       affliction: sourceParticipant.conditionSource?.affliction,
@@ -874,6 +883,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysis.career.pathwayPotential?.employment.candidates[0]?.candidateId).toBe('employment-1');
     expect(analysis.career.pathwayPotential?.independent.candidates[0]?.candidateId).toBe('business-1');
     expect(analysis.career.pathwayPotential?.suitabilityAvailable).toBe(false);
+    expect(analysis.career.pathwayPotential?.otherCareerCandidateCount).toBe(0);
     expect(selectCareer(analysis).pathwayPotential).toEqual(analysis.career.pathwayPotential);
   });
 

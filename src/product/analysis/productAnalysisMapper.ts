@@ -986,6 +986,7 @@ function mapCareerPathwayAnalysis(source: CareerPathwayAnalysis): ProductCareerP
     verdict: source.verdict,
     employment: mapMode(source.employment),
     independent: mapMode(source.independent),
+    otherCareerCandidateCount: source.otherCareerCandidateCount,
     confidence: { ...source.confidence },
     guaranteedOutcomeAvailable: source.guaranteedOutcomeAvailable,
     numericProbabilityAvailable: source.numericProbabilityAvailable,
@@ -1026,6 +1027,14 @@ function mapCareer(
             classification: qualifiedPattern.classification,
             name: qualifiedPattern.name,
             status: qualifiedPattern.status,
+            explanation: qualifiedPattern.explanation,
+            dimensions: { careerRelevance: qualifiedPattern.dimensions.careerRelevance },
+            policyEvidence: qualifiedPattern.policyEvidence.map(evidence => ({
+              sourceType: evidence.sourceType,
+              dimension: evidence.dimension,
+              relationshipIds: [...evidence.relationshipIds],
+              explanation: evidence.explanation
+            })),
             decisionBlockingReasons: qualifiedPattern.decisionBlockingReasons,
             deferredDimensions: qualifiedPattern.deferredDimensions,
             participants: qualifiedPattern.participants.map(participant => {
@@ -1034,6 +1043,7 @@ function mapCareer(
                 planet: participant.planet,
                 relevance: participant.relevance,
                 condition: participant.condition,
+                sourceCondition: conditionSource?.condition,
                 conditionAssessment: conditionSource?.assessment,
                 combustion: conditionSource?.combustion,
                 affliction: conditionSource?.affliction,

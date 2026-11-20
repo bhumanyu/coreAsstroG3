@@ -4,6 +4,7 @@ import { getMissingInputLabel } from '../../product/analysis/careerQualification
 import type { CareerProfessionStatus } from '../../product/analysis/careerQualificationPresentation';
 import { useTranslation } from 'react-i18next';
 import { enumLabel } from '../../i18n/enumLabels';
+import { selectPatternQualificationReasons } from './patternQualificationReasons';
 
 export interface CareerProfessionStatusSectionProps {
   readonly profession: CareerProfessionViewModel;
@@ -152,12 +153,36 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h4 className="text-xs font-medium text-slate-100">
-                  {tEnum(`careerPatternClassification.${pattern.classification}`)} · {pattern.name}
+                  {(() => {
+                    const classificationLabel = tEnum(`careerPatternClassification.${pattern.classification}`);
+                    const normalizedClassification = classificationLabel.trim().toLowerCase();
+                    const normalizedName = pattern.name.trim().toLowerCase();
+                    return normalizedClassification === normalizedName || !normalizedName
+                      ? classificationLabel
+                      : `${classificationLabel} · ${pattern.name.trim()}`;
+                  })()}
                 </h4>
                 <span className="rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300">
                   {tEnum(`careerPatternQualificationStatus.${pattern.status}`)}
                 </span>
               </div>
+              {selectPatternQualificationReasons(pattern).length > 0 && (
+                <ul
+                  aria-label={t('ui.profession.patternQualificationReasons')}
+                  className="list-disc space-y-1 pl-5 text-xs text-slate-400"
+                >
+                  {selectPatternQualificationReasons(pattern).map((reason, index) => (
+                    <li key={`${reason.category}-${index}`}>
+                      {reason.category === 'FULLY_ASSESSED_WEAK_PARTICIPANT'
+                        ? t('ui.profession.patternFullyAssessedWeakParticipant', {
+                            planet: tEnum(`careerPatternParticipantPlanet.${reason.planet}`),
+                            condition: t(`ui.profession.patternAdverseCondition.${reason.condition}`)
+                          })
+                        : t(`ui.profession.patternReason.${reason.category}`)}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {pattern.decisionBlockingReasons.length > 0 && (
                 <ul
                   aria-label={t('ui.profession.patternBlockingReasons')}

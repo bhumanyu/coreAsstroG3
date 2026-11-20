@@ -114,6 +114,7 @@ export function analyzeCareerPathways(
       verdict: 'INSUFFICIENT_DATA',
       employment: emptyEmployment,
       independent: emptyIndependent,
+      otherCareerCandidateCount: 0,
       confidence: Object.freeze({
         status: 'NOT_ASSESSED',
         reason: 'No B02 outcome analysis is attached; B05 does not infer pathways from B04 profession families.'
@@ -137,6 +138,11 @@ export function analyzeCareerPathways(
   const independentCandidates = outcome.candidateOutcomes.filter(
     candidate => candidate.outcomeType === 'INDEPENDENT_OR_BUSINESS_ACTIVITY'
   );
+  const otherCareerCandidateCount = outcome.candidateOutcomes.filter(
+    candidate =>
+      candidate.outcomeType !== 'EMPLOYMENT_OR_SERVICE_OPPORTUNITY' &&
+      candidate.outcomeType !== 'INDEPENDENT_OR_BUSINESS_ACTIVITY'
+  ).length;
   const employment = assessMode('EMPLOYMENT_SERVICE', employmentCandidates);
   const independent = assessMode('INDEPENDENT_BUSINESS', independentCandidates);
   const verdict = deriveVerdict(outcome, employment, independent);
@@ -156,6 +162,7 @@ export function analyzeCareerPathways(
     verdict,
     employment,
     independent,
+    otherCareerCandidateCount,
     confidence: Object.freeze({
       status: 'NOT_ASSESSED',
       reason: 'B05 reports candidate presence and qualification only; it does not create a parallel confidence or suitability score.'
@@ -165,6 +172,7 @@ export function analyzeCareerPathways(
     suitabilityAvailable: false,
     diagnostics: Object.freeze([
       ...outcome.diagnostics,
+      ...(otherCareerCandidateCount > 0 ? ['OTHER_CAREER_CANDIDATE_NOT_CLASSIFIED_TO_EITHER_MODE'] : []),
       ...(employment.candidateCount === 0 ? ['EMPLOYMENT_SERVICE_CANDIDATE_NOT_IDENTIFIED'] : []),
       ...(independent.candidateCount === 0 ? ['INDEPENDENT_BUSINESS_CANDIDATE_NOT_IDENTIFIED'] : [])
     ]),
