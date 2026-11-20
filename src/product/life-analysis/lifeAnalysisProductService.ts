@@ -1,7 +1,7 @@
 import type { Horoscope } from '../../types';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import type { DomainReasoningOptions } from '../../domain/reasoning/reasoningTypes';
-import type { AiRouter } from '../../ai/browser';
+import type { AiRouter } from '../../ai/routing/AiRouter';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { buildLifeAnalysis } from '../../domain/synthesis';
@@ -22,6 +22,9 @@ export interface RunLifeAnalysisProductOptions {
   readonly horoscope: Horoscope;
   readonly context: AnalysisContext;
   readonly router?: AiRouter;
+  /** 'LOCAL_ONLY' forces local rules; 'REMOTE_PRIMARY'/unset prefers a configured remote provider. */
+  readonly routingMode?: 'LOCAL_ONLY' | 'REMOTE_PRIMARY';
+  readonly providerTimeoutMs?: number;
   readonly includeAiExplanation?: boolean;
   /** Explicit user-supplied facts only; never inferred from the horoscope. */
   readonly observedCareerOutcomes?: readonly CareerObservedOutcomeInput[];
@@ -96,6 +99,8 @@ export async function runLifeAnalysisProduct(
       horoscope: options.horoscope,
       task: 'LIFE_ANALYSIS_EXPLANATION',
       router: options.router,
+      routingMode: options.routingMode,
+      providerTimeoutMs: options.providerTimeoutMs,
       domainInterpretations,
       lifeAnalysis: analysis,
       temporalState

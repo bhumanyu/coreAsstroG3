@@ -381,6 +381,7 @@ export const resources = {
         practicalFocus: 'Practical focus',
         aiProvider: 'AI provider',
         aiStatus: 'AI explanation status',
+        aiPreliminaryNote: 'Preliminary deterministic assessment (local rules) — not an LLM interpretation.',
         aiEvidenceReferences: 'AI evidence references',
         triggeredRules: 'Triggered rules'
       },
@@ -3143,6 +3144,7 @@ export const resources = {
         practicalFocus: 'व्यावहारिक ध्यान',
         aiProvider: 'AI प्रदाता',
         aiStatus: 'AI व्याख्या की स्थिति',
+        aiPreliminaryNote: 'प्रारंभिक नियतात्मक मूल्यांकन (स्थानीय नियम) — LLM व्याख्या नहीं।',
         aiEvidenceReferences: 'AI साक्ष्य संदर्भ',
         triggeredRules: 'सक्रिय नियम'
       },

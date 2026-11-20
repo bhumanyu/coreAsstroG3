@@ -30,6 +30,7 @@ import {
   type BuildProductSelectedPeriodSynthesisInput
 } from './selectedPeriodProductService';
 import { runAiExplanation } from '../../ai/product/aiExplanationService';
+import type { AiRouter } from '../../ai/routing/AiRouter';
 
 export interface ProductAnalysisDependencies {
   readonly calculateHoroscope: (birthDetails: BirthDetails, customPositionsOrOptions?: any, asOfParam?: string | Date) => Horoscope;
@@ -38,7 +39,26 @@ export interface ProductAnalysisDependencies {
     readonly horoscope: Horoscope;
     readonly context: AnalysisContext;
     readonly includeAiExplanation?: boolean;
+    readonly router?: AiRouter;
+    readonly routingMode?: 'LOCAL_ONLY' | 'REMOTE_PRIMARY';
+    readonly providerTimeoutMs?: number;
   }) => Promise<LifeAnalysisProductState>;
+  /**
+   * Optional pre-configured AI router supplied by the composition boundary.
+   * When provided, AI explanations (including selected-period analysis) route
+   * through it, so a trusted server-side composition root can register remote
+   * providers. When omitted, runAiExplanation builds a local-only default
+   * router. Provider credentials must never reach this layer from a client.
+   */
+  readonly aiRouter?: AiRouter;
+  /**
+   * Routing preference for AI explanation. 'LOCAL_ONLY' forces the local
+   * rules provider; 'REMOTE_PRIMARY' (or unset) lets the router prefer a
+   * configured remote provider with deterministic local fallback.
+   */
+  readonly aiRoutingMode?: 'LOCAL_ONLY' | 'REMOTE_PRIMARY';
+  /** Maximum time allowed for AI provider/router execution. */
+  readonly aiProviderTimeoutMs?: number;
 }
 
 export const defaultProductAnalysisDependencies: ProductAnalysisDependencies = Object.freeze({
@@ -160,7 +180,10 @@ export class ProductAnalysisService {
       pipelineState = await this.deps.runPipeline({
         horoscope,
         context,
-        includeAiExplanation: options?.includeAiExplanation ?? true
+        includeAiExplanation: options?.includeAiExplanation ?? true,
+        router: this.deps.aiRouter,
+        routingMode: this.deps.aiRoutingMode,
+        providerTimeoutMs: this.deps.aiProviderTimeoutMs
       });
 
       if (pipelineState.status === 'ERROR' || !pipelineState.analysis) {
@@ -269,6 +292,9 @@ export class ProductAnalysisService {
                 lifeAnalysis: pipelineState.lifeAnalysis!,
                 temporalState: pipelineState.temporalState!,
                 selectedPeriod: selectedPeriodResult.value,
+                router: this.deps.aiRouter,
+                routingMode: this.deps.aiRoutingMode,
+                providerTimeoutMs: this.deps.aiProviderTimeoutMs,
                 selectedPeriodEvidence: {
                   careerEvidence: pipelineState.career?.evidence ?? [],
                   careerDashaEvidence: pipelineState.careerArtifacts?.careerDashaEvidence ?? [],
@@ -489,6 +515,9 @@ export class ProductAnalysisService {
             lifeAnalysis: pipelineState.lifeAnalysis!,
             temporalState: pipelineState.temporalState!,
             selectedPeriod: selectedPeriodResult.value,
+            router: this.deps.aiRouter,
+            routingMode: this.deps.aiRoutingMode,
+            providerTimeoutMs: this.deps.aiProviderTimeoutMs,
             selectedPeriodEvidence: {
               careerEvidence: pipelineState.career?.evidence ?? [],
               careerDashaEvidence: pipelineState.careerArtifacts?.careerDashaEvidence ?? [],

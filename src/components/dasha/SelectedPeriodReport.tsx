@@ -367,9 +367,16 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
                   )}
                 </div>
                 {synthesis.aiExplanation.kind === 'SUCCESS' ? (
-                  <div className="text-xs text-slate-400">
-                    {t('selectedPeriodReport.aiProvider')}: {synthesis.aiExplanation.providerName} ({synthesis.aiExplanation.providerKind})
-                  </div>
+                  <>
+                    <div className="text-xs text-slate-400">
+                      {t('selectedPeriodReport.aiProvider')}: {synthesis.aiExplanation.providerName} ({synthesis.aiExplanation.providerKind})
+                    </div>
+                    {synthesis.aiExplanation.providerKind === 'LOCAL_RULES' && (
+                      <div className="text-xs text-amber-300/90">
+                        {t('selectedPeriodReport.aiPreliminaryNote')}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-xs text-slate-400">{synthesis.aiExplanation.message}</div>
                 )}

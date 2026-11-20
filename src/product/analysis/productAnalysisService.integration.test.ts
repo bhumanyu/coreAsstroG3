@@ -14,6 +14,9 @@ import type { ProductAnalysis } from './productAnalysisTypes';
 import { listSelectableMdAdPeriods } from '../../core/analysis/selectedMdAdPeriod';
 import { VALID_SELECTION_GOLDEN_FIXTURE } from '../../test/fixtures/selectedPeriodGoldenFixtures';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import { createDefaultAiRouter } from '../../ai/routing/createDefaultAiRouter';
+import type { AiProvider } from '../../ai/types/aiProviderTypes';
+import type { AiResponse } from '../../ai/types/aiResponseTypes';
 import {
   getValidMdAdSelection,
   getNonOverlappingAdFromOtherMd,
@@ -995,6 +998,79 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         expect(synthesis.aiExplanation).toEqual(mockSuccessResult);
       } finally {
         aiExplanationSpy.mockRestore();
+      }
+    });
+
+    it('injected aiRouter routes selected-period explanation to a configured remote provider', async () => {
+      // First, get a baseline to obtain canonical IDs with pinned asOf
+      const baseline = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date('2024-01-01T00:00:00Z')
+      });
+
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selectablePeriods = listSelectableMdAdPeriods(report!);
+      const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+      expect(validMd).toBeDefined();
+
+      const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
+      expect(validAd).toBeDefined();
+
+      const remoteProvider: AiProvider = {
+        identity: { id: 'test-remote-llm', name: 'Test Remote LLM', kind: 'REMOTE_LLM' },
+        capabilities: Object.freeze([
+          'STRUCTURED_OUTPUT',
+          'CAREER',
+          'WEALTH',
+          'DASHA',
+          'LIFE_THEMES',
+          'CHART_SYNTHESIS',
+          'LIFE_ANALYSIS'
+        ] as const),
+        getStatus: () => ({ availability: 'AVAILABLE' as const }),
+        generate: async (request): Promise<AiResponse> => ({
+          requestId: request.requestId,
+          format: 'STRUCTURED',
+          content: 'Remote period interpretation.',
+          structuredOutput: {
+            status: 'SUCCESS',
+            conclusion: 'Remote period interpretation.',
+            supportingEvidenceIds: [],
+            challengingEvidenceIds: [],
+            unresolvedQuestions: [],
+            warnings: []
+          },
+          warnings: []
+        })
+      };
+
+      const routerService = new ProductAnalysisService({
+        calculateHoroscope,
+        runPipeline: runLifeAnalysisProduct,
+        aiRouter: createDefaultAiRouter({ remoteProvider }),
+        aiRoutingMode: 'REMOTE_PRIMARY'
+      });
+
+      const analysis = await routerService.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date('2024-01-01T00:00:00Z'),
+        selectedPeriod: {
+          mahadashaId: validMd!.id,
+          antardashaId: validAd!.id
+        },
+        includeSelectedPeriodAiExplanation: true
+      });
+
+      expect(analysis.selectedPeriod?.status).toBe('OK');
+      const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesis.aiExplanationStatus).toBe('OK');
+      expect(synthesis.aiExplanation?.kind).toBe('SUCCESS');
+      if (synthesis.aiExplanation?.kind === 'SUCCESS') {
+        expect(synthesis.aiExplanation.providerId).toBe('test-remote-llm');
+        expect(synthesis.aiExplanation.providerKind).toBe('REMOTE_LLM');
+        expect(synthesis.aiExplanation.fallbackUsed).toBe(false);
       }
     });
 

@@ -46,7 +46,11 @@ function buildLifeAnalysisExplanationConclusion(context: AiContext): string {
   return `Cross-domain synthesis integrates Career and Wealth domain interpretations: ${careerPart}; ${wealthPart}.${overall}${evidencePart}`;
 }
 
-function buildConclusion(task: AiTask, context: AiContext): string {
+function buildConclusion(
+  task: AiTask,
+  context: AiContext,
+  ruleStatements: readonly string[] = []
+): string {
   switch (task) {
     case 'CAREER_ANALYSIS': {
       if (!context.career) {
@@ -113,6 +117,7 @@ function buildConclusion(task: AiTask, context: AiContext): string {
       }
       const sp = context.selectedPeriod;
       const parts: string[] = [];
+      parts.push('Preliminary deterministic assessment produced by local Vedic rules; this is an indicator-level read, not an LLM interpretation or a prediction of outcomes.');
       parts.push(`Selected period analysis for Mahadasha of ${sp.mahadashaPlanet} and Antardasha of ${sp.antardashaPlanet}.`);
       parts.push(`Period interval: ${sp.interval.start} to ${sp.interval.end}.`);
       parts.push(`Temporal relation: ${sp.temporalRelation}.`);
@@ -128,6 +133,9 @@ function buildConclusion(task: AiTask, context: AiContext): string {
       }
       if (sp.diagnostics.length > 0) {
         parts.push(`Diagnostics: ${sp.diagnostics.length}.`);
+      }
+      if (ruleStatements.length > 0) {
+        parts.push(`Indicator findings: ${ruleStatements.join(' ')}`);
       }
       return parts.join(' ');
     }
@@ -179,6 +187,7 @@ export function reasonWithLocalRules(
   const triggeredRuleSet = new Set<string>();
   const unresolvedQuestionsSet = new Set<string>();
   const unresolvedEvidenceIdsSet = new Set<string>();
+  const ruleStatements: string[] = [];
   const warnings: string[] = [];
   let ruleFailureCount = 0;
 
@@ -242,6 +251,10 @@ export function reasonWithLocalRules(
       const evaluation = rule.evaluate(context);
       if (evaluation.triggered) {
         triggeredRuleSet.add(rule.id);
+
+        if (evaluation.statement) {
+          ruleStatements.push(evaluation.statement);
+        }
 
         if (evaluation.warnings) {
           warnings.push(...evaluation.warnings);
@@ -332,7 +345,13 @@ export function reasonWithLocalRules(
     );
   }
 
-  const conclusion = buildConclusion(task, context);
+  if (task === 'SELECTED_PERIOD_ANALYSIS') {
+    warnings.push(
+      'Deterministic local rules produced a preliminary indicator assessment only; no remote LLM interpretation was applied.'
+    );
+  }
+
+  const conclusion = buildConclusion(task, context, ruleStatements);
 
   // For SELECTED_PERIOD_ANALYSIS, use selectedPeriodEvidenceResult.index for ranking
   // For other tasks, use validEvidenceMap
