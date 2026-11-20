@@ -551,8 +551,8 @@ describe('CareerProfessionStatusSection', () => {
         policyEvidence: [{
           sourceType: 'STRUCTURAL_RELATIONSHIP',
           dimension: 'structuralStrength',
-          relationshipIds: [],
-          explanation: 'Diagnostic provenance is not rendered.'
+          relationshipIds: ['establishing-relationship-1'],
+          explanation: 'Missing: 10→11'
         }]
       }]
     };
@@ -562,10 +562,43 @@ describe('CareerProfessionStatusSection', () => {
     expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition');
     expect(reasons).toHaveTextContent('Mars has a fully assessed afflicted condition');
     expect(reasons).toHaveTextContent('Career relevance is neutral.');
-    expect(reasons).toHaveTextContent('No establishing structural relationships were identified.');
+    expect(reasons).toHaveTextContent('Structural evidence: Missing: 10→11');
+    expect(reasons).not.toHaveTextContent('No establishing structural relationships were identified.');
     expect(reasons).not.toHaveTextContent('Saturn');
     expect(screen.getByRole('list', { name: 'Pattern participant evidence' })).toHaveTextContent('Saturn');
-    expect(screen.queryByText('Diagnostic provenance is not rendered.')).not.toBeInTheDocument();
+  });
+
+  it('does not present neutral relevance as a disqualifier for insufficient data', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        status: 'INSUFFICIENT_DATA' as const,
+        dimensions: { careerRelevance: 'NEUTRAL' as const },
+        decisionBlockingReasons: [{ kind: 'MISSING_INPUT' as const, reason: 'Missing condition data.' }]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+    const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
+    expect(reasons).toHaveTextContent('Inputs are insufficient to complete this pattern assessment.');
+    expect(reasons).not.toHaveTextContent('Career relevance is neutral.');
+  });
+
+  it('lists only fully assessed weak participants for an unqualified pattern', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        participants: [
+          { ...unqualifiedPattern.participants[0]!, planet: Planet.JUPITER, condition: 'WEAK' as const, conditionAssessment: 'FULL' as const },
+          { ...unqualifiedPattern.participants[0]!, planet: Planet.SATURN, condition: 'WEAK' as const, conditionAssessment: 'PARTIAL' as const }
+        ]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+    const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
+    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition');
+    expect(reasons).not.toHaveTextContent('Saturn');
   });
 
   it('renders insufficient inputs only for INSUFFICIENT_DATA patterns', () => {
@@ -606,13 +639,20 @@ describe('CareerProfessionStatusSection', () => {
       ...selectCareerViewModel(createProductAnalysis()).profession,
       patternQualifications: [{
         ...unqualifiedPattern,
-        dimensions: { careerRelevance: 'NEUTRAL' as const }
+        dimensions: { careerRelevance: 'NEUTRAL' as const },
+        policyEvidence: [{
+          sourceType: 'STRUCTURAL_RELATIONSHIP',
+          dimension: 'structuralStrength',
+          relationshipIds: ['establishing-relationship-1'],
+          explanation: 'Missing: 10→11'
+        }]
       }]
     };
     render(<CareerProfessionStatusSection profession={profession} />);
     const reasons = screen.getByRole('list', { name: 'पैटर्न योग्यता के कारण' });
     expect(reasons).toHaveTextContent('करियर प्रासंगिकता तटस्थ है।');
     expect(reasons).toHaveTextContent('बृहस्पति की स्थिति का पूर्ण आकलन कमजोर है');
+    expect(reasons).toHaveTextContent('संरचनात्मक साक्ष्य: Missing: 10→11');
   });
 
   it('hides the stage funnel when legacy records omit stage counts', () => {

@@ -154,8 +154,10 @@ describe('CareerPathwayComparisonSection', () => {
       'EMPLOYMENT_SERVICE_CANDIDATE_NOT_IDENTIFIED',
       'INDEPENDENT_BUSINESS_CANDIDATE_NOT_IDENTIFIED',
       'B02_OUTCOME_ANALYSIS_NOT_PROVIDED',
+      'B02_OUTCOME_ANALYSIS_NOT_PROVIDED',
       'C11_FINAL_CONCLUSION_NOT_SUPPORTIVE',
       'P2_09B_CANDIDATE_NOT_PROMOTED_WITHOUT_BOTH_PROMISE_AND_ACTIVATION',
+      'UNRECOGNIZED_INTERNAL_CODE',
       'UNRECOGNIZED_INTERNAL_CODE'
     ];
     const { container } = render(<CareerPathwayComparisonSection pathwayPotential={{
@@ -172,6 +174,8 @@ describe('CareerPathwayComparisonSection', () => {
     expect(list).toHaveTextContent('The final C11 conclusion does not support promoting this outcome candidate.');
     expect(list).toHaveTextContent('An outcome candidate was not promoted without both natal promise and linked activation.');
     expect(list).toHaveTextContent('A pathway diagnostic was reported but is not yet described.');
+    expect(within(list).getAllByText('The canonical B02 outcome analysis was not provided.')).toHaveLength(1);
+    expect(within(list).getAllByText('A pathway diagnostic was reported but is not yet described.')).toHaveLength(1);
     expect(container).not.toHaveTextContent('UNRECOGNIZED_INTERNAL_CODE');
   });
 
@@ -185,6 +189,12 @@ describe('CareerPathwayComparisonSection', () => {
     expect(screen.getByText('Other career candidates not classified to either pathway: 2.')).toBeInTheDocument();
     expect(screen.getByText('Some career candidates are not classified to either pathway.')).toBeInTheDocument();
     rerender(<CareerPathwayComparisonSection pathwayPotential={{ ...base, otherCareerCandidateCount: 0.5 }} />);
+    expect(screen.queryByText(/Other career candidates not classified/)).not.toBeInTheDocument();
+  });
+
+  it('renders legacy persisted pathway records without inventing an other-candidate count', () => {
+    const { otherCareerCandidateCount: _count, ...legacyPathway } = makePathway();
+    render(<CareerPathwayComparisonSection pathwayPotential={legacyPathway} />);
     expect(screen.queryByText(/Other career candidates not classified/)).not.toBeInTheDocument();
   });
 

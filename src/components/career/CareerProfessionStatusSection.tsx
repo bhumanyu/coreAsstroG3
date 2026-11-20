@@ -178,6 +178,10 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                             planet: tEnum(`careerPatternParticipantPlanet.${reason.planet}`),
                             condition: t(`ui.profession.patternAdverseCondition.${reason.condition}`)
                           })
+                        : reason.category === 'STRUCTURAL_EVIDENCE'
+                          ? t('ui.profession.patternReason.STRUCTURAL_EVIDENCE', {
+                              explanation: reason.explanation
+                            })
                         : t(`ui.profession.patternReason.${reason.category}`)}
                     </li>
                   ))}

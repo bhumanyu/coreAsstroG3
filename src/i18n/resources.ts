@@ -696,7 +696,7 @@ export const resources = {
           },
           patternReason: {
             NEUTRAL_CAREER_RELEVANCE: 'Career relevance is neutral.',
-            NO_ESTABLISHING_RELATIONSHIPS: 'No establishing structural relationships were identified.',
+            STRUCTURAL_EVIDENCE: 'Structural evidence: {{explanation}}',
             INSUFFICIENT_INPUTS: 'Inputs are insufficient to complete this pattern assessment.'
           },
           patternBlockingReasons: 'Decision-blocking reasons',
@@ -3428,7 +3428,7 @@ export const resources = {
           },
           patternReason: {
             NEUTRAL_CAREER_RELEVANCE: 'करियर प्रासंगिकता तटस्थ है।',
-            NO_ESTABLISHING_RELATIONSHIPS: 'कोई स्थापित करने वाला संरचनात्मक संबंध नहीं मिला।',
+            STRUCTURAL_EVIDENCE: 'संरचनात्मक साक्ष्य: {{explanation}}',
             INSUFFICIENT_INPUTS: 'इस पैटर्न का आकलन पूरा करने के लिए इनपुट अपर्याप्त हैं।'
           },
           patternBlockingReasons: 'निर्णय रोकने वाले कारण',

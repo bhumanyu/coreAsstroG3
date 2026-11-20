@@ -104,7 +104,7 @@ export const CareerPathwayComparisonSection: React.FC<CareerPathwayComparisonSec
       )}
       {pathwayPotential.diagnostics.length > 0 && (
         <ul aria-label={t('ui.pathways.diagnostics')} className="list-disc space-y-1 pl-5 text-xs text-slate-400">
-          {pathwayPotential.diagnostics.map((diagnostic, index) => (
+          {[...new Set(pathwayPotential.diagnostics)].map((diagnostic, index) => (
             <li key={`${diagnostic}-${index}`}>
               {t(`ui.pathways.diagnosticCopy.${diagnosticCopyKeys[diagnostic] ?? 'unknown'}`)}
             </li>
