@@ -495,10 +495,10 @@ function renderDashaDecomposition(lines: string[]): void {
   lines.push('- Reference-model independence boundary: the Gate-0 reference implementation is independent of production `vimshottari.ts`, but shares Gate-0 convention definitions (`DASHA_SEQUENCE`, `DASHA_YEARS`, and `vimshottariAnchor` from `lib/grid.ts`).');
   lines.push('- The 67 R→R first-MD anchors are checked against unchanged fixture expected values. Later MD/AD/PD periods are derived by the Gate-0 model and are NOT independently captured expected values.');
   lines.push('- Dasha known-answer conformance is hand-computed from the published Vimshottari sequence, durations, 365.25-day year, and proportional subdivisions ([Dasha overview](https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha)); see `tests/dashaDecomposition.test.ts`.');
-  lines.push('- Periods are matched by the full lord path (including MD ancestry); boundary errors cover matched periods only. Unmatched periods are excluded from timestamp error statistics, listed separately below; structural-mismatch counts also include differences in lord-path sequence order.');
+  lines.push('- Periods are matched by the full lord path (including MD ancestry); boundary errors cover matched periods only. Unmatched periods are excluded from timestamp error statistics and counted separately below.');
   lines.push('');
-  lines.push('| Level | Comparison | Cases structurally agreeing | Structurally matched periods | Boundary timestamps compared | Unmatched periods excluded | Structural mismatches | Max matched-boundary error (ms) | Mean matched-boundary error (ms) |');
-  lines.push('|-------|------------|-----------------------------|-----------------------------|-------------------------------|-----------------------------|-----------------------|-------------------------------|----------------------------------|');
+  lines.push('| Level | Comparison | Cases structurally agreeing | Structurally matched periods | Boundary timestamps compared | Unmatched periods excluded | Sequence-difference score | Max matched-boundary error (ms) | Mean matched-boundary error (ms) |');
+  lines.push('|-------|------------|-----------------------------|-----------------------------|-------------------------------|-----------------------------|---------------------------|-------------------------------|----------------------------------|');
   for (const level of ['MD', 'AD', 'PD'] as const) {
     for (const [label, key] of [
       ['R→R vs R→E (arithmetic/structure)', 'arithmetic'],
@@ -532,22 +532,23 @@ function renderDashaDecomposition(lines: string[]): void {
         (sum, result) => sum + result.unmatchedActualPeriods,
         0
       );
-      const structuralMismatchCount = results.reduce(
-        (sum, result) => sum + result.structuralMismatchCount,
+      const sequenceDifferenceCount = results.reduce(
+        (sum, result) => sum + result.sequenceDifferenceCount,
         0
       );
       lines.push(
         `| ${level} | ${label} | ${structuralCount}/${results.length} | ${matchedPeriodCount} | ${boundaryCount} | ` +
         `${unmatchedPeriodCount} (E ${unmatchedExpectedCount}, A ${unmatchedActualCount}) | ` +
-        `${structuralMismatchCount} | ${maxError === null ? 'n/a' : fmt(maxError)} | ` +
+        `${sequenceDifferenceCount} | ${maxError === null ? 'n/a' : fmt(maxError)} | ` +
         `${weightedMean === null ? 'n/a' : fmt(weightedMean)} |`
       );
       const mismatch = dashaCaseMeasurements.find(item => !item[key][level].structuralAgreement);
       if (mismatch) {
-        lines.push(`|  | First structural mismatch | ${mismatch.fixtureId}: ${mismatch[key][level].structuralDetail ?? 'lord sequence differs'} |  |  |  |  |`);
+        lines.push(`|  | First structural mismatch | ${mismatch.fixtureId}: ${mismatch[key][level].structuralDetail ?? 'lord sequence differs'} |  |  |  |  |  |`);
       }
     }
   }
+  lines.push('- Sequence-difference score is `|expected count − actual count| + positional lord-path mismatches`; it is a severity heuristic, not a count of unique failed periods. Unmatched expected/actual totals above are the precise exclusion counts.');
   lines.push('');
 }
 

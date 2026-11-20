@@ -1,7 +1,7 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-20T15:25:36.738Z
-Engine commit: `f188e5da53abc2937d11305c26417dcd530bc5de`
+Generated: 2026-11-20T15:53:27.027Z
+Engine commit: `e7c763ce4b39f9bf7c922dff404e44fa1c295a34`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
 RG-09 approval: **MISSING**
@@ -45,25 +45,27 @@ per cohort artifact). Engine output appears only as the measured side.
 - Reference-model independence boundary: the Gate-0 reference implementation is independent of production `vimshottari.ts`, but shares Gate-0 convention definitions (`DASHA_SEQUENCE`, `DASHA_YEARS`, and `vimshottariAnchor` from `lib/grid.ts`).
 - The 67 R→R first-MD anchors are checked against unchanged fixture expected values. Later MD/AD/PD periods are derived by the Gate-0 model and are NOT independently captured expected values.
 - Dasha known-answer conformance is hand-computed from the published Vimshottari sequence, durations, 365.25-day year, and proportional subdivisions ([Dasha overview](https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha)); see `tests/dashaDecomposition.test.ts`.
-- Periods are matched by the full lord path (including MD ancestry); boundary errors cover matched periods only. Unmatched periods are excluded from timestamp error statistics, listed separately below; structural-mismatch counts also include differences in lord-path sequence order.
+- Periods are matched by the full lord path (including MD ancestry); boundary errors cover matched periods only. Unmatched periods are excluded from timestamp error statistics and counted separately below.
 
-| Level | Comparison | Cases structurally agreeing | Structurally matched periods | Boundary timestamps compared | Unmatched periods excluded | Structural mismatches | Max matched-boundary error (ms) | Mean matched-boundary error (ms) |
-|-------|------------|-----------------------------|-----------------------------|-------------------------------|-----------------------------|-----------------------|-------------------------------|----------------------------------|
+| Level | Comparison | Cases structurally agreeing | Structurally matched periods | Boundary timestamps compared | Unmatched periods excluded | Sequence-difference score | Max matched-boundary error (ms) | Mean matched-boundary error (ms) |
+|-------|------------|-----------------------------|-----------------------------|-------------------------------|-----------------------------|---------------------------|-------------------------------|----------------------------------|
 | MD | R→R vs R→E (arithmetic/structure) | 67/67 | 670 | 1340 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
 | MD | R→E vs E→E (Moon-input delta) | 43/67 | 646 | 1292 | 48 (E 24, A 24) | 240 | 3786730295787 | 134409826909 |
-|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10 (MERCURY); unmatched actual MD10 (KETU) |  |  |  |  |
+|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10 (MERCURY); unmatched actual MD10 (KETU) |  |  |  |  |  |
 | AD | R→R vs R→E (arithmetic/structure) | 67/67 | 5494 | 10988 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
 | AD | R→E vs E→E (Moon-input delta) | 42/67 | 5469 | 10938 | 50 (E 25, A 25) | 2050 | 3786730295787 | 18831433346 |
-|  | First structural mismatch | DASHA-BI-025: unmatched expected MD10/AD8 (MARS/SUN); unmatched actual MD10/AD7 (MARS/VENUS) |  |  |  |  |
+|  | First structural mismatch | DASHA-BI-025: unmatched expected MD10/AD8 (MARS/SUN); unmatched actual MD10/AD7 (MARS/VENUS) |  |  |  |  |  |
 | PD | R→R vs R→E (arithmetic/structure) | 67/67 | 48910 | 97820 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
 | PD | R→E vs E→E (Moon-input delta) | 31/67 | 48874 | 97748 | 72 (E 36, A 36) | 26280 | 3786730295787 | 5440266057 |
-|  | First structural mismatch | DASHA-BI-005: unmatched expected MD10/AD3/PD4 (VENUS/MOON/JUPITER); unmatched actual MD10/AD3/PD5 (VENUS/MOON/SATURN) |  |  |  |  |
+|  | First structural mismatch | DASHA-BI-005: unmatched expected MD10/AD3/PD4 (VENUS/MOON/JUPITER); unmatched actual MD10/AD3/PD5 (VENUS/MOON/SATURN) |  |  |  |  |  |
+- Sequence-difference score is `|expected count − actual count| + positional lord-path mismatches`; it is a severity heuristic, not a count of unique failed periods. Unmatched expected/actual totals above are the precise exclusion counts.
 
 
 ## Cohort stratification audit (§3a)
 
 Captured cases: 86; captured planet positions: 774.
 Moon-anchor cases: 67; bracket threshold: ±0.01° per side.
+Bracket pairs require distinct captures at the same site, ordered within 2 minutes.
 Nakshatra boundaries bracketed on both sides: 27/27.
 | Boundary grid | ≤0.001° | >0.001–0.01° | >0.01–0.1° | >0.1–1° | >1° | total |
 |---------------|----------|---------------|-------------|----------|------|-------|

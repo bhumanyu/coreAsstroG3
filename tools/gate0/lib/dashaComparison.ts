@@ -26,7 +26,8 @@ export interface DashaLevelComparison {
   readonly matchedPeriods: number;
   readonly unmatchedExpectedPeriods: number;
   readonly unmatchedActualPeriods: number;
-  readonly structuralMismatchCount: number;
+  /** |length difference| + positional lord-path mismatches; a severity heuristic, not unique failures. */
+  readonly sequenceDifferenceCount: number;
   readonly boundaryTimestampsCompared: number;
   readonly maxBoundaryErrorMs: number | null;
   readonly meanBoundaryErrorMs: number | null;
@@ -134,8 +135,8 @@ function compareLevel(
     + Array.from({ length: Math.min(expected.length, actual.length) }, (_, index) =>
       expectedIdentities[index] === actualIdentities[index] ? 0 : 1
     ).reduce((sum, mismatch) => sum + mismatch, 0);
-  const structuralMismatchCount = sequenceMismatches;
-  const structuralDetail = structuralMismatchCount === 0
+  const sequenceDifferenceCount = sequenceMismatches;
+  const structuralDetail = sequenceDifferenceCount === 0
     ? undefined
     : firstStructuralDifference(
         expected, actual, expectedIdentitySet, actualIdentitySet, expectedIdentities, actualIdentities
@@ -147,13 +148,13 @@ function compareLevel(
   }
   return {
     level,
-    structuralAgreement: structuralMismatchCount === 0,
+    structuralAgreement: sequenceDifferenceCount === 0,
     expectedPeriodCount: expected.length,
     actualPeriodCount: actual.length,
     matchedPeriods: matched.length,
     unmatchedExpectedPeriods,
     unmatchedActualPeriods,
-    structuralMismatchCount,
+    sequenceDifferenceCount,
     boundaryTimestampsCompared: errors.length,
     maxBoundaryErrorMs: errors.length > 0 ? Math.max(...errors) : null,
     meanBoundaryErrorMs: errors.length > 0

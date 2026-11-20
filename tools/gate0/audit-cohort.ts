@@ -11,6 +11,7 @@ import { validateCaptureArtifact, type CaptureManifest } from './lib/captureMani
 const BODY_NAMES = ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU'] as const;
 const NAKSHATRA_SPAN = 360 / 27;
 const MOON_BRACKET_LIMIT_DEG = 0.01;
+const MOON_BRACKET_MAX_SEPARATION_MS = 2 * 60 * 1000;
 const PROXIMITY_BANDS = [
   { label: '≤0.001°', max: 0.001 },
   { label: '>0.001–0.01°', max: 0.01 },
@@ -77,6 +78,7 @@ export interface CohortAudit {
   readonly proximity: readonly BoundaryProximitySummary[];
   readonly moonAnchorCount: number;
   readonly moonBracketLimitDegrees: number;
+  readonly moonBracketMaxSeparationMinutes: number;
   readonly moonBoundaryBrackets: readonly MoonBoundaryBracket[];
   readonly missingMoonBrackets: readonly number[];
 }
@@ -140,27 +142,71 @@ export function auditCohort(captures: readonly CohortCapture[]): CohortAudit {
   const anchors = captures.filter(capture => capture.definition.dasha);
   const moonBoundaryBrackets = Array.from({ length: 27 }, (_, boundaryIndex) => {
     const boundaryLongitude = boundaryIndex * NAKSHATRA_SPAN;
-    let before: { caseId: string; distance: number } | undefined;
-    let after: { caseId: string; distance: number } | undefined;
+    let bestPair: {
+      before: CohortCapture;
+      after: CohortCapture;
+      beforeDistance: number;
+      afterDistance: number;
+      score: number;
+    } | undefined;
     for (const anchor of anchors) {
       const longitude = norm360(anchor.artifact.capture.bodies.MOON.sidereal.longitude);
       const beforeDistance = norm360(boundaryLongitude - longitude);
-      const afterDistance = norm360(longitude - boundaryLongitude);
-      if (beforeDistance <= MOON_BRACKET_LIMIT_DEG
-        && (!before || beforeDistance < before.distance)) {
-        before = { caseId: anchor.definition.id, distance: beforeDistance };
+      if (beforeDistance <= 0 || beforeDistance > MOON_BRACKET_LIMIT_DEG) {
+        continue;
       }
-      if (afterDistance <= MOON_BRACKET_LIMIT_DEG
-        && (!after || afterDistance < after.distance)) {
-        after = { caseId: anchor.definition.id, distance: afterDistance };
+
+      for (const after of anchors) {
+        if (anchor.definition.id === after.definition.id
+          || anchor.artifact.captureId === after.artifact.captureId) {
+          continue;
+        }
+        const afterLongitude = norm360(after.artifact.capture.bodies.MOON.sidereal.longitude);
+        const pairedAfterDistance = norm360(afterLongitude - boundaryLongitude);
+        const pairedBeforeDistance = norm360(boundaryLongitude - afterLongitude);
+        if (pairedAfterDistance <= 0 || pairedAfterDistance > MOON_BRACKET_LIMIT_DEG
+          || pairedBeforeDistance <= 0) {
+          continue;
+        }
+
+        const beforeSite = anchor.artifact.site;
+        const afterSite = after.artifact.site;
+        if (beforeSite.latitude !== afterSite.latitude
+          || beforeSite.longitude !== afterSite.longitude
+          || beforeSite.instant.ianaTimeZone !== afterSite.instant.ianaTimeZone) {
+          continue;
+        }
+
+        const beforeTime = Date.parse(beforeSite.instant.utcInstant);
+        const afterTime = Date.parse(afterSite.instant.utcInstant);
+        const separation = afterTime - beforeTime;
+        if (!Number.isFinite(beforeTime) || !Number.isFinite(afterTime)
+          || separation <= 0 || separation > MOON_BRACKET_MAX_SEPARATION_MS) {
+          continue;
+        }
+
+        const score = beforeDistance + pairedAfterDistance;
+        if (!bestPair || score < bestPair.score) {
+          bestPair = {
+            before: anchor,
+            after,
+            beforeDistance,
+            afterDistance: pairedAfterDistance,
+            score
+          };
+        }
       }
     }
     return {
       boundaryIndex,
       boundaryLongitude,
-      ...(before ? { beforeCaseId: before.caseId, beforeDistanceDegrees: before.distance } : {}),
-      ...(after ? { afterCaseId: after.caseId, afterDistanceDegrees: after.distance } : {}),
-      bracketed: Boolean(before && after)
+      ...(bestPair ? {
+        beforeCaseId: bestPair.before.definition.id,
+        beforeDistanceDegrees: bestPair.beforeDistance,
+        afterCaseId: bestPair.after.definition.id,
+        afterDistanceDegrees: bestPair.afterDistance
+      } : {}),
+      bracketed: bestPair !== undefined
     };
   });
 
@@ -170,6 +216,7 @@ export function auditCohort(captures: readonly CohortCapture[]): CohortAudit {
     proximity,
     moonAnchorCount: anchors.length,
     moonBracketLimitDegrees: MOON_BRACKET_LIMIT_DEG,
+    moonBracketMaxSeparationMinutes: MOON_BRACKET_MAX_SEPARATION_MS / 60_000,
     moonBoundaryBrackets,
     missingMoonBrackets: moonBoundaryBrackets
       .filter(bracket => !bracket.bracketed)
@@ -181,6 +228,7 @@ export function renderCohortAudit(audit: CohortAudit): string {
   const lines = [
     `Captured cases: ${audit.captureCount}; captured planet positions: ${audit.bodyCount}.`,
     `Moon-anchor cases: ${audit.moonAnchorCount}; bracket threshold: ±${audit.moonBracketLimitDegrees}° per side.`,
+    `Bracket pairs require distinct captures at the same site, ordered within ${audit.moonBracketMaxSeparationMinutes} minutes.`,
     `Nakshatra boundaries bracketed on both sides: ${27 - audit.missingMoonBrackets.length}/27.`,
     '| Boundary grid | ≤0.001° | >0.001–0.01° | >0.01–0.1° | >0.1–1° | >1° | total |',
     '|---------------|----------|---------------|-------------|----------|------|-------|'
