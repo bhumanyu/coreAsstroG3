@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "track": "BIRTH_INSTANT_COHORT",
+  "protocol": "docs/career/audit/GATE-0-VALIDATION-PROTOCOL.md §3a",
+  "ayanamsa": "LAHIRI",
+  "notes": "utcInstant is authoritative. localRepresentation and ianaTimeZone are recorded for provenance; the harness derives localRepresentation from ICU and verifies consistency. dasha=true marks cases selected for Vimshottari anchor fixtures (Moon nakshatra-lord diversity verified post-capture). motionHint names a planet whose speed at this instant is expected to exercise a motion scenario; verified post-capture.",
+  "cases": [
+    {
+      "id": "BI-001",
+      "utcInstant": "1905-04-12T04:30:00Z",
+      "latitude": 28.6139,
+      "longitude": 77.209,
+      "ianaTimeZone": "Asia/Kolkata",
+      "dasha": true,
+      "motionHint": null,
+      "note": "early-era ayanamsa leverage, north"
+    },
+    {
+      "id": "BI-002",
+      "utcInstant": "1911-11-03T18:45:00Z",
+      "latitude": -33.8688,
+      "longitude": 151.2093,
+      "ianaTimeZone": "Australia/Sydney",
+      "dasha": false,
+      "motionHint": null,
+      "note": "southern hemisphere, +10/+11 offset"
+    },
+    {
+      "id": "BI-003",
+      "utcInstant": "1918-07-22T09:15:00Z",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "ianaTimeZone": "America/New_York",
+      "dasha": true,
+      "motionHint": null,
+      "note": "US east coast"
+    },
+    {
+      "id": "BI-004",
+      "utcInstant": "1926-01-30T23:00:00Z",
+      "latitude": 51.5074,
+      "longitude": -0.1278,
+      "ianaTimeZone": "Europe/London",
+      "dasha": false,
+      "motionHint": null,
+      "note": "prime meridian vicinity"
+    },
+    {
+      "id": "BI-005",
+      "utcInstant": "1934-09-08T12:20:00Z",
+      "latitude": -23.5505,
+      "longitude": -46.6333,
+      "ianaTimeZone": "America/Sao_Paulo",
+      "dasha": true,
+      "motionHint": null,
+      "note": "southern hemisphere, -03 offset"
+    },
+    {
+      "id": "BI-006",
+      "utcInstant": "1942-05-17T06:40:00Z",
+      "latitude": 35.6762,
+      "longitude": 139.6503,
+      "ianaTimeZone": "Asia/Tokyo",
+      "dasha": false,
+      "motionHint": null,
+      "note": "+09 offset"
+    },
+    {
+      "id": "BI-007",
+      "utcInstant": "1951-12-05T15:10:00Z",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "ianaTimeZone": "Asia/Kathmandu",
+      "dasha": true,
+      "motionHint": null,
+      "note": "+05:45 fractional offset"
+    },
+    {
+      "id": "BI-008",
+      "utcInstant": "1959-03-27T21:55:00Z",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "ianaTimeZone": "America/Los_Angeles",
+      "dasha": false,
+      "motionHint": null,
+      "note": "US west coast"
+    },
+    {
+      "id": "BI-009",
+      "utcInstant": "1967-08-14T07:05:00Z",
+      "latitude": 52.52,
+      "longitude": 13.405,
+      "ianaTimeZone": "Europe/Berlin",
+      "dasha": true,
+      "motionHint": null,
+      "note": "central europe"
+    },
+    {
+      "id": "BI-010",
+      "utcInstant": "1975-02-19T13:35:00Z",
+      "latitude": -36.8485,
+      "longitude": 174.7633,
+      "ianaTimeZone": "Pacific/Auckland",
+      "dasha": false,
+      "motionHint": null,
+      "note": "+12/+13 offset"
+    },
+    {
+      "id": "BI-011",
+      "utcInstant": "1983-06-30T02:25:00Z",
+      "latitude": -33.9249,
+      "longitude": 18.4241,
+      "ianaTimeZone": "Africa/Johannesburg",
+      "dasha": true,
+      "motionHint": null,
+      "note": "southern hemisphere, +02"
+    },
+    {
+      "id": "BI-012",
+      "utcInstant": "1991-10-11T19:50:00Z",
+      "latitude": 64.1466,
+      "longitude": -21.9426,
+      "ianaTimeZone": "Atlantic/Reykjavik",
+      "dasha": false,
+      "motionHint": null,
+      "note": "high latitude"
+    },
+    {
+      "id": "BI-013",
+      "utcInstant": "1999-04-25T08:15:00Z",
+      "latitude": 1.3521,
+      "longitude": 103.8198,
+      "ianaTimeZone": "Asia/Singapore",
+      "dasha": true,
+      "motionHint": null,
+      "note": "near-equatorial"
+    },
+    {
+      "id": "BI-014",
+      "utcInstant": "2007-11-08T16:45:00Z",
+      "latitude": 21.3069,
+      "longitude": -157.8583,
+      "ianaTimeZone": "Pacific/Honolulu",
+      "dasha": false,
+      "motionHint": null,
+      "note": "-10 offset"
+    },
+    {
+      "id": "BI-015",
+      "utcInstant": "2015-07-16T11:30:00Z",
+      "latitude": 28.6139,
+      "longitude": 77.209,
+      "ianaTimeZone": "Asia/Kolkata",
+      "dasha": true,
+      "motionHint": null,
+      "note": "modern era, +05:30"
+    },
+    {
+      "id": "BI-016",
+      "utcInstant": "2023-01-05T05:55:00Z",
+      "latitude": -33.8688,
+      "longitude": 151.2093,
+      "ianaTimeZone": "Australia/Sydney",
+      "dasha": false,
+      "motionHint": null,
+      "note": "southern hemisphere modern"
+    },
+    {
+      "id": "BI-017",
+      "utcInstant": "2031-08-21T14:10:00Z",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "ianaTimeZone": "America/New_York",
+      "dasha": true,
+      "motionHint": null,
+      "note": "future-dated north"
+    },
+    {
+      "id": "BI-018",
+      "utcInstant": "2039-03-09T23:40:00Z",
+      "latitude": 51.5074,
+      "longitude": -0.1278,
+      "ianaTimeZone": "Europe/London",
+      "dasha": false,
+      "motionHint": null,
+      "note": "far-from-J2000 ayanamsa"
+    },
+    {
+      "id": "BI-019",
+      "utcInstant": "2047-09-28T10:20:00Z",
+      "latitude": -23.5505,
+      "longitude": -46.6333,
+      "ianaTimeZone": "America/Sao_Paulo",
+      "dasha": true,
+      "motionHint": null,
+      "note": "future-dated south"
+    },
+    {
+      "id": "BI-020",
+      "utcInstant": "2055-12-17T17:35:00Z",
+      "latitude": 35.6762,
+      "longitude": 139.6503,
+      "ianaTimeZone": "Asia/Tokyo",
+      "dasha": false,
+      "motionHint": null,
+      "note": "+09 offset future"
+    },
+    {
+      "id": "BI-021",
+      "utcInstant": "2064-05-03T01:50:00Z",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "ianaTimeZone": "Asia/Kathmandu",
+      "dasha": true,
+      "motionHint": null,
+      "note": "+05:45 offset future"
+    },
+    {
+      "id": "BI-022",
+      "utcInstant": "2072-10-24T20:05:00Z",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "ianaTimeZone": "America/Los_Angeles",
+      "dasha": false,
+      "motionHint": null,
+      "note": "far-future west coast"
+    },
+    {
+      "id": "BI-023",
+      "utcInstant": "2081-02-11T09:25:00Z",
+      "latitude": 52.52,
+      "longitude": 13.405,
+      "ianaTimeZone": "Europe/Berlin",
+      "dasha": true,
+      "motionHint": null,
+      "note": "far-future central europe"
+    },
+    {
+      "id": "BI-024",
+      "utcInstant": "2089-07-07T15:15:00Z",
+      "latitude": -36.8485,
+      "longitude": 174.7633,
+      "ianaTimeZone": "Pacific/Auckland",
+      "dasha": false,
+      "motionHint": null,
+      "note": "far-future +12/+13"
+    },
+    {
+      "id": "BI-025",
+      "utcInstant": "2097-12-19T03:45:00Z",
+      "latitude": -33.9249,
+      "longitude": 18.4241,
+      "ianaTimeZone": "Africa/Johannesburg",
+      "dasha": true,
+      "motionHint": null,
+      "note": "edge of 2100 window"
+    },
+    {
+      "id": "BI-026",
+      "utcInstant": "2099-06-02T12:00:00Z",
+      "latitude": 64.1466,
+      "longitude": -21.9426,
+      "ianaTimeZone": "Atlantic/Reykjavik",
+      "dasha": false,
+      "motionHint": null,
+      "note": "near 2100 boundary"
+    },
+    {
+      "id": "BI-027",
+      "utcInstant": "1997-04-25T12:00:00Z",
+      "latitude": 51.5074,
+      "longitude": -0.1278,
+      "ianaTimeZone": "Europe/London",
+      "dasha": false,
+      "motionHint": "MERCURY",
+      "note": "Mercury retrograde period (filled by station scan) (station-scan verified)"
+    },
+    {
+      "id": "BI-028",
+      "utcInstant": "2001-03-25T12:00:00Z",
+      "latitude": -33.8688,
+      "longitude": 151.2093,
+      "ianaTimeZone": "Australia/Sydney",
+      "dasha": false,
+      "motionHint": "VENUS",
+      "note": "Venus retrograde period (station-scan verified)"
+    },
+    {
+      "id": "BI-029",
+      "utcInstant": "2001-06-25T12:00:00Z",
+      "latitude": 28.6139,
+      "longitude": 77.209,
+      "ianaTimeZone": "Asia/Kolkata",
+      "dasha": false,
+      "motionHint": "MARS",
+      "note": "Mars retrograde period (station-scan verified)"
+    },
+    {
+      "id": "BI-030",
+      "utcInstant": "2001-06-28T06:00:00Z",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "ianaTimeZone": "America/New_York",
+      "dasha": false,
+      "motionHint": "MERCURY",
+      "note": "near-stationary Mercury (station-scan verified)"
+    },
+    {
+      "id": "BI-031",
+      "utcInstant": "1999-09-11T00:00:00Z",
+      "latitude": -23.5505,
+      "longitude": -46.6333,
+      "ianaTimeZone": "America/Sao_Paulo",
+      "dasha": false,
+      "motionHint": "VENUS",
+      "note": "near-stationary Venus (station-scan verified)"
+    },
+    {
+      "id": "BI-032",
+      "utcInstant": "1999-06-04T06:00:00Z",
+      "latitude": 35.6762,
+      "longitude": 139.6503,
+      "ianaTimeZone": "Asia/Tokyo",
+      "dasha": false,
+      "motionHint": "MARS",
+      "note": "near-stationary Mars (station-scan verified)"
+    }
+  ]
+}

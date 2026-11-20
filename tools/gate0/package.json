@@ -1,0 +1,17 @@
+{
+  "name": "gate0",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@kuntay/swisseph": "^0.2.2",
+    "@kuntay/swisseph-data": "^0.2.2",
+    "astronomy-engine": "^2.1.19"
+  }
+}

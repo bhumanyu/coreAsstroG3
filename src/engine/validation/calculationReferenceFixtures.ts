@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { GENERATED_CALCULATION_REFERENCE_FIXTURES } from './calculationReferenceFixtures.generated.ts';
 import type {
   CalculationCoveragePolicy,
   CalculationReferenceFixture,
@@ -11,15 +12,15 @@ import type {
 /**
  * RG-09 calculation reference fixtures.
  *
- * This list is intentionally empty: no approved, independent expected values
- * for the required production calculations are currently available here.
- * Existing engine snapshots and analytically constructed Vimshottari cases do
- * not independently validate planetary positions, speed/retrograde, or node
- * opposition. Add entries only with source provenance, conventions, approved
- * expected values, and tolerances; never copy values from engine output.
+ * Populated exclusively from `./calculationReferenceFixtures.generated.ts`,
+ * an auto-generated module assembled through the typed builders in
+ * `./calculationReferenceFixtureSchema.ts` from independently captured
+ * reference artifacts (Swiss Ephemeris captures + the independent
+ * grid-semantics evaluator under tools/gate0/). Expected values are never
+ * copied from engine output; regenerate via tools/gate0/gen-fixtures.ts.
  */
 export const CALCULATION_REFERENCE_FIXTURES: readonly CalculationReferenceFixture[] =
-  Object.freeze([]);
+  GENERATED_CALCULATION_REFERENCE_FIXTURES;
 
 const policyJson = JSON.parse(readFileSync(
   resolve(process.cwd(), 'docs/release/release-policy.json'),

@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 1,
+  "captureId": "CAPTURE-BI-029-2001-06-25",
+  "track": "BIRTH_INSTANT_COHORT",
+  "caseId": "BI-029",
+  "note": "Mars retrograde period (station-scan verified)",
+  "dasha": false,
+  "motionHint": "MARS",
+  "site": {
+    "latitude": 28.6139,
+    "longitude": 77.209,
+    "instant": {
+      "utcInstant": "2001-06-25T12:00:00Z",
+      "localRepresentation": "2001-06-25T17:30:00+05:30",
+      "ianaTimeZone": "Asia/Kolkata"
+    }
+  },
+  "referenceImplementation": {
+    "name": "@kuntay/swisseph@0.2.2 (WASM port of Swiss Ephemeris 2.10.03)",
+    "swissephVersion": "2.10.03",
+    "license": "Swiss Ephemeris is AGPL-3.0-or-later (commercial license available from Astrodienst AG). Used only as an offline fixture-generation reference inside tools/gate0/; flag for distribution review before any release.",
+    "ephemerisFiles": [
+      {
+        "file": "seas_18.se1",
+        "bytes": 223004,
+        "sha256": "a2cd8fc33807c78ca9a700c91c2e042258b12fc4796519e00781440b5ad8b2e2"
+      },
+      {
+        "file": "sefstars.txt",
+        "bytes": 136618,
+        "sha256": "18b0dcafbe5b7240773daba2c038a325f5b3fc4163f61e0a7f4e92abd4f517c6"
+      },
+      {
+        "file": "semo_18.se1",
+        "bytes": 1304771,
+        "sha256": "1ca07bd67c24374d77226180c20a4f9996cba013697894810518e7eb582ca4f7"
+      },
+      {
+        "file": "seorbel.txt",
+        "bytes": 6063,
+        "sha256": "97b454ff78f4f4716b5cc987a93ca8f33e44ef4b524a165a155a8a4885fd2e18"
+      },
+      {
+        "file": "sepl_18.se1",
+        "bytes": 484061,
+        "sha256": "ca1393ceab3a44fbc895887cf789c68819ae6a1cbc9b22225872dbe4ccd99a66"
+      }
+    ],
+    "ephemerisData": "@kuntay/swisseph-data",
+    "ephemerisDataVersion": "0.2.2",
+    "ephemerisDataJpl": "DE441-derived .se1 files, coverage 1800-2399 CE"
+  },
+  "conventions": {
+    "positionConvention": "GEOCENTRIC",
+    "apparentConvention": "APPARENT (light-time + aberration + nutation; no topoctr, no truepos)",
+    "nodeConvention": "MEAN (Ketu = mean node + 180 deg)",
+    "frameTropical": "tropical, mean equinox of date",
+    "frameSidereal": "sidereal, SEFLG_SIDEREAL, ayanamsa mode LAHIRI (1)",
+    "timeStandard": "UTC input; TT handled internally via deltaT",
+    "flagsTropical": "SEFLG_SWIEPH|SEFLG_SPEED (geocentric apparent, nutation, light-time+aberration)",
+    "flagsSidereal": "SEFLG_SWIEPH|SEFLG_SPEED|SEFLG_SIDEREAL (ayanamsa=LAHIRI)"
+  },
+  "capture": {
+    "utcInstant": "2001-06-25T12:00:00Z",
+    "julianDayUt": 2452086,
+    "deltaTDays": 0.0007430118494364246,
+    "ayanamsaMode": "LAHIRI",
+    "ayanamsaSweMode": 1,
+    "ayanamsaDegrees": 23.87315102972141,
+    "bodies": {
+      "SUN": {
+        "body": "SUN",
+        "sweBody": 0,
+        "tropical": {
+          "longitude": 93.99157318224513,
+          "latitude": 0.000013508551462686251,
+          "distance": 1.0164813928358314,
+          "longitudeSpeed": 0.9540934992999033,
+          "latitudeSpeed": 0.000042277354344840445,
+          "distanceSpeed": 0.00003895582056170069,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 70.11842215252372,
+          "latitude": 0.000013508551464813266,
+          "distance": 1.0164813928358314,
+          "longitudeSpeed": 0.954050792619217,
+          "latitudeSpeed": 0.00002448110291370245,
+          "distanceSpeed": 0.00003895581986957592,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": 0
+      },
+      "MOON": {
+        "body": "MOON",
+        "sweBody": 1,
+        "tropical": {
+          "longitude": 148.81116440056073,
+          "latitude": 4.196734731594665,
+          "distance": 0.0024413076091750843,
+          "longitudeSpeed": 14.577267302721134,
+          "latitudeSpeed": 0.817799244470774,
+          "distanceSpeed": 0.000014636850251108682,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 124.93801337083931,
+          "latitude": 4.196734731594665,
+          "distance": 0.0024413076091750847,
+          "longitudeSpeed": 14.577223476202574,
+          "latitudeSpeed": 0.8177900061002427,
+          "distanceSpeed": 0.000014636850252574654,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": 0
+      },
+      "MARS": {
+        "body": "MARS",
+        "sweBody": 4,
+        "tropical": {
+          "longitude": 259.0301686548076,
+          "latitude": -3.828769713136304,
+          "distance": 0.4511618388861735,
+          "longitudeSpeed": -0.2932781575665385,
+          "latitudeSpeed": -0.0379024466328625,
+          "distanceSpeed": 0.0005513588005746023,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 235.15701762508618,
+          "latitude": -3.8287697131363054,
+          "distance": 0.4511618388861736,
+          "longitudeSpeed": -0.29332063704325234,
+          "latitudeSpeed": -0.03788493306196706,
+          "distanceSpeed": 0.0005513588011547355,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": 0
+      },
+      "MERCURY": {
+        "body": "MERCURY",
+        "sweBody": 2,
+        "tropical": {
+          "longitude": 81.55089620934636,
+          "latitude": -4.581930419532145,
+          "distance": 0.6077063124633367,
+          "longitudeSpeed": -0.20446103767971718,
+          "latitudeSpeed": -0.007718592036978661,
+          "distanceSpeed": 0.010870694485987238,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 57.67774517962496,
+          "latitude": -4.581930419532148,
+          "distance": 0.6077063124633367,
+          "longitudeSpeed": -0.20450395436600538,
+          "latitudeSpeed": -0.007736237978087546,
+          "distanceSpeed": 0.010870694488068223,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": 0
+      },
+      "JUPITER": {
+        "body": "JUPITER",
+        "sweBody": 5,
+        "tropical": {
+          "longitude": 86.04088581775508,
+          "latitude": -0.3012954783141218,
+          "distance": 6.107565980976853,
+          "longitudeSpeed": 0.22932031094999092,
+          "latitudeSpeed": 0.0014925240777740924,
+          "distanceSpeed": -0.0017354742928640603,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 62.16773478803368,
+          "latitude": -0.3012954783141186,
+          "distance": 6.107565980976853,
+          "longitudeSpeed": 0.22927759780012474,
+          "latitudeSpeed": 0.0014747271006758868,
+          "distanceSpeed": -0.0017354742823478594,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": 0
+      },
+      "VENUS": {
+        "body": "VENUS",
+        "sweBody": 3,
+        "tropical": {
+          "longitude": 49.11777729214693,
+          "latitude": -2.796178270632591,
+          "distance": 0.8395471606275833,
+          "longitudeSpeed": 1.0488372475962178,
+          "latitudeSpeed": 0.0011968417058992398,
+          "distanceSpeed": 0.007908239731697539,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 25.244626262425534,
+          "latitude": -2.796178270632594,
+          "distance": 0.8395471606275835,
+          "longitudeSpeed": 1.0487939707455514,
+          "latitudeSpeed": 0.0011833539874548527,
+          "distanceSpeed": 0.00790823973237601,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": 0
+      },
+      "SATURN": {
+        "body": "SATURN",
+        "sweBody": 6,
+        "tropical": {
+          "longitude": 68.28786132751029,
+          "latitude": -1.6836077953321498,
+          "distance": 9.99110900535761,
+          "longitudeSpeed": 0.12123410086569757,
+          "latitudeSpeed": -0.00018793593253748709,
+          "distanceSpeed": -0.007144373495709308,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 44.41471029778888,
+          "latitude": -1.6836077953321444,
+          "distance": 9.991109005357611,
+          "longitudeSpeed": 0.12119120018742188,
+          "latitudeSpeed": -0.00020450978625654288,
+          "distanceSpeed": -0.0071443735132828935,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": 0
+      },
+      "RAHU": {
+        "body": "RAHU",
+        "sweBody": 10,
+        "tropical": {
+          "longitude": 96.39189678478913,
+          "latitude": 0,
+          "distance": 0.00256955528979999,
+          "longitudeSpeed": -0.05294931086471013,
+          "latitudeSpeed": 0,
+          "distanceSpeed": 0,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 72.51874575506771,
+          "latitude": 2.4175470700678966e-15,
+          "distance": 0.0025695552897999903,
+          "longitudeSpeed": -0.0529920175627083,
+          "latitudeSpeed": -9.961558465069075e-35,
+          "distanceSpeed": 1.0587911840678754e-22,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": 0
+      },
+      "KETU": {
+        "body": "KETU",
+        "sweBody": 10,
+        "tropical": {
+          "longitude": 276.3918967847892,
+          "latitude": 0,
+          "distance": 0.00256955528979999,
+          "longitudeSpeed": -0.05294931086471013,
+          "latitudeSpeed": 0,
+          "distanceSpeed": 0,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "sidereal": {
+          "longitude": 252.5187457550677,
+          "latitude": -2.4175470700678966e-15,
+          "distance": 0.0025695552897999903,
+          "longitudeSpeed": -0.0529920175627083,
+          "latitudeSpeed": 9.961558465069075e-35,
+          "distanceSpeed": 1.0587911840678754e-22,
+          "ephemeris": "swiss",
+          "warning": null
+        },
+        "ayanamsaResidualDeg": -1.1368683772161603e-13
+      }
+    },
+    "ascendantTropicalDeg": 249.86159532758387,
+    "ascendantSiderealDeg": 225.98844429786243,
+    "houseSystem": "EqualWholeSign (W); ascendant recorded for parity measurement only",
+    "flagsTropical": "SEFLG_SWIEPH|SEFLG_SPEED (geocentric apparent, nutation, light-time+aberration)",
+    "flagsSidereal": "SEFLG_SWIEPH|SEFLG_SPEED|SEFLG_SIDEREAL (ayanamsa=LAHIRI)",
+    "ephemerisModelsObserved": [
+      "swiss"
+    ],
+    "warnings": []
+  },
+  "crossCheck": {
+    "source": "astronomy-engine@2.1.19",
+    "license": "MIT",
+    "conventions": "geocentric, astrometric+aberration, tropical ecliptic-of-date (EQJ->ECT)",
+    "independentlyIdentifiable": true,
+    "bodies": {
+      "SUN": {
+        "body": "SUN",
+        "eclipticLongitudeDeg": 93.99139240443301,
+        "eclipticLatitudeDeg": 0.0000032390895426858206,
+        "distanceAu": 1.0164866383636213,
+        "longitudeSpeedDegPerDay": 0.954087115954394
+      },
+      "MOON": {
+        "body": "MOON",
+        "eclipticLongitudeDeg": 148.8108759256137,
+        "eclipticLatitudeDeg": 4.196835980690469,
+        "distanceAu": 0.0024410551188515685,
+        "longitudeSpeedDegPerDay": 14.576474657266658
+      },
+      "MERCURY": {
+        "body": "MERCURY",
+        "eclipticLongitudeDeg": 81.55070997896425,
+        "eclipticLatitudeDeg": -4.581965238277685,
+        "distanceAu": 0.6077267216855717,
+        "longitudeSpeedDegPerDay": -0.2044142997220888
+      },
+      "VENUS": {
+        "body": "VENUS",
+        "eclipticLongitudeDeg": 49.118318019676124,
+        "eclipticLatitudeDeg": -2.7956990965489656,
+        "distanceAu": 0.839622068346798,
+        "longitudeSpeedDegPerDay": 1.0488587895522983
+      },
+      "MARS": {
+        "body": "MARS",
+        "eclipticLongitudeDeg": 259.03310885889266,
+        "eclipticLatitudeDeg": -3.826766753391992,
+        "distanceAu": 0.45115189791817056,
+        "longitudeSpeedDegPerDay": -0.29325499082233364
+      },
+      "JUPITER": {
+        "body": "JUPITER",
+        "eclipticLongitudeDeg": 86.04083059700217,
+        "eclipticLatitudeDeg": -0.29990649640906764,
+        "distanceAu": 6.107717740427208,
+        "longitudeSpeedDegPerDay": 0.22931614771124487
+      },
+      "SATURN": {
+        "body": "SATURN",
+        "eclipticLongitudeDeg": 68.2908660022868,
+        "eclipticLatitudeDeg": -1.6835532927907557,
+        "distanceAu": 9.991635270731749,
+        "longitudeSpeedDegPerDay": 0.12122940098322488
+      }
+    },
+    "absDiffDegVsSeTropical": {
+      "SUN": 0.000180777812119004,
+      "MOON": 0.0002884749470410952,
+      "MERCURY": 0.0001862303821127398,
+      "VENUS": 0.0005407275291915425,
+      "MARS": 0.0029402040850641242,
+      "JUPITER": 0.00005522075291253259,
+      "SATURN": 0.003004674776519778
+    },
+    "maxAbsDiffDeg": 0.003004674776519778
+  }
+}
