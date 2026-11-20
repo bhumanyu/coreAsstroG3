@@ -134,6 +134,9 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
         explanation,
         ...(disposition ? { disposition } : {})
       })),
+      ...(sourcePattern.decisionReasonCodes !== undefined
+        ? { decisionReasonCodes: sourcePattern.decisionReasonCodes }
+        : {}),
       decisionBlockingReasons: sourcePattern.decisionBlockingReasons,
       deferredDimensions: sourcePattern.deferredDimensions
     });

@@ -13,6 +13,7 @@ import type {
   CareerPatternQualificationDimensions,
   CareerPatternQualificationStatus,
   QualificationEvidence,
+  QualificationDecisionReasonCode,
   CareerPatternDeferredDimension,
   DecisionBlockingReason
 } from './careerPatternQualificationTypes';
@@ -397,6 +398,7 @@ function qualifyPattern(
 
   let policyEvidence: QualificationEvidence[] = [];
   let decisionBlockingReasons: DecisionBlockingReason[] = [];
+  let decisionReasonCodes: readonly QualificationDecisionReasonCode[] | undefined;
   let deferredDimensions: CareerPatternDeferredDimension[] = [];
   let ruleId: string;
   let explanation: string;
@@ -420,6 +422,7 @@ function qualifyPattern(
     // Use policy status and evidence, but keep legacy dimensions
     policyEvidence = [...policyResult.evidence];
     decisionBlockingReasons = [...policyResult.decisionBlockingReasons];
+    decisionReasonCodes = policyResult.decisionReasonCodes;
     deferredDimensions = [...policyResult.deferredDimensions];
     ruleId = policyResult.ruleId;
     explanation = policyResult.explanation;
@@ -464,6 +467,9 @@ function qualifyPattern(
     evidence,
     policyEvidence: Object.freeze(policyEvidence),
     decisionBlockingReasons: Object.freeze(decisionBlockingReasons),
+    ...(decisionReasonCodes !== undefined
+      ? { decisionReasonCodes: Object.freeze([...decisionReasonCodes]) }
+      : {}),
     deferredDimensions: Object.freeze(deferredDimensions),
     ruleId,
     explanation,

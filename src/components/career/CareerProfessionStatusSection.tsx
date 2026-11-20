@@ -4,7 +4,18 @@ import { getMissingInputLabel } from '../../product/analysis/careerQualification
 import type { CareerProfessionStatus } from '../../product/analysis/careerQualificationPresentation';
 import { useTranslation } from 'react-i18next';
 import { enumLabel } from '../../i18n/enumLabels';
-import { selectPatternQualificationReasons } from './patternQualificationReasons';
+import { selectPatternQualificationReasons, type PatternQualificationReason } from './patternQualificationReasons';
+
+const decisionReasonCopyKeys: Readonly<Record<string, string>> = {
+  NO_ESTABLISHING_RELATIONSHIPS: 'NO_ESTABLISHING_RELATIONSHIPS',
+  REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING: 'REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING',
+  FULLY_ASSESSED_WEAK_PARTICIPANT: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+  NEUTRAL_CAREER_RELEVANCE: 'NEUTRAL_CAREER_RELEVANCE',
+  MISSING_INPUT: 'MISSING_INPUT',
+  METHODOLOGY_NOT_FROZEN: 'METHODOLOGY_NOT_FROZEN',
+  INSUFFICIENT_STRUCTURAL_EVIDENCE: 'INSUFFICIENT_STRUCTURAL_EVIDENCE',
+  INSUFFICIENT_INPUTS: 'INSUFFICIENT_INPUTS'
+};
 
 export interface CareerProfessionStatusSectionProps {
   readonly profession: CareerProfessionViewModel;
@@ -146,46 +157,74 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
           aria-label={t('ui.profession.patternQualificationsAria')}
           className="space-y-3"
         >
-          {profession.patternQualifications.map(pattern => (
+          {profession.patternQualifications.map(pattern => {
+            const reasons = selectPatternQualificationReasons(pattern);
+            const decisiveReasons = reasons.filter(reason => reason.role === 'DECISIVE');
+            const contributingReasons = reasons.filter(reason => reason.role === 'CONTRIBUTING');
+            const classificationLabel = tEnum(`careerPatternClassification.${pattern.classification}`);
+            const normalizedClassification = classificationLabel.trim().toLowerCase();
+            const normalizedName = pattern.name.trim().toLowerCase();
+            const patternHeading = normalizedClassification === normalizedName || !normalizedName
+              ? classificationLabel
+              : `${classificationLabel} · ${pattern.name.trim()}`;
+            const reasonText = (reason: PatternQualificationReason): string => {
+              if (reason.code === 'STRUCTURAL_EVIDENCE') {
+                return t('ui.profession.patternReason.STRUCTURAL_EVIDENCE', {
+                  explanation: reason.detail ?? ''
+                });
+              }
+              if (reason.code === 'FULLY_ASSESSED_WEAK_PARTICIPANT') {
+                const planet = reason.detail
+                  ? tEnum(`careerPatternParticipantPlanet.${reason.detail}`)
+                  : t('ui.profession.unknownParticipant');
+                if (reason.condition) {
+                  return t('ui.profession.patternFullyAssessedWeakParticipant', {
+                    planet,
+                    condition: t(`ui.profession.patternAdverseCondition.${reason.condition}`)
+                  });
+                }
+                return t('ui.profession.patternDecisionReason.FULLY_ASSESSED_WEAK_PARTICIPANT', { planet });
+              }
+              return t(`ui.profession.patternDecisionReason.${decisionReasonCopyKeys[reason.code] ?? 'UNKNOWN'}`, {
+                detail: reason.detail ?? ''
+              });
+            };
+
+            return (
             <li
               key={pattern.patternId}
               className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h4 className="text-xs font-medium text-slate-100">
-                  {(() => {
-                    const classificationLabel = tEnum(`careerPatternClassification.${pattern.classification}`);
-                    const normalizedClassification = classificationLabel.trim().toLowerCase();
-                    const normalizedName = pattern.name.trim().toLowerCase();
-                    return normalizedClassification === normalizedName || !normalizedName
-                      ? classificationLabel
-                      : `${classificationLabel} · ${pattern.name.trim()}`;
-                  })()}
+                  {patternHeading}
                 </h4>
                 <span className="rounded-md border border-slate-700 bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300">
                   {tEnum(`careerPatternQualificationStatus.${pattern.status}`)}
                 </span>
               </div>
-              {selectPatternQualificationReasons(pattern).length > 0 && (
+              {decisiveReasons.length > 0 && (
                 <ul
                   aria-label={t('ui.profession.patternQualificationReasons')}
                   className="list-disc space-y-1 pl-5 text-xs text-slate-400"
                 >
-                  {selectPatternQualificationReasons(pattern).map((reason, index) => (
-                    <li key={`${reason.category}-${index}`}>
-                      {reason.category === 'FULLY_ASSESSED_WEAK_PARTICIPANT'
-                        ? t('ui.profession.patternFullyAssessedWeakParticipant', {
-                            planet: tEnum(`careerPatternParticipantPlanet.${reason.planet}`),
-                            condition: t(`ui.profession.patternAdverseCondition.${reason.condition}`)
-                          })
-                        : reason.category === 'STRUCTURAL_EVIDENCE'
-                          ? t('ui.profession.patternReason.STRUCTURAL_EVIDENCE', {
-                              explanation: reason.explanation
-                            })
-                        : t(`ui.profession.patternReason.${reason.category}`)}
-                    </li>
+                  {decisiveReasons.map((reason, index) => (
+                    <li key={`${reason.code}-${index}`}>{reasonText(reason)}</li>
                   ))}
                 </ul>
+              )}
+              {contributingReasons.length > 0 && (
+                <div className="space-y-1">
+                  <h5 className="text-xs font-medium text-slate-400">{t('ui.profession.relatedObservations')}</h5>
+                  <ul
+                    aria-label={t('ui.profession.relatedObservations')}
+                    className="list-disc space-y-1 pl-5 text-xs text-slate-400"
+                  >
+                    {contributingReasons.map((reason, index) => (
+                      <li key={`${reason.code}-${index}`}>{reasonText(reason)}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {pattern.decisionBlockingReasons.length > 0 && (
                 <ul
@@ -267,7 +306,8 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
                 </ul>
               )}
             </li>
-          ))}
+            );
+          })}
         </ol>
       </div>
     )}

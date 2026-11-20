@@ -1506,6 +1506,12 @@ describe('Career Pattern Qualification', () => {
           'has both required establishing relationships'
         );
         expect(result.qualifiedPatterns[0].policyEvidence[0].disposition).toBe('SUPPORTIVE');
+        expect(result.qualifiedPatterns[0].decisionReasonCodes).toEqual(
+          result.qualifiedPatterns[0].decisionBlockingReasons.map(reason => ({
+            code: reason.kind,
+            role: 'DECISIVE'
+          }))
+        );
         expect(result.diagnostics).toEqual([]);
       });
 
@@ -1523,7 +1529,7 @@ describe('Career Pattern Qualification', () => {
         const result = qualifyCareerPatterns({
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-          condition: [makeCondition(Planet.SATURN, 'STRONG')],
+          condition: [makeCondition(Planet.SATURN, 'WEAK')],
           networks: [{
             ...makeDirectedServiceProfessionNetwork(),
             relationships: []
@@ -1535,6 +1541,15 @@ describe('Career Pattern Qualification', () => {
           'Neither found.'
         );
         expect(result.qualifiedPatterns[0].policyEvidence[0].disposition).toBe('ADVERSE');
+        expect(result.qualifiedPatterns[0].decisionReasonCodes).toContainEqual({
+          code: 'NO_ESTABLISHING_RELATIONSHIPS',
+          role: 'DECISIVE'
+        });
+        expect(result.qualifiedPatterns[0].decisionReasonCodes).toContainEqual({
+          code: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+          role: 'CONTRIBUTING',
+          detail: Planet.SATURN
+        });
       });
 
       it('does not interpret legacy relationship IDs when canonical network context is omitted', () => {
@@ -1652,6 +1667,11 @@ describe('Career Pattern Qualification', () => {
         expect(qualified.status).toBe('UNQUALIFIED');
         expect(qualified.policyEvidence[0].explanation).toContain('Missing: 10→11');
         expect(qualified.policyEvidence[0].disposition).toBe('ADVERSE');
+        expect(qualified.decisionReasonCodes).toContainEqual({
+          code: 'REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING',
+          role: 'DECISIVE',
+          detail: '10→11'
+        });
       });
 
       it('returns INSUFFICIENT_DATA when structural strength is NOT_ASSESSED', () => {
@@ -1686,6 +1706,12 @@ describe('Career Pattern Qualification', () => {
         const structuralReason = qualified.decisionBlockingReasons.find(r => r.kind === 'METHODOLOGY_NOT_FROZEN');
         expect(structuralReason).toBeDefined();
         expect(structuralReason?.reason).toContain('structural strength methodology not frozen');
+        expect(qualified.decisionReasonCodes).toEqual(
+          qualified.decisionBlockingReasons.map(reason => ({
+            code: reason.kind,
+            role: 'DECISIVE'
+          }))
+        );
       });
 
       it('returns UNQUALIFIED when planetary condition is WEAK (negative beats missing data)', () => {
@@ -1719,6 +1745,11 @@ describe('Career Pattern Qualification', () => {
         expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
         // Disqualifiers (WEAK condition) are NOT in decisionBlockingReasons - they're explicit negatives
         expect(qualified.decisionBlockingReasons).toHaveLength(0);
+        expect(qualified.decisionReasonCodes).toContainEqual({
+          code: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+          role: 'DECISIVE',
+          detail: Planet.SATURN
+        });
       });
 
       it('does not hard-disqualify on a partially assessed WEAK condition', () => {
@@ -1858,6 +1889,9 @@ describe('Career Pattern Qualification', () => {
         expect(qualified.dimensions.careerRelevance).toBe('NEUTRAL');
         // Disqualifiers (NEUTRAL relevance) are NOT in decisionBlockingReasons - they're explicit negatives
         expect(qualified.decisionBlockingReasons).toHaveLength(0);
+        expect(qualified.decisionReasonCodes).toEqual([
+          { code: 'NEUTRAL_CAREER_RELEVANCE', role: 'DECISIVE' }
+        ]);
       });
 
       it('explicit negative beats unrelated missing data: WEAK condition + NOT_ASSESSED structural strength → UNQUALIFIED', () => {
@@ -1911,7 +1945,7 @@ describe('Career Pattern Qualification', () => {
         const input: CareerPatternQualificationInput = {
           patterns: [pattern],
           relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
-          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+          condition: [makeCondition(Planet.SATURN, 'WEAK')]
         };
 
         const result = qualifyCareerPatterns(input);
@@ -1920,6 +1954,14 @@ describe('Career Pattern Qualification', () => {
         expect(qualified.status).toBe('UNQUALIFIED');
         expect(qualified.policyEvidence[0].explanation).toContain('no establishing relationships');
         expect(qualified.policyEvidence[0].disposition).toBe('ADVERSE');
+        expect(qualified.decisionReasonCodes).toEqual([
+          { code: 'NO_ESTABLISHING_RELATIONSHIPS', role: 'DECISIVE' },
+          {
+            code: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+            role: 'CONTRIBUTING',
+            detail: Planet.SATURN
+          }
+        ]);
       });
 
       it('returns INSUFFICIENT_DATA when establishing relationships exist (legacy rules apply)', () => {

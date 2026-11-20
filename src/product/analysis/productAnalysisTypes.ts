@@ -660,6 +660,11 @@ export interface ProductCareerPatternQualification {
     readonly explanation: string;
     readonly disposition?: 'ADVERSE' | 'SUPPORTIVE';
   }[];
+  readonly decisionReasonCodes?: readonly {
+    readonly code: string;
+    readonly role: 'DECISIVE' | 'CONTRIBUTING';
+    readonly detail?: string;
+  }[];
   readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly participants: readonly ProductCareerPatternQualificationParticipant[];

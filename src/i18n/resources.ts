@@ -694,10 +694,21 @@ export const resources = {
             WEAK: 'weak',
             AFFLICTED: 'afflicted'
           },
-          patternReason: {
+          relatedObservations: 'Related observations',
+          unknownParticipant: 'A participant',
+          patternDecisionReason: {
+            NO_ESTABLISHING_RELATIONSHIPS: 'No establishing structural relationships were found.',
+            REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING: 'A required structural relationship is missing: {{detail}}.',
+            FULLY_ASSESSED_WEAK_PARTICIPANT: '{{planet}} has a fully assessed weak or afflicted condition.',
             NEUTRAL_CAREER_RELEVANCE: 'Career relevance is neutral.',
+            MISSING_INPUT: 'A required input is missing.',
+            METHODOLOGY_NOT_FROZEN: 'A required methodology is not yet established.',
+            INSUFFICIENT_STRUCTURAL_EVIDENCE: 'Structural evidence is insufficient.',
+            INSUFFICIENT_INPUTS: 'Inputs are insufficient to complete this pattern assessment.',
+            UNKNOWN: 'A qualification reason was recorded but could not be described.'
+          },
+          patternReason: {
             STRUCTURAL_EVIDENCE: 'Structural evidence: {{explanation}}',
-            INSUFFICIENT_INPUTS: 'Inputs are insufficient to complete this pattern assessment.'
           },
           patternBlockingReasons: 'Decision-blocking reasons',
           patternParticipantEvidence: 'Pattern participant evidence',
@@ -3426,10 +3437,21 @@ export const resources = {
             WEAK: 'कमजोर',
             AFFLICTED: 'पीड़ित'
           },
-          patternReason: {
+          relatedObservations: 'संबंधित अवलोकन',
+          unknownParticipant: 'एक प्रतिभागी',
+          patternDecisionReason: {
+            NO_ESTABLISHING_RELATIONSHIPS: 'कोई स्थापित करने वाला संरचनात्मक संबंध नहीं मिला।',
+            REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING: 'आवश्यक संरचनात्मक संबंध अनुपस्थित है: {{detail}}।',
+            FULLY_ASSESSED_WEAK_PARTICIPANT: '{{planet}} की स्थिति पूर्ण रूप से आकलित कमजोर या पीड़ित है।',
             NEUTRAL_CAREER_RELEVANCE: 'करियर प्रासंगिकता तटस्थ है।',
+            MISSING_INPUT: 'आवश्यक इनपुट अनुपलब्ध है।',
+            METHODOLOGY_NOT_FROZEN: 'आवश्यक पद्धति अभी निर्धारित नहीं है।',
+            INSUFFICIENT_STRUCTURAL_EVIDENCE: 'संरचनात्मक साक्ष्य अपर्याप्त है।',
+            INSUFFICIENT_INPUTS: 'इस पैटर्न का आकलन पूरा करने के लिए इनपुट अपर्याप्त हैं।',
+            UNKNOWN: 'योग्यता का कारण दर्ज है, लेकिन उसका विवरण उपलब्ध नहीं है।'
+          },
+          patternReason: {
             STRUCTURAL_EVIDENCE: 'संरचनात्मक साक्ष्य: {{explanation}}',
-            INSUFFICIENT_INPUTS: 'इस पैटर्न का आकलन पूरा करने के लिए इनपुट अपर्याप्त हैं।'
           },
           patternBlockingReasons: 'निर्णय रोकने वाले कारण',
           patternParticipantEvidence: 'पैटर्न प्रतिभागी साक्ष्य',

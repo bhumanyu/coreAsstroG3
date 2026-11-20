@@ -1036,6 +1036,11 @@ function mapCareer(
               explanation: evidence.explanation,
               ...(evidence.disposition ? { disposition: evidence.disposition } : {})
             })),
+            ...(qualifiedPattern.decisionReasonCodes !== undefined
+              ? {
+                  decisionReasonCodes: qualifiedPattern.decisionReasonCodes.map(reason => ({ ...reason }))
+                }
+              : {}),
             decisionBlockingReasons: qualifiedPattern.decisionBlockingReasons,
             deferredDimensions: qualifiedPattern.deferredDimensions,
             participants: qualifiedPattern.participants.map(participant => {

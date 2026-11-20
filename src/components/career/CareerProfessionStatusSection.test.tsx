@@ -560,8 +560,8 @@ describe('CareerProfessionStatusSection', () => {
     render(<CareerProfessionStatusSection profession={profession} />);
 
     const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
-    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition');
-    expect(reasons).toHaveTextContent('Mars has a fully assessed afflicted condition');
+    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition, which weighs against this pattern.');
+    expect(reasons).toHaveTextContent('Mars has a fully assessed afflicted condition, which weighs against this pattern.');
     expect(reasons).toHaveTextContent('Career relevance is neutral.');
     expect(reasons).toHaveTextContent('Structural evidence: Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Neither found.');
     expect(reasons).not.toHaveTextContent('No establishing structural relationships were identified.');
@@ -616,7 +616,7 @@ describe('CareerProfessionStatusSection', () => {
     };
     render(<CareerProfessionStatusSection profession={profession} />);
     const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
-    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition');
+    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition, which weighs against this pattern.');
     expect(reasons).not.toHaveTextContent('Structural evidence:');
     expect(reasons.children).toHaveLength(1);
   });
@@ -652,7 +652,7 @@ describe('CareerProfessionStatusSection', () => {
     };
     render(<CareerProfessionStatusSection profession={profession} />);
     const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
-    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition');
+    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition, which weighs against this pattern.');
     expect(reasons).not.toHaveTextContent('Saturn');
   });
 
@@ -707,8 +707,50 @@ describe('CareerProfessionStatusSection', () => {
     render(<CareerProfessionStatusSection profession={profession} />);
     const reasons = screen.getByRole('list', { name: 'पैटर्न योग्यता के कारण' });
     expect(reasons).toHaveTextContent('करियर प्रासंगिकता तटस्थ है।');
-    expect(reasons).toHaveTextContent('बृहस्पति की स्थिति का पूर्ण आकलन कमजोर है');
+    expect(reasons).toHaveTextContent('बृहस्पति की स्थिति का पूर्ण आकलन कमजोर है, जो इस पैटर्न के विरुद्ध जाता है।');
     expect(reasons).toHaveTextContent('संरचनात्मक साक्ष्य: Missing: 10→11');
+  });
+
+  it('prefers typed decision reasons and separates contributing observations', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        decisionReasonCodes: [
+          { code: 'NO_ESTABLISHING_RELATIONSHIPS', role: 'DECISIVE' as const },
+          { code: 'FULLY_ASSESSED_WEAK_PARTICIPANT', role: 'CONTRIBUTING' as const, detail: Planet.JUPITER }
+        ]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
+    expect(reasons).toHaveTextContent('No establishing structural relationships were found.');
+    expect(reasons).not.toHaveTextContent('Jupiter');
+    const observations = screen.getByRole('list', { name: 'Related observations' });
+    expect(observations).toHaveTextContent('Jupiter has a fully assessed weak or afflicted condition.');
+  });
+
+  it('localizes typed decisive reasons and related observations in Hindi', async () => {
+    await i18n.changeLanguage('hi');
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        participants: [],
+        decisionReasonCodes: [
+          { code: 'NO_ESTABLISHING_RELATIONSHIPS', role: 'DECISIVE' as const },
+          { code: 'NEUTRAL_CAREER_RELEVANCE', role: 'CONTRIBUTING' as const }
+        ]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByRole('list', { name: 'पैटर्न योग्यता के कारण' }))
+      .toHaveTextContent('कोई स्थापित करने वाला संरचनात्मक संबंध नहीं मिला।');
+    expect(screen.getByRole('heading', { name: 'संबंधित अवलोकन' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'संबंधित अवलोकन' }))
+      .toHaveTextContent('करियर प्रासंगिकता तटस्थ है।');
   });
 
   it('hides the stage funnel when legacy records omit stage counts', () => {

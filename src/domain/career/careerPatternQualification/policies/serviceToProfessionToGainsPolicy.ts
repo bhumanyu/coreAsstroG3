@@ -7,7 +7,8 @@ import type {
   CareerPatternQualificationDimensions,
   QualificationEvidence,
   CareerPatternDeferredDimension,
-  DecisionBlockingReason
+  DecisionBlockingReason,
+  QualificationDecisionReasonCode
 } from '../careerPatternQualificationTypes';
 import {
   generatePolicyEvidenceId,
@@ -53,6 +54,7 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
 
     const evidence: QualificationEvidence[] = [];
     const decisionBlockingReasons: DecisionBlockingReason[] = [];
+    const decisionReasonCodes: QualificationDecisionReasonCode[] = [];
     const deferredDimensions: CareerPatternDeferredDimension[] = [];
     let status: CareerPatternQualificationStatus = 'INSUFFICIENT_DATA';
 
@@ -75,6 +77,7 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       } else if (has6to10 === 'ABSENT' && has10to11 === 'ABSENT') {
         // Both prerequisites explicitly absent → UNQUALIFIED
         status = 'UNQUALIFIED';
+        decisionReasonCodes.push({ code: 'NO_ESTABLISHING_RELATIONSHIPS', role: 'DECISIVE' });
         evidence.push(
           createQualificationEvidence(
             generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
@@ -90,6 +93,11 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
         // One prerequisite absent, one present → UNQUALIFIED
         status = 'UNQUALIFIED';
         const missing = has6to10 === 'ABSENT' ? '6→10' : '10→11';
+        decisionReasonCodes.push({
+          code: 'REQUIRED_STRUCTURAL_RELATIONSHIP_MISSING',
+          role: 'DECISIVE',
+          detail: missing
+        });
         evidence.push(
           createQualificationEvidence(
             generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
@@ -134,11 +142,18 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       return condition?.assessment === 'FULL' &&
         (condition.condition === 'WEAK' || condition.condition === 'AFFLICTED');
     });
+    const fullyAssessedWeakPlanets = pattern.planets.filter(planet => {
+      const condition = conditionByPlanet.get(planet);
+      return condition?.assessment === 'FULL' &&
+        (condition.condition === 'WEAK' || condition.condition === 'AFFLICTED');
+    });
     const hasPartiallyAssessedWeakCondition = pattern.planets.some(planet => {
       const condition = conditionByPlanet.get(planet);
       return context.partiallyAssessedConditionPlanets.has(planet) &&
         (condition?.condition === 'WEAK' || condition?.condition === 'AFFLICTED');
     });
+
+    const structurallyDisqualified = status === 'UNQUALIFIED';
 
     // Step 3: Apply frozen decision layer (only if prerequisites present)
     if (status !== 'UNQUALIFIED') {
@@ -153,9 +168,20 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       // A fully assessed participant-level disqualifier takes precedence over unavailable peers.
       if (hasFullyAssessedWeakCondition) {
         status = 'UNQUALIFIED';
+        for (const planet of fullyAssessedWeakPlanets) {
+          decisionReasonCodes.push({
+            code: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+            role: 'DECISIVE',
+            detail: planet
+          });
+        }
+        if (dimensions.careerRelevance === 'NEUTRAL') {
+          decisionReasonCodes.push({ code: 'NEUTRAL_CAREER_RELEVANCE', role: 'CONTRIBUTING' });
+        }
         // Disqualifier: kept in evidence only, not in decisionBlockingReasons
       } else if (dimensions.careerRelevance === 'NEUTRAL') {
         status = 'UNQUALIFIED';
+        decisionReasonCodes.push({ code: 'NEUTRAL_CAREER_RELEVANCE', role: 'DECISIVE' });
         // Disqualifier: kept in evidence only, not in decisionBlockingReasons
       } else {
         // No disqualifiers - check for missing/unevaluable data (decision-blocking)
@@ -205,6 +231,23 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       }
     }
 
+    if (structurallyDisqualified) {
+      for (const planet of fullyAssessedWeakPlanets) {
+        decisionReasonCodes.push({
+          code: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+          role: 'CONTRIBUTING',
+          detail: planet
+        });
+      }
+      if (dimensions.careerRelevance === 'NEUTRAL') {
+        decisionReasonCodes.push({ code: 'NEUTRAL_CAREER_RELEVANCE', role: 'CONTRIBUTING' });
+      }
+    } else if (status === 'INSUFFICIENT_DATA') {
+      for (const reason of decisionBlockingReasons) {
+        decisionReasonCodes.push({ code: reason.kind, role: 'DECISIVE' });
+      }
+    }
+
     // Build explanation
     const explanation = this.buildExplanation(status, dimensions, decisionBlockingReasons);
 
@@ -213,6 +256,7 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       dimensions,
       evidence: Object.freeze(evidence),
       decisionBlockingReasons: Object.freeze(decisionBlockingReasons),
+      decisionReasonCodes: Object.freeze(decisionReasonCodes.map(reason => Object.freeze({ ...reason }))),
       deferredDimensions: Object.freeze(deferredDimensions),
       ruleId: this.policyId,
       explanation

@@ -53,6 +53,13 @@ export interface DecisionBlockingReason {
   readonly kind: DecisionBlockingReasonKind;
 }
 
+/** Explanation provenance only; this record must not participate in qualification decisions. */
+export interface QualificationDecisionReasonCode {
+  readonly code: string;
+  readonly role: 'DECISIVE' | 'CONTRIBUTING';
+  readonly detail?: string;
+}
+
 /**
  * Structural strength of a Career pattern.
  * Represents the overall strength of the pattern based on participant conditions.
@@ -252,6 +259,7 @@ export interface PolicyEvaluationResult {
   readonly dimensions: CareerPatternQualificationDimensions;
   readonly evidence: readonly QualificationEvidence[];
   readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
+  readonly decisionReasonCodes: readonly QualificationDecisionReasonCode[];
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly ruleId: string;
   readonly explanation: string;
@@ -308,6 +316,7 @@ export interface QualifiedCareerPattern {
   readonly evidence: readonly CareerPatternQualificationEvidence[];
   readonly policyEvidence: readonly QualificationEvidence[];
   readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
+  readonly decisionReasonCodes?: readonly QualificationDecisionReasonCode[];
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly ruleId: string;
   readonly explanation: string;

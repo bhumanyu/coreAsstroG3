@@ -1,18 +1,19 @@
 import type { ProductCareerPatternQualification } from '../../product/analysis/productAnalysisTypes';
 
-export type PatternQualificationReason =
-  | {
-      readonly category: 'FULLY_ASSESSED_WEAK_PARTICIPANT';
-      readonly planet: ProductCareerPatternQualification['participants'][number]['planet'];
-      readonly condition: 'WEAK' | 'AFFLICTED';
-    }
-  | { readonly category: 'NEUTRAL_CAREER_RELEVANCE' }
-  | { readonly category: 'STRUCTURAL_EVIDENCE'; readonly explanation: string }
-  | { readonly category: 'INSUFFICIENT_INPUTS' };
+export interface PatternQualificationReason {
+  readonly code: string;
+  readonly role: 'DECISIVE' | 'CONTRIBUTING';
+  readonly detail?: string;
+  readonly condition?: 'WEAK' | 'AFFLICTED';
+}
 
 export function selectPatternQualificationReasons(
   pattern: ProductCareerPatternQualification
 ): readonly PatternQualificationReason[] {
+  if (pattern.decisionReasonCodes !== undefined) {
+    return pattern.decisionReasonCodes.map(reason => ({ ...reason }));
+  }
+
   const reasons: PatternQualificationReason[] = [];
 
   if (pattern.status === 'UNQUALIFIED') {
@@ -23,26 +24,31 @@ export function selectPatternQualificationReasons(
         (condition === 'WEAK' || condition === 'AFFLICTED')
       ) {
         reasons.push({
-          category: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
-          planet: participant.planet,
+          code: 'FULLY_ASSESSED_WEAK_PARTICIPANT',
+          role: 'DECISIVE',
+          detail: participant.planet,
           condition
         });
       }
     }
 
     if (pattern.dimensions?.careerRelevance === 'NEUTRAL') {
-      reasons.push({ category: 'NEUTRAL_CAREER_RELEVANCE' });
+      reasons.push({ code: 'NEUTRAL_CAREER_RELEVANCE', role: 'DECISIVE' });
     }
 
     for (const evidence of pattern.policyEvidence ?? []) {
       if (evidence.dimension === 'structuralStrength' && evidence.disposition === 'ADVERSE') {
-        reasons.push({ category: 'STRUCTURAL_EVIDENCE', explanation: evidence.explanation });
+        reasons.push({
+          code: 'STRUCTURAL_EVIDENCE',
+          role: 'DECISIVE',
+          detail: evidence.explanation
+        });
       }
     }
   }
 
   if (pattern.status === 'INSUFFICIENT_DATA' && pattern.decisionBlockingReasons.length > 0) {
-    reasons.push({ category: 'INSUFFICIENT_INPUTS' });
+    reasons.push({ code: 'INSUFFICIENT_INPUTS', role: 'DECISIVE' });
   }
 
   return reasons;
