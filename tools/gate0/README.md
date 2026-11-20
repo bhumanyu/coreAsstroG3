@@ -94,18 +94,21 @@ attribution.
 
 ## Swiss Ephemeris conformance vectors
 
-`tests/seConformance.test.ts` pins the wrapper contract against two historical
-instants: 1900-01-01 and 2099-01-01, each entered as TT midnight in the
-independent Astro.com swetest 2.10.04 interface. The returned UT Julian days
-are passed unchanged to `calc`, `ayanamsa`, `houses`, and `deltaT`.
+`tests/seConformance.test.ts` pins the wrapper contract against two instants:
+1900-01-01 TT midnight and 2099-01-01 TT midnight, converted to their returned
+UT instants in the independent Astro.com swetest 2.10.04 interface. The tests
+cover all nine `SE_BODY_MAP` entries (Sun through Saturn, mean Rahu, and derived
+Ketu), including tropical longitude and speed; they also check Lahiri
+ayanamsa, ΔT, and `houses` ascendants at Delhi (28.6139° N) and Sydney
+(33.8688° S). A separate 2024-12-01 swetest vector confirms retrograde
+Jupiter's negative longitude speed.
 
-The planetary longitude, mean-node, and ΔT expected values are the published
-swetest output. Source commands:
+The planetary longitude, speed, mean-node, and ΔT expected values are the
+published swetest output. Source commands use `-b{date} -n1 -s1 -fPLBRS`:
 
-- [1900 planets](https://www.astro.com/cgi/swetest.cgi?b=1.1.1900&n=1&s=1&f=PLBRS&p=0123)
-  and [1900 mean node](https://www.astro.com/cgi/swetest.cgi?b=1.1.1900&n=1&s=1&f=PLBRS&p=m).
-- [2099 planets](https://www.astro.com/cgi/swetest.cgi?b=1.1.2099&n=1&s=1&f=PLBRS&p=0123)
-  and [2099 mean node](https://www.astro.com/cgi/swetest.cgi?b=1.1.2099&n=1&s=1&f=PLBRS&p=m).
+- [1900 all bodies](https://www.astro.com/cgi/swetest.cgi?b=1.1.1900&n=1&s=1&f=PLBRS&p=0123456m).
+- [2099 all bodies](https://www.astro.com/cgi/swetest.cgi?b=1.1.2099&n=1&s=1&f=PLBRS&p=0123456m).
+- [2024 retrograde Jupiter](https://www.astro.com/cgi/swetest.cgi?b=1.12.2024&n=1&s=1&f=PLBRS&p=5).
 
 The CGI echoes `-b{date} -n1 -s1 -fPLBRS -p{planets}`. `PLBRS` requests
 ecliptic longitude, latitude, distance, and speed. With no sidereal flag, the
@@ -120,8 +123,9 @@ The binding source maps `calc()` to `swe_calc_ut`, `ayanamsa()` to
 specifies the UT contracts: `swe_calc_ut` accepts UT and applies ΔT internally;
 the `_ut` ayanamsa function and houses routine take UT; `swe_deltat_ex` returns
 ΔT. The test pins `Ayanamsa.Lahiri`, geocentric apparent positions, mean node,
-the `EqualWholeSign` house system, and longitude/latitude 0° for the
-independent ascendant calculation.
+the `EqualWholeSign` house system, and east-positive geographic longitude.
+House ascendants are checked at both a northern mid-latitude and a southern
+hemisphere site against an independent Meeus GMST/mean-obliquity formula.
 
 The Lahiri numerical check uses the published J2000 Lahiri reference value
 `23.8571°` (see Astrodienst's [ayanamsha overview](https://www.astro.com/astrology/in_ayanamsha_e.htm))

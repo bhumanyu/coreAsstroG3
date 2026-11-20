@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { sha256Hex } from './util.ts';
 
+export const CAPTURE_MANIFEST_SCHEMA_VERSION = 1;
+export const CAPTURE_ARTIFACT_SCHEMA_VERSION = 1;
+
 export interface CaptureManifestEntry {
   readonly sha256: string;
   readonly bytes: number;
@@ -105,6 +108,10 @@ function validateLongitude(value: unknown, caseId: string, field: string): void 
   }
 }
 
+function validateNullableLongitude(value: unknown, caseId: string, field: string): void {
+  if (value !== null) validateLongitude(value, caseId, field);
+}
+
 function validateCohortCaptureNumbers(
   artifact: unknown,
   caseId: string,
@@ -128,10 +135,62 @@ function validateCohortCaptureNumbers(
   }
 
   const capture = objectField(root.capture, caseId, 'capture');
-  finiteNumberField(capture.ayanamsaDegrees, caseId, 'capture.ayanamsaDegrees');
+  const julianDayUt = finiteNumberField(capture.julianDayUt, caseId, 'capture.julianDayUt');
+  if (julianDayUt <= 0) {
+    throw new Error(`capture ${caseId}: capture.julianDayUt must be greater than 0`);
+  }
+  const deltaTDays = finiteNumberField(capture.deltaTDays, caseId, 'capture.deltaTDays');
+  if (deltaTDays < -0.001 || deltaTDays > 0.01) {
+    throw new Error(`capture ${caseId}: capture.deltaTDays must be in [-0.001, 0.01]`);
+  }
+  const ayanamsaDegrees = finiteNumberField(
+    capture.ayanamsaDegrees,
+    caseId,
+    'capture.ayanamsaDegrees'
+  );
+  if (ayanamsaDegrees < 0 || ayanamsaDegrees >= 360) {
+    throw new Error(`capture ${caseId}: capture.ayanamsaDegrees must be in [0, 360)`);
+  }
+  const ayanamsaSweMode = finiteNumberField(
+    capture.ayanamsaSweMode,
+    caseId,
+    'capture.ayanamsaSweMode'
+  );
+  if (!Number.isSafeInteger(ayanamsaSweMode) || ayanamsaSweMode < 0) {
+    throw new Error(`capture ${caseId}: capture.ayanamsaSweMode must be a non-negative integer`);
+  }
+  for (const field of ['ascendantTropicalDeg', 'ascendantSiderealDeg'] as const) {
+    validateNullableLongitude(capture[field], caseId, `capture.${field}`);
+  }
   const bodies = objectField(capture.bodies, caseId, 'capture.bodies');
   for (const bodyName of expectedBodies) {
     const body = objectField(bodies[bodyName], caseId, `capture.bodies.${bodyName}`);
+    if (body.body !== bodyName) {
+      throw new Error(
+        `capture ${caseId}: capture.bodies.${bodyName}.body must be '${bodyName}'`
+      );
+    }
+    const sweBody = finiteNumberField(
+      body.sweBody,
+      caseId,
+      `capture.bodies.${bodyName}.sweBody`
+    );
+    if (!Number.isSafeInteger(sweBody) || sweBody < 0) {
+      throw new Error(
+        `capture ${caseId}: capture.bodies.${bodyName}.sweBody must be a non-negative integer`
+      );
+    }
+    const residual = finiteNumberField(
+      body.ayanamsaResidualDeg,
+      caseId,
+      `capture.bodies.${bodyName}.ayanamsaResidualDeg`
+    );
+    if (Math.abs(residual) >= 0.01) {
+      throw new Error(
+        `capture ${caseId}: capture.bodies.${bodyName}.ayanamsaResidualDeg must have ` +
+        `absolute value less than 0.01`
+      );
+    }
     for (const frame of ['tropical', 'sidereal'] as const) {
       const position = objectField(body[frame], caseId, `capture.bodies.${bodyName}.${frame}`);
       validateLongitude(
@@ -139,10 +198,40 @@ function validateCohortCaptureNumbers(
         caseId,
         `capture.bodies.${bodyName}.${frame}.longitude`
       );
+      const latitude = finiteNumberField(
+        position.latitude,
+        caseId,
+        `capture.bodies.${bodyName}.${frame}.latitude`
+      );
+      if (latitude < -90 || latitude > 90) {
+        throw new Error(
+          `capture ${caseId}: capture.bodies.${bodyName}.${frame}.latitude must be in [-90, 90]`
+        );
+      }
+      const distance = finiteNumberField(
+        position.distance,
+        caseId,
+        `capture.bodies.${bodyName}.${frame}.distance`
+      );
+      if (distance <= 0) {
+        throw new Error(
+          `capture ${caseId}: capture.bodies.${bodyName}.${frame}.distance must be greater than 0`
+        );
+      }
       finiteNumberField(
         position.longitudeSpeed,
         caseId,
         `capture.bodies.${bodyName}.${frame}.longitudeSpeed`
+      );
+      finiteNumberField(
+        position.latitudeSpeed,
+        caseId,
+        `capture.bodies.${bodyName}.${frame}.latitudeSpeed`
+      );
+      finiteNumberField(
+        position.distanceSpeed,
+        caseId,
+        `capture.bodies.${bodyName}.${frame}.distanceSpeed`
       );
     }
   }
@@ -205,9 +294,34 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
   }
 ): ValidatedCapture<T> {
   const manifestPath = options.relativePath.replace(/\\/g, '/');
-  const entry = options.manifest.files?.[manifestPath];
-  if (!entry) {
+  const manifest = objectField(options.manifest, options.caseId, 'manifest');
+  if (manifest.schemaVersion !== CAPTURE_MANIFEST_SCHEMA_VERSION) {
+    throw new Error(
+      `capture ${options.caseId}: manifest.schemaVersion must be ${CAPTURE_MANIFEST_SCHEMA_VERSION}`
+    );
+  }
+  const files = objectField(manifest.files, options.caseId, 'manifest.files');
+  const rawEntry = files[manifestPath];
+  if (!rawEntry) {
     throw new Error(`capture ${options.caseId}: manifest has no entry for ${manifestPath}`);
+  }
+  const entry = objectField(rawEntry, options.caseId, `manifest.files.${manifestPath}`);
+  if (typeof entry.sha256 !== 'string' || !/^[0-9a-f]{64}$/i.test(entry.sha256)) {
+    throw new Error(
+      `capture ${options.caseId}: manifest.files.${manifestPath}.sha256 must be 64 hexadecimal characters`
+    );
+  }
+  if (typeof entry.bytes !== 'number'
+    || !Number.isSafeInteger(entry.bytes)
+    || entry.bytes <= 0) {
+    throw new Error(
+      `capture ${options.caseId}: manifest.files.${manifestPath}.bytes must be a positive integer`
+    );
+  }
+  if (typeof entry.captureId !== 'string' || entry.captureId.trim().length === 0) {
+    throw new Error(
+      `capture ${options.caseId}: manifest.files.${manifestPath}.captureId must be a non-empty string`
+    );
   }
   if (entry.status !== 'CAPTURED') {
     throw new Error(
@@ -221,13 +335,13 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
 
   const bytes = readFileSync(options.artifactPath);
   const actualSha = sha256Hex(bytes);
-  if (actualSha !== entry.sha256) {
+  if (actualSha !== entry.sha256.toLowerCase()) {
     throw new Error(
       `capture ${options.caseId}: SHA-256 mismatch for ${manifestPath}; ` +
       `manifest=${entry.sha256}, actual=${actualSha}`
     );
   }
-  if (Number.isFinite(entry.bytes) && bytes.byteLength !== entry.bytes) {
+  if (bytes.byteLength !== entry.bytes) {
     throw new Error(
       `capture ${options.caseId}: byte length mismatch for ${manifestPath}; ` +
       `manifest=${entry.bytes}, actual=${bytes.byteLength}`
@@ -244,6 +358,12 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
     );
   }
 
+  const artifactRecord = objectField(artifact, options.caseId, 'artifact');
+  if (artifactRecord.schemaVersion !== CAPTURE_ARTIFACT_SCHEMA_VERSION) {
+    throw new Error(
+      `capture ${options.caseId}: artifact.schemaVersion must be ${CAPTURE_ARTIFACT_SCHEMA_VERSION}`
+    );
+  }
   if (artifact.captureId !== entry.captureId) {
     throw new Error(
       `capture ${options.caseId}: captureId mismatch for ${manifestPath}; ` +
@@ -281,7 +401,7 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
         `capture ${options.caseId}: ${manifestPath} is missing expected bodies: ${missing.join(', ')}`
       );
     }
-    validateCohortCaptureNumbers(artifact, options.caseId, options.expectedBodies);
+    validateCohortCaptureNumbers(artifact, options.caseId, Object.keys(bodySet));
   }
 
   return { artifact, sha256: actualSha };

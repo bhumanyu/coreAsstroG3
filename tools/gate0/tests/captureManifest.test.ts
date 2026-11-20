@@ -39,6 +39,7 @@ afterEach(() => {
 
 describe('validateCaptureArtifact', () => {
   const validArtifact = {
+    schemaVersion: 1,
     captureId: 'CAPTURE-CASE-001',
     caseId: 'CASE-001',
     site: {
@@ -51,15 +52,54 @@ describe('validateCaptureArtifact', () => {
       }
     },
     capture: {
+      julianDayUt: 2451545,
+      deltaTDays: 0.0008,
+      ayanamsaSweMode: 1,
       ayanamsaDegrees: 24,
+      ascendantTropicalDeg: null,
+      ascendantSiderealDeg: null,
       bodies: {
         SUN: {
-          tropical: { longitude: 10, longitudeSpeed: 1 },
-          sidereal: { longitude: 346, longitudeSpeed: 1 }
+          body: 'SUN',
+          sweBody: 0,
+          tropical: {
+            longitude: 10,
+            latitude: 0,
+            distance: 1,
+            longitudeSpeed: 1,
+            latitudeSpeed: 0,
+            distanceSpeed: 0
+          },
+          sidereal: {
+            longitude: 346,
+            latitude: 0,
+            distance: 1,
+            longitudeSpeed: 1,
+            latitudeSpeed: 0,
+            distanceSpeed: 0
+          },
+          ayanamsaResidualDeg: 0
         },
         MOON: {
-          tropical: { longitude: 20, longitudeSpeed: 13 },
-          sidereal: { longitude: 356, longitudeSpeed: 13 }
+          body: 'MOON',
+          sweBody: 1,
+          tropical: {
+            longitude: 20,
+            latitude: 0,
+            distance: 1,
+            longitudeSpeed: 13,
+            latitudeSpeed: 0,
+            distanceSpeed: 0
+          },
+          sidereal: {
+            longitude: 356,
+            latitude: 0,
+            distance: 1,
+            longitudeSpeed: 13,
+            latitudeSpeed: 0,
+            distanceSpeed: 0
+          },
+          ayanamsaResidualDeg: 0
         }
       }
     }
@@ -77,6 +117,73 @@ describe('validateCaptureArtifact', () => {
     });
 
     expect(validated.artifact).toEqual(validArtifact);
+  });
+
+  it.each([
+    ['NaN', Number.NaN],
+    ['negative', -1],
+    ['non-integer', 1.5]
+  ])('rejects %s manifest bytes', (_label, bytes) => {
+    const { artifactPath, manifest } = writeArtifact(validArtifact);
+    const invalidManifest: CaptureManifest = {
+      ...manifest,
+      files: {
+        ...manifest.files,
+        'cohort/CASE-001.json': {
+          ...manifest.files['cohort/CASE-001.json'],
+          bytes
+        }
+      }
+    };
+
+    expect(() => validateCaptureArtifact({
+      manifest: invalidManifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001'
+    })).toThrow(/CASE-001.*manifest\.files\.cohort\/CASE-001\.json\.bytes/);
+  });
+
+  it.each([
+    ['malformed SHA-256', { sha256: 'g'.repeat(64) }, /sha256/],
+    ['empty capture ID', { captureId: '  ' }, /captureId/]
+  ])('rejects %s manifest metadata', (_label, entryOverrides, fieldPattern) => {
+    const { artifactPath, manifest } = writeArtifact(validArtifact);
+    const invalidManifest: CaptureManifest = {
+      ...manifest,
+      files: {
+        ...manifest.files,
+        'cohort/CASE-001.json': {
+          ...manifest.files['cohort/CASE-001.json'],
+          ...entryOverrides
+        }
+      }
+    };
+
+    expect(() => validateCaptureArtifact({
+      manifest: invalidManifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001'
+    })).toThrow(new RegExp(`CASE-001.*manifest\\.files.*${fieldPattern.source}`));
+  });
+
+  it('rejects unsupported manifest and artifact schema versions', () => {
+    const { artifactPath, manifest } = writeArtifact(validArtifact);
+    expect(() => validateCaptureArtifact({
+      manifest: { ...manifest, schemaVersion: 2 },
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001'
+    })).toThrow(/CASE-001.*manifest\.schemaVersion/);
+
+    const wrongArtifact = writeArtifact({ ...validArtifact, schemaVersion: 2 });
+    expect(() => validateCaptureArtifact({
+      manifest: wrongArtifact.manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath: wrongArtifact.artifactPath,
+      caseId: 'CASE-001'
+    })).toThrow(/CASE-001.*artifact\.schemaVersion/);
   });
 
   it('rejects a stale hash and a BLOCKED manifest entry', () => {
@@ -129,6 +236,17 @@ describe('validateCaptureArtifact', () => {
     ['non-finite longitude', { tropicalLongitude: Number.NaN }, 'tropical.longitude'],
     ['out-of-range longitude', { tropicalLongitude: 360 }, 'tropical.longitude'],
     ['string speed', { tropicalSpeed: '1' }, 'tropical.longitudeSpeed'],
+    ['non-finite latitude', { tropicalLatitude: Number.NaN }, 'tropical.latitude'],
+    ['non-finite latitude speed', { tropicalLatitudeSpeed: Number.NaN }, 'tropical.latitudeSpeed'],
+    ['non-finite distance', { tropicalDistance: Number.NaN }, 'tropical.distance'],
+    ['non-positive distance', { tropicalDistance: 0 }, 'tropical.distance'],
+    ['non-finite distance speed', { siderealDistanceSpeed: Number.NaN }, 'sidereal.distanceSpeed'],
+    ['malformed tropical ascendant', { ascendantTropicalDeg: '90' }, 'capture.ascendantTropicalDeg'],
+    ['out-of-range sidereal ascendant', { ascendantSiderealDeg: 360 }, 'capture.ascendantSiderealDeg'],
+    ['non-positive Julian day', { julianDayUt: 0 }, 'capture.julianDayUt'],
+    ['excessive delta-T', { deltaTDays: 0.02 }, 'capture.deltaTDays'],
+    ['delta-T below historical bound', { deltaTDays: -0.002 }, 'capture.deltaTDays'],
+    ['large ayanamsa residual', { ayanamsaResidualDeg: 0.01 }, 'ayanamsaResidualDeg'],
     ['missing ayanamsa', { omitAyanamsa: true }, 'capture.ayanamsaDegrees'],
     ['latitude outside range', { latitude: 91 }, 'site.latitude'],
     ['longitude outside range', { siteLongitude: 181 }, 'site.longitude'],
@@ -211,29 +329,53 @@ describe('validateCaptureArtifact', () => {
 
   function numericArtifact(overrides: {
     readonly tropicalLongitude?: unknown;
+    readonly tropicalLatitude?: unknown;
+    readonly tropicalDistance?: unknown;
     readonly tropicalSpeed?: unknown;
+    readonly tropicalLatitudeSpeed?: unknown;
+    readonly tropicalDistanceSpeed?: unknown;
     readonly siderealLongitude?: unknown;
+    readonly siderealLatitude?: unknown;
+    readonly siderealDistance?: unknown;
     readonly siderealSpeed?: unknown;
+    readonly siderealLatitudeSpeed?: unknown;
+    readonly siderealDistanceSpeed?: unknown;
+    readonly julianDayUt?: unknown;
+    readonly deltaTDays?: unknown;
     readonly ayanamsaDegrees?: unknown;
+    readonly ayanamsaSweMode?: unknown;
+    readonly ayanamsaResidualDeg?: unknown;
+    readonly ascendantTropicalDeg?: unknown;
+    readonly ascendantSiderealDeg?: unknown;
+    readonly sweBody?: unknown;
     readonly omitAyanamsa?: boolean;
     readonly latitude?: unknown;
     readonly siteLongitude?: unknown;
     readonly utcInstant?: unknown;
   } = {}) {
-    const choose = (value: unknown, fallback: number | string): unknown =>
+    const choose = (value: unknown, fallback: unknown): unknown =>
       value === undefined ? fallback : value;
     const makeBody = (frame: 'tropical' | 'sidereal') => ({
       [frame]: frame === 'tropical'
         ? {
           longitude: choose(overrides.tropicalLongitude, 10),
-          longitudeSpeed: choose(overrides.tropicalSpeed, 1)
+          latitude: choose(overrides.tropicalLatitude, 0),
+          distance: choose(overrides.tropicalDistance, 1),
+          longitudeSpeed: choose(overrides.tropicalSpeed, 1),
+          latitudeSpeed: choose(overrides.tropicalLatitudeSpeed, 0),
+          distanceSpeed: choose(overrides.tropicalDistanceSpeed, 0)
         }
         : {
           longitude: choose(overrides.siderealLongitude, 346),
-          longitudeSpeed: choose(overrides.siderealSpeed, 1)
+          latitude: choose(overrides.siderealLatitude, 0),
+          distance: choose(overrides.siderealDistance, 1),
+          longitudeSpeed: choose(overrides.siderealSpeed, 1),
+          latitudeSpeed: choose(overrides.siderealLatitudeSpeed, 0),
+          distanceSpeed: choose(overrides.siderealDistanceSpeed, 0)
         }
     });
     return {
+      schemaVersion: 1,
       captureId: 'CAPTURE-CASE-001',
       caseId: 'CASE-001',
       site: {
@@ -246,10 +388,23 @@ describe('validateCaptureArtifact', () => {
         }
       },
       capture: {
+        julianDayUt: choose(overrides.julianDayUt, 2451545),
+        deltaTDays: choose(overrides.deltaTDays, 0.0008),
+        ayanamsaSweMode: choose(overrides.ayanamsaSweMode, 1),
         ...(overrides.omitAyanamsa
           ? {}
           : { ayanamsaDegrees: choose(overrides.ayanamsaDegrees, 24) }),
-        bodies: { SUN: { ...makeBody('tropical'), ...makeBody('sidereal') } }
+        ascendantTropicalDeg: choose(overrides.ascendantTropicalDeg, null),
+        ascendantSiderealDeg: choose(overrides.ascendantSiderealDeg, null),
+        bodies: {
+          SUN: {
+            body: 'SUN',
+            sweBody: choose(overrides.sweBody, 0),
+            ...makeBody('tropical'),
+            ...makeBody('sidereal'),
+            ayanamsaResidualDeg: choose(overrides.ayanamsaResidualDeg, 0)
+          }
+        }
       }
     };
   }
