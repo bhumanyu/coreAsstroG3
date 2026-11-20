@@ -19,6 +19,60 @@ export interface ValidatedCapture<T> {
   readonly sha256: string;
 }
 
+export interface CohortCaptureDefinition {
+  readonly id: string;
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly ianaTimeZone: string;
+  readonly utcInstant: string;
+}
+
+interface CohortCaptureMetadata {
+  readonly caseId?: unknown;
+  readonly site?: {
+    readonly latitude?: unknown;
+    readonly longitude?: unknown;
+    readonly instant?: {
+      readonly ianaTimeZone?: unknown;
+      readonly utcInstant?: unknown;
+    };
+  };
+}
+
+function validateCohortCaptureMetadata(
+  artifact: CohortCaptureMetadata,
+  definition: CohortCaptureDefinition
+): void {
+  const checks: readonly { field: string; expected: unknown; actual: unknown }[] = [
+    { field: 'caseId', expected: definition.id, actual: artifact.caseId },
+    { field: 'site.latitude', expected: definition.latitude, actual: artifact.site?.latitude },
+    { field: 'site.longitude', expected: definition.longitude, actual: artifact.site?.longitude },
+    {
+      field: 'site.instant.ianaTimeZone',
+      expected: definition.ianaTimeZone,
+      actual: artifact.site?.instant?.ianaTimeZone
+    },
+    {
+      field: 'site.instant.utcInstant',
+      expected: definition.utcInstant,
+      actual: artifact.site?.instant?.utcInstant
+    }
+  ];
+
+  for (const { field, expected, actual } of checks) {
+    if (actual !== expected) {
+      throw new Error(
+        `capture ${definition.id}: artifact ${field} mismatch; ` +
+        `expected ${formatMetadataValue(expected)}, actual ${formatMetadataValue(actual)}`
+      );
+    }
+  }
+}
+
+function formatMetadataValue(value: unknown): string {
+  return value === undefined ? '<missing>' : JSON.stringify(value) ?? String(value);
+}
+
 export function validateCaptureArtifact<T extends { captureId?: unknown; capture?: unknown }>(
   options: {
     readonly manifest: CaptureManifest;
@@ -27,6 +81,7 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
     readonly caseId: string;
     readonly expectedCaptureId?: string;
     readonly expectedBodies?: readonly string[];
+    readonly expectedCohortDefinition?: CohortCaptureDefinition;
   }
 ): ValidatedCapture<T> {
   const manifestPath = options.relativePath.replace(/\\/g, '/');
@@ -73,6 +128,12 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
     throw new Error(
       `capture ${options.caseId}: captureId mismatch for ${manifestPath}; ` +
       `manifest=${entry.captureId}, artifact=${String(artifact.captureId)}`
+    );
+  }
+  if (options.expectedCohortDefinition) {
+    validateCohortCaptureMetadata(
+      artifact as unknown as CohortCaptureMetadata,
+      options.expectedCohortDefinition
     );
   }
   if (options.expectedCaptureId && entry.captureId !== options.expectedCaptureId) {

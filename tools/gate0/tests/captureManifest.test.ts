@@ -103,4 +103,65 @@ describe('validateCaptureArtifact', () => {
       expectedBodies: ['SUN', 'MOON', 'MARS']
     })).toThrow(/CASE-001.*MARS/);
   });
+
+  const cohortDefinition = {
+    id: 'CASE-001',
+    latitude: 28.6139,
+    longitude: 77.209,
+    ianaTimeZone: 'Asia/Kolkata',
+    utcInstant: '1905-04-12T04:30:00Z'
+  };
+
+  function cohortArtifact(overrides: {
+    readonly caseId?: string;
+    readonly latitude?: number;
+    readonly longitude?: number;
+    readonly ianaTimeZone?: string;
+    readonly utcInstant?: string;
+  } = {}) {
+    return {
+      ...validArtifact,
+      caseId: overrides.caseId ?? cohortDefinition.id,
+      site: {
+        latitude: overrides.latitude ?? cohortDefinition.latitude,
+        longitude: overrides.longitude ?? cohortDefinition.longitude,
+        instant: {
+          ianaTimeZone: overrides.ianaTimeZone ?? cohortDefinition.ianaTimeZone,
+          utcInstant: overrides.utcInstant ?? cohortDefinition.utcInstant
+        }
+      }
+    };
+  }
+
+  it('accepts cohort metadata that exactly matches the full case definition', () => {
+    const artifact = cohortArtifact();
+    const { artifactPath, manifest } = writeArtifact(artifact);
+    const validated = validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: cohortDefinition.id,
+      expectedCohortDefinition: cohortDefinition
+    });
+
+    expect(validated.artifact).toEqual(artifact);
+  });
+
+  it.each([
+    ['caseId', { caseId: 'OTHER-CASE' }, 'caseId'],
+    ['latitude', { latitude: 28.614 }, 'site.latitude'],
+    ['longitude', { longitude: 77.21 }, 'site.longitude'],
+    ['IANA timezone', { ianaTimeZone: 'Asia/Tokyo' }, 'site.instant.ianaTimeZone'],
+    ['full UTC instant', { utcInstant: '1905-04-12T04:31:00Z' }, 'site.instant.utcInstant']
+  ])('rejects mismatched cohort %s with a field-specific error', (_label, overrides, field) => {
+    const { artifactPath, manifest } = writeArtifact(cohortArtifact(overrides));
+
+    expect(() => validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: cohortDefinition.id,
+      expectedCohortDefinition: cohortDefinition
+    })).toThrow(new RegExp(`CASE-001.*${field.replaceAll('.', '\\.')}`));
+  });
 });

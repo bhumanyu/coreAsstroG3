@@ -321,7 +321,8 @@ function main() {
       artifactPath,
       caseId: c.id,
       expectedCaptureId: `CAPTURE-${c.id}-${c.utcInstant.slice(0, 10)}`,
-      expectedBodies: PLANET_NAMES
+      expectedBodies: PLANET_NAMES,
+      expectedCohortDefinition: c
     });
     const artifact = validated.artifact;
     cohortCaptures.set(c.id, { artifact, artifactPath, sha256: validated.sha256 });

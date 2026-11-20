@@ -74,6 +74,13 @@ Generate **24–36 birth instants** spanning **1900–2100**, stratified across:
 - Moon longitudes bracketing nakshatra boundaries for `VIMSHOTTARI_DASHA` anchor
   fixtures (first-MD boundary cases).
 
+Moon-boundary bracket captures must be distinct, chronologically ordered, from the
+same site/timezone, and no more than two minutes apart. This limit is based on lunar
+motion: the Moon averages about 0.55°/hour, so moving through a 0.01° one-sided
+bracket band takes about 65 seconds; near apogee, at about 0.47°/hour, it takes about
+77 seconds. The 120-second cap allows margin for that slow one-sided crossing while
+rejecting captures too far apart to provide strong evidence of the same crossing.
+
 ### 3b. Calculation-boundary vectors — constructed longitudes
 
 Boundary coverage is supplied by **constructed longitude vectors**, not additional

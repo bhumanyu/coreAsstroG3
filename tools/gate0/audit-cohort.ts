@@ -6,11 +6,16 @@
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GATE0_ROOT, readJsonFile } from './lib/util.ts';
-import { validateCaptureArtifact, type CaptureManifest } from './lib/captureManifest.ts';
+import {
+  validateCaptureArtifact,
+  type CaptureManifest,
+  type CohortCaptureDefinition
+} from './lib/captureManifest.ts';
 
 const BODY_NAMES = ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU'] as const;
 const NAKSHATRA_SPAN = 360 / 27;
 const MOON_BRACKET_LIMIT_DEG = 0.01;
+// At 0.47°/hour, traversing the 0.01° one-sided band takes about 77s; 120s allows margin.
 const MOON_BRACKET_MAX_SEPARATION_MS = 2 * 60 * 1000;
 const PROXIMITY_BANDS = [
   { label: '≤0.001°', max: 0.001 },
@@ -20,12 +25,7 @@ const PROXIMITY_BANDS = [
   { label: '>1°', max: Infinity }
 ] as const;
 
-export interface CohortCase {
-  readonly id: string;
-  readonly utcInstant: string;
-  readonly latitude: number;
-  readonly longitude: number;
-  readonly ianaTimeZone: string;
+export interface CohortCase extends CohortCaptureDefinition {
   readonly dasha: boolean;
 }
 
@@ -105,7 +105,8 @@ export function loadCohortCaptures(): readonly CohortCapture[] {
       artifactPath: path,
       caseId: definition.id,
       expectedCaptureId: `CAPTURE-${definition.id}-${definition.utcInstant.slice(0, 10)}`,
-      expectedBodies: BODY_NAMES
+      expectedBodies: BODY_NAMES,
+      expectedCohortDefinition: definition
     });
     captures.push({
       definition,
