@@ -324,6 +324,546 @@
       "dasha": false,
       "motionHint": "MARS",
       "note": "near-stationary Mars (station-scan verified)"
+    },
+    {
+      "id": "MB-01-BEFORE",
+      "utcInstant": "2026-01-25T08:05:26.992Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 1"
+    },
+    {
+      "id": "MB-01-AFTER",
+      "utcInstant": "2026-01-25T08:06:26.992Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 1"
+    },
+    {
+      "id": "MB-02-BEFORE",
+      "utcInstant": "2026-01-26T07:02:33.405Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 2"
+    },
+    {
+      "id": "MB-02-AFTER",
+      "utcInstant": "2026-01-26T07:03:33.405Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 2"
+    },
+    {
+      "id": "MB-03-BEFORE",
+      "utcInstant": "2026-01-27T05:38:35.031Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 3"
+    },
+    {
+      "id": "MB-03-AFTER",
+      "utcInstant": "2026-01-27T05:39:35.031Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 3"
+    },
+    {
+      "id": "MB-04-BEFORE",
+      "utcInstant": "2026-01-28T03:56:37.547Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 4"
+    },
+    {
+      "id": "MB-04-AFTER",
+      "utcInstant": "2026-01-28T03:57:37.547Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 4"
+    },
+    {
+      "id": "MB-05-BEFORE",
+      "utcInstant": "2026-01-01T17:18:05.112Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 5"
+    },
+    {
+      "id": "MB-05-AFTER",
+      "utcInstant": "2026-01-01T17:19:05.112Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 5"
+    },
+    {
+      "id": "MB-06-BEFORE",
+      "utcInstant": "2026-01-02T14:33:39.414Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 6"
+    },
+    {
+      "id": "MB-06-AFTER",
+      "utcInstant": "2026-01-02T14:34:39.414Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 6"
+    },
+    {
+      "id": "MB-07-BEFORE",
+      "utcInstant": "2026-01-03T11:57:33.048Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 7"
+    },
+    {
+      "id": "MB-07-AFTER",
+      "utcInstant": "2026-01-03T11:58:33.048Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 7"
+    },
+    {
+      "id": "MB-08-BEFORE",
+      "utcInstant": "2026-01-04T09:40:59.490Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 8"
+    },
+    {
+      "id": "MB-08-AFTER",
+      "utcInstant": "2026-01-04T09:41:59.490Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 8"
+    },
+    {
+      "id": "MB-09-BEFORE",
+      "utcInstant": "2026-01-05T07:54:33.898Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 9"
+    },
+    {
+      "id": "MB-09-AFTER",
+      "utcInstant": "2026-01-05T07:55:33.898Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 9"
+    },
+    {
+      "id": "MB-10-BEFORE",
+      "utcInstant": "2026-01-06T06:47:23.309Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 10"
+    },
+    {
+      "id": "MB-10-AFTER",
+      "utcInstant": "2026-01-06T06:48:23.309Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 10"
+    },
+    {
+      "id": "MB-11-BEFORE",
+      "utcInstant": "2026-01-07T06:26:09.445Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 11"
+    },
+    {
+      "id": "MB-11-AFTER",
+      "utcInstant": "2026-01-07T06:27:09.445Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 11"
+    },
+    {
+      "id": "MB-12-BEFORE",
+      "utcInstant": "2026-01-08T06:54:09.248Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 12"
+    },
+    {
+      "id": "MB-12-AFTER",
+      "utcInstant": "2026-01-08T06:55:09.248Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 12"
+    },
+    {
+      "id": "MB-13-BEFORE",
+      "utcInstant": "2026-01-09T08:10:26.003Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 13"
+    },
+    {
+      "id": "MB-13-AFTER",
+      "utcInstant": "2026-01-09T08:11:26.003Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 13"
+    },
+    {
+      "id": "MB-14-BEFORE",
+      "utcInstant": "2026-01-10T10:09:30.273Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 14"
+    },
+    {
+      "id": "MB-14-AFTER",
+      "utcInstant": "2026-01-10T10:10:30.273Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 14"
+    },
+    {
+      "id": "MB-15-BEFORE",
+      "utcInstant": "2026-01-11T12:41:48.596Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 15"
+    },
+    {
+      "id": "MB-15-AFTER",
+      "utcInstant": "2026-01-11T12:42:48.596Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 15"
+    },
+    {
+      "id": "MB-16-BEFORE",
+      "utcInstant": "2026-01-12T15:35:04.554Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 16"
+    },
+    {
+      "id": "MB-16-AFTER",
+      "utcInstant": "2026-01-12T15:36:04.554Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 16"
+    },
+    {
+      "id": "MB-17-BEFORE",
+      "utcInstant": "2026-01-13T18:36:15.090Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 17"
+    },
+    {
+      "id": "MB-17-AFTER",
+      "utcInstant": "2026-01-13T18:37:15.090Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 17"
+    },
+    {
+      "id": "MB-18-BEFORE",
+      "utcInstant": "2026-01-14T21:33:27.894Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 18"
+    },
+    {
+      "id": "MB-18-AFTER",
+      "utcInstant": "2026-01-14T21:34:27.894Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 18"
+    },
+    {
+      "id": "MB-19-BEFORE",
+      "utcInstant": "2026-01-16T00:17:25.562Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 19"
+    },
+    {
+      "id": "MB-19-AFTER",
+      "utcInstant": "2026-01-16T00:18:25.562Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 19"
+    },
+    {
+      "id": "MB-20-BEFORE",
+      "utcInstant": "2026-01-17T02:41:58.886Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 20"
+    },
+    {
+      "id": "MB-20-AFTER",
+      "utcInstant": "2026-01-17T02:42:58.886Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 20"
+    },
+    {
+      "id": "MB-21-BEFORE",
+      "utcInstant": "2026-01-18T04:43:52.662Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 21"
+    },
+    {
+      "id": "MB-21-AFTER",
+      "utcInstant": "2026-01-18T04:44:52.662Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 21"
+    },
+    {
+      "id": "MB-22-BEFORE",
+      "utcInstant": "2026-01-19T06:22:00.988Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 22"
+    },
+    {
+      "id": "MB-22-AFTER",
+      "utcInstant": "2026-01-19T06:23:00.988Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 22"
+    },
+    {
+      "id": "MB-23-BEFORE",
+      "utcInstant": "2026-01-20T07:36:31.952Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 23"
+    },
+    {
+      "id": "MB-23-AFTER",
+      "utcInstant": "2026-01-20T07:37:31.952Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 23"
+    },
+    {
+      "id": "MB-24-BEFORE",
+      "utcInstant": "2026-01-21T08:27:57.795Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 24"
+    },
+    {
+      "id": "MB-24-AFTER",
+      "utcInstant": "2026-01-21T08:28:57.795Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 24"
+    },
+    {
+      "id": "MB-25-BEFORE",
+      "utcInstant": "2026-01-22T08:56:40.863Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 25"
+    },
+    {
+      "id": "MB-25-AFTER",
+      "utcInstant": "2026-01-22T08:57:40.863Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 25"
+    },
+    {
+      "id": "MB-26-BEFORE",
+      "utcInstant": "2026-01-23T09:02:40.210Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 26"
+    },
+    {
+      "id": "MB-26-AFTER",
+      "utcInstant": "2026-01-23T09:03:40.210Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 26"
+    },
+    {
+      "id": "MB-27-BEFORE",
+      "utcInstant": "2026-01-24T08:45:38.836Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor before nakshatra boundary 27"
+    },
+    {
+      "id": "MB-27-AFTER",
+      "utcInstant": "2026-01-24T08:46:38.836Z",
+      "latitude": 0,
+      "longitude": 0,
+      "ianaTimeZone": "UTC",
+      "dasha": true,
+      "motionHint": null,
+      "note": "Moon anchor after nakshatra boundary 27"
     }
   ]
 }

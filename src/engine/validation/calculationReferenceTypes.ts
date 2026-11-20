@@ -9,8 +9,8 @@ import type {
 } from '../../types.ts';
 
 /**
- * Calculation-level references are accepted only when their expected values
- * come from an independently produced source and have been explicitly approved.
+ * Calculation-level references identify independent sources. Human approval
+ * is tracked separately from generated fixture provenance.
  * Engine snapshots and values copied from the implementation are not references.
  */
 export type CalculationReferenceKind =
@@ -38,8 +38,8 @@ export interface ReferenceSource {
   readonly independenceStatement: string;
   readonly independentlyProduced: true;
   readonly retrievedAt: string;
-  readonly approvedBy: string;
-  readonly approvedAt: string;
+  readonly approvedBy?: string;
+  readonly approvedAt?: string;
 }
 
 export type CalculationReferenceProvenance = ReferenceSource;
@@ -165,11 +165,11 @@ export interface SignBoundaryReference extends CalculationReferenceBase<
 > {
   readonly provenance: ReferenceSource & { readonly expectedValuesProducedIndependently: true };
   readonly boundaryDefinition: BoundaryDefinition;
-  /** Approved independent reference value; never derive this from an engine calculation. */
+  /** Independent reference value; never derive this from an engine calculation. */
   readonly boundaryLongitude: number;
   readonly boundaryId: string;
   readonly boundaryPosition: BoundaryPosition;
-  /** Expected category is independently sourced and approved; do not generate it with calculateSign. */
+  /** Expected category is independently sourced; do not generate it with calculateSign. */
   readonly expectedSign: Sign;
 }
 
@@ -180,12 +180,12 @@ export interface NakshatraBoundaryReference extends CalculationReferenceBase<
 > {
   readonly provenance: ReferenceSource & { readonly expectedValuesProducedIndependently: true };
   readonly boundaryDefinition: BoundaryDefinition;
-  /** Boundary identity and expected fields must come from the approved fixture source, not engine output. */
+  /** Boundary identity and expected fields must come from the fixture source, not engine output. */
   readonly boundaryKind: 'NAKSHATRA' | 'PADA';
   readonly boundaryLongitude: number;
   readonly boundaryId: string;
   readonly boundaryPosition: BoundaryPosition;
-  /** Expected values are independently sourced and approved; do not generate them with engine functions. */
+  /** Expected values are independently sourced; do not generate them with engine functions. */
   readonly expectedNakshatra: Nakshatra;
   readonly expectedPada: Pada;
 }
@@ -212,6 +212,7 @@ export interface VimshottariDashaReference extends CalculationReferenceBase<
   {
     readonly birthDateTime: string;
     readonly moonSiderealLongitude: number;
+    readonly birth?: BirthDetails;
     readonly until?: string;
   }
 > {

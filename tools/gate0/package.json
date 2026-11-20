@@ -1,17 +1,28 @@
 {
   "name": "gate0",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "type": "module",
+  "description": "Offline Gate-0 capture and parity harness",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "esbuild capture-cohort.ts capture-boundary.ts gen-fixtures.ts run-parity.ts audit-cohort.ts plan-moon-anchor-cases.ts scan-stations.ts --bundle --platform=node --format=esm --outdir=dist --out-extension:.js=.mjs --external:@kuntay/swisseph --external:@kuntay/swisseph-data",
+    "capture:cohort": "npm run build && node dist/capture-cohort.mjs",
+    "capture:boundary": "npm run build && node dist/capture-boundary.mjs",
+    "generate:fixtures": "npm run build && node dist/gen-fixtures.mjs",
+    "parity": "npm run build && node run-parity-launcher.mjs",
+    "audit:cohort": "npm run build && node dist/audit-cohort.mjs",
+    "plan:moon-anchor-cases": "npm run build && node dist/plan-moon-anchor-cases.mjs",
+    "test": "vitest run --config vitest.config.ts",
+    "check:imports": "node check-import-boundary.mjs"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@kuntay/swisseph": "^0.2.2",
     "@kuntay/swisseph-data": "^0.2.2",
     "astronomy-engine": "^2.1.19"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "vite": "6.4.4",
+    "vitest": "4.1.11"
   }
 }

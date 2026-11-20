@@ -1,205 +1,529 @@
 {
   "schemaVersion": 1,
-  "generatedAtTool": "tools/gate0/capture-cohort.ts",
-  "engineCommitSha": "dd4d5e4668ba2eedcd8700b64fa0ba69cfd93b0b",
+  "generatedAtTool": "tools/gate0/capture-boundary.ts",
+  "engineCommitSha": "e257193197472479db978e503fe8fc4c33c94ae3",
   "icuVersion": "74.2",
   "files": {
     "cohort/BI-001.json": {
-      "sha256": "84ddff92e3df70aa92059cd7eed43802eb8434c70a2229693fe7f6e572b9dc57",
-      "bytes": 12832,
+      "sha256": "7173242b4867a6c99c893bc8a95db055ab02f49d795b3bcd8f813ffcb05f43a8",
+      "bytes": 12846,
       "captureId": "CAPTURE-BI-001-1905-04-12",
       "status": "CAPTURED"
     },
     "cohort/BI-015.json": {
-      "sha256": "f44b064e3b5c0018c3aca806103beea306ce55a5d399638ab4fa071349cf74f8",
-      "bytes": 12835,
+      "sha256": "5089036ea6df9a784140994df5afd53d6eb01b6952ff811c9d915c096cf9238a",
+      "bytes": 12849,
       "captureId": "CAPTURE-BI-015-2015-07-16",
       "status": "CAPTURED"
     },
     "cohort/BI-002.json": {
-      "sha256": "78fdf96679fc8c6f9bc05298465845fa205a328213056e0f6bf6eb8ccb52c585",
-      "bytes": 12947,
+      "sha256": "2632e71b594e998a314042e62984d4b5fcdad4d7238f32c44a05fdfaeb08036a",
+      "bytes": 12961,
       "captureId": "CAPTURE-BI-002-1911-11-03",
       "status": "CAPTURED"
     },
     "cohort/BI-003.json": {
-      "sha256": "0abf4fc5467c0c380683be5151e63c87edeaf5526d118eb6d8ec300b7f20c82d",
-      "bytes": 12836,
+      "sha256": "864a2f661b2412511e6b4c3ca20d4acd011afeedc551eed765db4a6c65f7ca18",
+      "bytes": 12850,
       "captureId": "CAPTURE-BI-003-1918-07-22",
       "status": "CAPTURED"
     },
     "cohort/BI-004.json": {
-      "sha256": "6be241b07e5a8ecba88b8981f517e9bd3f2f9c7f26f2308c80b7f52d09d4cad9",
-      "bytes": 12889,
+      "sha256": "56c37279d929b0ff5806792c448d43dbdfd1bdf3847ff91dfe1c9c604eeae827",
+      "bytes": 12903,
       "captureId": "CAPTURE-BI-004-1926-01-30",
       "status": "CAPTURED"
     },
     "cohort/BI-005.json": {
-      "sha256": "0c9c3b4d65c476401cf447c855bec71cfff5ebab791a447aebc97f033c78b169",
-      "bytes": 12944,
+      "sha256": "3eb2b041dec680a083a5a3fb7856cb15cd357ee0c618b78e92c04b62647af57a",
+      "bytes": 12958,
       "captureId": "CAPTURE-BI-005-1934-09-08",
       "status": "CAPTURED"
     },
     "cohort/BI-006.json": {
-      "sha256": "b17db0d80aadbb0c2c6cd829299d665a623ba4de006bac9e4b85fbdc363b35b8",
-      "bytes": 12812,
+      "sha256": "4de0a65779b1871ee38d6d1dcbb68649de6ad4afea6fa0e48e9294cae32134a7",
+      "bytes": 12826,
       "captureId": "CAPTURE-BI-006-1942-05-17",
       "status": "CAPTURED"
     },
     "cohort/BI-007.json": {
-      "sha256": "86bfe89cdc05abd54753be05a8f037ec6b4f93d046bc78a9dc946aa8d8230884",
-      "bytes": 13014,
+      "sha256": "5aa79ecceb9454c26bc4aaa1881b8624f61fca7e1f04391d188faec4df343094",
+      "bytes": 13028,
       "captureId": "CAPTURE-BI-007-1951-12-05",
       "status": "CAPTURED"
     },
     "cohort/BI-008.json": {
-      "sha256": "8594e2ef02cdd0e3f0ec2b12bb1fe6f6db5112de7a3a5116921ab8f264679938",
-      "bytes": 12870,
+      "sha256": "c63d0e486936d68b05ba855b1163ef19a21364f7dafa5204df8bd20db65225ab",
+      "bytes": 12884,
       "captureId": "CAPTURE-BI-008-1959-03-27",
       "status": "CAPTURED"
     },
     "cohort/BI-009.json": {
-      "sha256": "f098ce7b51dddae2ed7ce577dd2c1b8ab23f0a1c150ea51c3e3e46cca1447da5",
-      "bytes": 12899,
+      "sha256": "63dde02b54d57f2053f6943ab2b71243cf827b8d0dd402c58945da3b628ac0cc",
+      "bytes": 12913,
       "captureId": "CAPTURE-BI-009-1967-08-14",
       "status": "CAPTURED"
     },
     "cohort/BI-010.json": {
-      "sha256": "2ce61f90cc5713de9c54ec431fc4defcf0a73239fa1a9455a642b610923651c0",
-      "bytes": 13040,
+      "sha256": "a7a3f00990d409e5cd9e3cd39feeb90ebf29a60214255be0866ac440b077620b",
+      "bytes": 13054,
       "captureId": "CAPTURE-BI-010-1975-02-19",
       "status": "CAPTURED"
     },
     "cohort/BI-011.json": {
-      "sha256": "316a5bb68f3fb347cf0ddbe8ef03384a10bb2c229e90ce067d01b9d66f5e0006",
-      "bytes": 12935,
+      "sha256": "c466be7855e3b162dff517b7d7a415c7cf09ce3201a54675d83e20fbb7c4897a",
+      "bytes": 12949,
       "captureId": "CAPTURE-BI-011-1983-06-30",
       "status": "CAPTURED"
     },
     "cohort/BI-012.json": {
-      "sha256": "63a01b8e5b796575da83d19100ef6d3f25b8bf1621419d65039b94b0341e1f00",
-      "bytes": 12944,
+      "sha256": "624961cdf30bcfbb897b968c2f2ce1ca022645e24c95368713215747ada1c815",
+      "bytes": 12958,
       "captureId": "CAPTURE-BI-012-1991-10-11",
       "status": "CAPTURED"
     },
     "cohort/BI-013.json": {
-      "sha256": "4336c415d06f31d6746ba29bfb0fd1091c9d7143080d238a1d8de81b03751dab",
-      "bytes": 12867,
+      "sha256": "4be0365707223e4b11ae5d441dad4d8d11d4755c068faf92926f0e395aa3b350",
+      "bytes": 12881,
       "captureId": "CAPTURE-BI-013-1999-04-25",
       "status": "CAPTURED"
     },
     "cohort/BI-014.json": {
-      "sha256": "2176925abbe336932a192d04ffe9251e3c376e5994cf949f27a9f172313a69b8",
-      "bytes": 12949,
+      "sha256": "f796cf8adea2253274e9df6a07ad1f799e05e9252cba885570af8c8137728be4",
+      "bytes": 12963,
       "captureId": "CAPTURE-BI-014-2007-11-08",
       "status": "CAPTURED"
     },
     "cohort/BI-016.json": {
-      "sha256": "79f0b12fd5775378e91525419cb8a401bf9a59b20dba7426a665db9a691f5200",
-      "bytes": 12876,
+      "sha256": "99afb47ec9a29414495f5d9278bf8e1e1ea5599c81c7744538716f0033cb66a2",
+      "bytes": 12890,
       "captureId": "CAPTURE-BI-016-2023-01-05",
       "status": "CAPTURED"
     },
     "cohort/BI-017.json": {
-      "sha256": "37522d761309352a84eb77f780b48b07a0373d4a86633722d0406b27ff61e1ad",
-      "bytes": 12880,
+      "sha256": "8f742832a53f2b16a110baec1f308fc4c1e9f22e576fb35a781e4b0ab7c0abbc",
+      "bytes": 12894,
       "captureId": "CAPTURE-BI-017-2031-08-21",
       "status": "CAPTURED"
     },
     "cohort/BI-018.json": {
-      "sha256": "4a70fbf7d8ece45685a02ad74c9dc723de9e0f6ce7ce8c7956e5f2e6729b7d89",
-      "bytes": 12953,
+      "sha256": "4eda84137b6399b7f78d35be7794cbae3ca31559e3a09493d2dbd670fd6dc0c5",
+      "bytes": 12967,
       "captureId": "CAPTURE-BI-018-2039-03-09",
       "status": "CAPTURED"
     },
     "cohort/BI-019.json": {
-      "sha256": "0f18a80c581c5595b15d30a615b227c79b96bbe62fb2a402adb1416542a7bae8",
-      "bytes": 12853,
+      "sha256": "fa6f4a13bbda41c8a579187b86a2205e9da45bfcc21f51206a0b54a19bdfe30a",
+      "bytes": 12867,
       "captureId": "CAPTURE-BI-019-2047-09-28",
       "status": "CAPTURED"
     },
     "cohort/BI-020.json": {
-      "sha256": "e1d83ced91dca0d9a2c0c6338097868f7fdac372382cd1aff12a89fc43b69ae7",
-      "bytes": 12925,
+      "sha256": "2d3cf1ca10104dfd278e7171d9f49791cd94256d7fa229313119e425fd074243",
+      "bytes": 12939,
       "captureId": "CAPTURE-BI-020-2055-12-17",
       "status": "CAPTURED"
     },
     "cohort/BI-021.json": {
-      "sha256": "bada4eed54c98b64d1241d9ba46c881a71197d04765eba4789057469d700003c",
-      "bytes": 12905,
+      "sha256": "75c7aff23767aebaed5445b5d5d591ac69e666b9089838ef3c6402519ab3ee0c",
+      "bytes": 12919,
       "captureId": "CAPTURE-BI-021-2064-05-03",
       "status": "CAPTURED"
     },
     "cohort/BI-022.json": {
-      "sha256": "86eeb3f20b892ebc1fcb0a0e5109563b311d467c7964a7b3941b4f78af8bba3a",
-      "bytes": 12943,
+      "sha256": "ad5e8125b187c9191633287ed0373bcef3b8a3a9a6353c5cc636dd7f775abd38",
+      "bytes": 12957,
       "captureId": "CAPTURE-BI-022-2072-10-24",
       "status": "CAPTURED"
     },
     "cohort/BI-023.json": {
-      "sha256": "1e04d87e0c90df9f2338c799739b4a22d2ced8f05f5d26333136ceddd18a0205",
-      "bytes": 12927,
+      "sha256": "b6a51d0fdd06209a3eb45f275ae6e21350754f2bc58bb0a26f47ec85d04a5554",
+      "bytes": 12941,
       "captureId": "CAPTURE-BI-023-2081-02-11",
       "status": "CAPTURED"
     },
     "cohort/BI-024.json": {
-      "sha256": "5f2a1daf56ca20550708f57af3f981db251bd399ab2555287c193530e99aabc6",
-      "bytes": 12949,
+      "sha256": "8391fc7646fa3179533de3618b7fce4a966ba6b6abef399f3435368b8717dec6",
+      "bytes": 12963,
       "captureId": "CAPTURE-BI-024-2089-07-07",
       "status": "CAPTURED"
     },
     "cohort/BI-025.json": {
-      "sha256": "d28e6e48d86ac456eb10fc87d1ef171954e2c98463f86b3f75fbbe70f859ddcf",
-      "bytes": 12902,
+      "sha256": "85969021c333601996266831ebeb07726683fcacf047f1c37295a87bda130ef9",
+      "bytes": 12916,
       "captureId": "CAPTURE-BI-025-2097-12-19",
       "status": "CAPTURED"
     },
     "cohort/BI-026.json": {
-      "sha256": "c81f4bbd9907b7650d5d256e98a98f0958151f30f26aa5f098792fe42030482a",
-      "bytes": 12957,
+      "sha256": "705313a19c03aa2ceb571c460898390909e9ef170604571df0364b83dadd6ef4",
+      "bytes": 12971,
       "captureId": "CAPTURE-BI-026-2099-06-02",
       "status": "CAPTURED"
     },
     "cohort/BI-027.json": {
-      "sha256": "2345a51b6ea2f58059ebdaf53e5d170d8e9e0dc259daf813ff1b192e7047caba",
-      "bytes": 13003,
+      "sha256": "010c2c3119870ad7004c0ee5e71336463417f987acf19cb435a62d082df5da44",
+      "bytes": 13017,
       "captureId": "CAPTURE-BI-027-1997-04-25",
       "status": "CAPTURED"
     },
     "cohort/BI-028.json": {
-      "sha256": "23651b12e15f701c6523f0b2723d065130334abdbbdf487014d2d8838348cad5",
-      "bytes": 12917,
+      "sha256": "62ecad37b9b19e172e495e41815ed1383a31b8147d7f4bdb6333498ecd9fc45c",
+      "bytes": 12931,
       "captureId": "CAPTURE-BI-028-2001-03-25",
       "status": "CAPTURED"
     },
     "cohort/BI-029.json": {
-      "sha256": "1d72a29b6a2b48d132087f949965682cd3752b73e4a6595f6c51acba71acea6c",
-      "bytes": 12945,
+      "sha256": "001fbd6db479382beb0138d173613eb37b64a9bf563115cbf9c5963689673ab3",
+      "bytes": 12959,
       "captureId": "CAPTURE-BI-029-2001-06-25",
       "status": "CAPTURED"
     },
     "cohort/BI-030.json": {
-      "sha256": "46e50ed3094d7d3a8f3a4eaf65197919ab9224ef6d904223f9c66a34168384ef",
-      "bytes": 12902,
+      "sha256": "084cbc3e057d6495eba9ff00696d85c9a451d20c0514f1361124ce4740ef8c45",
+      "bytes": 12916,
       "captureId": "CAPTURE-BI-030-2001-06-28",
       "status": "CAPTURED"
     },
     "cohort/BI-031.json": {
-      "sha256": "785547016301bc6c0c59b2872149e2e02eca2dd0ea0f8b6c1fbe8ce27ee6157d",
-      "bytes": 12929,
+      "sha256": "91ea2307610f6efcb2d27c71ddbd6e33cc39e195594efd831931200b26d0d028",
+      "bytes": 12943,
       "captureId": "CAPTURE-BI-031-1999-09-11",
       "status": "CAPTURED"
     },
     "cohort/BI-032.json": {
-      "sha256": "96316ed36404415320233d8467bbd6b4aa44212043d5629080c39ca2d28269c4",
-      "bytes": 12958,
+      "sha256": "1b36db6bef81e8a29496968b9a0719a5952dcfda3e54ecbbab3b02410c641bc1",
+      "bytes": 12972,
       "captureId": "CAPTURE-BI-032-1999-06-04",
       "status": "CAPTURED"
     },
     "boundary-vectors.v1.json": {
-      "sha256": "3309f07ada63facfa3ce67267c83167e87a57e8f5d5366ed0bd30cb07d645240",
-      "bytes": 354102,
-      "captureId": "BOUNDARY-VECTORS-v1",
+      "sha256": "28bf5c2603348b7eb59d7243146bd06c41de66348479fe0a854dcef6529243dc",
+      "bytes": 426798,
+      "captureId": "CAPTURE-BOUNDARY-VECTORS-2026-11-20",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-01-BEFORE.json": {
+      "sha256": "8680fd8612370993ac2591b78810ca5959ddb8cdbafec6a2d0be954ea7198d80",
+      "bytes": 12914,
+      "captureId": "CAPTURE-MB-01-BEFORE-2026-01-25",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-01-AFTER.json": {
+      "sha256": "1ecea2e654c27f5211da18be7e1bac305d630631c5d02c1c8f82c7854df9439c",
+      "bytes": 12996,
+      "captureId": "CAPTURE-MB-01-AFTER-2026-01-25",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-02-BEFORE.json": {
+      "sha256": "710ef2991e783e51b1ce7071adc344dfa751d9ed5e31c9c43259b098543110ca",
+      "bytes": 12978,
+      "captureId": "CAPTURE-MB-02-BEFORE-2026-01-26",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-02-AFTER.json": {
+      "sha256": "da599b5350a139457cb48f703f2848d071288b12077129e8ba808d13680da83f",
+      "bytes": 12890,
+      "captureId": "CAPTURE-MB-02-AFTER-2026-01-26",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-03-BEFORE.json": {
+      "sha256": "3eb24415fe683c09b9babe6897a377dda8555d2ee1f5d1ca9a45f45304e0710c",
+      "bytes": 12895,
+      "captureId": "CAPTURE-MB-03-BEFORE-2026-01-27",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-03-AFTER.json": {
+      "sha256": "b9b7ce7e9248dc7a9522d87f58bed87a0fcf5d69d36dfcc70cb0223aeb47f662",
+      "bytes": 12945,
+      "captureId": "CAPTURE-MB-03-AFTER-2026-01-27",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-04-BEFORE.json": {
+      "sha256": "758925d3dd4d33a75bf024b986b23c95c257345d0b7f6345f379a95183c198ea",
+      "bytes": 12908,
+      "captureId": "CAPTURE-MB-04-BEFORE-2026-01-28",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-04-AFTER.json": {
+      "sha256": "5044d2273ce57bdb6bd3e5e05d887b9fa50f7747a1bc649ad9775c00855513d5",
+      "bytes": 12880,
+      "captureId": "CAPTURE-MB-04-AFTER-2026-01-28",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-05-BEFORE.json": {
+      "sha256": "65503d0fbb998e4a8defa8d6d33ffbb182dce846992e09a6a5f3104d2472ea52",
+      "bytes": 13044,
+      "captureId": "CAPTURE-MB-05-BEFORE-2026-01-01",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-05-AFTER.json": {
+      "sha256": "2649da894deee348a768f6aef330a2d5acb3059417edfc4bccbef3a8a48001a6",
+      "bytes": 12953,
+      "captureId": "CAPTURE-MB-05-AFTER-2026-01-01",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-06-BEFORE.json": {
+      "sha256": "937c7678f0355d5a03b085f9c5f40a1d7e6e9d5f9ddcb0be98fee8c719cc7a3d",
+      "bytes": 12877,
+      "captureId": "CAPTURE-MB-06-BEFORE-2026-01-02",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-06-AFTER.json": {
+      "sha256": "b8021d8a309be6c270a0be1107be654bd8ac79ab01e010e9c16807c77918d98e",
+      "bytes": 12942,
+      "captureId": "CAPTURE-MB-06-AFTER-2026-01-02",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-07-BEFORE.json": {
+      "sha256": "1831a554315851b74bfb8051ac266f9d7f6e9c3e7eeda79e24d320042aff2d5d",
+      "bytes": 12975,
+      "captureId": "CAPTURE-MB-07-BEFORE-2026-01-03",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-07-AFTER.json": {
+      "sha256": "15e58f16dad41292176da1e69a33a8973db18f546791d3f79eef74f16cf38f82",
+      "bytes": 12984,
+      "captureId": "CAPTURE-MB-07-AFTER-2026-01-03",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-08-BEFORE.json": {
+      "sha256": "50a4e836a2516670ac8326b41fc8f3c3e96e04594317e0ab3eca41491c8dc743",
+      "bytes": 12937,
+      "captureId": "CAPTURE-MB-08-BEFORE-2026-01-04",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-08-AFTER.json": {
+      "sha256": "405b3c9708a3f5c4ffa0d6786f8b17cd00362d07b367fb03d638e23e803954eb",
+      "bytes": 12905,
+      "captureId": "CAPTURE-MB-08-AFTER-2026-01-04",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-09-BEFORE.json": {
+      "sha256": "87fffbf3af525a8ca093d3db51210b97175326f59cfa41e956c72b5d012a3d00",
+      "bytes": 12887,
+      "captureId": "CAPTURE-MB-09-BEFORE-2026-01-05",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-09-AFTER.json": {
+      "sha256": "012656c653f136be915213d8575b907602b9cce380ebae736e592a345b76e31a",
+      "bytes": 13003,
+      "captureId": "CAPTURE-MB-09-AFTER-2026-01-05",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-10-BEFORE.json": {
+      "sha256": "95ca94cac7a8c442ce8a30e4bc74affe2c7d48068453ae6a6739214a395206dd",
+      "bytes": 12966,
+      "captureId": "CAPTURE-MB-10-BEFORE-2026-01-06",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-10-AFTER.json": {
+      "sha256": "f89cb35e47c8172704f4995672c160b3e1a50494d0bc11386785db235f695907",
+      "bytes": 13000,
+      "captureId": "CAPTURE-MB-10-AFTER-2026-01-06",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-11-BEFORE.json": {
+      "sha256": "7921ae027bf1f8e82ba3836505cb7f302459587a505f946a94731a6cbb2c5d47",
+      "bytes": 12914,
+      "captureId": "CAPTURE-MB-11-BEFORE-2026-01-07",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-11-AFTER.json": {
+      "sha256": "338b77b910a2630f8bec25ca4ae6a69c37a13d99d772f5036284ed5cab0ca439",
+      "bytes": 12953,
+      "captureId": "CAPTURE-MB-11-AFTER-2026-01-07",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-12-BEFORE.json": {
+      "sha256": "fb855d50d66720f667cb08080508339030ba2ee5ec342b34387f13834eb4ae09",
+      "bytes": 12968,
+      "captureId": "CAPTURE-MB-12-BEFORE-2026-01-08",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-12-AFTER.json": {
+      "sha256": "0e998f51b3c10ea78629b34e80706b634423cecb17822259e53f0447125ec717",
+      "bytes": 12930,
+      "captureId": "CAPTURE-MB-12-AFTER-2026-01-08",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-13-BEFORE.json": {
+      "sha256": "b26a8e4772c02cbe294038f7b26bf0f79571d91cce4e44d2e3e04567f147aef0",
+      "bytes": 12957,
+      "captureId": "CAPTURE-MB-13-BEFORE-2026-01-09",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-13-AFTER.json": {
+      "sha256": "4ebf8b368b6511777a12898d8de74d6f85a7a15a11f60d59f0ce57c5e3191392",
+      "bytes": 13000,
+      "captureId": "CAPTURE-MB-13-AFTER-2026-01-09",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-14-BEFORE.json": {
+      "sha256": "0cdce6e769cfd8a443e991d28fbfcd87f8672a116b1130c1c52464b996ed4ac8",
+      "bytes": 13022,
+      "captureId": "CAPTURE-MB-14-BEFORE-2026-01-10",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-14-AFTER.json": {
+      "sha256": "fbad240877c93cc98410559d58ff77fc4956dbf14af21c4f28704264d6bc8734",
+      "bytes": 12916,
+      "captureId": "CAPTURE-MB-14-AFTER-2026-01-10",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-15-BEFORE.json": {
+      "sha256": "644bdda7dc03c46cf590792dc0626e1cddc5e9cb9af596a8daed973f6162fe6d",
+      "bytes": 12943,
+      "captureId": "CAPTURE-MB-15-BEFORE-2026-01-11",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-15-AFTER.json": {
+      "sha256": "a236d49b6e56b1278158ba8ab7705240ea5f806b57e543a21e3e613370bab54b",
+      "bytes": 12905,
+      "captureId": "CAPTURE-MB-15-AFTER-2026-01-11",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-16-BEFORE.json": {
+      "sha256": "4453b8fae6cf6ce6087534e7afbe33eb5d08c84e6e11bf6becbb9529fbfd885c",
+      "bytes": 12919,
+      "captureId": "CAPTURE-MB-16-BEFORE-2026-01-12",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-16-AFTER.json": {
+      "sha256": "f2ace14bf2a2ad28da463d4de15116c60575aabecc1b790410e5ee628411c25d",
+      "bytes": 12933,
+      "captureId": "CAPTURE-MB-16-AFTER-2026-01-12",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-17-BEFORE.json": {
+      "sha256": "f9540d9c1f7a3223478d3afa2b933719e76e38b9dca39bd9d8d18ea3147d93e0",
+      "bytes": 12913,
+      "captureId": "CAPTURE-MB-17-BEFORE-2026-01-13",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-17-AFTER.json": {
+      "sha256": "0f836e3e14d420220f4a1aab151e88e72f61655754cb040200294e1945c44395",
+      "bytes": 12976,
+      "captureId": "CAPTURE-MB-17-AFTER-2026-01-13",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-18-BEFORE.json": {
+      "sha256": "b214f99e704c26527aebd8b48c60fcb50b802cc49a760bb1a807948e85c87c1d",
+      "bytes": 12903,
+      "captureId": "CAPTURE-MB-18-BEFORE-2026-01-14",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-18-AFTER.json": {
+      "sha256": "0bab92878628571ee1a06088a6e6a56d92b6f6c166566a9c8bb2c31a2bda2605",
+      "bytes": 13018,
+      "captureId": "CAPTURE-MB-18-AFTER-2026-01-14",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-19-BEFORE.json": {
+      "sha256": "b0ddaa41872329e207aed619f11a7a130061c8c1210563c68fb460ca9d25b36e",
+      "bytes": 12935,
+      "captureId": "CAPTURE-MB-19-BEFORE-2026-01-16",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-19-AFTER.json": {
+      "sha256": "7576e49077b38a8b4d5d84495b5c06649359ecfe555a073b9b1bd48fd776ce64",
+      "bytes": 12934,
+      "captureId": "CAPTURE-MB-19-AFTER-2026-01-16",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-20-BEFORE.json": {
+      "sha256": "58a4c78ae86058614aaebce9cb395785e0b2ad82d66010347355d2513b058940",
+      "bytes": 13009,
+      "captureId": "CAPTURE-MB-20-BEFORE-2026-01-17",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-20-AFTER.json": {
+      "sha256": "48561044a64189aa79cad9890781e2e75ba78fad6da17ad1cfe13c9a8a17128d",
+      "bytes": 12925,
+      "captureId": "CAPTURE-MB-20-AFTER-2026-01-17",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-21-BEFORE.json": {
+      "sha256": "0c973f58125bba0266356381e1bc66ab950cf7cb7c973561a40b7048c8a8824a",
+      "bytes": 12964,
+      "captureId": "CAPTURE-MB-21-BEFORE-2026-01-18",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-21-AFTER.json": {
+      "sha256": "8bdca1da6e3b3eebb5c45433889b088dc20686515d729a0c6e308fcd14a43c34",
+      "bytes": 12975,
+      "captureId": "CAPTURE-MB-21-AFTER-2026-01-18",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-22-BEFORE.json": {
+      "sha256": "95486196c25bd1de1969e435418436815640cc5337ec1d1f27475514ebff717c",
+      "bytes": 13016,
+      "captureId": "CAPTURE-MB-22-BEFORE-2026-01-19",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-22-AFTER.json": {
+      "sha256": "7a9bc96d9c5507c374d09990fe669682a0c7c0884aa0ee42a151c0b77f38b47f",
+      "bytes": 12995,
+      "captureId": "CAPTURE-MB-22-AFTER-2026-01-19",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-23-BEFORE.json": {
+      "sha256": "8a8dcabbb852c802a2df2a6ac756974093870aee5bfeff460cb22f1b05c3abe9",
+      "bytes": 12953,
+      "captureId": "CAPTURE-MB-23-BEFORE-2026-01-20",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-23-AFTER.json": {
+      "sha256": "2ac06853aec39756bd1c600665611807b60295a1b5b398f02962bc314538910c",
+      "bytes": 13052,
+      "captureId": "CAPTURE-MB-23-AFTER-2026-01-20",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-24-BEFORE.json": {
+      "sha256": "c176d40f96424f5457828ad4f9db477b5ea66ec256fbad84107b799ec1cf0380",
+      "bytes": 12982,
+      "captureId": "CAPTURE-MB-24-BEFORE-2026-01-21",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-24-AFTER.json": {
+      "sha256": "dcc9827fdc5b634397323be49cade5ba72e71e096ff26cdf68e7f4b6c730034b",
+      "bytes": 12938,
+      "captureId": "CAPTURE-MB-24-AFTER-2026-01-21",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-25-BEFORE.json": {
+      "sha256": "4e9b05f2bf21eb10d79f9312a821e6e1b0584839cf337dca006c5011bb958ec5",
+      "bytes": 12981,
+      "captureId": "CAPTURE-MB-25-BEFORE-2026-01-22",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-25-AFTER.json": {
+      "sha256": "2edbec405b2f4c31c97a9f7ec642363f6d7e8f5eab4cabe742adf6b9fa87904a",
+      "bytes": 13029,
+      "captureId": "CAPTURE-MB-25-AFTER-2026-01-22",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-26-BEFORE.json": {
+      "sha256": "c75f323bf88112e8d78f051168bcaa2423d24823c61113e1237872c2b6251059",
+      "bytes": 12929,
+      "captureId": "CAPTURE-MB-26-BEFORE-2026-01-23",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-26-AFTER.json": {
+      "sha256": "02ab8d13753631e614086736aca137ce7bca0a4363f4751bb161305b85e35ad3",
+      "bytes": 12962,
+      "captureId": "CAPTURE-MB-26-AFTER-2026-01-23",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-27-BEFORE.json": {
+      "sha256": "03abb39c325e39d7568bbc476ca2e6e866980a35e9f058909f999232f19c142b",
+      "bytes": 13072,
+      "captureId": "CAPTURE-MB-27-BEFORE-2026-01-24",
+      "status": "CAPTURED"
+    },
+    "cohort/MB-27-AFTER.json": {
+      "sha256": "35a0844c9ab36a90c4dc514581dc10ed8e75d6872f3c35680f7ff9aa7578b886",
+      "bytes": 12948,
+      "captureId": "CAPTURE-MB-27-AFTER-2026-01-24",
       "status": "CAPTURED"
     }
   }

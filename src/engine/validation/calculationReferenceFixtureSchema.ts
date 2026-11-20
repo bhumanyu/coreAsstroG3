@@ -8,8 +8,8 @@
  * HARD CONSTRAINTS (see docs/career/audit/GATE-0-VALIDATION-PROTOCOL.md):
  * - This module contains NO expected values. Builders accept expected values
  *   as caller-supplied arguments; nothing here derives them from engine output.
- * - `CALCULATION_REFERENCE_FIXTURES` in `./calculationReferenceFixtures.ts`
- *   remains empty until independently produced, approved reference data exists.
+ * - Expected values must come from independently produced reference data;
+ *   human approval is tracked separately from generated fixture provenance.
  * - Missing data must stay UNAVAILABLE / NOT_PROVIDED; never fabricate.
  * - Engine output must never seed a reference fixture.
  *
@@ -74,6 +74,13 @@ export interface ReferenceCaptureRecord {
   readonly rawCapturedOutput: string;
   /** Engine commit SHA the fixture was validated against (informational). */
   readonly engineCommitSha: string;
+  /** Multiple source artifacts used to derive this reference, when applicable. */
+  readonly derivedFrom?: readonly {
+    readonly captureId: string;
+    readonly sourceArtifactSha256: string;
+    readonly referenceImplementation: string;
+    readonly referenceImplementationVersion: string;
+  }[];
 }
 
 /**
@@ -213,7 +220,8 @@ export function boundaryTripletLongitudes(
 /* Fixture builders                                                    */
 /*
  * Each builder is a pure assembler: every expected value is supplied by the
- * caller from an approved independent source. Builders never compute,
+ * caller from an independent source. Human approval is tracked separately;
+ * builders never compute,
  * interpolate, or default expected values.
  * ------------------------------------------------------------------ */
 
@@ -526,7 +534,9 @@ export interface VimshottariDashaFixtureInput {
   readonly entryPoint: 'calculateVimshottari';
   readonly description: string;
   readonly birthDateTime: string;
-  /** Moon sidereal longitude locked from an approved independent source. */
+  /** Birth inputs used for end-to-end dasha measurement from engine Moon output. */
+  readonly birth?: BirthDetails;
+  /** Moon sidereal longitude locked from an independent capture. */
   readonly moonSiderealLongitude: number;
   readonly until?: string;
   readonly provenance: FixtureProvenance;
@@ -576,6 +586,7 @@ export function buildVimshottariDashaFixture(
     input: Object.freeze({
       birthDateTime: input.birthDateTime,
       moonSiderealLongitude: input.moonSiderealLongitude,
+      ...(input.birth ? { birth: input.birth } : {}),
       ...(input.until !== undefined ? { until: input.until } : {})
     }),
     provenance: input.provenance,

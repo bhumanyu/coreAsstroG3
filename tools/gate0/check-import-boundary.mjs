@@ -1,12 +1,13 @@
 // Gate-0 import-boundary check: verifies no runtime/production module under
-// src/ (or scripts/, except this harness's own tree) imports anything under
-// tools/gate0/. Offline tooling only — not part of the shipped bundle.
+// src/, workers/, or scripts/ imports anything under tools/gate0/.
+// It recognizes literal import specifiers; computed/non-literal dynamic
+// imports cannot be resolved by this source scan.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
-const scanRoots = ['src', 'scripts', 'app', 'pages', 'components', 'lib', 'server'];
+const scanRoots = ['src', 'workers', 'scripts'];
 const needle = /tools[\\/]gate0|gate0[\\/]/;
 const importPattern = /(?:import|export)[^'"]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]|require\s*\(\s*['"]([^'"]+)['"]/g;
 

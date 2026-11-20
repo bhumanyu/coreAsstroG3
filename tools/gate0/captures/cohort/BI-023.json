@@ -56,7 +56,7 @@
     "nodeConvention": "MEAN (Ketu = mean node + 180 deg)",
     "frameTropical": "tropical, mean equinox of date",
     "frameSidereal": "sidereal, SEFLG_SIDEREAL, ayanamsa mode LAHIRI (1)",
-    "timeStandard": "UTC input; TT handled internally via deltaT",
+    "timeStandard": "UTC input -> UT JD; swe_calc_ut applies deltaT internally",
     "flagsTropical": "SEFLG_SWIEPH|SEFLG_SPEED (geocentric apparent, nutation, light-time+aberration)",
     "flagsSidereal": "SEFLG_SWIEPH|SEFLG_SPEED|SEFLG_SIDEREAL (ayanamsa=LAHIRI)"
   },

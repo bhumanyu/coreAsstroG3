@@ -9,14 +9,16 @@
  * longitude to the Swiss Ephemeris cohort captures.
  */
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { boundaryTripletLongitudes, type BoundaryTripletSpec } from '../../src/engine/validation/calculationReferenceFixtureSchema.ts';
 import {
-  SIGNS, NAKSHATRA_DEFS, NAKSHATRA_SPAN_DEG, PADA_SPAN_DEG, SIGN_SPAN_DEG,
+  SIGNS, NAKSHATRA_DEFS, NAKSHATRA_SPAN_DEG, PADA_SPAN_DEG,
   signAt, padaAt, vargaD9, vargaD10, wholeSignHouse, vimshottariAnchor,
   type SignName
 } from './lib/grid.ts';
-import { canonicalJson, gitCommitSha, readJsonFile, repoRoot, sha256Hex, GATE0_ROOT } from './lib/util.ts';
+import { canonicalJson, gitCommitSha, readJsonFile, repoRoot, sha256Hex, writeJsonFile, GATE0_ROOT } from './lib/util.ts';
+import { validateCaptureArtifact, type CaptureManifest } from './lib/captureManifest.ts';
 
 /** Must match boundaryTripletLongitudes' internal normalize exactly. */
 const norm360 = (d: number) => ((d % 360) + 360) % 360;
@@ -43,7 +45,7 @@ interface BoundaryVectorRecord {
   rawLine: string;
 }
 
-function buildBoundaryVectors(): BoundaryVectorRecord[] {
+export function buildBoundaryVectors(): BoundaryVectorRecord[] {
   const policy = (JSON.parse(readFileSync(
     join(repoRoot(), 'docs/release/release-policy.json'), 'utf8'
   )) as { calculationCoverage: { boundaryEpsilonDegrees: { min: number; max: number } } })
@@ -200,20 +202,22 @@ interface CohortArtifact {
   capture: { ayanamsaDegrees: number; bodies: Record<string, { sidereal: { longitude: number; longitudeSpeed: number } }> };
 }
 
-function buildDashaAnchors(): unknown[] {
+function buildDashaAnchors(manifest: CaptureManifest): unknown[] {
   const cohortDir = join(GATE0_ROOT, 'captures/cohort');
   const cases = readJsonFile<{ cases: { id: string; dasha: boolean; utcInstant: string }[] }>(
     join(GATE0_ROOT, 'cohort/cases.v1.json')
-  ).cases.filter(c => c.dasha);
+  ).cases.filter(c => c.dasha && !c.utcInstant.startsWith('TBD'));
   const out: unknown[] = [];
   for (const c of cases) {
     const path = join(cohortDir, `${c.id}.json`);
-    let artifact: CohortArtifact;
-    try {
-      artifact = readJsonFile<CohortArtifact>(path);
-    } catch {
-      continue; // capture missing -> skip; gen-fixtures will BLOCK if needed
-    }
+    const { artifact } = validateCaptureArtifact<CohortArtifact>({
+      manifest,
+      relativePath: `cohort/${c.id}.json`,
+      artifactPath: path,
+      caseId: c.id,
+      expectedCaptureId: `CAPTURE-${c.id}-${c.utcInstant.slice(0, 10)}`,
+      expectedBodies: ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU']
+    });
     const moonLon = artifact.capture.bodies.MOON.sidereal.longitude;
     const birthMs = new Date(c.utcInstant).getTime();
     const anchor = vimshottariAnchor(moonLon, birthMs);
@@ -251,10 +255,12 @@ function buildDashaAnchors(): unknown[] {
 
 async function main() {
   const root = repoRoot();
+  const manifestPath = join(GATE0_ROOT, 'captures/manifest.json');
+  const manifest = readJsonFile<CaptureManifest>(manifestPath);
   const vectors = buildBoundaryVectors();
   const vargaVectors = buildVargaVectors();
   const houseVectors = buildHouseVectors();
-  const dashaAnchors = buildDashaAnchors();
+  const dashaAnchors = buildDashaAnchors(manifest);
 
   const artifact = {
     schemaVersion: 1,
@@ -282,9 +288,26 @@ async function main() {
   mkdirSync(join(GATE0_ROOT, 'captures'), { recursive: true });
   writeFileSync(outPath, json, 'utf8');
   const sha = sha256Hex(json);
+  const nextManifest = {
+    ...manifest,
+    generatedAtTool: 'tools/gate0/capture-boundary.ts',
+    files: {
+      ...manifest.files,
+      'boundary-vectors.v1.json': {
+        sha256: sha,
+        bytes: Buffer.byteLength(json),
+        captureId: CAPTURE_ID,
+        status: 'CAPTURED' as const
+      }
+    }
+  };
+  writeJsonFile(manifestPath, nextManifest);
   console.log(`wrote ${outPath}`);
   console.log(`sha256=${sha}`);
   console.log(`boundaryVectors=${vectors.length} vargaVectors=${vargaVectors.length} houseVectors=${houseVectors.length} dashaAnchors=${dashaAnchors.length}`);
+  console.log(`manifest updated: ${manifestPath}`);
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  main().catch(err => { console.error(err); process.exit(1); });
+}

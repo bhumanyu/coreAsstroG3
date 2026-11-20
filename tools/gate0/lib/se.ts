@@ -16,8 +16,9 @@
  *    (SEFLG_SIDEREAL with ayanamsa mode LAHIRI = 1) are captured separately so
  *    raw and normalized values are preserved independently.
  *  - Nodes: MEAN node (SE mean lunar node). Ketu = mean node + 180°.
- *  - Time: UTC instant -> UT julian day via swe.julianDay (TT handled
- *    internally through deltaT for the ephemeris evaluation).
+ *  - Time: UTC instant -> UT julian day via swe.julianDay. In
+ *    @kuntay/swisseph@0.2.2, SwissEph.calc() calls swe_calc_ut(), which
+ *    accepts UT and applies deltaT internally; do not add deltaT to this JD.
  */
 import { createSwissEph, Body, Flag, Ayanamsa, HouseSystem, type SwissEph, type Position } from '@kuntay/swisseph';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -156,7 +157,7 @@ export function captureInstant(
   const warnings: string[] = [];
   const models = new Set<string>();
   for (const [name, bodyId] of Object.entries(SE_BODY_MAP)) {
-    const tropical = swe.calc(jd, bodyId);
+    const tropical = swe.calc(jd, bodyId, { flags: SPEED_FLAG });
     const sidereal = swe.calc(jd, bodyId, { flags: Flag.Sidereal | SPEED_FLAG });
     models.add(tropical.ephemeris);
     models.add(sidereal.ephemeris);

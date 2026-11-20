@@ -10,7 +10,7 @@
     "gridEpsilonDeg": 1e-12,
     "vimshottariYearDays": 365.25
   },
-  "engineCommitSha": "dd4d5e4668ba2eedcd8700b64fa0ba69cfd93b0b",
+  "engineCommitSha": "e257193197472479db978e503fe8fc4c33c94ae3",
   "boundaryEpsilonDegrees": 0.00001,
   "boundaryVectors": [
     {
@@ -8165,6 +8165,1518 @@
         "firstMahadashaEnd": "2098-11-12T01:25:42.833Z"
       },
       "rawLine": "{\"birthUtc\":\"2097-12-19T03:45:00Z\",\"caseId\":\"BI-025\",\"firstMahadashaEnd\":\"2098-11-12T01:25:42.833Z\",\"firstMahadashaLord\":\"MARS\",\"firstMahadashaStart\":\"2097-12-19T03:45:00.000Z\",\"moonSiderealLongitude\":64.95666621798091,\"nakshatra\":\"MRIGASHIRA\",\"nakshatraLord\":\"MARS\",\"nakshatraProgress\":0.871749966348568,\"remainingFraction\":0.12825003365143195}"
+    },
+    {
+      "vectorId": "DASHA-MB-01-BEFORE",
+      "caseId": "MB-01-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-01-BEFORE-2026-01-25",
+      "moonSiderealLongitude": 359.9951980556956,
+      "birthUtcInstant": "2026-01-25T08:05:26.992Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-25T08:05:26.992Z",
+          "localRepresentation": "2026-01-25T08:05:26+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223056969442748,
+      "expected": {
+        "nakshatra": "REVATI",
+        "nakshatraEnglish": "Revati",
+        "nakshatraLord": "MERCURY",
+        "nakshatraProgress": 0.9996398541771683,
+        "remainingFraction": 0.0003601458228317256,
+        "firstMahadashaLord": "MERCURY",
+        "firstMahadashaStart": "2026-01-25T08:05:26.992Z",
+        "firstMahadashaEnd": "2026-01-27T13:45:37.734Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-25T08:05:26.992Z\",\"caseId\":\"MB-01-BEFORE\",\"firstMahadashaEnd\":\"2026-01-27T13:45:37.734Z\",\"firstMahadashaLord\":\"MERCURY\",\"firstMahadashaStart\":\"2026-01-25T08:05:26.992Z\",\"moonSiderealLongitude\":359.9951980556956,\"nakshatra\":\"REVATI\",\"nakshatraLord\":\"MERCURY\",\"nakshatraProgress\":0.9996398541771683,\"remainingFraction\":0.0003601458228317256}"
+    },
+    {
+      "vectorId": "DASHA-MB-01-AFTER",
+      "caseId": "MB-01-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-01-AFTER-2026-01-25",
+      "moonSiderealLongitude": 0.004802167742017377,
+      "birthUtcInstant": "2026-01-25T08:06:26.992Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-25T08:06:26.992Z",
+          "localRepresentation": "2026-01-25T08:06:26+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22305698798434,
+      "expected": {
+        "nakshatra": "ASHWINI",
+        "nakshatraEnglish": "Ashwini",
+        "nakshatraLord": "KETU",
+        "nakshatraProgress": 0.00036016258065130327,
+        "remainingFraction": 0.9996398374193487,
+        "firstMahadashaLord": "KETU",
+        "firstMahadashaStart": "2026-01-25T08:06:26.992Z",
+        "firstMahadashaEnd": "2033-01-24T04:00:25.925Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-25T08:06:26.992Z\",\"caseId\":\"MB-01-AFTER\",\"firstMahadashaEnd\":\"2033-01-24T04:00:25.925Z\",\"firstMahadashaLord\":\"KETU\",\"firstMahadashaStart\":\"2026-01-25T08:06:26.992Z\",\"moonSiderealLongitude\":0.004802167742017377,\"nakshatra\":\"ASHWINI\",\"nakshatraLord\":\"KETU\",\"nakshatraProgress\":0.00036016258065130327,\"remainingFraction\":0.9996398374193487}"
+    },
+    {
+      "vectorId": "DASHA-MB-02-BEFORE",
+      "caseId": "MB-02-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-02-BEFORE-2026-01-26",
+      "moonSiderealLongitude": 13.328453650172788,
+      "birthUtcInstant": "2026-01-26T07:02:33.405Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-26T07:02:33.405Z",
+          "localRepresentation": "2026-01-26T07:02:33+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.2230894932747,
+      "expected": {
+        "nakshatra": "ASHWINI",
+        "nakshatraEnglish": "Ashwini",
+        "nakshatraLord": "KETU",
+        "nakshatraProgress": 0.9996340237629591,
+        "remainingFraction": 0.0003659762370409325,
+        "firstMahadashaLord": "KETU",
+        "firstMahadashaStart": "2026-01-26T07:02:33.405Z",
+        "firstMahadashaEnd": "2026-01-27T05:29:58.726Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-26T07:02:33.405Z\",\"caseId\":\"MB-02-BEFORE\",\"firstMahadashaEnd\":\"2026-01-27T05:29:58.726Z\",\"firstMahadashaLord\":\"KETU\",\"firstMahadashaStart\":\"2026-01-26T07:02:33.405Z\",\"moonSiderealLongitude\":13.328453650172788,\"nakshatra\":\"ASHWINI\",\"nakshatraLord\":\"KETU\",\"nakshatraProgress\":0.9996340237629591,\"remainingFraction\":0.0003659762370409325}"
+    },
+    {
+      "vectorId": "DASHA-MB-02-AFTER",
+      "caseId": "MB-02-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-02-AFTER-2026-01-26",
+      "moonSiderealLongitude": 13.338213203583612,
+      "birthUtcInstant": "2026-01-26T07:03:33.405Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-26T07:03:33.405Z",
+          "localRepresentation": "2026-01-26T07:03:33+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223089522487786,
+      "expected": {
+        "nakshatra": "BHARANI",
+        "nakshatraEnglish": "Bharani",
+        "nakshatraLord": "VENUS",
+        "nakshatraProgress": 0.0003659902687708438,
+        "remainingFraction": 0.9996340097312292,
+        "firstMahadashaLord": "VENUS",
+        "firstMahadashaStart": "2026-01-26T07:03:33.405Z",
+        "firstMahadashaEnd": "2046-01-23T14:53:37.914Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-26T07:03:33.405Z\",\"caseId\":\"MB-02-AFTER\",\"firstMahadashaEnd\":\"2046-01-23T14:53:37.914Z\",\"firstMahadashaLord\":\"VENUS\",\"firstMahadashaStart\":\"2026-01-26T07:03:33.405Z\",\"moonSiderealLongitude\":13.338213203583612,\"nakshatra\":\"BHARANI\",\"nakshatraLord\":\"VENUS\",\"nakshatraProgress\":0.0003659902687708438,\"remainingFraction\":0.9996340097312292}"
+    },
+    {
+      "vectorId": "DASHA-MB-03-BEFORE",
+      "caseId": "MB-03-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-03-BEFORE-2026-01-27",
+      "moonSiderealLongitude": 26.661715178737804,
+      "birthUtcInstant": "2026-01-27T05:38:35.031Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-27T05:38:35.031Z",
+          "localRepresentation": "2026-01-27T05:38:35+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223137404642,
+      "expected": {
+        "nakshatra": "BHARANI",
+        "nakshatraEnglish": "Bharani",
+        "nakshatraLord": "VENUS",
+        "nakshatraProgress": 0.9996286384053352,
+        "remainingFraction": 0.00037136159466477636,
+        "firstMahadashaLord": "VENUS",
+        "firstMahadashaStart": "2026-01-27T05:38:35.031Z",
+        "firstMahadashaEnd": "2026-01-29T22:45:00.644Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-27T05:38:35.031Z\",\"caseId\":\"MB-03-BEFORE\",\"firstMahadashaEnd\":\"2026-01-29T22:45:00.644Z\",\"firstMahadashaLord\":\"VENUS\",\"firstMahadashaStart\":\"2026-01-27T05:38:35.031Z\",\"moonSiderealLongitude\":26.661715178737804,\"nakshatra\":\"BHARANI\",\"nakshatraLord\":\"VENUS\",\"nakshatraProgress\":0.9996286384053352,\"remainingFraction\":0.00037136159466477636}"
+    },
+    {
+      "vectorId": "DASHA-MB-03-AFTER",
+      "caseId": "MB-03-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-03-AFTER-2026-01-27",
+      "moonSiderealLongitude": 26.671618228858176,
+      "birthUtcInstant": "2026-01-27T05:39:35.031Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-27T05:39:35.031Z",
+          "localRepresentation": "2026-01-27T05:39:35+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223137446190574,
+      "expected": {
+        "nakshatra": "KRITTIKA",
+        "nakshatraEnglish": "Krittika",
+        "nakshatraLord": "SUN",
+        "nakshatraProgress": 0.0003713671643630789,
+        "remainingFraction": 0.999628632835637,
+        "firstMahadashaLord": "SUN",
+        "firstMahadashaStart": "2026-01-27T05:39:35.031Z",
+        "firstMahadashaEnd": "2032-01-26T22:07:38.292Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-27T05:39:35.031Z\",\"caseId\":\"MB-03-AFTER\",\"firstMahadashaEnd\":\"2032-01-26T22:07:38.292Z\",\"firstMahadashaLord\":\"SUN\",\"firstMahadashaStart\":\"2026-01-27T05:39:35.031Z\",\"moonSiderealLongitude\":26.671618228858176,\"nakshatra\":\"KRITTIKA\",\"nakshatraLord\":\"SUN\",\"nakshatraProgress\":0.0003713671643630789,\"remainingFraction\":0.999628632835637}"
+    },
+    {
+      "vectorId": "DASHA-MB-04-BEFORE",
+      "caseId": "MB-04-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-04-BEFORE-2026-01-28",
+      "moonSiderealLongitude": 39.99498937103062,
+      "birthUtcInstant": "2026-01-28T03:56:37.547Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-28T03:56:37.547Z",
+          "localRepresentation": "2026-01-28T03:56:37+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223200790113587,
+      "expected": {
+        "nakshatra": "KRITTIKA",
+        "nakshatraEnglish": "Krittika",
+        "nakshatraLord": "SUN",
+        "nakshatraProgress": 0.9996242028272964,
+        "remainingFraction": 0.0003757971727036402,
+        "firstMahadashaLord": "SUN",
+        "firstMahadashaStart": "2026-01-28T03:56:37.547Z",
+        "firstMahadashaEnd": "2026-01-28T23:42:33.088Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-28T03:56:37.547Z\",\"caseId\":\"MB-04-BEFORE\",\"firstMahadashaEnd\":\"2026-01-28T23:42:33.088Z\",\"firstMahadashaLord\":\"SUN\",\"firstMahadashaStart\":\"2026-01-28T03:56:37.547Z\",\"moonSiderealLongitude\":39.99498937103062,\"nakshatra\":\"KRITTIKA\",\"nakshatraLord\":\"SUN\",\"nakshatraProgress\":0.9996242028272964,\"remainingFraction\":0.0003757971727036402}"
+    },
+    {
+      "vectorId": "DASHA-MB-04-AFTER",
+      "caseId": "MB-04-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-04-AFTER-2026-01-28",
+      "moonSiderealLongitude": 40.005010788014474,
+      "birthUtcInstant": "2026-01-28T03:57:37.547Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-28T03:57:37.547Z",
+          "localRepresentation": "2026-01-28T03:57:37+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223200842925085,
+      "expected": {
+        "nakshatra": "ROHINI",
+        "nakshatraEnglish": "Rohini",
+        "nakshatraLord": "MOON",
+        "nakshatraProgress": 0.00037580910108552245,
+        "remainingFraction": 0.9996241908989145,
+        "firstMahadashaLord": "MOON",
+        "firstMahadashaStart": "2026-01-28T03:57:37.547Z",
+        "firstMahadashaEnd": "2036-01-27T07:01:01.214Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-28T03:57:37.547Z\",\"caseId\":\"MB-04-AFTER\",\"firstMahadashaEnd\":\"2036-01-27T07:01:01.214Z\",\"firstMahadashaLord\":\"MOON\",\"firstMahadashaStart\":\"2026-01-28T03:57:37.547Z\",\"moonSiderealLongitude\":40.005010788014474,\"nakshatra\":\"ROHINI\",\"nakshatraLord\":\"MOON\",\"nakshatraProgress\":0.00037580910108552245,\"remainingFraction\":0.9996241908989145}"
+    },
+    {
+      "vectorId": "DASHA-MB-05-BEFORE",
+      "caseId": "MB-05-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-05-BEFORE-2026-01-01",
+      "moonSiderealLongitude": 53.328105410624815,
+      "birthUtcInstant": "2026-01-01T17:18:05.112Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-01T17:18:05.112Z",
+          "localRepresentation": "2026-01-01T17:18:05+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.221879129119255,
+      "expected": {
+        "nakshatra": "ROHINI",
+        "nakshatraEnglish": "Rohini",
+        "nakshatraLord": "MOON",
+        "nakshatraProgress": 0.9996079057968611,
+        "remainingFraction": 0.0003920942031389041,
+        "firstMahadashaLord": "MOON",
+        "firstMahadashaStart": "2026-01-01T17:18:05.112Z",
+        "firstMahadashaEnd": "2026-01-03T03:40:20.632Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-01T17:18:05.112Z\",\"caseId\":\"MB-05-BEFORE\",\"firstMahadashaEnd\":\"2026-01-03T03:40:20.632Z\",\"firstMahadashaLord\":\"MOON\",\"firstMahadashaStart\":\"2026-01-01T17:18:05.112Z\",\"moonSiderealLongitude\":53.328105410624815,\"nakshatra\":\"ROHINI\",\"nakshatraLord\":\"MOON\",\"nakshatraProgress\":0.9996079057968611,\"remainingFraction\":0.0003920942031389041}"
+    },
+    {
+      "vectorId": "DASHA-MB-05-AFTER",
+      "caseId": "MB-05-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-05-AFTER-2026-01-01",
+      "moonSiderealLongitude": 53.33856156092131,
+      "birthUtcInstant": "2026-01-01T17:19:05.112Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-01T17:19:05.112Z",
+          "localRepresentation": "2026-01-01T17:19:05+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.221879198533898,
+      "expected": {
+        "nakshatra": "MRIGASHIRA",
+        "nakshatraEnglish": "Mrigashira",
+        "nakshatraLord": "MARS",
+        "nakshatraProgress": 0.00039211706909831885,
+        "remainingFraction": 0.9996078829309016,
+        "firstMahadashaLord": "MARS",
+        "firstMahadashaStart": "2026-01-01T17:19:05.112Z",
+        "firstMahadashaEnd": "2032-12-31T11:15:25.196Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-01T17:19:05.112Z\",\"caseId\":\"MB-05-AFTER\",\"firstMahadashaEnd\":\"2032-12-31T11:15:25.196Z\",\"firstMahadashaLord\":\"MARS\",\"firstMahadashaStart\":\"2026-01-01T17:19:05.112Z\",\"moonSiderealLongitude\":53.33856156092131,\"nakshatra\":\"MRIGASHIRA\",\"nakshatraLord\":\"MARS\",\"nakshatraProgress\":0.00039211706909831885,\"remainingFraction\":0.9996078829309016}"
+    },
+    {
+      "vectorId": "DASHA-MB-06-BEFORE",
+      "caseId": "MB-06-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-06-BEFORE-2026-01-02",
+      "moonSiderealLongitude": 66.66144960666055,
+      "birthUtcInstant": "2026-01-02T14:33:39.414Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-02T14:33:39.414Z",
+          "localRepresentation": "2026-01-02T14:33:39+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.221969532018228,
+      "expected": {
+        "nakshatra": "MRIGASHIRA",
+        "nakshatraEnglish": "Mrigashira",
+        "nakshatraLord": "MARS",
+        "nakshatraProgress": 0.9996087204995413,
+        "remainingFraction": 0.00039127950045869664,
+        "firstMahadashaLord": "MARS",
+        "firstMahadashaStart": "2026-01-02T14:33:39.414Z",
+        "firstMahadashaEnd": "2026-01-03T14:34:14.307Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-02T14:33:39.414Z\",\"caseId\":\"MB-06-BEFORE\",\"firstMahadashaEnd\":\"2026-01-03T14:34:14.307Z\",\"firstMahadashaLord\":\"MARS\",\"firstMahadashaStart\":\"2026-01-02T14:33:39.414Z\",\"moonSiderealLongitude\":66.66144960666055,\"nakshatra\":\"MRIGASHIRA\",\"nakshatraLord\":\"MARS\",\"nakshatraProgress\":0.9996087204995413,\"remainingFraction\":0.00039127950045869664}"
+    },
+    {
+      "vectorId": "DASHA-MB-06-AFTER",
+      "caseId": "MB-06-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-06-AFTER-2026-01-02",
+      "moonSiderealLongitude": 66.67188384480565,
+      "birthUtcInstant": "2026-01-02T14:34:39.414Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-02T14:34:39.414Z",
+          "localRepresentation": "2026-01-02T14:34:39+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.221969603236104,
+      "expected": {
+        "nakshatra": "ARDRA",
+        "nakshatraEnglish": "Ardra",
+        "nakshatraLord": "RAHU",
+        "nakshatraProgress": 0.000391288360423303,
+        "remainingFraction": 0.9996087116395767,
+        "firstMahadashaLord": "RAHU",
+        "firstMahadashaStart": "2026-01-02T14:34:39.414Z",
+        "firstMahadashaEnd": "2043-12-31T12:50:13.225Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-02T14:34:39.414Z\",\"caseId\":\"MB-06-AFTER\",\"firstMahadashaEnd\":\"2043-12-31T12:50:13.225Z\",\"firstMahadashaLord\":\"RAHU\",\"firstMahadashaStart\":\"2026-01-02T14:34:39.414Z\",\"moonSiderealLongitude\":66.67188384480565,\"nakshatra\":\"ARDRA\",\"nakshatraLord\":\"RAHU\",\"nakshatraProgress\":0.000391288360423303,\"remainingFraction\":0.9996087116395767}"
+    },
+    {
+      "vectorId": "DASHA-MB-07-BEFORE",
+      "caseId": "MB-07-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-07-BEFORE-2026-01-03",
+      "moonSiderealLongitude": 79.99483938690392,
+      "birthUtcInstant": "2026-01-03T11:57:33.048Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-03T11:57:33.048Z",
+          "localRepresentation": "2026-01-03T11:57:33+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22205855872352,
+      "expected": {
+        "nakshatra": "ARDRA",
+        "nakshatraEnglish": "Ardra",
+        "nakshatraLord": "RAHU",
+        "nakshatraProgress": 0.9996129540177936,
+        "remainingFraction": 0.00038704598220640207,
+        "firstMahadashaLord": "RAHU",
+        "firstMahadashaStart": "2026-01-03T11:57:33.048Z",
+        "firstMahadashaEnd": "2026-01-06T01:01:49.409Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-03T11:57:33.048Z\",\"caseId\":\"MB-07-BEFORE\",\"firstMahadashaEnd\":\"2026-01-06T01:01:49.409Z\",\"firstMahadashaLord\":\"RAHU\",\"firstMahadashaStart\":\"2026-01-03T11:57:33.048Z\",\"moonSiderealLongitude\":79.99483938690392,\"nakshatra\":\"ARDRA\",\"nakshatraLord\":\"RAHU\",\"nakshatraProgress\":0.9996129540177936,\"remainingFraction\":0.00038704598220640207}"
+    },
+    {
+      "vectorId": "DASHA-MB-07-AFTER",
+      "caseId": "MB-07-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-07-AFTER-2026-01-03",
+      "moonSiderealLongitude": 80.00516073859978,
+      "birthUtcInstant": "2026-01-03T11:58:33.048Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-03T11:58:33.048Z",
+          "localRepresentation": "2026-01-03T11:58:33+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222058625143884,
+      "expected": {
+        "nakshatra": "PUNARVASU",
+        "nakshatraEnglish": "Punarvasu",
+        "nakshatraLord": "JUPITER",
+        "nakshatraProgress": 0.000387055394983804,
+        "remainingFraction": 0.9996129446050162,
+        "firstMahadashaLord": "JUPITER",
+        "firstMahadashaStart": "2026-01-03T11:58:33.048Z",
+        "firstMahadashaEnd": "2042-01-01T05:41:20.418Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-03T11:58:33.048Z\",\"caseId\":\"MB-07-AFTER\",\"firstMahadashaEnd\":\"2042-01-01T05:41:20.418Z\",\"firstMahadashaLord\":\"JUPITER\",\"firstMahadashaStart\":\"2026-01-03T11:58:33.048Z\",\"moonSiderealLongitude\":80.00516073859978,\"nakshatra\":\"PUNARVASU\",\"nakshatraLord\":\"JUPITER\",\"nakshatraProgress\":0.000387055394983804,\"remainingFraction\":0.9996129446050162}"
+    },
+    {
+      "vectorId": "DASHA-MB-08-BEFORE",
+      "caseId": "MB-08-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-08-BEFORE-2026-01-04",
+      "moonSiderealLongitude": 93.32827076118828,
+      "birthUtcInstant": "2026-01-04T09:40:59.490Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-04T09:40:59.490Z",
+          "localRepresentation": "2026-01-04T09:40:59+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222138934765987,
+      "expected": {
+        "nakshatra": "PUNARVASU",
+        "nakshatraEnglish": "Punarvasu",
+        "nakshatraLord": "JUPITER",
+        "nakshatraProgress": 0.9996203070891209,
+        "remainingFraction": 0.0003796929108791369,
+        "firstMahadashaLord": "JUPITER",
+        "firstMahadashaStart": "2026-01-04T09:40:59.490Z",
+        "firstMahadashaEnd": "2026-01-06T14:56:14.642Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-04T09:40:59.490Z\",\"caseId\":\"MB-08-BEFORE\",\"firstMahadashaEnd\":\"2026-01-06T14:56:14.642Z\",\"firstMahadashaLord\":\"JUPITER\",\"firstMahadashaStart\":\"2026-01-04T09:40:59.490Z\",\"moonSiderealLongitude\":93.32827076118828,\"nakshatra\":\"PUNARVASU\",\"nakshatraLord\":\"JUPITER\",\"nakshatraProgress\":0.9996203070891209,\"remainingFraction\":0.0003796929108791369}"
+    },
+    {
+      "vectorId": "DASHA-MB-08-AFTER",
+      "caseId": "MB-08-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-08-AFTER-2026-01-04",
+      "moonSiderealLongitude": 93.33839609184491,
+      "birthUtcInstant": "2026-01-04T09:41:59.490Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-04T09:41:59.490Z",
+          "localRepresentation": "2026-01-04T09:41:59+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.2221389909744,
+      "expected": {
+        "nakshatra": "PUSHYA",
+        "nakshatraEnglish": "Pushya",
+        "nakshatraLord": "SATURN",
+        "nakshatraProgress": 0.0003797068883677923,
+        "remainingFraction": 0.9996202931116323,
+        "firstMahadashaLord": "SATURN",
+        "firstMahadashaStart": "2026-01-04T09:41:59.490Z",
+        "firstMahadashaEnd": "2045-01-01T12:27:29.366Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-04T09:41:59.490Z\",\"caseId\":\"MB-08-AFTER\",\"firstMahadashaEnd\":\"2045-01-01T12:27:29.366Z\",\"firstMahadashaLord\":\"SATURN\",\"firstMahadashaStart\":\"2026-01-04T09:41:59.490Z\",\"moonSiderealLongitude\":93.33839609184491,\"nakshatra\":\"PUSHYA\",\"nakshatraLord\":\"SATURN\",\"nakshatraProgress\":0.0003797068883677923,\"remainingFraction\":0.9996202931116323}"
+    },
+    {
+      "vectorId": "DASHA-MB-09-BEFORE",
+      "caseId": "MB-09-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-09-BEFORE-2026-01-05",
+      "moonSiderealLongitude": 106.66173519606863,
+      "birthUtcInstant": "2026-01-05T07:54:33.898Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-05T07:54:33.898Z",
+          "localRepresentation": "2026-01-05T07:54:33+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22220526275551,
+      "expected": {
+        "nakshatra": "PUSHYA",
+        "nakshatraEnglish": "Pushya",
+        "nakshatraLord": "SATURN",
+        "nakshatraProgress": 0.9996301397051468,
+        "remainingFraction": 0.00036986029485319705,
+        "firstMahadashaLord": "SATURN",
+        "firstMahadashaStart": "2026-01-05T07:54:33.898Z",
+        "firstMahadashaEnd": "2026-01-07T21:30:40.059Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-05T07:54:33.898Z\",\"caseId\":\"MB-09-BEFORE\",\"firstMahadashaEnd\":\"2026-01-07T21:30:40.059Z\",\"firstMahadashaLord\":\"SATURN\",\"firstMahadashaStart\":\"2026-01-05T07:54:33.898Z\",\"moonSiderealLongitude\":106.66173519606863,\"nakshatra\":\"PUSHYA\",\"nakshatraLord\":\"SATURN\",\"nakshatraProgress\":0.9996301397051468,\"remainingFraction\":0.00036986029485319705}"
+    },
+    {
+      "vectorId": "DASHA-MB-09-AFTER",
+      "caseId": "MB-09-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-09-AFTER-2026-01-05",
+      "moonSiderealLongitude": 106.67159812496749,
+      "birthUtcInstant": "2026-01-05T07:55:33.898Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-05T07:55:33.898Z",
+          "localRepresentation": "2026-01-05T07:55:33+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222205305836052,
+      "expected": {
+        "nakshatra": "ASHLESHA",
+        "nakshatraEnglish": "Ashlesha",
+        "nakshatraLord": "MERCURY",
+        "nakshatraProgress": 0.0003698593725612653,
+        "remainingFraction": 0.9996301406274387,
+        "firstMahadashaLord": "MERCURY",
+        "firstMahadashaStart": "2026-01-05T07:55:33.898Z",
+        "firstMahadashaEnd": "2043-01-03T06:48:32.037Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-05T07:55:33.898Z\",\"caseId\":\"MB-09-AFTER\",\"firstMahadashaEnd\":\"2043-01-03T06:48:32.037Z\",\"firstMahadashaLord\":\"MERCURY\",\"firstMahadashaStart\":\"2026-01-05T07:55:33.898Z\",\"moonSiderealLongitude\":106.67159812496749,\"nakshatra\":\"ASHLESHA\",\"nakshatraLord\":\"MERCURY\",\"nakshatraProgress\":0.0003698593725612653,\"remainingFraction\":0.9996301406274387}"
+    },
+    {
+      "vectorId": "DASHA-MB-10-BEFORE",
+      "caseId": "MB-10-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-10-BEFORE-2026-01-06",
+      "moonSiderealLongitude": 119.99522098287969,
+      "birthUtcInstant": "2026-01-06T06:47:23.309Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-06T06:47:23.309Z",
+          "localRepresentation": "2026-01-06T06:47:23+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222255275988385,
+      "expected": {
+        "nakshatra": "ASHLESHA",
+        "nakshatraEnglish": "Ashlesha",
+        "nakshatraLord": "MERCURY",
+        "nakshatraProgress": 0.9996415737159761,
+        "remainingFraction": 0.0003584262840239383,
+        "firstMahadashaLord": "MERCURY",
+        "firstMahadashaStart": "2026-01-06T06:47:23.309Z",
+        "firstMahadashaEnd": "2026-01-08T12:12:11.555Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-06T06:47:23.309Z\",\"caseId\":\"MB-10-BEFORE\",\"firstMahadashaEnd\":\"2026-01-08T12:12:11.555Z\",\"firstMahadashaLord\":\"MERCURY\",\"firstMahadashaStart\":\"2026-01-06T06:47:23.309Z\",\"moonSiderealLongitude\":119.99522098287969,\"nakshatra\":\"ASHLESHA\",\"nakshatraLord\":\"MERCURY\",\"nakshatraProgress\":0.9996415737159761,\"remainingFraction\":0.0003584262840239383}"
+    },
+    {
+      "vectorId": "DASHA-MB-10-AFTER",
+      "caseId": "MB-10-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-10-AFTER-2026-01-06",
+      "moonSiderealLongitude": 120.00477928822757,
+      "birthUtcInstant": "2026-01-06T06:48:23.309Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-06T06:48:23.309Z",
+          "localRepresentation": "2026-01-06T06:48:23+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22225530611004,
+      "expected": {
+        "nakshatra": "MAGHA",
+        "nakshatraEnglish": "Magha",
+        "nakshatraLord": "KETU",
+        "nakshatraProgress": 0.00035844661706754263,
+        "remainingFraction": 0.9996415533829325,
+        "firstMahadashaLord": "KETU",
+        "firstMahadashaStart": "2026-01-06T06:48:23.309Z",
+        "firstMahadashaEnd": "2033-01-05T02:48:41.304Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-06T06:48:23.309Z\",\"caseId\":\"MB-10-AFTER\",\"firstMahadashaEnd\":\"2033-01-05T02:48:41.304Z\",\"firstMahadashaLord\":\"KETU\",\"firstMahadashaStart\":\"2026-01-06T06:48:23.309Z\",\"moonSiderealLongitude\":120.00477928822757,\"nakshatra\":\"MAGHA\",\"nakshatraLord\":\"KETU\",\"nakshatraProgress\":0.00035844661706754263,\"remainingFraction\":0.9996415533829325}"
+    },
+    {
+      "vectorId": "DASHA-MB-11-BEFORE",
+      "caseId": "MB-11-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-11-BEFORE-2026-01-07",
+      "moonSiderealLongitude": 133.3287139643832,
+      "birthUtcInstant": "2026-01-07T06:26:09.445Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-07T06:26:09.445Z",
+          "localRepresentation": "2026-01-07T06:26:09+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222290384019345,
+      "expected": {
+        "nakshatra": "MAGHA",
+        "nakshatraEnglish": "Magha",
+        "nakshatraLord": "KETU",
+        "nakshatraProgress": 0.9996535473287409,
+        "remainingFraction": 0.00034645267125910095,
+        "firstMahadashaLord": "KETU",
+        "firstMahadashaStart": "2026-01-07T06:26:09.445Z",
+        "firstMahadashaEnd": "2026-01-08T03:41:41.948Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-07T06:26:09.445Z\",\"caseId\":\"MB-11-BEFORE\",\"firstMahadashaEnd\":\"2026-01-08T03:41:41.948Z\",\"firstMahadashaLord\":\"KETU\",\"firstMahadashaStart\":\"2026-01-07T06:26:09.445Z\",\"moonSiderealLongitude\":133.3287139643832,\"nakshatra\":\"MAGHA\",\"nakshatraLord\":\"KETU\",\"nakshatraProgress\":0.9996535473287409,\"remainingFraction\":0.00034645267125910095}"
+    },
+    {
+      "vectorId": "DASHA-MB-11-AFTER",
+      "caseId": "MB-11-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-11-AFTER-2026-01-07",
+      "moonSiderealLongitude": 133.33795294894017,
+      "birthUtcInstant": "2026-01-07T06:27:09.445Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-07T06:27:09.445Z",
+          "localRepresentation": "2026-01-07T06:27:09+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22229040410594,
+      "expected": {
+        "nakshatra": "PURVA_PHALGUNI",
+        "nakshatraEnglish": "Purva Phalguni",
+        "nakshatraLord": "VENUS",
+        "nakshatraProgress": 0.0003464711705120749,
+        "remainingFraction": 0.9996535288294879,
+        "firstMahadashaLord": "VENUS",
+        "firstMahadashaStart": "2026-01-07T06:27:09.445Z",
+        "firstMahadashaEnd": "2046-01-04T17:42:33.472Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-07T06:27:09.445Z\",\"caseId\":\"MB-11-AFTER\",\"firstMahadashaEnd\":\"2046-01-04T17:42:33.472Z\",\"firstMahadashaLord\":\"VENUS\",\"firstMahadashaStart\":\"2026-01-07T06:27:09.445Z\",\"moonSiderealLongitude\":133.33795294894017,\"nakshatra\":\"PURVA_PHALGUNI\",\"nakshatraLord\":\"VENUS\",\"nakshatraProgress\":0.0003464711705120749,\"remainingFraction\":0.9996535288294879}"
+    },
+    {
+      "vectorId": "DASHA-MB-12-BEFORE",
+      "caseId": "MB-12-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-12-BEFORE-2026-01-08",
+      "moonSiderealLongitude": 146.6622004805504,
+      "birthUtcInstant": "2026-01-08T06:54:09.248Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-08T06:54:09.248Z",
+          "localRepresentation": "2026-01-08T06:54:09+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22231524870327,
+      "expected": {
+        "nakshatra": "PURVA_PHALGUNI",
+        "nakshatraEnglish": "Purva Phalguni",
+        "nakshatraLord": "VENUS",
+        "nakshatraProgress": 0.99966503604128,
+        "remainingFraction": 0.0003349639587200137,
+        "firstMahadashaLord": "VENUS",
+        "firstMahadashaStart": "2026-01-08T06:54:09.248Z",
+        "firstMahadashaEnd": "2026-01-10T17:37:42.420Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-08T06:54:09.248Z\",\"caseId\":\"MB-12-BEFORE\",\"firstMahadashaEnd\":\"2026-01-10T17:37:42.420Z\",\"firstMahadashaLord\":\"VENUS\",\"firstMahadashaStart\":\"2026-01-08T06:54:09.248Z\",\"moonSiderealLongitude\":146.6622004805504,\"nakshatra\":\"PURVA_PHALGUNI\",\"nakshatraLord\":\"VENUS\",\"nakshatraProgress\":0.99966503604128,\"remainingFraction\":0.0003349639587200137}"
+    },
+    {
+      "vectorId": "DASHA-MB-12-AFTER",
+      "caseId": "MB-12-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-12-AFTER-2026-01-08",
+      "moonSiderealLongitude": 146.67113301732482,
+      "birthUtcInstant": "2026-01-08T06:55:09.248Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-08T06:55:09.248Z",
+          "localRepresentation": "2026-01-08T06:55:09+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.2223152633541,
+      "expected": {
+        "nakshatra": "UTTARA_PHALGUNI",
+        "nakshatraEnglish": "Uttara Phalguni",
+        "nakshatraLord": "SUN",
+        "nakshatraProgress": 0.0003349762993600791,
+        "remainingFraction": 0.9996650237006399,
+        "firstMahadashaLord": "SUN",
+        "firstMahadashaStart": "2026-01-08T06:55:09.248Z",
+        "firstMahadashaEnd": "2032-01-08T01:18:02.959Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-08T06:55:09.248Z\",\"caseId\":\"MB-12-AFTER\",\"firstMahadashaEnd\":\"2032-01-08T01:18:02.959Z\",\"firstMahadashaLord\":\"SUN\",\"firstMahadashaStart\":\"2026-01-08T06:55:09.248Z\",\"moonSiderealLongitude\":146.67113301732482,\"nakshatra\":\"UTTARA_PHALGUNI\",\"nakshatraLord\":\"SUN\",\"nakshatraProgress\":0.0003349762993600791,\"remainingFraction\":0.9996650237006399}"
+    },
+    {
+      "vectorId": "DASHA-MB-13-BEFORE",
+      "caseId": "MB-13-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-13-BEFORE-2026-01-09",
+      "moonSiderealLongitude": 159.99566813197296,
+      "birthUtcInstant": "2026-01-09T08:10:26.003Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-09T08:10:26.003Z",
+          "localRepresentation": "2026-01-09T08:10:26+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222336498881965,
+      "expected": {
+        "nakshatra": "UTTARA_PHALGUNI",
+        "nakshatraEnglish": "Uttara Phalguni",
+        "nakshatraLord": "SUN",
+        "nakshatraProgress": 0.9996751098979707,
+        "remainingFraction": 0.000324890102029296,
+        "firstMahadashaLord": "SUN",
+        "firstMahadashaStart": "2026-01-09T08:10:26.003Z",
+        "firstMahadashaEnd": "2026-01-10T01:15:42.514Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-09T08:10:26.003Z\",\"caseId\":\"MB-13-BEFORE\",\"firstMahadashaEnd\":\"2026-01-10T01:15:42.514Z\",\"firstMahadashaLord\":\"SUN\",\"firstMahadashaStart\":\"2026-01-09T08:10:26.003Z\",\"moonSiderealLongitude\":159.99566813197296,\"nakshatra\":\"UTTARA_PHALGUNI\",\"nakshatraLord\":\"SUN\",\"nakshatraProgress\":0.9996751098979707,\"remainingFraction\":0.000324890102029296}"
+    },
+    {
+      "vectorId": "DASHA-MB-13-AFTER",
+      "caseId": "MB-13-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-13-AFTER-2026-01-09",
+      "moonSiderealLongitude": 160.00433195323384,
+      "birthUtcInstant": "2026-01-09T08:11:26.003Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-09T08:11:26.003Z",
+          "localRepresentation": "2026-01-09T08:11:26+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222336513058824,
+      "expected": {
+        "nakshatra": "HASTA",
+        "nakshatraEnglish": "Hasta",
+        "nakshatraLord": "MOON",
+        "nakshatraProgress": 0.00032489649253832905,
+        "remainingFraction": 0.9996751035074617,
+        "firstMahadashaLord": "MOON",
+        "firstMahadashaStart": "2026-01-09T08:11:26.003Z",
+        "firstMahadashaEnd": "2036-01-08T15:42:36.467Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-09T08:11:26.003Z\",\"caseId\":\"MB-13-AFTER\",\"firstMahadashaEnd\":\"2036-01-08T15:42:36.467Z\",\"firstMahadashaLord\":\"MOON\",\"firstMahadashaStart\":\"2026-01-09T08:11:26.003Z\",\"moonSiderealLongitude\":160.00433195323384,\"nakshatra\":\"HASTA\",\"nakshatraLord\":\"MOON\",\"nakshatraProgress\":0.00032489649253832905,\"remainingFraction\":0.9996751035074617}"
+    },
+    {
+      "vectorId": "DASHA-MB-14-BEFORE",
+      "caseId": "MB-14-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-14-BEFORE-2026-01-10",
+      "moonSiderealLongitude": 173.32910749928104,
+      "birthUtcInstant": "2026-01-10T10:09:30.273Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-10T10:09:30.273Z",
+          "localRepresentation": "2026-01-10T10:09:30+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22236111377101,
+      "expected": {
+        "nakshatra": "HASTA",
+        "nakshatraEnglish": "Hasta",
+        "nakshatraLord": "MOON",
+        "nakshatraProgress": 0.9996830624460777,
+        "remainingFraction": 0.00031693755392225853,
+        "firstMahadashaLord": "MOON",
+        "firstMahadashaStart": "2026-01-10T10:09:30.273Z",
+        "firstMahadashaEnd": "2026-01-11T13:56:28.158Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-10T10:09:30.273Z\",\"caseId\":\"MB-14-BEFORE\",\"firstMahadashaEnd\":\"2026-01-11T13:56:28.158Z\",\"firstMahadashaLord\":\"MOON\",\"firstMahadashaStart\":\"2026-01-10T10:09:30.273Z\",\"moonSiderealLongitude\":173.32910749928104,\"nakshatra\":\"HASTA\",\"nakshatraLord\":\"MOON\",\"nakshatraProgress\":0.9996830624460777,\"remainingFraction\":0.00031693755392225853}"
+    },
+    {
+      "vectorId": "DASHA-MB-14-AFTER",
+      "caseId": "MB-14-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-14-AFTER-2026-01-10",
+      "moonSiderealLongitude": 173.33755934187386,
+      "birthUtcInstant": "2026-01-10T10:10:30.273Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-10T10:10:30.273Z",
+          "localRepresentation": "2026-01-10T10:10:30+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.2223611317873,
+      "expected": {
+        "nakshatra": "CHITRA",
+        "nakshatraEnglish": "Chitra",
+        "nakshatraLord": "MARS",
+        "nakshatraProgress": 0.00031695064053849364,
+        "remainingFraction": 0.9996830493594615,
+        "firstMahadashaLord": "MARS",
+        "firstMahadashaStart": "2026-01-10T10:10:30.273Z",
+        "firstMahadashaEnd": "2033-01-09T08:43:34.862Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-10T10:10:30.273Z\",\"caseId\":\"MB-14-AFTER\",\"firstMahadashaEnd\":\"2033-01-09T08:43:34.862Z\",\"firstMahadashaLord\":\"MARS\",\"firstMahadashaStart\":\"2026-01-10T10:10:30.273Z\",\"moonSiderealLongitude\":173.33755934187386,\"nakshatra\":\"CHITRA\",\"nakshatraLord\":\"MARS\",\"nakshatraProgress\":0.00031695064053849364,\"remainingFraction\":0.9996830493594615}"
+    },
+    {
+      "vectorId": "DASHA-MB-15-BEFORE",
+      "caseId": "MB-15-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-15-BEFORE-2026-01-11",
+      "moonSiderealLongitude": 186.66251291154055,
+      "birthUtcInstant": "2026-01-11T12:41:48.596Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-11T12:41:48.596Z",
+          "localRepresentation": "2026-01-11T12:41:48+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222395029037617,
+      "expected": {
+        "nakshatra": "CHITRA",
+        "nakshatraEnglish": "Chitra",
+        "nakshatraLord": "MARS",
+        "nakshatraProgress": 0.9996884683655402,
+        "remainingFraction": 0.00031153163445984955,
+        "firstMahadashaLord": "MARS",
+        "firstMahadashaStart": "2026-01-11T12:41:48.596Z",
+        "firstMahadashaEnd": "2026-01-12T07:48:46.930Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-11T12:41:48.596Z\",\"caseId\":\"MB-15-BEFORE\",\"firstMahadashaEnd\":\"2026-01-12T07:48:46.930Z\",\"firstMahadashaLord\":\"MARS\",\"firstMahadashaStart\":\"2026-01-11T12:41:48.596Z\",\"moonSiderealLongitude\":186.66251291154055,\"nakshatra\":\"CHITRA\",\"nakshatraLord\":\"MARS\",\"nakshatraProgress\":0.9996884683655402,\"remainingFraction\":0.00031153163445984955}"
+    },
+    {
+      "vectorId": "DASHA-MB-15-AFTER",
+      "caseId": "MB-15-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-15-AFTER-2026-01-11",
+      "moonSiderealLongitude": 186.6708204580449,
+      "birthUtcInstant": "2026-01-11T12:42:48.596Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-11T12:42:48.596Z",
+          "localRepresentation": "2026-01-11T12:42:48+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222395054005865,
+      "expected": {
+        "nakshatra": "SWATI",
+        "nakshatraEnglish": "Swati",
+        "nakshatraLord": "RAHU",
+        "nakshatraProgress": 0.00031153435336506163,
+        "remainingFraction": 0.9996884656466349,
+        "firstMahadashaLord": "RAHU",
+        "firstMahadashaStart": "2026-01-11T12:42:48.596Z",
+        "firstMahadashaEnd": "2044-01-09T23:33:25.618Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-11T12:42:48.596Z\",\"caseId\":\"MB-15-AFTER\",\"firstMahadashaEnd\":\"2044-01-09T23:33:25.618Z\",\"firstMahadashaLord\":\"RAHU\",\"firstMahadashaStart\":\"2026-01-11T12:42:48.596Z\",\"moonSiderealLongitude\":186.6708204580449,\"nakshatra\":\"SWATI\",\"nakshatraLord\":\"RAHU\",\"nakshatraProgress\":0.00031153435336506163,\"remainingFraction\":0.9996884656466349}"
+    },
+    {
+      "vectorId": "DASHA-MB-16-BEFORE",
+      "caseId": "MB-16-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-16-BEFORE-2026-01-12",
+      "moonSiderealLongitude": 199.99588320066204,
+      "birthUtcInstant": "2026-01-12T15:35:04.554Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-12T15:35:04.554Z",
+          "localRepresentation": "2026-01-12T15:35:04+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22244211700059,
+      "expected": {
+        "nakshatra": "SWATI",
+        "nakshatraEnglish": "Swati",
+        "nakshatraLord": "RAHU",
+        "nakshatraProgress": 0.9996912400496512,
+        "remainingFraction": 0.00030875995034884696,
+        "firstMahadashaLord": "RAHU",
+        "firstMahadashaStart": "2026-01-12T15:35:04.554Z",
+        "firstMahadashaEnd": "2026-01-14T16:18:11.568Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-12T15:35:04.554Z\",\"caseId\":\"MB-16-BEFORE\",\"firstMahadashaEnd\":\"2026-01-14T16:18:11.568Z\",\"firstMahadashaLord\":\"RAHU\",\"firstMahadashaStart\":\"2026-01-12T15:35:04.554Z\",\"moonSiderealLongitude\":199.99588320066204,\"nakshatra\":\"SWATI\",\"nakshatraLord\":\"RAHU\",\"nakshatraProgress\":0.9996912400496512,\"remainingFraction\":0.00030875995034884696}"
+    },
+    {
+      "vectorId": "DASHA-MB-16-AFTER",
+      "caseId": "MB-16-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-16-AFTER-2026-01-12",
+      "moonSiderealLongitude": 200.0041169156384,
+      "birthUtcInstant": "2026-01-12T15:36:04.554Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-12T15:36:04.554Z",
+          "localRepresentation": "2026-01-12T15:36:04+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222442150532192,
+      "expected": {
+        "nakshatra": "VISHAKHA",
+        "nakshatraEnglish": "Vishakha",
+        "nakshatraLord": "JUPITER",
+        "nakshatraProgress": 0.00030876867288043286,
+        "remainingFraction": 0.9996912313271196,
+        "firstMahadashaLord": "JUPITER",
+        "firstMahadashaStart": "2026-01-12T15:36:04.554Z",
+        "firstMahadashaEnd": "2042-01-10T20:17:40.581Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-12T15:36:04.554Z\",\"caseId\":\"MB-16-AFTER\",\"firstMahadashaEnd\":\"2042-01-10T20:17:40.581Z\",\"firstMahadashaLord\":\"JUPITER\",\"firstMahadashaStart\":\"2026-01-12T15:36:04.554Z\",\"moonSiderealLongitude\":200.0041169156384,\"nakshatra\":\"VISHAKHA\",\"nakshatraLord\":\"JUPITER\",\"nakshatraProgress\":0.00030876867288043286,\"remainingFraction\":0.9996912313271196}"
+    },
+    {
+      "vectorId": "DASHA-MB-17-BEFORE",
+      "caseId": "MB-17-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-17-BEFORE-2026-01-13",
+      "moonSiderealLongitude": 213.32922069998506,
+      "birthUtcInstant": "2026-01-13T18:36:15.090Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-13T18:36:15.090Z",
+          "localRepresentation": "2026-01-13T18:36:15+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222503481482864,
+      "expected": {
+        "nakshatra": "VISHAKHA",
+        "nakshatraEnglish": "Vishakha",
+        "nakshatraLord": "JUPITER",
+        "nakshatraProgress": 0.9996915524988793,
+        "remainingFraction": 0.00030844750112068997,
+        "firstMahadashaLord": "JUPITER",
+        "firstMahadashaStart": "2026-01-13T18:36:15.090Z",
+        "firstMahadashaEnd": "2026-01-15T13:51:56.895Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-13T18:36:15.090Z\",\"caseId\":\"MB-17-BEFORE\",\"firstMahadashaEnd\":\"2026-01-15T13:51:56.895Z\",\"firstMahadashaLord\":\"JUPITER\",\"firstMahadashaStart\":\"2026-01-13T18:36:15.090Z\",\"moonSiderealLongitude\":213.32922069998506,\"nakshatra\":\"VISHAKHA\",\"nakshatraLord\":\"JUPITER\",\"nakshatraProgress\":0.9996915524988793,\"remainingFraction\":0.00030844750112068997}"
+    },
+    {
+      "vectorId": "DASHA-MB-17-AFTER",
+      "caseId": "MB-17-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-17-AFTER-2026-01-13",
+      "moonSiderealLongitude": 213.3374461179986,
+      "birthUtcInstant": "2026-01-13T18:37:15.090Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-13T18:37:15.090Z",
+          "localRepresentation": "2026-01-13T18:37:15+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22250352350294,
+      "expected": {
+        "nakshatra": "ANURADHA",
+        "nakshatraEnglish": "Anuradha",
+        "nakshatraLord": "SATURN",
+        "nakshatraProgress": 0.00030845884989503245,
+        "remainingFraction": 0.999691541150105,
+        "firstMahadashaLord": "SATURN",
+        "firstMahadashaStart": "2026-01-13T18:37:15.090Z",
+        "firstMahadashaEnd": "2045-01-11T09:14:44.890Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-13T18:37:15.090Z\",\"caseId\":\"MB-17-AFTER\",\"firstMahadashaEnd\":\"2045-01-11T09:14:44.890Z\",\"firstMahadashaLord\":\"SATURN\",\"firstMahadashaStart\":\"2026-01-13T18:37:15.090Z\",\"moonSiderealLongitude\":213.3374461179986,\"nakshatra\":\"ANURADHA\",\"nakshatraLord\":\"SATURN\",\"nakshatraProgress\":0.00030845884989503245,\"remainingFraction\":0.999691541150105}"
+    },
+    {
+      "vectorId": "DASHA-MB-18-BEFORE",
+      "caseId": "MB-18-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-18-BEFORE-2026-01-14",
+      "moonSiderealLongitude": 226.66253079578897,
+      "birthUtcInstant": "2026-01-14T21:33:27.894Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-14T21:33:27.894Z",
+          "localRepresentation": "2026-01-14T21:33:27+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222577228652995,
+      "expected": {
+        "nakshatra": "ANURADHA",
+        "nakshatraEnglish": "Anuradha",
+        "nakshatraLord": "SATURN",
+        "nakshatraProgress": 0.9996898096841718,
+        "remainingFraction": 0.0003101903158282404,
+        "firstMahadashaLord": "SATURN",
+        "firstMahadashaStart": "2026-01-14T21:33:27.894Z",
+        "firstMahadashaEnd": "2026-01-17T01:13:16.270Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-14T21:33:27.894Z\",\"caseId\":\"MB-18-BEFORE\",\"firstMahadashaEnd\":\"2026-01-17T01:13:16.270Z\",\"firstMahadashaLord\":\"SATURN\",\"firstMahadashaStart\":\"2026-01-14T21:33:27.894Z\",\"moonSiderealLongitude\":226.66253079578897,\"nakshatra\":\"ANURADHA\",\"nakshatraLord\":\"SATURN\",\"nakshatraProgress\":0.9996898096841718,\"remainingFraction\":0.0003101903158282404}"
+    },
+    {
+      "vectorId": "DASHA-MB-18-AFTER",
+      "caseId": "MB-18-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-18-AFTER-2026-01-14",
+      "moonSiderealLongitude": 226.67080272725377,
+      "birthUtcInstant": "2026-01-14T21:34:27.894Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-14T21:34:27.894Z",
+          "localRepresentation": "2026-01-14T21:34:27+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.2225772774336,
+      "expected": {
+        "nakshatra": "JYESHTHA",
+        "nakshatraEnglish": "Jyeshtha",
+        "nakshatraLord": "MERCURY",
+        "nakshatraProgress": 0.00031020454403147825,
+        "remainingFraction": 0.9996897954559685,
+        "firstMahadashaLord": "MERCURY",
+        "firstMahadashaStart": "2026-01-14T21:34:27.894Z",
+        "firstMahadashaEnd": "2043-01-13T05:20:49.608Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-14T21:34:27.894Z\",\"caseId\":\"MB-18-AFTER\",\"firstMahadashaEnd\":\"2043-01-13T05:20:49.608Z\",\"firstMahadashaLord\":\"MERCURY\",\"firstMahadashaStart\":\"2026-01-14T21:34:27.894Z\",\"moonSiderealLongitude\":226.67080272725377,\"nakshatra\":\"JYESHTHA\",\"nakshatraLord\":\"MERCURY\",\"nakshatraProgress\":0.00031020454403147825,\"remainingFraction\":0.9996897954559685}"
+    },
+    {
+      "vectorId": "DASHA-MB-19-BEFORE",
+      "caseId": "MB-19-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-19-BEFORE-2026-01-16",
+      "moonSiderealLongitude": 239.99582040580538,
+      "birthUtcInstant": "2026-01-16T00:17:25.562Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-16T00:17:25.562Z",
+          "localRepresentation": "2026-01-16T00:17:25+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22265890749631,
+      "expected": {
+        "nakshatra": "JYESHTHA",
+        "nakshatraEnglish": "Jyeshtha",
+        "nakshatraLord": "MERCURY",
+        "nakshatraProgress": 0.9996865304354017,
+        "remainingFraction": 0.0003134695645983232,
+        "firstMahadashaLord": "MERCURY",
+        "firstMahadashaStart": "2026-01-16T00:17:25.562Z",
+        "firstMahadashaEnd": "2026-01-17T23:00:15.463Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-16T00:17:25.562Z\",\"caseId\":\"MB-19-BEFORE\",\"firstMahadashaEnd\":\"2026-01-17T23:00:15.463Z\",\"firstMahadashaLord\":\"MERCURY\",\"firstMahadashaStart\":\"2026-01-16T00:17:25.562Z\",\"moonSiderealLongitude\":239.99582040580538,\"nakshatra\":\"JYESHTHA\",\"nakshatraLord\":\"MERCURY\",\"nakshatraProgress\":0.9996865304354017,\"remainingFraction\":0.0003134695645983232}"
+    },
+    {
+      "vectorId": "DASHA-MB-19-AFTER",
+      "caseId": "MB-19-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-19-AFTER-2026-01-16",
+      "moonSiderealLongitude": 240.00417976157308,
+      "birthUtcInstant": "2026-01-16T00:18:25.562Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-16T00:18:25.562Z",
+          "localRepresentation": "2026-01-16T00:18:25+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22265895997369,
+      "expected": {
+        "nakshatra": "MULA",
+        "nakshatraEnglish": "Mula",
+        "nakshatraLord": "KETU",
+        "nakshatraProgress": 0.00031348211798132297,
+        "remainingFraction": 0.9996865178820187,
+        "firstMahadashaLord": "KETU",
+        "firstMahadashaStart": "2026-01-16T00:18:25.562Z",
+        "firstMahadashaEnd": "2033-01-14T23:04:16.358Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-16T00:18:25.562Z\",\"caseId\":\"MB-19-AFTER\",\"firstMahadashaEnd\":\"2033-01-14T23:04:16.358Z\",\"firstMahadashaLord\":\"KETU\",\"firstMahadashaStart\":\"2026-01-16T00:18:25.562Z\",\"moonSiderealLongitude\":240.00417976157308,\"nakshatra\":\"MULA\",\"nakshatraLord\":\"KETU\",\"nakshatraProgress\":0.00031348211798132297,\"remainingFraction\":0.9996865178820187}"
+    },
+    {
+      "vectorId": "DASHA-MB-20-BEFORE",
+      "caseId": "MB-20-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-20-BEFORE-2026-01-17",
+      "moonSiderealLongitude": 253.32909675328588,
+      "birthUtcInstant": "2026-01-17T02:41:58.886Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-17T02:41:58.886Z",
+          "localRepresentation": "2026-01-17T02:41:58+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222742448181823,
+      "expected": {
+        "nakshatra": "MULA",
+        "nakshatraEnglish": "Mula",
+        "nakshatraLord": "KETU",
+        "nakshatraProgress": 0.999682256496441,
+        "remainingFraction": 0.00031774350355895375,
+        "firstMahadashaLord": "KETU",
+        "firstMahadashaStart": "2026-01-17T02:41:58.886Z",
+        "firstMahadashaEnd": "2026-01-17T22:11:49.442Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-17T02:41:58.886Z\",\"caseId\":\"MB-20-BEFORE\",\"firstMahadashaEnd\":\"2026-01-17T22:11:49.442Z\",\"firstMahadashaLord\":\"KETU\",\"firstMahadashaStart\":\"2026-01-17T02:41:58.886Z\",\"moonSiderealLongitude\":253.32909675328588,\"nakshatra\":\"MULA\",\"nakshatraLord\":\"KETU\",\"nakshatraProgress\":0.999682256496441,\"remainingFraction\":0.00031774350355895375}"
+    },
+    {
+      "vectorId": "DASHA-MB-20-AFTER",
+      "caseId": "MB-20-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-20-AFTER-2026-01-17",
+      "moonSiderealLongitude": 253.33757014116856,
+      "birthUtcInstant": "2026-01-17T02:42:58.886Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-17T02:42:58.886Z",
+          "localRepresentation": "2026-01-17T02:42:58+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222742500460242,
+      "expected": {
+        "nakshatra": "PURVA_ASHADHA",
+        "nakshatraEnglish": "Purva Ashadha",
+        "nakshatraLord": "VENUS",
+        "nakshatraProgress": 0.0003177605876409473,
+        "remainingFraction": 0.999682239412359,
+        "firstMahadashaLord": "VENUS",
+        "firstMahadashaStart": "2026-01-17T02:42:58.886Z",
+        "firstMahadashaEnd": "2046-01-14T19:00:23.655Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-17T02:42:58.886Z\",\"caseId\":\"MB-20-AFTER\",\"firstMahadashaEnd\":\"2046-01-14T19:00:23.655Z\",\"firstMahadashaLord\":\"VENUS\",\"firstMahadashaStart\":\"2026-01-17T02:42:58.886Z\",\"moonSiderealLongitude\":253.33757014116856,\"nakshatra\":\"PURVA_ASHADHA\",\"nakshatraLord\":\"VENUS\",\"nakshatraProgress\":0.0003177605876409473,\"remainingFraction\":0.999682239412359}"
+    },
+    {
+      "vectorId": "DASHA-MB-21-BEFORE",
+      "caseId": "MB-21-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-21-BEFORE-2026-01-18",
+      "moonSiderealLongitude": 266.6623658998162,
+      "birthUtcInstant": "2026-01-18T04:43:52.662Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-18T04:43:52.662Z",
+          "localRepresentation": "2026-01-18T04:43:52+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222821276031688,
+      "expected": {
+        "nakshatra": "PURVA_ASHADHA",
+        "nakshatraEnglish": "Purva Ashadha",
+        "nakshatraLord": "VENUS",
+        "nakshatraProgress": 0.9996774424862159,
+        "remainingFraction": 0.00032255751378407194,
+        "firstMahadashaLord": "VENUS",
+        "firstMahadashaStart": "2026-01-18T04:43:52.662Z",
+        "firstMahadashaEnd": "2026-01-20T13:16:55.481Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-18T04:43:52.662Z\",\"caseId\":\"MB-21-BEFORE\",\"firstMahadashaEnd\":\"2026-01-20T13:16:55.481Z\",\"firstMahadashaLord\":\"VENUS\",\"firstMahadashaStart\":\"2026-01-18T04:43:52.662Z\",\"moonSiderealLongitude\":266.6623658998162,\"nakshatra\":\"PURVA_ASHADHA\",\"nakshatraLord\":\"VENUS\",\"nakshatraProgress\":0.9996774424862159,\"remainingFraction\":0.00032255751378407194}"
+    },
+    {
+      "vectorId": "DASHA-MB-21-AFTER",
+      "caseId": "MB-21-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-21-AFTER-2026-01-18",
+      "moonSiderealLongitude": 266.6709677078133,
+      "birthUtcInstant": "2026-01-18T04:44:52.662Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-18T04:44:52.662Z",
+          "localRepresentation": "2026-01-18T04:44:52+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222821324019712,
+      "expected": {
+        "nakshatra": "UTTARA_ASHADHA",
+        "nakshatraEnglish": "Uttara Ashadha",
+        "nakshatraLord": "SUN",
+        "nakshatraProgress": 0.00032257808599638337,
+        "remainingFraction": 0.9996774219140037,
+        "firstMahadashaLord": "SUN",
+        "firstMahadashaStart": "2026-01-18T04:44:52.662Z",
+        "firstMahadashaEnd": "2032-01-17T23:46:53.920Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-18T04:44:52.662Z\",\"caseId\":\"MB-21-AFTER\",\"firstMahadashaEnd\":\"2032-01-17T23:46:53.920Z\",\"firstMahadashaLord\":\"SUN\",\"firstMahadashaStart\":\"2026-01-18T04:44:52.662Z\",\"moonSiderealLongitude\":266.6709677078133,\"nakshatra\":\"UTTARA_ASHADHA\",\"nakshatraLord\":\"SUN\",\"nakshatraProgress\":0.00032257808599638337,\"remainingFraction\":0.9996774219140037}"
+    },
+    {
+      "vectorId": "DASHA-MB-22-BEFORE",
+      "caseId": "MB-22-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-22-BEFORE-2026-01-19",
+      "moonSiderealLongitude": 279.9956320807141,
+      "birthUtcInstant": "2026-01-19T06:22:00.988Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-19T06:22:00.988Z",
+          "localRepresentation": "2026-01-19T06:22:00+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222889495559482,
+      "expected": {
+        "nakshatra": "UTTARA_ASHADHA",
+        "nakshatraEnglish": "Uttara Ashadha",
+        "nakshatraLord": "SUN",
+        "nakshatraProgress": 0.9996724060535541,
+        "remainingFraction": 0.000327593946445881,
+        "firstMahadashaLord": "SUN",
+        "firstMahadashaStart": "2026-01-19T06:22:00.988Z",
+        "firstMahadashaEnd": "2026-01-19T23:35:49.460Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-19T06:22:00.988Z\",\"caseId\":\"MB-22-BEFORE\",\"firstMahadashaEnd\":\"2026-01-19T23:35:49.460Z\",\"firstMahadashaLord\":\"SUN\",\"firstMahadashaStart\":\"2026-01-19T06:22:00.988Z\",\"moonSiderealLongitude\":279.9956320807141,\"nakshatra\":\"UTTARA_ASHADHA\",\"nakshatraLord\":\"SUN\",\"nakshatraProgress\":0.9996724060535541,\"remainingFraction\":0.000327593946445881}"
+    },
+    {
+      "vectorId": "DASHA-MB-22-AFTER",
+      "caseId": "MB-22-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-22-AFTER-2026-01-19",
+      "moonSiderealLongitude": 280.00436813716453,
+      "birthUtcInstant": "2026-01-19T06:23:00.988Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-19T06:23:00.988Z",
+          "localRepresentation": "2026-01-19T06:23:00+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222889535764697,
+      "expected": {
+        "nakshatra": "SHRAVANA",
+        "nakshatraEnglish": "Shravana",
+        "nakshatraLord": "MOON",
+        "nakshatraProgress": 0.00032761028734000773,
+        "remainingFraction": 0.99967238971266,
+        "firstMahadashaLord": "MOON",
+        "firstMahadashaStart": "2026-01-19T06:23:00.988Z",
+        "firstMahadashaEnd": "2036-01-18T13:39:55.043Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-19T06:23:00.988Z\",\"caseId\":\"MB-22-AFTER\",\"firstMahadashaEnd\":\"2036-01-18T13:39:55.043Z\",\"firstMahadashaLord\":\"MOON\",\"firstMahadashaStart\":\"2026-01-19T06:23:00.988Z\",\"moonSiderealLongitude\":280.00436813716453,\"nakshatra\":\"SHRAVANA\",\"nakshatraLord\":\"MOON\",\"nakshatraProgress\":0.00032761028734000773,\"remainingFraction\":0.99967238971266}"
+    },
+    {
+      "vectorId": "DASHA-MB-23-BEFORE",
+      "caseId": "MB-23-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-23-BEFORE-2026-01-20",
+      "moonSiderealLongitude": 293.32889753934063,
+      "birthUtcInstant": "2026-01-20T07:36:31.952Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-20T07:36:31.952Z",
+          "localRepresentation": "2026-01-20T07:36:31+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22294311193336,
+      "expected": {
+        "nakshatra": "SHRAVANA",
+        "nakshatraEnglish": "Shravana",
+        "nakshatraLord": "MOON",
+        "nakshatraProgress": 0.9996673154505472,
+        "remainingFraction": 0.0003326845494527886,
+        "firstMahadashaLord": "MOON",
+        "firstMahadashaStart": "2026-01-20T07:36:31.952Z",
+        "firstMahadashaEnd": "2026-01-21T12:46:19.211Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-20T07:36:31.952Z\",\"caseId\":\"MB-23-BEFORE\",\"firstMahadashaEnd\":\"2026-01-21T12:46:19.211Z\",\"firstMahadashaLord\":\"MOON\",\"firstMahadashaStart\":\"2026-01-20T07:36:31.952Z\",\"moonSiderealLongitude\":293.32889753934063,\"nakshatra\":\"SHRAVANA\",\"nakshatraLord\":\"MOON\",\"nakshatraProgress\":0.9996673154505472,\"remainingFraction\":0.0003326845494527886}"
+    },
+    {
+      "vectorId": "DASHA-MB-23-AFTER",
+      "caseId": "MB-23-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-23-AFTER-2026-01-20",
+      "moonSiderealLongitude": 293.33776940120487,
+      "birthUtcInstant": "2026-01-20T07:37:31.952Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-20T07:37:31.952Z",
+          "localRepresentation": "2026-01-20T07:37:31+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222943142322617,
+      "expected": {
+        "nakshatra": "DHANISHTA",
+        "nakshatraEnglish": "Dhanishta",
+        "nakshatraLord": "MARS",
+        "nakshatraProgress": 0.0003327050903621398,
+        "remainingFraction": 0.9996672949096379,
+        "firstMahadashaLord": "MARS",
+        "firstMahadashaStart": "2026-01-20T07:37:31.952Z",
+        "firstMahadashaEnd": "2033-01-19T05:12:36.332Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-20T07:37:31.952Z\",\"caseId\":\"MB-23-AFTER\",\"firstMahadashaEnd\":\"2033-01-19T05:12:36.332Z\",\"firstMahadashaLord\":\"MARS\",\"firstMahadashaStart\":\"2026-01-20T07:37:31.952Z\",\"moonSiderealLongitude\":293.33776940120487,\"nakshatra\":\"DHANISHTA\",\"nakshatraLord\":\"MARS\",\"nakshatraProgress\":0.0003327050903621398,\"remainingFraction\":0.9996672949096379}"
+    },
+    {
+      "vectorId": "DASHA-MB-24-BEFORE",
+      "caseId": "MB-24-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-24-BEFORE-2026-01-21",
+      "moonSiderealLongitude": 306.66216240258944,
+      "birthUtcInstant": "2026-01-21T08:27:57.795Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-21T08:27:57.795Z",
+          "localRepresentation": "2026-01-21T08:27:57+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222981037793748,
+      "expected": {
+        "nakshatra": "DHANISHTA",
+        "nakshatraEnglish": "Dhanishta",
+        "nakshatraLord": "MARS",
+        "nakshatraProgress": 0.9996621801942055,
+        "remainingFraction": 0.00033781980579450366,
+        "firstMahadashaLord": "MARS",
+        "firstMahadashaStart": "2026-01-21T08:27:57.795Z",
+        "firstMahadashaEnd": "2026-01-22T05:11:43.271Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-21T08:27:57.795Z\",\"caseId\":\"MB-24-BEFORE\",\"firstMahadashaEnd\":\"2026-01-22T05:11:43.271Z\",\"firstMahadashaLord\":\"MARS\",\"firstMahadashaStart\":\"2026-01-21T08:27:57.795Z\",\"moonSiderealLongitude\":306.66216240258944,\"nakshatra\":\"DHANISHTA\",\"nakshatraLord\":\"MARS\",\"nakshatraProgress\":0.9996621801942055,\"remainingFraction\":0.00033781980579450366}"
+    },
+    {
+      "vectorId": "DASHA-MB-24-AFTER",
+      "caseId": "MB-24-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-24-AFTER-2026-01-21",
+      "moonSiderealLongitude": 306.67117117746835,
+      "birthUtcInstant": "2026-01-21T08:28:57.795Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-21T08:28:57.795Z",
+          "localRepresentation": "2026-01-21T08:28:57+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.222981058433977,
+      "expected": {
+        "nakshatra": "SHATABHISHA",
+        "nakshatraEnglish": "Shatabhisha",
+        "nakshatraLord": "RAHU",
+        "nakshatraProgress": 0.00033783831012499375,
+        "remainingFraction": 0.999662161689875,
+        "firstMahadashaLord": "RAHU",
+        "firstMahadashaStart": "2026-01-21T08:28:57.795Z",
+        "firstMahadashaEnd": "2044-01-19T15:10:33.202Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-21T08:28:57.795Z\",\"caseId\":\"MB-24-AFTER\",\"firstMahadashaEnd\":\"2044-01-19T15:10:33.202Z\",\"firstMahadashaLord\":\"RAHU\",\"firstMahadashaStart\":\"2026-01-21T08:28:57.795Z\",\"moonSiderealLongitude\":306.67117117746835,\"nakshatra\":\"SHATABHISHA\",\"nakshatraLord\":\"RAHU\",\"nakshatraProgress\":0.00033783831012499375,\"remainingFraction\":0.999662161689875}"
+    },
+    {
+      "vectorId": "DASHA-MB-25-BEFORE",
+      "caseId": "MB-25-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-25-BEFORE-2026-01-22",
+      "moonSiderealLongitude": 319.9954256059686,
+      "birthUtcInstant": "2026-01-22T08:56:40.863Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-22T08:56:40.863Z",
+          "localRepresentation": "2026-01-22T08:56:40+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.22300549769326,
+      "expected": {
+        "nakshatra": "SHATABHISHA",
+        "nakshatraEnglish": "Shatabhisha",
+        "nakshatraLord": "RAHU",
+        "nakshatraProgress": 0.9996569204476429,
+        "remainingFraction": 0.0003430795523571284,
+        "firstMahadashaLord": "RAHU",
+        "firstMahadashaStart": "2026-01-22T08:56:40.863Z",
+        "firstMahadashaEnd": "2026-01-24T15:04:42.674Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-22T08:56:40.863Z\",\"caseId\":\"MB-25-BEFORE\",\"firstMahadashaEnd\":\"2026-01-24T15:04:42.674Z\",\"firstMahadashaLord\":\"RAHU\",\"firstMahadashaStart\":\"2026-01-22T08:56:40.863Z\",\"moonSiderealLongitude\":319.9954256059686,\"nakshatra\":\"SHATABHISHA\",\"nakshatraLord\":\"RAHU\",\"nakshatraProgress\":0.9996569204476429,\"remainingFraction\":0.0003430795523571284}"
+    },
+    {
+      "vectorId": "DASHA-MB-25-AFTER",
+      "caseId": "MB-25-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-25-AFTER-2026-01-22",
+      "moonSiderealLongitude": 320.00457441952517,
+      "birthUtcInstant": "2026-01-22T08:57:40.863Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-22T08:57:40.863Z",
+          "localRepresentation": "2026-01-22T08:57:40+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223005510894005,
+      "expected": {
+        "nakshatra": "PURVA_BHADRAPADA",
+        "nakshatraEnglish": "Purva Bhadrapada",
+        "nakshatraLord": "JUPITER",
+        "nakshatraProgress": 0.0003430814643877511,
+        "remainingFraction": 0.9996569185356122,
+        "firstMahadashaLord": "JUPITER",
+        "firstMahadashaStart": "2026-01-22T08:57:40.863Z",
+        "firstMahadashaEnd": "2042-01-20T08:50:31.621Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-22T08:57:40.863Z\",\"caseId\":\"MB-25-AFTER\",\"firstMahadashaEnd\":\"2042-01-20T08:50:31.621Z\",\"firstMahadashaLord\":\"JUPITER\",\"firstMahadashaStart\":\"2026-01-22T08:57:40.863Z\",\"moonSiderealLongitude\":320.00457441952517,\"nakshatra\":\"PURVA_BHADRAPADA\",\"nakshatraLord\":\"JUPITER\",\"nakshatraProgress\":0.0003430814643877511,\"remainingFraction\":0.9996569185356122}"
+    },
+    {
+      "vectorId": "DASHA-MB-26-BEFORE",
+      "caseId": "MB-26-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-26-BEFORE-2026-01-23",
+      "moonSiderealLongitude": 333.3286862016848,
+      "birthUtcInstant": "2026-01-23T09:02:40.210Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-23T09:02:40.210Z",
+          "localRepresentation": "2026-01-23T09:02:40+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223021623886055,
+      "expected": {
+        "nakshatra": "PURVA_BHADRAPADA",
+        "nakshatraEnglish": "Purva Bhadrapada",
+        "nakshatraLord": "JUPITER",
+        "nakshatraProgress": 0.999651465126358,
+        "remainingFraction": 0.000348534873641948,
+        "firstMahadashaLord": "JUPITER",
+        "firstMahadashaStart": "2026-01-23T09:02:40.210Z",
+        "firstMahadashaEnd": "2026-01-25T09:55:42.996Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-23T09:02:40.210Z\",\"caseId\":\"MB-26-BEFORE\",\"firstMahadashaEnd\":\"2026-01-25T09:55:42.996Z\",\"firstMahadashaLord\":\"JUPITER\",\"firstMahadashaStart\":\"2026-01-23T09:02:40.210Z\",\"moonSiderealLongitude\":333.3286862016848,\"nakshatra\":\"PURVA_BHADRAPADA\",\"nakshatraLord\":\"JUPITER\",\"nakshatraProgress\":0.999651465126358,\"remainingFraction\":0.000348534873641948}"
+    },
+    {
+      "vectorId": "DASHA-MB-26-AFTER",
+      "caseId": "MB-26-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-26-AFTER-2026-01-23",
+      "moonSiderealLongitude": 333.33798074312625,
+      "birthUtcInstant": "2026-01-23T09:03:40.210Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-23T09:03:40.210Z",
+          "localRepresentation": "2026-01-23T09:03:40+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223021633779968,
+      "expected": {
+        "nakshatra": "UTTARA_BHADRAPADA",
+        "nakshatraEnglish": "Uttara Bhadrapada",
+        "nakshatraLord": "SATURN",
+        "nakshatraProgress": 0.0003485557344660606,
+        "remainingFraction": 0.999651444265534,
+        "firstMahadashaLord": "SATURN",
+        "firstMahadashaStart": "2026-01-23T09:03:40.210Z",
+        "firstMahadashaEnd": "2045-01-20T17:00:28.143Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-23T09:03:40.210Z\",\"caseId\":\"MB-26-AFTER\",\"firstMahadashaEnd\":\"2045-01-20T17:00:28.143Z\",\"firstMahadashaLord\":\"SATURN\",\"firstMahadashaStart\":\"2026-01-23T09:03:40.210Z\",\"moonSiderealLongitude\":333.33798074312625,\"nakshatra\":\"UTTARA_BHADRAPADA\",\"nakshatraLord\":\"SATURN\",\"nakshatraProgress\":0.0003485557344660606,\"remainingFraction\":0.999651444265534}"
+    },
+    {
+      "vectorId": "DASHA-MB-27-BEFORE",
+      "caseId": "MB-27-BEFORE",
+      "cohortCaptureId": "CAPTURE-MB-27-BEFORE-2026-01-24",
+      "moonSiderealLongitude": 346.66194321210975,
+      "birthUtcInstant": "2026-01-24T08:45:38.836Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-24T08:45:38.836Z",
+          "localRepresentation": "2026-01-24T08:45:38+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.223036358763075,
+      "expected": {
+        "nakshatra": "UTTARA_BHADRAPADA",
+        "nakshatraEnglish": "Uttara Bhadrapada",
+        "nakshatraLord": "SATURN",
+        "nakshatraProgress": 0.9996457409082282,
+        "remainingFraction": 0.0003542590917717803,
+        "firstMahadashaLord": "SATURN",
+        "firstMahadashaStart": "2026-01-24T08:45:38.836Z",
+        "firstMahadashaEnd": "2026-01-26T19:45:50.603Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-24T08:45:38.836Z\",\"caseId\":\"MB-27-BEFORE\",\"firstMahadashaEnd\":\"2026-01-26T19:45:50.603Z\",\"firstMahadashaLord\":\"SATURN\",\"firstMahadashaStart\":\"2026-01-24T08:45:38.836Z\",\"moonSiderealLongitude\":346.66194321210975,\"nakshatra\":\"UTTARA_BHADRAPADA\",\"nakshatraLord\":\"SATURN\",\"nakshatraProgress\":0.9996457409082282,\"remainingFraction\":0.0003542590917717803}"
+    },
+    {
+      "vectorId": "DASHA-MB-27-AFTER",
+      "caseId": "MB-27-AFTER",
+      "cohortCaptureId": "CAPTURE-MB-27-AFTER-2026-01-24",
+      "moonSiderealLongitude": 346.6713902319333,
+      "birthUtcInstant": "2026-01-24T08:46:38.836Z",
+      "site": {
+        "latitude": 0,
+        "longitude": 0,
+        "instant": {
+          "utcInstant": "2026-01-24T08:46:38.836Z",
+          "localRepresentation": "2026-01-24T08:46:38+00:00",
+          "ianaTimeZone": "UTC"
+        }
+      },
+      "ayanamsaDegrees": 24.2230363704652,
+      "expected": {
+        "nakshatra": "REVATI",
+        "nakshatraEnglish": "Revati",
+        "nakshatraLord": "MERCURY",
+        "nakshatraProgress": 0.00035426739499513357,
+        "remainingFraction": 0.9996457326050049,
+        "firstMahadashaLord": "MERCURY",
+        "firstMahadashaStart": "2026-01-24T08:46:38.836Z",
+        "firstMahadashaEnd": "2043-01-22T09:59:01.747Z"
+      },
+      "rawLine": "{\"birthUtc\":\"2026-01-24T08:46:38.836Z\",\"caseId\":\"MB-27-AFTER\",\"firstMahadashaEnd\":\"2043-01-22T09:59:01.747Z\",\"firstMahadashaLord\":\"MERCURY\",\"firstMahadashaStart\":\"2026-01-24T08:46:38.836Z\",\"moonSiderealLongitude\":346.6713902319333,\"nakshatra\":\"REVATI\",\"nakshatraLord\":\"MERCURY\",\"nakshatraProgress\":0.00035426739499513357,\"remainingFraction\":0.9996457326050049}"
     }
   ]
 }

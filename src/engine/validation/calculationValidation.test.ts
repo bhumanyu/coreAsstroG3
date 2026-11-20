@@ -122,8 +122,8 @@ describe('RG-09 calculation reference validation', () => {
       expect(fixture.provenance.toleranceRationale.trim()).not.toBe('');
       expect(fixture.provenance.independenceStatement.trim()).not.toBe('');
       expect(fixture.provenance.retrievedAt.trim()).not.toBe('');
-      expect(fixture.provenance.approvedBy.trim()).not.toBe('');
-      expect(fixture.provenance.approvedAt.trim()).not.toBe('');
+      expect(fixture.provenance.approvedBy).toBeUndefined();
+      expect(fixture.provenance.approvedAt).toBeUndefined();
 
       switch (fixture.kind) {
         case 'PLANETARY_LONGITUDE': {

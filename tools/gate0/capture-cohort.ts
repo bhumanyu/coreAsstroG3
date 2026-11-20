@@ -143,7 +143,7 @@ async function main() {
           nodeConvention: 'MEAN (Ketu = mean node + 180 deg)',
           frameTropical: 'tropical, mean equinox of date',
           frameSidereal: 'sidereal, SEFLG_SIDEREAL, ayanamsa mode LAHIRI (1)',
-          timeStandard: 'UTC input; TT handled internally via deltaT',
+          timeStandard: 'UTC input -> UT JD; swe_calc_ut applies deltaT internally',
           flagsTropical: instant.flagsTropical,
           flagsSidereal: instant.flagsSidereal
         },
@@ -181,13 +181,19 @@ async function main() {
   }
 
   writeJsonFile(MANIFEST_PATH, manifest);
+  const capturedTargets = targets.filter(c => manifest.files[`cohort/${c.id}.json`]?.status === 'CAPTURED');
   writeJsonFile(join(CAPTURES_DIR, 'cohort-raw-lines.txt'),
-    targets.map(c => `${c.id}\n${Object.values(
+    capturedTargets.map(c => `${c.id}\n${Object.values(
       // re-read artifact for raw lines
       (JSON.parse(readFileSync(join(COHORT_DIR, `${c.id}.json`), 'utf8')) as { capture: SeInstantCapture }).capture.bodies
     ).map(rawBodyLine).join('\n')}`).join('\n\n') + '\n');
   session.dispose();
   console.log('manifest updated:', MANIFEST_PATH);
+  const blocked = targets.filter(c => manifest.files[`cohort/${c.id}.json`]?.status !== 'CAPTURED');
+  if (blocked.length > 0) {
+    console.error(`blocked cohort cases: ${blocked.map(c => c.id).join(', ')}`);
+    process.exitCode = 1;
+  }
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

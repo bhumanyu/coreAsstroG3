@@ -11,10 +11,12 @@
  * Offline tooling only; nothing in src/ imports this script.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { BoundaryTripletSpec } from '../../src/engine/validation/calculationReferenceFixtureSchema.ts';
 import { gitCommitSha, readJsonFile, repoRoot, GATE0_ROOT } from './lib/util.ts';
+import { validateCaptureArtifact, type CaptureManifest } from './lib/captureManifest.ts';
 
 const CAPTURE_DATE = '2026-11-20';
 const SE_CAPTURE_IMPL = '@kuntay/swisseph@0.2.2 (WASM port of Swiss Ephemeris 2.10.03)';
@@ -27,6 +29,7 @@ const MOTION_PLANETS = ['MERCURY', 'VENUS', 'MARS'] as const;
 const SPEED_TOLERANCE = 0.05; // deg/day
 const STATIONARY_THRESHOLD = 0.005; // deg/day, documented station threshold
 const LONGITUDE_TOLERANCE_DEFAULT = 0.01; // deg, protocol §4
+const LONGITUDE_TOLERANCE_MOON_ANCHOR = 0.0001; // deg, protocol §4 Moon-anchor track
 const LONGITUDE_TOLERANCE_NODE = 0.005; // deg, protocol §4 mean nodes
 const TOLERANCE_RATIONALE =
   'GATE-0-VALIDATION-PROTOCOL.md §4 per-track tolerances; engine analytical series ' +
@@ -122,7 +125,7 @@ const PADA_EXPR: Record<number, TsExpr> = {
 };
 const AYAN_EXPR = E('AyanamsaType.LAHIRI');
 
-interface BuilderCall {
+export interface BuilderCall {
   fn: string;
   args: Record<string, unknown>;
 }
@@ -145,11 +148,15 @@ function provBase(args: {
   sourceType: string; sourceName: string; citation: string; sourceVersion: string;
   methodology: string; coordinateConvention: string; timeStandard: string;
   ayanamsa: string; nodeConvention: string; tolerance: string; toleranceRationale: string;
-  independenceStatement: string; retrievedAt: string; approvedBy: string; approvedAt: string;
+  independenceStatement: string; retrievedAt: string;
   captureId: string; sourceArtifactSha256: string; referenceImplementation: string;
   referenceImplementationVersion: string; referenceFlags: string[];
   rawCapturedOutput: string; engineCommitSha: string; site: SiteInstant;
   ephemeris: typeof SE_SITE_EPHEMERIS;
+  derivedFrom?: readonly {
+    captureId: string; sourceArtifactSha256: string;
+    referenceImplementation: string; referenceImplementationVersion: string;
+  }[];
 }) {
   return {
     sourceType: args.sourceType,
@@ -166,8 +173,6 @@ function provBase(args: {
     independenceStatement: args.independenceStatement,
     independentlyProduced: true,
     retrievedAt: args.retrievedAt,
-    approvedBy: args.approvedBy,
-    approvedAt: args.approvedAt,
     expectedValuesProducedIndependently: true,
     capture: {
       captureId: args.captureId,
@@ -176,7 +181,8 @@ function provBase(args: {
       referenceImplementationVersion: args.referenceImplementationVersion,
       referenceFlags: args.referenceFlags,
       rawCapturedOutput: args.rawCapturedOutput,
-      engineCommitSha: args.engineCommitSha
+      engineCommitSha: args.engineCommitSha,
+      ...(args.derivedFrom ? { derivedFrom: args.derivedFrom } : {})
     },
     site: args.site,
     ephemeris: args.ephemeris
@@ -202,8 +208,6 @@ function seProvenance(args: {
     toleranceRationale: TOLERANCE_RATIONALE,
     independenceStatement: 'Expected values produced by Swiss Ephemeris offline capture (tools/gate0); cross-checked against astronomy-engine 2.1.19 (MIT) recorded in the same artifact; no engine output used.',
     retrievedAt: CAPTURE_DATE,
-    approvedBy: 'tools/gate0 offline capture pipeline (auto-generated; pending human review)',
-    approvedAt: CAPTURE_DATE,
     captureId: args.artifact.captureId,
     sourceArtifactSha256: sha256File(args.artifactPath),
     referenceImplementation: SE_CAPTURE_IMPL,
@@ -219,6 +223,10 @@ function seProvenance(args: {
 function gridProvenance(args: {
   captureId: string; artifactSha: string; rawLine: string;
   methodology: string; tolerance: string; engineCommitSha: string;
+  derivedFrom?: readonly {
+    captureId: string; sourceArtifactSha256: string;
+    referenceImplementation: string; referenceImplementationVersion: string;
+  }[];
 }) {
   return provBase({
     sourceType: 'INDEPENDENT_CALCULATION',
@@ -234,8 +242,6 @@ function gridProvenance(args: {
     toleranceRationale: 'Categorical grid membership / deterministic varga arithmetic; tolerance covers only floating-point representation.',
     independenceStatement: 'Expected values computed by tools/gate0/lib/grid.ts from documented grid rules; expected values are not derived from engine output.',
     retrievedAt: CAPTURE_DATE,
-    approvedBy: 'tools/gate0 offline capture pipeline (auto-generated; pending human review)',
-    approvedAt: CAPTURE_DATE,
     captureId: args.captureId,
     sourceArtifactSha256: args.artifactSha,
     referenceImplementation: GRID_EVALUATOR_IMPL,
@@ -244,7 +250,8 @@ function gridProvenance(args: {
     rawCapturedOutput: args.rawLine,
     engineCommitSha: args.engineCommitSha,
     site: NOMINAL_SITE,
-    ephemeris: SE_SITE_EPHEMERIS
+    ephemeris: SE_SITE_EPHEMERIS,
+    derivedFrom: args.derivedFrom
   });
 }
 
@@ -283,9 +290,16 @@ function main() {
   const engineCommitSha = gitCommitSha(root);
   const cohortDir = join(GATE0_ROOT, 'captures/cohort');
   const cohortFile = readJsonFile<{ cases: CohortCase[] }>(join(GATE0_ROOT, 'cohort/cases.v1.json'));
+  const manifest = readJsonFile<CaptureManifest>(join(GATE0_ROOT, 'captures/manifest.json'));
   const boundaryPath = join(GATE0_ROOT, 'captures/boundary-vectors.v1.json');
-  const boundary = readJsonFile<BoundaryArtifact>(boundaryPath);
-  const boundarySha = sha256File(boundaryPath);
+  const boundaryCapture = validateCaptureArtifact<BoundaryArtifact>({
+    manifest,
+    relativePath: 'boundary-vectors.v1.json',
+    artifactPath: boundaryPath,
+    caseId: 'boundary-vectors.v1'
+  });
+  const boundary = boundaryCapture.artifact;
+  const boundarySha = boundaryCapture.sha256;
 
   const siderealConventions = {
     coordinateFrame: 'SIDEREAL',
@@ -294,14 +308,23 @@ function main() {
   };
 
   const activeCases = cohortFile.cases.filter(c => !c.utcInstant.startsWith('TBD'));
+  const cohortCaptures = new Map<string, {
+    artifact: CohortArtifact; artifactPath: string; sha256: string;
+  }>();
 
   // --- cohort: planetary longitudes, motion, Rahu/Ketu opposition ---------
   for (const c of activeCases) {
     const artifactPath = join(cohortDir, `${c.id}.json`);
-    if (!existsSync(artifactPath)) {
-      throw new Error(`missing capture artifact for ${c.id}: ${artifactPath} — capture must succeed before fixture generation (BLOCKED, never fabricated)`);
-    }
-    const artifact = readJsonFile<CohortArtifact>(artifactPath);
+    const validated = validateCaptureArtifact<CohortArtifact>({
+      manifest,
+      relativePath: `cohort/${c.id}.json`,
+      artifactPath,
+      caseId: c.id,
+      expectedCaptureId: `CAPTURE-${c.id}-${c.utcInstant.slice(0, 10)}`,
+      expectedBodies: PLANET_NAMES
+    });
+    const artifact = validated.artifact;
+    cohortCaptures.set(c.id, { artifact, artifactPath, sha256: validated.sha256 });
     const birth = birthDetails({
       latitude: c.latitude, longitude: c.longitude,
       ianaTimeZone: c.ianaTimeZone, utcInstant: c.utcInstant
@@ -313,8 +336,10 @@ function main() {
       if (body.tropical.ephemeris !== 'swiss' || body.sidereal.ephemeris !== 'swiss') {
         throw new Error(`capture ${c.id}/${planetName} ephemeris model not 'swiss': BLOCKED`);
       }
-      const tol = planetName === 'RAHU' || planetName === 'KETU'
-        ? LONGITUDE_TOLERANCE_NODE : LONGITUDE_TOLERANCE_DEFAULT;
+      const tol = planetName === 'MOON'
+        ? LONGITUDE_TOLERANCE_MOON_ANCHOR
+        : planetName === 'RAHU' || planetName === 'KETU'
+          ? LONGITUDE_TOLERANCE_NODE : LONGITUDE_TOLERANCE_DEFAULT;
       call('buildPlanetaryLongitudeFixture', {
         id: `PL-${c.id}-${planetName}`,
         entryPoint: 'generatePlanetaryPositions',
@@ -462,22 +487,41 @@ function main() {
 
   // --- Vimshottari anchors -------------------------------------------------
   for (const v of boundary.dashaAnchors) {
-    const cohortArtifactPath = join(cohortDir, `${v.caseId}.json`);
-    if (!existsSync(cohortArtifactPath)) {
-      throw new Error(`dasha anchor ${v.vectorId} references missing cohort capture ${v.caseId}`);
+    const cohortCapture = cohortCaptures.get(v.caseId);
+    if (!cohortCapture) {
+      throw new Error(`dasha anchor ${v.vectorId}: no validated cohort capture for ${v.caseId}`);
     }
-    const cohortSha = sha256File(cohortArtifactPath);
     call('buildVimshottariDashaFixture', {
       id: v.vectorId,
       entryPoint: 'calculateVimshottari',
       description: `Vimshottari birth anchor at ${v.birthUtcInstant} (Moon nakshatra ${v.expected.nakshatraEnglish})`,
       birthDateTime: v.birthUtcInstant,
+      birth: birthDetails({
+        latitude: v.site.latitude,
+        longitude: v.site.longitude,
+        ianaTimeZone: v.site.instant.ianaTimeZone,
+        utcInstant: v.birthUtcInstant
+      }),
       moonSiderealLongitude: v.moonSiderealLongitude,
       provenance: gridProvenance({
         captureId: boundary.captureId, artifactSha: boundarySha, rawLine: v.rawLine,
-        methodology: `Moon sidereal longitude locked from Swiss Ephemeris cohort capture ${v.cohortCaptureId} (artifact sha256 ${cohortSha}); nakshatra/progress/dasha anchor computed by independent Vimshottari implementation (365.25-day year convention).`,
+        methodology: `Moon sidereal longitude locked from Swiss Ephemeris cohort capture ${v.cohortCaptureId}; nakshatra/progress/dasha anchor computed by independent Vimshottari implementation (365.25-day year convention).`,
         tolerance: 'fraction <= 1e-6; MD boundary <= 1000 ms (conditional on identical year-length convention per protocol §4)',
-        engineCommitSha
+        engineCommitSha,
+        derivedFrom: [
+          {
+            captureId: v.cohortCaptureId,
+            sourceArtifactSha256: cohortCapture.sha256,
+            referenceImplementation: SE_CAPTURE_IMPL,
+            referenceImplementationVersion: SE_CAPTURE_VERSION
+          },
+          {
+            captureId: boundary.captureId,
+            sourceArtifactSha256: boundarySha,
+            referenceImplementation: GRID_EVALUATOR_IMPL,
+            referenceImplementationVersion: GRID_EVALUATOR_VERSION
+          }
+        ]
       }),
       conventions: {
         coordinateFrame: 'SIDEREAL', ayanamsa: AYAN_EXPR,
@@ -503,6 +547,14 @@ function main() {
 /* ------------------------- emission ------------------------------------- */
 
 function emit(builderCalls: readonly BuilderCall[]): void {
+  const out = renderFixtureModule(builderCalls);
+  const outPath = join(GATE0_ROOT, '../../src/engine/validation/calculationReferenceFixtures.generated.ts');
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, out, 'utf8');
+  console.log(`wrote ${outPath} (${out.length} bytes)`);
+}
+
+export function renderFixtureModule(builderCalls: readonly BuilderCall[]): string {
   const header = `/**
  * AUTO-GENERATED FILE — do not edit by hand.
  *
@@ -535,11 +587,7 @@ import type { BirthDetails } from '../../types.ts';
     `  ${c.fn}(${serialize(c.args, '  ')})`
   ).join(',\n');
 
-  const out = `${header}export const GENERATED_CALCULATION_REFERENCE_FIXTURES: readonly CalculationReferenceFixture[] = Object.freeze([\n${body}\n]);\n`;
-  const outPath = join(GATE0_ROOT, '../../src/engine/validation/calculationReferenceFixtures.generated.ts');
-  mkdirSync(dirname(outPath), { recursive: true });
-  writeFileSync(outPath, out, 'utf8');
-  console.log(`wrote ${outPath} (${out.length} bytes)`);
+  return `${header}export const GENERATED_CALCULATION_REFERENCE_FIXTURES: readonly CalculationReferenceFixture[] = Object.freeze([\n${body}\n]);\n`;
 }
 
-main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
