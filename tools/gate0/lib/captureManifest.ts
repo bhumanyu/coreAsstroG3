@@ -27,6 +27,13 @@ export interface CohortCaptureDefinition {
   readonly utcInstant: string;
 }
 
+export interface CohortManifestCompleteness {
+  readonly missingManifestEntries: readonly string[];
+  readonly missingArtifacts: readonly string[];
+  readonly orphanManifestEntries: readonly string[];
+  readonly unmanifestedArtifacts: readonly string[];
+}
+
 interface CohortCaptureMetadata {
   readonly caseId?: unknown;
   readonly site?: {
@@ -71,6 +78,119 @@ function validateCohortCaptureMetadata(
 
 function formatMetadataValue(value: unknown): string {
   return value === undefined ? '<missing>' : JSON.stringify(value) ?? String(value);
+}
+
+function objectField(
+  value: unknown,
+  caseId: string,
+  field: string
+): Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`capture ${caseId}: ${field} must be an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function finiteNumberField(value: unknown, caseId: string, field: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`capture ${caseId}: ${field} must be a finite number`);
+  }
+  return value;
+}
+
+function validateLongitude(value: unknown, caseId: string, field: string): void {
+  const longitude = finiteNumberField(value, caseId, field);
+  if (longitude < 0 || longitude >= 360) {
+    throw new Error(`capture ${caseId}: ${field} must be in [0, 360)`);
+  }
+}
+
+function validateCohortCaptureNumbers(
+  artifact: unknown,
+  caseId: string,
+  expectedBodies: readonly string[]
+): void {
+  const root = objectField(artifact, caseId, 'artifact');
+  const site = objectField(root.site, caseId, 'site');
+  const latitude = finiteNumberField(site.latitude, caseId, 'site.latitude');
+  if (latitude < -90 || latitude > 90) {
+    throw new Error(`capture ${caseId}: site.latitude must be in [-90, 90]`);
+  }
+  const longitude = finiteNumberField(site.longitude, caseId, 'site.longitude');
+  if (longitude < -180 || longitude > 180) {
+    throw new Error(`capture ${caseId}: site.longitude must be in [-180, 180]`);
+  }
+
+  const instant = objectField(site.instant, caseId, 'site.instant');
+  const utcInstant = instant.utcInstant;
+  if (typeof utcInstant !== 'string' || !Number.isFinite(Date.parse(utcInstant))) {
+    throw new Error(`capture ${caseId}: site.instant.utcInstant must be a valid date`);
+  }
+
+  const capture = objectField(root.capture, caseId, 'capture');
+  finiteNumberField(capture.ayanamsaDegrees, caseId, 'capture.ayanamsaDegrees');
+  const bodies = objectField(capture.bodies, caseId, 'capture.bodies');
+  for (const bodyName of expectedBodies) {
+    const body = objectField(bodies[bodyName], caseId, `capture.bodies.${bodyName}`);
+    for (const frame of ['tropical', 'sidereal'] as const) {
+      const position = objectField(body[frame], caseId, `capture.bodies.${bodyName}.${frame}`);
+      validateLongitude(
+        position.longitude,
+        caseId,
+        `capture.bodies.${bodyName}.${frame}.longitude`
+      );
+      finiteNumberField(
+        position.longitudeSpeed,
+        caseId,
+        `capture.bodies.${bodyName}.${frame}.longitudeSpeed`
+      );
+    }
+  }
+}
+
+export function validateCohortManifestCompleteness(
+  definitions: readonly CohortCaptureDefinition[],
+  manifest: CaptureManifest,
+  artifactPaths: readonly string[]
+): CohortManifestCompleteness {
+  const expectedPaths = new Set(definitions.map(definition => `cohort/${definition.id}.json`));
+  const manifestPaths = Object.keys(manifest.files ?? {}).map(path => path.replace(/\\/g, '/'));
+  const artifactPathSet = new Set(artifactPaths.map(path => path.replace(/\\/g, '/')));
+  const cohortManifestPaths = manifestPaths.filter(path => path.startsWith('cohort/'));
+  const cohortArtifactPaths = [...artifactPathSet].filter(path => path.startsWith('cohort/'));
+
+  return {
+    missingManifestEntries: [...expectedPaths].filter(path => !manifestPaths.includes(path)),
+    missingArtifacts: [...expectedPaths].filter(path => !artifactPathSet.has(path)),
+    orphanManifestEntries: cohortManifestPaths.filter(path => !expectedPaths.has(path)),
+    unmanifestedArtifacts: cohortArtifactPaths.filter(path => !manifestPaths.includes(path))
+  };
+}
+
+export function assertCohortManifestComplete(
+  definitions: readonly CohortCaptureDefinition[],
+  manifest: CaptureManifest,
+  artifactPaths: readonly string[]
+): void {
+  const issues = validateCohortManifestCompleteness(definitions, manifest, artifactPaths);
+  const messages = [
+    issues.missingManifestEntries.length > 0
+      ? `missing manifest entries: ${issues.missingManifestEntries.join(', ')}`
+      : '',
+    issues.missingArtifacts.length > 0
+      ? `missing artifact files: ${issues.missingArtifacts.join(', ')}`
+      : '',
+    issues.orphanManifestEntries.length > 0
+      ? `orphan manifest entries: ${issues.orphanManifestEntries.join(', ')}`
+      : '',
+    issues.unmanifestedArtifacts.length > 0
+      ? `unmanifested files: ${issues.unmanifestedArtifacts.join(', ')}`
+      : ''
+  ].filter(Boolean);
+
+  if (messages.length > 0) {
+    throw new Error(`cohort manifest completeness BLOCKED: ${messages.join('; ')}`);
+  }
 }
 
 export function validateCaptureArtifact<T extends { captureId?: unknown; capture?: unknown }>(
@@ -161,6 +281,7 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
         `capture ${options.caseId}: ${manifestPath} is missing expected bodies: ${missing.join(', ')}`
       );
     }
+    validateCohortCaptureNumbers(artifact, options.caseId, options.expectedBodies);
   }
 
   return { artifact, sha256: actualSha };

@@ -11,12 +11,16 @@
  * Offline tooling only; nothing in src/ imports this script.
  */
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BoundaryTripletSpec } from '../../src/engine/validation/calculationReferenceFixtureSchema.ts';
 import { gitCommitSha, readJsonFile, repoRoot, GATE0_ROOT } from './lib/util.ts';
-import { validateCaptureArtifact, type CaptureManifest } from './lib/captureManifest.ts';
+import {
+  assertCohortManifestComplete,
+  validateCaptureArtifact,
+  type CaptureManifest
+} from './lib/captureManifest.ts';
 
 const CAPTURE_DATE = '2026-11-20';
 const SE_CAPTURE_IMPL = '@kuntay/swisseph@0.2.2 (WASM port of Swiss Ephemeris 2.10.03)';
@@ -291,6 +295,13 @@ function main() {
   const cohortDir = join(GATE0_ROOT, 'captures/cohort');
   const cohortFile = readJsonFile<{ cases: CohortCase[] }>(join(GATE0_ROOT, 'cohort/cases.v1.json'));
   const manifest = readJsonFile<CaptureManifest>(join(GATE0_ROOT, 'captures/manifest.json'));
+  const activeCases = cohortFile.cases.filter(c => !c.utcInstant.startsWith('TBD'));
+  const cohortArtifactPaths = existsSync(cohortDir)
+    ? readdirSync(cohortDir, { withFileTypes: true })
+      .filter(entry => entry.isFile())
+      .map(entry => `cohort/${entry.name}`)
+    : [];
+  assertCohortManifestComplete(activeCases, manifest, cohortArtifactPaths);
   const boundaryPath = join(GATE0_ROOT, 'captures/boundary-vectors.v1.json');
   const boundaryCapture = validateCaptureArtifact<BoundaryArtifact>({
     manifest,
@@ -307,7 +318,6 @@ function main() {
     timeStandard: 'UTC'
   };
 
-  const activeCases = cohortFile.cases.filter(c => !c.utcInstant.startsWith('TBD'));
   const cohortCaptures = new Map<string, {
     artifact: CohortArtifact; artifactPath: string; sha256: string;
   }>();

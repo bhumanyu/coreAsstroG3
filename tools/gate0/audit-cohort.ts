@@ -3,10 +3,12 @@
  * Reports measured proximity to categorical boundaries; it does not assert
  * coverage when the captures do not demonstrate it.
  */
+import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GATE0_ROOT, readJsonFile } from './lib/util.ts';
 import {
+  assertCohortManifestComplete,
   validateCaptureArtifact,
   type CaptureManifest,
   type CohortCaptureDefinition
@@ -95,9 +97,17 @@ function distanceToGridBoundary(longitude: number, gridStep: number): number {
 export function loadCohortCaptures(): readonly CohortCapture[] {
   const cases = readJsonFile<{ cases: CohortCase[] }>(join(GATE0_ROOT, 'cohort/cases.v1.json')).cases;
   const manifest = readJsonFile<CaptureManifest>(join(GATE0_ROOT, 'captures/manifest.json'));
+  const activeCases = cases.filter(definition => !definition.utcInstant.startsWith('TBD'));
+  const cohortDirectory = join(GATE0_ROOT, 'captures/cohort');
+  const artifactPaths = existsSync(cohortDirectory)
+    ? readdirSync(cohortDirectory, { withFileTypes: true })
+      .filter(entry => entry.isFile())
+      .map(entry => `cohort/${entry.name}`)
+    : [];
+  assertCohortManifestComplete(activeCases, manifest, artifactPaths);
+
   const captures: CohortCapture[] = [];
-  for (const definition of cases) {
-    if (definition.utcInstant.startsWith('TBD')) continue;
+  for (const definition of activeCases) {
     const path = join(GATE0_ROOT, 'captures/cohort', `${definition.id}.json`);
     const validated = validateCaptureArtifact<CohortArtifact>({
       manifest,

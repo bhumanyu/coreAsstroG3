@@ -92,6 +92,48 @@ records `deltaTDays` separately. Tropical and sidereal calls both request
 longitude are preserved separately in each artifact for discrepancy
 attribution.
 
+## Swiss Ephemeris conformance vectors
+
+`tests/seConformance.test.ts` pins the wrapper contract against two historical
+instants: 1900-01-01 and 2099-01-01, each entered as TT midnight in the
+independent Astro.com swetest 2.10.04 interface. The returned UT Julian days
+are passed unchanged to `calc`, `ayanamsa`, `houses`, and `deltaT`.
+
+The planetary longitude, mean-node, and ΔT expected values are the published
+swetest output. Source commands:
+
+- [1900 planets](https://www.astro.com/cgi/swetest.cgi?b=1.1.1900&n=1&s=1&f=PLBRS&p=0123)
+  and [1900 mean node](https://www.astro.com/cgi/swetest.cgi?b=1.1.1900&n=1&s=1&f=PLBRS&p=m).
+- [2099 planets](https://www.astro.com/cgi/swetest.cgi?b=1.1.2099&n=1&s=1&f=PLBRS&p=0123)
+  and [2099 mean node](https://www.astro.com/cgi/swetest.cgi?b=1.1.2099&n=1&s=1&f=PLBRS&p=m).
+
+The CGI echoes `-b{date} -n1 -s1 -fPLBRS -p{planets}`. `PLBRS` requests
+ecliptic longitude, latitude, distance, and speed. With no sidereal flag, the
+default is geocentric apparent longitude on the true equinox of date;
+`SEFLG_SWIEPH` is the default ephemeris and `SEFLG_SPEED` requests speed.
+The test sets those flags explicitly. The `m` planet selector is the mean
+lunar node; captures use that node (Ketu is the antipode).
+
+The binding source maps `calc()` to `swe_calc_ut`, `ayanamsa()` to
+`swe_get_ayanamsa_ex_ut`, `houses()` to `swe_houses_ex2`, and `deltaT()` to
+`swe_deltat_ex`. Official [Swiss Ephemeris programming documentation](https://www.astro.com/swisseph/swephprg.htm)
+specifies the UT contracts: `swe_calc_ut` accepts UT and applies ΔT internally;
+the `_ut` ayanamsa function and houses routine take UT; `swe_deltat_ex` returns
+ΔT. The test pins `Ayanamsa.Lahiri`, geocentric apparent positions, mean node,
+the `EqualWholeSign` house system, and longitude/latitude 0° for the
+independent ascendant calculation.
+
+The Lahiri numerical check uses the published J2000 Lahiri reference value
+`23.8571°` (see Astrodienst's [ayanamsha overview](https://www.astro.com/astrology/in_ayanamsha_e.htm))
+and the standard precession polynomial
+`23.8571 + 1.3969713*T + 0.0003086*T²` (T in Julian centuries from J2000),
+with a 0.01° tolerance. The house check independently evaluates Meeus'
+GMST/mean-obliquity formula, the swetest-reported nutation-in-longitude term,
+and the eastern intersection of the ecliptic and horizon; its tolerance is
+0.001°. These formula-based tolerances are conformance checks, not substitutes
+for the exact swetest planetary/node vectors. Test annotations preserve the
+inputs, sources, and tolerances.
+
 ## Licensing
 
 Swiss Ephemeris is AGPL-3.0-or-later / commercial dual-licensed. It is used

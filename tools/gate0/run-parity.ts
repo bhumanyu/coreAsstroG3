@@ -15,10 +15,10 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  calculateCalculationReferenceGate,
   CALCULATION_REFERENCE_FIXTURES,
   CALCULATION_COVERAGE_POLICY,
-  inspectBoundaryCoverage,
-  RG_09_CALCULATION_REFERENCE_GATE
+  inspectBoundaryCoverage
 } from '../../src/engine/validation/calculationReferenceFixtures.ts';
 import type { CalculationReferenceFixture } from '../../src/engine/validation/calculationReferenceTypes.ts';
 import {
@@ -29,7 +29,7 @@ import { calculateNakshatra } from '../../src/engine/nakshatraUtils.ts';
 import { calculateVimshottari } from '../../src/engine/dasha/vimshottari.ts';
 import { AyanamsaType, Planet, ChartType } from '../../src/types.ts';
 import type { BirthDetails, PlanetaryPositions } from '../../src/types.ts';
-import { gitCommitSha, repoRoot, normDeg } from './lib/util.ts';
+import { gitCommitSha, repoRoot, normDeg, GATE0_ROOT } from './lib/util.ts';
 import { signAt, nakshatraAt, padaAt, vargaD9, vargaD10 } from './lib/grid.ts';
 import { loadCohortCaptures, auditCohort, renderCohortAudit, type CohortCapture } from './audit-cohort.ts';
 import { calculateReferenceDasha } from './lib/referenceDasha.ts';
@@ -53,8 +53,20 @@ interface Measurement {
   detail?: string;
 }
 
+interface NakshatraBoundaryObservation {
+  readonly fixtureId: string;
+  readonly boundaryId: string;
+  readonly boundaryLongitude: number;
+  readonly position: string;
+  readonly longitude: number;
+  readonly expected: string;
+  readonly actual: string;
+  readonly pass: boolean;
+}
+
 const measurements: Measurement[] = [];
 const failures: string[] = [];
+const nakshatraBoundaryObservations: NakshatraBoundaryObservation[] = [];
 const dashaCaseMeasurements: {
   fixtureId: string;
   yearLengthDays: number;
@@ -150,6 +162,16 @@ function measureSignBoundary(f: Extract<CalculationReferenceFixture, { kind: 'SI
 function measureNakshatraBoundary(f: Extract<CalculationReferenceFixture, { kind: 'NAKSHATRA_BOUNDARY' }>) {
   const r = calculateNakshatra(f.input.longitude);
   const pass = r.nakshatra === f.expectedNakshatra && r.padaNumber === f.expectedPada;
+  nakshatraBoundaryObservations.push({
+    fixtureId: f.id,
+    boundaryId: f.boundaryId,
+    boundaryLongitude: f.boundaryLongitude,
+    position: f.boundaryPosition,
+    longitude: f.input.longitude,
+    expected: `${f.expectedNakshatra}/${f.expectedPada}`,
+    actual: `${r.nakshatra}/${r.padaNumber}`,
+    pass
+  });
   measurements.push({
     fixtureId: f.id, track: 'NAKSHATRA_BOUNDARY', error: pass ? 0 : 1, unit: 'category', pass,
     detail: `lon=${f.input.longitude} engine=${r.nakshatra}/${r.padaNumber} expected=${f.expectedNakshatra}/${f.expectedPada}`
@@ -349,7 +371,7 @@ export function runParity() {
   const engineCommitSha = gitCommitSha(root);
   const cohortCaptures = loadCohortCaptures();
   const cohortAudit = auditCohort(cohortCaptures);
-  const gate = RG_09_CALCULATION_REFERENCE_GATE;
+  const gate = calculateCalculationReferenceGate(join(GATE0_ROOT, 'approvals.json'));
   const gate0OverallStatus = deriveGate0OverallStatus(
     gate.overallStatus,
     cohortAudit.missingMoonBrackets.length
@@ -445,6 +467,7 @@ export function runParity() {
   lines.push('|-------|-------------|');
   for (const g of gridAgreements) lines.push(`| ${g.track} | ${g.agree}/${g.total} |`);
   lines.push('');
+  const failingBoundaryGroups = renderNakshatraBoundaryDiagnosis(lines);
   lines.push('## Failure sample (first 40)');
   lines.push('');
   if (failures.length === 0) {
@@ -471,9 +494,99 @@ export function runParity() {
   const reportPath = join(root, 'docs/career/audit/GATE-0-PARITY-REPORT.md');
   mkdirSync(dirname(reportPath), { recursive: true });
   writeFileSync(reportPath, lines.join('\n') + '\n', 'utf8');
+  writeNakshatraBoundaryDefectReport(root, failingBoundaryGroups);
   console.log(`wrote ${reportPath}`);
   console.log(`fixtures=${CALCULATION_REFERENCE_FIXTURES.length} measurements=${measurements.length} failures=${failures.length} ` +
     `rg09=${gate.overallStatus} gate0=${gate0OverallStatus}`);
+}
+
+function renderNakshatraBoundaryDiagnosis(lines: string[]): readonly NakshatraBoundaryObservation[][] {
+  const groups = new Map<string, NakshatraBoundaryObservation[]>();
+  for (const observation of nakshatraBoundaryObservations) {
+    groups.set(observation.boundaryId, [
+      ...(groups.get(observation.boundaryId) ?? []),
+      observation
+    ]);
+  }
+  const failingGroups = [...groups.values()]
+    .filter(group => group.some(observation => !observation.pass))
+    .sort((left, right) => left[0].boundaryLongitude - right[0].boundaryLongitude);
+  const failingCount = failingGroups.reduce(
+    (count, group) => count + group.filter(observation => !observation.pass).length,
+    0
+  );
+  const exactOnly = failingGroups.every(group =>
+    group.filter(observation => !observation.pass).every(observation => observation.position === 'EXACT')
+  );
+  const outsideExactFailures = failingGroups.flat().filter(
+    observation => !observation.pass && observation.position !== 'EXACT'
+  ).length;
+  lines.push('## Nakshatra/pada boundary defect diagnosis');
+  lines.push('');
+  lines.push(`- ${failingCount} categorical failures across ${failingGroups.length} boundary triplets; ` +
+    `${outsideExactFailures} occur outside EXACT. The exact-only finding is ${exactOnly ? 'confirmed' : 'not confirmed'}.`);
+  lines.push('- These constructed vectors pass reference longitudes directly to `calculateNakshatra`; no ephemeris result participates. A failed category with the same input longitude is a categorical assignment discrepancy, not an upstream longitude error.');
+  lines.push('- See [the defect report](./NAKSHATRA-BOUNDARY-DEFECT-REPORT.md) for all three positions of every failing triplet and the classification evidence.');
+  lines.push('');
+  return failingGroups;
+}
+
+function writeNakshatraBoundaryDefectReport(
+  root: string,
+  failingGroups: readonly NakshatraBoundaryObservation[][]
+): void {
+  const observations = failingGroups.flat();
+  const exactOnly = failingGroups.every(group =>
+    group.filter(observation => !observation.pass).every(observation => observation.position === 'EXACT')
+  );
+  const passingBefore = observations.filter(
+    observation => observation.position === 'EPSILON_BEFORE' && observation.pass
+  ).length;
+  const passingAfter = observations.filter(
+    observation => observation.position === 'EPSILON_AFTER' && observation.pass
+  ).length;
+  const exactFailures = observations.filter(
+    observation => observation.position === 'EXACT' && !observation.pass
+  );
+  const lines = [
+    '# Gate-0 Nakshatra Boundary Defect Report',
+    '',
+    '## Finding',
+    '',
+    `The current 405-vector categorical track has ${exactFailures.length} failed assignments. ` +
+      `All failures are at EXACT positions: ${exactOnly ? 'confirmed' : 'not confirmed'}.`,
+    `For the ${failingGroups.length} failing triplets, EPSILON_BEFORE passes ${passingBefore}/${failingGroups.length} ` +
+      `and EPSILON_AFTER passes ${passingAfter}/${failingGroups.length}.`,
+    'The constructed reference longitude is passed directly to the production categorizer; these failures do not depend on planetary ephemeris accuracy. They are categorical assignment defects, not upstream longitude errors.',
+    '',
+    '## Diagnosis',
+    '',
+    'Every failing triplet is a pada boundary. The expected nakshatra is retained, but at the exact longitude the engine reports the preceding pada (for example, Krittika/1 instead of Krittika/2 at 30°). The mismatch is consistent with the production lookup metadata using decimal-rounded nakshatra start degrees (for example, 26.6666666667°) while the pada span is computed from `40 / 3`; the `1e-12°` offset in `calculateNakshatra` does not compensate for the larger representation difference. This is a half-open interval / floating-point boundary classification defect.',
+    '',
+    'The defect is documented only. The audit freeze prohibits changes to `src/engine/nakshatraUtils.ts`; no boundary algorithm or expected fixture has been modified to force parity.',
+    '',
+    '## Failing triplets',
+    '',
+    '| Boundary ID | Boundary longitude (°) | Position | Input longitude (°) | Expected | Engine | Result |',
+    '|-------------|-------------------------|----------|---------------------|----------|--------|--------|'
+  ];
+  for (const group of failingGroups) {
+    const ordered = [...group].sort((a, b) =>
+      ['EPSILON_BEFORE', 'EXACT', 'EPSILON_AFTER'].indexOf(a.position)
+      - ['EPSILON_BEFORE', 'EXACT', 'EPSILON_AFTER'].indexOf(b.position)
+    );
+    for (const observation of ordered) {
+      lines.push(
+        `| ${observation.boundaryId} | ${observation.boundaryLongitude} | ${observation.position} | ` +
+        `${observation.longitude} | ${observation.expected} | ${observation.actual} | ` +
+        `${observation.pass ? 'PASS' : 'FAIL'} |`
+      );
+    }
+  }
+  lines.push('');
+  const reportPath = join(root, 'docs/career/audit/NAKSHATRA-BOUNDARY-DEFECT-REPORT.md');
+  mkdirSync(dirname(reportPath), { recursive: true });
+  writeFileSync(reportPath, lines.join('\n') + '\n', 'utf8');
 }
 
 function renderDashaDecomposition(lines: string[]): void {

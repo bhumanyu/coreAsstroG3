@@ -1,8 +1,12 @@
 # Gate 0 — Calculation Validation Protocol (RG-09)
 
-**Status:** BLOCKED — `CALCULATION_REFERENCE_FIXTURES` is intentionally empty
-(`src/engine/validation/calculationReferenceFixtures.ts:21`); `RG_09_CALCULATION_REFERENCE_GATE`
-reports `BLOCKED` with the full missing-coverage list.
+**Status:** PENDING_REVIEW — the generated 2,015-fixture set has complete RG-09
+coverage, but its approval manifest is missing. `RG_09_CALCULATION_REFERENCE_GATE`
+therefore reports `coverageStatus: READY`, `approvalStatus: MISSING`, and
+`overallStatus: PENDING_REVIEW`. Gate-0 readiness separately requires complete
+cohort manifest/artifact coverage and all 27 strict Moon-boundary brackets.
+See the current [parity report](./GATE-0-PARITY-REPORT.md) and
+[preparation inventory](./GATE-0-PREPARATION-INVENTORY.md).
 
 **Companion artifact:** `src/engine/validation/calculationReferenceFixtureSchema.ts`
 (types + pure builders only; contains no expected values).

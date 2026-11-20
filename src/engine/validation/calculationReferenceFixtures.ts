@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { GENERATED_CALCULATION_REFERENCE_FIXTURES } from './calculationReferenceFixtures.generated.ts';
+import releasePolicy from '../../../docs/release/release-policy.json' with { type: 'json' };
 import type {
   CalculationCoveragePolicy,
   CalculationReferenceFixture,
@@ -27,10 +26,9 @@ import {
 export const CALCULATION_REFERENCE_FIXTURES: readonly CalculationReferenceFixture[] =
   GENERATED_CALCULATION_REFERENCE_FIXTURES;
 
-const policyJson = JSON.parse(readFileSync(
-  resolve(process.cwd(), 'docs/release/release-policy.json'),
-  'utf8'
-)) as { readonly calculationCoverage?: CalculationCoveragePolicy };
+const policyJson = releasePolicy as {
+  readonly calculationCoverage?: CalculationCoveragePolicy;
+};
 
 if (!policyJson.calculationCoverage) {
   throw new Error('release-policy.json must declare calculationCoverage.');
@@ -344,39 +342,41 @@ const missingCoverage = [
 ];
 const coverageComplete = missingCoverage.length === 0;
 const fixtureCount = CALCULATION_REFERENCE_FIXTURES.length;
-const fixtureSetPath = resolve(
-  process.cwd(),
-  'src/engine/validation/calculationReferenceFixtures.generated.ts'
-);
-const fixtureSetSha256 = createHash('sha256')
-  .update(readFileSync(fixtureSetPath))
-  .digest('hex');
-const approval = evaluateFixtureApproval(
-  resolve(process.cwd(), 'tools/gate0/approvals.json'),
-  fixtureSetSha256
-);
 const coverageStatus = fixtureCount > 0 && coverageComplete ? 'READY' : 'BLOCKED';
-const overallStatus = deriveCalculationReferenceGateStatus(
-  coverageStatus === 'READY',
-  approval.verdict
-);
-const reason = overallStatus === 'READY'
-  ? 'Independent calculation reference coverage is complete and the current fixture set has human approval.'
-  : [
-      ...(coverageStatus === 'BLOCKED'
-        ? [`Calculation reference coverage is incomplete: ${missingCoverage.join(', ')}.`]
-        : []),
-      ...(approval.verdict === 'APPROVED' ? [] : [approval.detail])
-    ].join(' ');
 
-export const RG_09_CALCULATION_REFERENCE_GATE: CalculationReferenceGate = Object.freeze({
-  id: 'RG-09',
-  status: overallStatus,
-  coverageStatus,
-  approvalStatus: approval.verdict,
-  overallStatus,
-  fixtureCount,
-  coverageComplete,
-  fixtureSetSha256,
-  reason
-});
+function calculateFixtureSetSha256(): string {
+  return createHash('sha256')
+    .update(JSON.stringify(CALCULATION_REFERENCE_FIXTURES))
+    .digest('hex');
+}
+
+export function calculateCalculationReferenceGate(
+  approvalsPath: string
+): CalculationReferenceGate {
+  const fixtureSetSha256 = calculateFixtureSetSha256();
+  const approval = evaluateFixtureApproval(approvalsPath, fixtureSetSha256);
+  const overallStatus = deriveCalculationReferenceGateStatus(
+    coverageStatus === 'READY',
+    approval.verdict
+  );
+  const reason = overallStatus === 'READY'
+    ? 'Independent calculation reference coverage is complete and the current fixture set has human approval.'
+    : [
+        ...(coverageStatus === 'BLOCKED'
+          ? [`Calculation reference coverage is incomplete: ${missingCoverage.join(', ')}.`]
+          : []),
+        ...(approval.verdict === 'APPROVED' ? [] : [approval.detail])
+      ].join(' ');
+
+  return Object.freeze({
+    id: 'RG-09',
+    status: overallStatus,
+    coverageStatus,
+    approvalStatus: approval.verdict,
+    overallStatus,
+    fixtureCount,
+    coverageComplete,
+    fixtureSetSha256,
+    reason
+  });
+}

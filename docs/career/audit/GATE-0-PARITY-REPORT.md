@@ -1,13 +1,13 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-20T15:53:27.027Z
-Engine commit: `e7c763ce4b39f9bf7c922dff404e44fa1c295a34`
+Generated: 2026-11-20T17:08:31.572Z
+Engine commit: `5388fc7952a29282296b4db4376180f7a0fb8cb0`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
 RG-09 approval: **MISSING**
 RG-09 overall: **PENDING_REVIEW** — No human approval manifest found; human approval is outstanding.
 Gate-0 overall readiness (includes cohort brackets): **PENDING_REVIEW** (missingMoonBrackets=0)
-Fixture-set SHA-256: `541a3ce9e0929b4e49d435a6e691980cf4e49ddc40d72c75a80c1cf722378731`
+Fixture-set SHA-256: `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f`
 Cohort stratification: **COMPLETE**
 inspectBoundaryCoverage issues: 0
 
@@ -88,6 +88,12 @@ Moon-anchor cases must bracket every nakshatra boundary within ±0.01° on both 
 | PADA only (on reference longitudes) | 774/774 |
 | D9 varga (on reference longitudes) | 774/774 |
 | D10 varga (on reference longitudes) | 774/774 |
+
+## Nakshatra/pada boundary defect diagnosis
+
+- 27 categorical failures across 27 boundary triplets; 0 occur outside EXACT. The exact-only finding is confirmed.
+- These constructed vectors pass reference longitudes directly to `calculateNakshatra`; no ephemeris result participates. A failed category with the same input longitude is a categorical assignment discrepancy, not an upstream longitude error.
+- See [the defect report](./NAKSHATRA-BOUNDARY-DEFECT-REPORT.md) for all three positions of every failing triplet and the classification evidence.
 
 ## Failure sample (first 40)
 

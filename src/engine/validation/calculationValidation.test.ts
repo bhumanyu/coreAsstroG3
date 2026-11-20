@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import {
   angularDistance,
   compareAngle,
@@ -9,8 +10,8 @@ import {
   signedAngularDifferenceDegrees
 } from './angularComparison';
 import {
+  calculateCalculationReferenceGate,
   CALCULATION_REFERENCE_FIXTURES,
-  RG_09_CALCULATION_REFERENCE_GATE
 } from './calculationReferenceFixtures';
 import { calculateNakshatra } from '../nakshatraUtils';
 import { calculateSign, calculateWholeSignHouse, getDivisionalLongitude } from '../chartMath';
@@ -68,6 +69,26 @@ describe('RG-09 calculation reference validation', () => {
 
   it('requires approved independent fixtures before RG-09 can pass', () => {
     expect(CALCULATION_REFERENCE_FIXTURES.length).toBeGreaterThan(0);
+  });
+
+  it('loads and evaluates from the repository root and an unrelated working directory', async () => {
+    const repositoryRoot = resolve(process.cwd());
+    const approvalsPath = join(repositoryRoot, 'tools/gate0/approvals.json');
+    const previousCwd = process.cwd();
+    const otherWorkingDirectory = mkdtempSync(join(tmpdir(), 'rg09-cwd-'));
+    try {
+      process.chdir(repositoryRoot);
+      const rootGate = calculateCalculationReferenceGate(approvalsPath);
+      process.chdir(otherWorkingDirectory);
+      vi.resetModules();
+      const freshlyLoadedModule = await import('./calculationReferenceFixtures');
+      const otherCwdGate = freshlyLoadedModule.calculateCalculationReferenceGate(approvalsPath);
+
+      expect(otherCwdGate).toEqual(rootGate);
+    } finally {
+      process.chdir(previousCwd);
+      rmSync(otherWorkingDirectory, { recursive: true, force: true });
+    }
   });
 
   describe('angular comparison helpers', () => {
@@ -235,23 +256,26 @@ describe('RG-09 calculation reference validation', () => {
   }
 
   it('marks RG-09 ready only when coverage is complete and the current set is approved', () => {
-    expect(RG_09_CALCULATION_REFERENCE_GATE.fixtureCount)
-      .toBe(CALCULATION_REFERENCE_FIXTURES.length);
-    expect(RG_09_CALCULATION_REFERENCE_GATE.coverageStatus).toBe(
-      RG_09_CALCULATION_REFERENCE_GATE.fixtureCount > 0
-      && RG_09_CALCULATION_REFERENCE_GATE.coverageComplete ? 'READY' : 'BLOCKED'
+    const gate = calculateCalculationReferenceGate(
+      join(resolve(process.cwd()), 'tools/gate0/approvals.json')
     );
-    expect(RG_09_CALCULATION_REFERENCE_GATE.status)
-      .toBe(RG_09_CALCULATION_REFERENCE_GATE.overallStatus);
-    if (RG_09_CALCULATION_REFERENCE_GATE.overallStatus === 'READY') {
-      expect(RG_09_CALCULATION_REFERENCE_GATE.coverageStatus).toBe('READY');
-      expect(RG_09_CALCULATION_REFERENCE_GATE.approvalStatus).toBe('APPROVED');
+    expect(gate.fixtureCount)
+      .toBe(CALCULATION_REFERENCE_FIXTURES.length);
+    expect(gate.coverageStatus).toBe(
+      gate.fixtureCount > 0
+      && gate.coverageComplete ? 'READY' : 'BLOCKED'
+    );
+    expect(gate.status).toBe(gate.overallStatus);
+    if (gate.overallStatus === 'READY') {
+      expect(gate.coverageStatus).toBe('READY');
+      expect(gate.approvalStatus).toBe('APPROVED');
     }
-    if (RG_09_CALCULATION_REFERENCE_GATE.approvalStatus !== 'APPROVED') {
-      expect(RG_09_CALCULATION_REFERENCE_GATE.overallStatus).not.toBe('READY');
+    if (gate.approvalStatus !== 'APPROVED') {
+      expect(gate.overallStatus).not.toBe('READY');
     }
-    if (['MISSING', 'PENDING_REVIEW'].includes(RG_09_CALCULATION_REFERENCE_GATE.approvalStatus)) {
-      expect(RG_09_CALCULATION_REFERENCE_GATE.reason).toContain('human approval is outstanding');
+    if (['MISSING', 'PENDING_REVIEW'].includes(gate.approvalStatus)) {
+      expect(gate.reason).toContain('human approval is outstanding');
     }
   });
+
 });
