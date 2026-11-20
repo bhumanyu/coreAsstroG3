@@ -34,6 +34,7 @@ import { signAt, nakshatraAt, padaAt, vargaD9, vargaD10 } from './lib/grid.ts';
 import { loadCohortCaptures, auditCohort, renderCohortAudit, type CohortCapture } from './audit-cohort.ts';
 import { calculateReferenceDasha } from './lib/referenceDasha.ts';
 import { decomposeDashaTimelines, type DashaLevelComparison } from './lib/dashaComparison.ts';
+import { deriveGate0OverallStatus } from './lib/readiness.ts';
 
 const ARCSEC_PER_DEG = 3600;
 
@@ -349,6 +350,10 @@ export function runParity() {
   const cohortCaptures = loadCohortCaptures();
   const cohortAudit = auditCohort(cohortCaptures);
   const gate = RG_09_CALCULATION_REFERENCE_GATE;
+  const gate0OverallStatus = deriveGate0OverallStatus(
+    gate.overallStatus,
+    cohortAudit.missingMoonBrackets.length
+  );
   const fixtureSetSha256 = gate.fixtureSetSha256;
 
   const boundaryIssues = inspectBoundaryCoverage(CALCULATION_REFERENCE_FIXTURES, CALCULATION_COVERAGE_POLICY);
@@ -382,7 +387,9 @@ export function runParity() {
   lines.push(`Fixture count: ${CALCULATION_REFERENCE_FIXTURES.length}`);
   lines.push(`RG-09 coverage: **${gate.coverageStatus}** (coverageComplete=${gate.coverageComplete})`);
   lines.push(`RG-09 approval: **${gate.approvalStatus}**`);
-  lines.push(`Gate-0 overall readiness: **${gate.overallStatus}** — ${gate.reason}`);
+  lines.push(`RG-09 overall: **${gate.overallStatus}** — ${gate.reason}`);
+  lines.push(`Gate-0 overall readiness (includes cohort brackets): **${gate0OverallStatus}**` +
+    ` (missingMoonBrackets=${cohortAudit.missingMoonBrackets.length})`);
   lines.push(`Fixture-set SHA-256: \`${fixtureSetSha256}\``);
   lines.push(`Cohort stratification: **${cohortAudit.missingMoonBrackets.length === 0 ? 'COMPLETE' : 'INCOMPLETE'}**`);
   lines.push(`inspectBoundaryCoverage issues: ${boundaryIssues.length}${boundaryIssues.length ? ' — ' + boundaryIssues.slice(0, 5).join('; ') : ''}`);
@@ -465,7 +472,8 @@ export function runParity() {
   mkdirSync(dirname(reportPath), { recursive: true });
   writeFileSync(reportPath, lines.join('\n') + '\n', 'utf8');
   console.log(`wrote ${reportPath}`);
-  console.log(`fixtures=${CALCULATION_REFERENCE_FIXTURES.length} measurements=${measurements.length} failures=${failures.length} readiness=${gate.overallStatus}`);
+  console.log(`fixtures=${CALCULATION_REFERENCE_FIXTURES.length} measurements=${measurements.length} failures=${failures.length} ` +
+    `rg09=${gate.overallStatus} gate0=${gate0OverallStatus}`);
 }
 
 function renderDashaDecomposition(lines: string[]): void {
@@ -484,14 +492,17 @@ function renderDashaDecomposition(lines: string[]): void {
   }
   lines.push(`- Year-length convention: ${yearLengths.map(days => `${days} days`).join(', ') || 'none recorded'}.`);
   lines.push(`- Engine-vs-reference Moon difference: max ${fmt(moonStats.max)}″, mean ${fmt(moonStats.mean)}″.`);
-  lines.push('- R→R uses the Gate-0 independent Vimshottari model; its first-MD anchors are checked against the unchanged fixture expected values. Later MD/AD/PD periods are derived by that model, not newly captured fixture values.');
+  lines.push('- Reference-model independence boundary: the Gate-0 reference implementation is independent of production `vimshottari.ts`, but shares Gate-0 convention definitions (`DASHA_SEQUENCE`, `DASHA_YEARS`, and `vimshottariAnchor` from `lib/grid.ts`).');
+  lines.push('- The 67 R→R first-MD anchors are checked against unchanged fixture expected values. Later MD/AD/PD periods are derived by the Gate-0 model and are NOT independently captured expected values.');
+  lines.push('- Dasha known-answer conformance is hand-computed from the published Vimshottari sequence, durations, 365.25-day year, and proportional subdivisions ([Dasha overview](https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha)); see `tests/dashaDecomposition.test.ts`.');
+  lines.push('- Periods are matched by the full lord path (including MD ancestry); boundary errors cover matched periods only. Unmatched periods are excluded from timestamp error statistics, listed separately below; structural-mismatch counts also include differences in lord-path sequence order.');
   lines.push('');
-  lines.push('| Level | Delta | Structural agreement | Periods compared | Boundary timestamps | Max error (ms) | Mean error (ms) |');
-  lines.push('|-------|-------|----------------------|------------------|---------------------|----------------|-----------------|');
+  lines.push('| Level | Comparison | Cases structurally agreeing | Structurally matched periods | Boundary timestamps compared | Unmatched periods excluded | Structural mismatches | Max matched-boundary error (ms) | Mean matched-boundary error (ms) |');
+  lines.push('|-------|------------|-----------------------------|-----------------------------|-------------------------------|-----------------------------|-----------------------|-------------------------------|----------------------------------|');
   for (const level of ['MD', 'AD', 'PD'] as const) {
     for (const [label, key] of [
-      ['R→E vs R→R (arithmetic/structure)', 'arithmetic'],
-      ['E→E vs R→E (Moon-input delta)', 'moonInput']
+      ['R→R vs R→E (arithmetic/structure)', 'arithmetic'],
+      ['R→E vs E→E (Moon-input delta)', 'moonInput']
     ] as const) {
       const results = dashaCaseMeasurements.map(item => item[key][level]);
       const boundaryResults = results.filter(
@@ -508,10 +519,28 @@ function renderDashaDecomposition(lines: string[]): void {
         ...boundaryResults.map(result => result.maxBoundaryErrorMs ?? 0)
       );
       const structuralCount = results.filter(result => result.structuralAgreement).length;
-      const periodCount = results.reduce((sum, result) => sum + result.periodsCompared, 0);
+      const matchedPeriodCount = results.reduce((sum, result) => sum + result.matchedPeriods, 0);
+      const unmatchedPeriodCount = results.reduce(
+        (sum, result) => sum + result.unmatchedExpectedPeriods + result.unmatchedActualPeriods,
+        0
+      );
+      const unmatchedExpectedCount = results.reduce(
+        (sum, result) => sum + result.unmatchedExpectedPeriods,
+        0
+      );
+      const unmatchedActualCount = results.reduce(
+        (sum, result) => sum + result.unmatchedActualPeriods,
+        0
+      );
+      const structuralMismatchCount = results.reduce(
+        (sum, result) => sum + result.structuralMismatchCount,
+        0
+      );
       lines.push(
-        `| ${level} | ${label} | ${structuralCount}/${results.length} cases | ${periodCount} | ${boundaryCount} | ` +
-        `${maxError === null ? 'n/a' : fmt(maxError)} | ${weightedMean === null ? 'n/a' : fmt(weightedMean)} |`
+        `| ${level} | ${label} | ${structuralCount}/${results.length} | ${matchedPeriodCount} | ${boundaryCount} | ` +
+        `${unmatchedPeriodCount} (E ${unmatchedExpectedCount}, A ${unmatchedActualCount}) | ` +
+        `${structuralMismatchCount} | ${maxError === null ? 'n/a' : fmt(maxError)} | ` +
+        `${weightedMean === null ? 'n/a' : fmt(weightedMean)} |`
       );
       const mismatch = dashaCaseMeasurements.find(item => !item[key][level].structuralAgreement);
       if (mismatch) {

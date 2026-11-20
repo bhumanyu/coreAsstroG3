@@ -28,8 +28,10 @@ Run the pipeline in order:
    boundaries and exits nonzero unless every nakshatra boundary has Moon-anchor
    captures on both sides within 0.01°.
 5. `npm run parity` measures astronomical, motion, ascendant, categorical,
-   varga/house, locked-Moon dasha arithmetic, and end-to-end dasha tracks, then
-   regenerates `docs/career/audit/GATE-0-PARITY-REPORT.md`.
+   varga/house, and the R→R/R→E/E→E dasha comparisons, then regenerates
+   `docs/career/audit/GATE-0-PARITY-REPORT.md`. RG-09 status is reported
+   separately from Gate-0 readiness; Gate-0 additionally requires complete
+   cohort Moon-boundary brackets.
 
 The package also provides `npm test` and `npm run check:imports`. `npm run build`
 bundles the offline entry points with the pinned esbuild version. Parity
@@ -52,9 +54,31 @@ and report, a reviewer may create `tools/gate0/approvals.json` manually:
 ```
 
 The approval manifest is not created or updated by any pipeline command.
-Parity reports `PENDING_REVIEW`, `STALE`, or `INVALID` until the recorded
-approval matches the current generated fixture SHA. Any fixture regeneration
-requires a new human review and approval entry.
+RG-09 reports `PENDING_REVIEW`, `STALE`, or `INVALID` until the recorded
+approval matches the current generated fixture SHA. Gate-0 overall readiness
+also remains pending if any cohort Moon-boundary bracket is missing. Any
+fixture regeneration requires a new human review and approval entry.
+
+## Dasha decomposition and reference-model conformance
+
+The Gate-0 reference dasha implementation is independent of production
+`src/engine/dasha/vimshottari.ts`, but it shares Gate-0 convention definitions
+from `lib/grid.ts`: `DASHA_SEQUENCE`, `DASHA_YEARS`, and `vimshottariAnchor`.
+The 67 frozen fixture expected values validate the first-MD anchors. They do
+not contain captured full MD/AD/PD timelines. Therefore subsequent periods in
+the R→R timeline are Gate-0 model output, **not independently captured expected
+values**; the report calls out this boundary explicitly.
+
+`tests/dashaDecomposition.test.ts` includes a hand-computed full-Ketu-MD
+known-answer case. Provenance: the published
+[Dasha (astrology) overview](https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha) documents
+the Vimshottari order and durations (Ketu 7, Venus 20, Sun 6, Moon 10, Mars 7,
+Rahu 18, Jupiter 16, Saturn 19, Mercury 17), the 365.25-day solar year, and
+pro-rata subdivision into Antar- and Pratyantar-dashas. The test fixes the
+Moon at the Ashwini boundary, uses a complete 7-year Ketu Mahadasha, and
+independently hand-calculates the AD/PD sequence and UTC boundary dates from
+those published rules. This is a conformance check of the Gate-0 model, not an
+additional captured fixture.
 
 ## Conventions recorded per capture
 
