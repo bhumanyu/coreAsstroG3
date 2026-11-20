@@ -11,8 +11,10 @@ import {
   assertCohortManifestComplete,
   validateCaptureArtifact,
   type CaptureManifest,
+  type CohortCaptureTimeMath,
   type CohortCaptureDefinition
 } from './lib/captureManifest.ts';
+import { openSwissEph } from './lib/se.ts';
 
 const BODY_NAMES = ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU'] as const;
 const NAKSHATRA_SPAN = 360 / 27;
@@ -104,7 +106,7 @@ function hasAscendantMeasurements(capture: CohortCapture): boolean {
     && Number.isFinite(ascendantSiderealDeg);
 }
 
-export function loadCohortCaptures(): readonly CohortCapture[] {
+export function loadCohortCaptures(timeMath: CohortCaptureTimeMath): readonly CohortCapture[] {
   const cases = readJsonFile<{ cases: CohortCase[] }>(join(GATE0_ROOT, 'cohort/cases.v1.json')).cases;
   const manifest = readJsonFile<CaptureManifest>(join(GATE0_ROOT, 'captures/manifest.json'));
   const activeCases = cases.filter(definition => !definition.utcInstant.startsWith('TBD'));
@@ -126,7 +128,8 @@ export function loadCohortCaptures(): readonly CohortCapture[] {
       caseId: definition.id,
       expectedCaptureId: `CAPTURE-${definition.id}-${definition.utcInstant.slice(0, 10)}`,
       expectedBodies: BODY_NAMES,
-      expectedCohortDefinition: definition
+      expectedCohortDefinition: definition,
+      timeMath
     });
     captures.push({
       definition,
@@ -268,10 +271,22 @@ export function renderCohortAudit(audit: CohortAudit): string {
   return lines.join('\n');
 }
 
-function main(): void {
-  const audit = auditCohort(loadCohortCaptures());
+async function main(): Promise<void> {
+  const session = await openSwissEph();
+  let captures: readonly CohortCapture[];
+  try {
+    captures = loadCohortCaptures(session.swe);
+  } finally {
+    session.dispose();
+  }
+  const audit = auditCohort(captures);
   console.log(renderCohortAudit(audit));
   if (audit.missingMoonBrackets.length > 0) process.exitCode = 1;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) main();
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  main().catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

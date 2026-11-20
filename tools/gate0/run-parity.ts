@@ -32,6 +32,7 @@ import type { BirthDetails, PlanetaryPositions } from '../../src/types.ts';
 import { gitCommitSha, repoRoot, normDeg, GATE0_ROOT } from './lib/util.ts';
 import { signAt, nakshatraAt, padaAt, vargaD9, vargaD10 } from './lib/grid.ts';
 import { loadCohortCaptures, auditCohort, renderCohortAudit, type CohortCapture } from './audit-cohort.ts';
+import { openSwissEph } from './lib/se.ts';
 import { calculateReferenceDasha } from './lib/referenceDasha.ts';
 import { decomposeDashaTimelines, type DashaLevelComparison } from './lib/dashaComparison.ts';
 import { deriveGate0OverallStatus } from './lib/readiness.ts';
@@ -367,10 +368,16 @@ function stats(values: number[]) {
   };
 }
 
-export function runParity() {
+export async function runParity(): Promise<void> {
   const root = repoRoot();
   const engineCommitSha = gitCommitSha(root);
-  const cohortCaptures = loadCohortCaptures();
+  const session = await openSwissEph();
+  let cohortCaptures: readonly CohortCapture[];
+  try {
+    cohortCaptures = loadCohortCaptures(session.swe);
+  } finally {
+    session.dispose();
+  }
   const cohortAudit = auditCohort(cohortCaptures);
   const gate = calculateCalculationReferenceGate(join(GATE0_ROOT, 'approvals.json'));
   const gate0OverallStatus = deriveGate0OverallStatus(
@@ -731,4 +738,6 @@ function buildForkRecommendation(
   return lines.join('\n');
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) runParity();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await runParity();
+}

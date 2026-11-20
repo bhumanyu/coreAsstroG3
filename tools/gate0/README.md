@@ -103,6 +103,13 @@ physical invariant, and `|ayanamsaResidualDeg| < 0.01°` checks frame
 consistency between the tropical and sidereal calls, not ayanamsa accuracy.
 Revisit these bounds if the cohort date range expands.
 
+For every cohort artifact, validation recomputes UT Julian day from the recorded
+UTC instant using `swe.julianDay` and compares it with `capture.julianDayUt`
+within `1e-6` day. It also compares recorded `deltaTDays` with
+`swe.deltaT(capture.julianDayUt)` within `1e-6` day. These cohort-scoped checks
+protect evidence integrity and confirm the Swiss Ephemeris convention used by
+the capture; they are not independent time-scale or ΔT models.
+
 A `null` tropical or sidereal ascendant means the value is unavailable (for
 example, if house computation fails at an extreme latitude); it is not a
 successful measurement. The cohort audit reports unavailable ascendants

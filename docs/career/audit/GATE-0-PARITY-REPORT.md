@@ -1,7 +1,7 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-20T17:38:14.981Z
-Engine commit: `f72f68167175fad5c0605dabcd09089f693d5027`
+Generated: 2026-11-20T18:14:31.865Z
+Engine commit: `efd36cac61fef4708b770656e2354feffe5bed3c`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
 RG-09 approval: **MISSING**

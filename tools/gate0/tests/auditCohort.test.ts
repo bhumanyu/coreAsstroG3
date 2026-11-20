@@ -1,10 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   auditCohort,
   loadCohortCaptures,
   renderCohortAudit,
   type CohortCapture
 } from '../audit-cohort.ts';
+import { openSwissEph, type SwissEphSession } from '../lib/se.ts';
+
+let swissEphSession: SwissEphSession;
+
+beforeAll(async () => {
+  swissEphSession = await openSwissEph();
+});
+
+afterAll(() => {
+  swissEphSession?.dispose();
+});
 
 interface CaptureOptions {
   readonly utcInstant?: string;
@@ -75,7 +86,7 @@ describe('cohort stratification audit', () => {
   });
 
   it('asserts the current cohort has no unavailable ascendants and reports zero', () => {
-    const audit = auditCohort(loadCohortCaptures());
+    const audit = auditCohort(loadCohortCaptures(swissEphSession.swe));
 
     expect(audit.ascendantUnavailableCount).toBe(0);
     expect(renderCohortAudit(audit)).toContain('Ascendant unavailable: 0');

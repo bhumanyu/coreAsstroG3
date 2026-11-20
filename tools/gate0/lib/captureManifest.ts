@@ -1,9 +1,17 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { SE_BODY_MAP } from './seBodyMap.ts';
+import { utcHourDecimal } from './utc.ts';
 import { sha256Hex } from './util.ts';
 
 export const CAPTURE_MANIFEST_SCHEMA_VERSION = 1;
 export const CAPTURE_ARTIFACT_SCHEMA_VERSION = 1;
+export const COHORT_JD_UT_TOLERANCE_DAYS = 1e-6;
+export const COHORT_DELTA_T_TOLERANCE_DAYS = 1e-6;
+
+export interface CohortCaptureTimeMath {
+  julianDay(year: number, month: number, day: number, hour: number): number;
+  deltaT(julianDayUt: number): number;
+}
 
 export interface CaptureManifestEntry {
   readonly sha256: string;
@@ -36,6 +44,17 @@ export interface CohortManifestCompleteness {
   readonly missingArtifacts: readonly string[];
   readonly orphanManifestEntries: readonly string[];
   readonly unmanifestedArtifacts: readonly string[];
+}
+
+export interface CaptureArtifactValidationOptions {
+  readonly manifest: CaptureManifest;
+  readonly relativePath: string;
+  readonly artifactPath: string;
+  readonly caseId: string;
+  readonly expectedCaptureId?: string;
+  readonly expectedBodies?: readonly string[];
+  readonly expectedCohortDefinition?: CohortCaptureDefinition;
+  readonly timeMath?: CohortCaptureTimeMath;
 }
 
 interface CohortCaptureMetadata {
@@ -121,11 +140,15 @@ function validateNullableLongitude(value: unknown, caseId: string, field: string
 // - Positive geocentric distance is a physical invariant.
 // - |ayanamsaResidualDeg| < 0.01° checks frame consistency between swe.calc
 //   calls; it is not a claim about ayanamsa accuracy.
+// - The timestamp/JD check regenerates UT Julian day from the recorded UTC
+//   instant, and the ΔT check compares against Swiss Ephemeris at that JD.
+//   These are evidence-integrity checks, not independent astronomical models.
 // Revisit these checks if the declared cohort date range expands.
 function validateCohortCaptureNumbers(
   artifact: unknown,
   caseId: string,
-  expectedBodies: readonly string[]
+  expectedBodies: readonly string[],
+  timeMath: CohortCaptureTimeMath
 ): void {
   const root = objectField(artifact, caseId, 'artifact');
   const site = objectField(root.site, caseId, 'site');
@@ -143,15 +166,40 @@ function validateCohortCaptureNumbers(
   if (typeof utcInstant !== 'string' || !Number.isFinite(Date.parse(utcInstant))) {
     throw new Error(`capture ${caseId}: site.instant.utcInstant must be a valid date`);
   }
+  const date = new Date(utcInstant);
 
   const capture = objectField(root.capture, caseId, 'capture');
   const julianDayUt = finiteNumberField(capture.julianDayUt, caseId, 'capture.julianDayUt');
   if (julianDayUt <= 0) {
     throw new Error(`capture ${caseId}: capture.julianDayUt must be greater than 0`);
   }
+  const expectedJulianDayUt = timeMath.julianDay(
+    date.getUTCFullYear(),
+    date.getUTCMonth() + 1,
+    date.getUTCDate(),
+    utcHourDecimal(date)
+  );
+  if (!Number.isFinite(expectedJulianDayUt)
+    || Math.abs(julianDayUt - expectedJulianDayUt) > COHORT_JD_UT_TOLERANCE_DAYS) {
+    throw new Error(
+      `capture ${caseId}: capture.julianDayUt does not match site.instant.utcInstant; ` +
+      `recorded=${julianDayUt}, expected=${expectedJulianDayUt} ` +
+      `(tolerance=${COHORT_JD_UT_TOLERANCE_DAYS} days)`
+    );
+  }
+
   const deltaTDays = finiteNumberField(capture.deltaTDays, caseId, 'capture.deltaTDays');
   if (deltaTDays < -0.001 || deltaTDays > 0.01) {
     throw new Error(`capture ${caseId}: capture.deltaTDays must be in [-0.001, 0.01]`);
+  }
+  const expectedDeltaTDays = timeMath.deltaT(julianDayUt);
+  if (!Number.isFinite(expectedDeltaTDays)
+    || Math.abs(deltaTDays - expectedDeltaTDays) > COHORT_DELTA_T_TOLERANCE_DAYS) {
+    throw new Error(
+      `capture ${caseId}: capture.deltaTDays does not match Swiss Ephemeris at ` +
+      `capture.julianDayUt; recorded=${deltaTDays}, expected=${expectedDeltaTDays} ` +
+      `(tolerance=${COHORT_DELTA_T_TOLERANCE_DAYS} days)`
+    );
   }
   const ayanamsaDegrees = finiteNumberField(
     capture.ayanamsaDegrees,
@@ -299,15 +347,7 @@ export function assertCohortManifestComplete(
 }
 
 export function validateCaptureArtifact<T extends { captureId?: unknown; capture?: unknown }>(
-  options: {
-    readonly manifest: CaptureManifest;
-    readonly relativePath: string;
-    readonly artifactPath: string;
-    readonly caseId: string;
-    readonly expectedCaptureId?: string;
-    readonly expectedBodies?: readonly string[];
-    readonly expectedCohortDefinition?: CohortCaptureDefinition;
-  }
+  options: CaptureArtifactValidationOptions
 ): ValidatedCapture<T> {
   const manifestPath = options.relativePath.replace(/\\/g, '/');
   const manifest = objectField(options.manifest, options.caseId, 'manifest');
@@ -417,7 +457,17 @@ export function validateCaptureArtifact<T extends { captureId?: unknown; capture
         `capture ${options.caseId}: ${manifestPath} is missing expected bodies: ${missing.join(', ')}`
       );
     }
-    validateCohortCaptureNumbers(artifact, options.caseId, Object.keys(bodySet));
+    if (!options.timeMath) {
+      throw new Error(
+        `capture ${options.caseId}: Swiss Ephemeris time math is required for cohort validation`
+      );
+    }
+    validateCohortCaptureNumbers(
+      artifact,
+      options.caseId,
+      Object.keys(bodySet),
+      options.timeMath
+    );
   }
 
   return { artifact, sha256: actualSha };

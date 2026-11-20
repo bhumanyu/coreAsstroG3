@@ -19,8 +19,10 @@ import { gitCommitSha, readJsonFile, repoRoot, GATE0_ROOT } from './lib/util.ts'
 import {
   assertCohortManifestComplete,
   validateCaptureArtifact,
-  type CaptureManifest
+  type CaptureManifest,
+  type CohortCaptureTimeMath
 } from './lib/captureManifest.ts';
+import { openSwissEph } from './lib/se.ts';
 
 const CAPTURE_DATE = '2026-11-20';
 const SE_CAPTURE_IMPL = '@kuntay/swisseph@0.2.2 (WASM port of Swiss Ephemeris 2.10.03)';
@@ -289,7 +291,7 @@ function birthDetails(c: { latitude: number; longitude: number; ianaTimeZone: st
   };
 }
 
-function main() {
+function main(timeMath: CohortCaptureTimeMath) {
   const root = repoRoot();
   const engineCommitSha = gitCommitSha(root);
   const cohortDir = join(GATE0_ROOT, 'captures/cohort');
@@ -332,7 +334,8 @@ function main() {
       caseId: c.id,
       expectedCaptureId: `CAPTURE-${c.id}-${c.utcInstant.slice(0, 10)}`,
       expectedBodies: PLANET_NAMES,
-      expectedCohortDefinition: c
+      expectedCohortDefinition: c,
+      timeMath
     });
     const artifact = validated.artifact;
     cohortCaptures.set(c.id, { artifact, artifactPath, sha256: validated.sha256 });
@@ -601,4 +604,18 @@ import type { BirthDetails } from '../../types.ts';
   return `${header}export const GENERATED_CALCULATION_REFERENCE_FIXTURES: readonly CalculationReferenceFixture[] = Object.freeze([\n${body}\n]);\n`;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+async function runMain(): Promise<void> {
+  const session = await openSwissEph();
+  try {
+    main(session.swe);
+  } finally {
+    session.dispose();
+  }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  runMain().catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

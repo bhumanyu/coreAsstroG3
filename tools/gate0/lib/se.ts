@@ -24,6 +24,7 @@ import { createSwissEph, Flag, Ayanamsa, HouseSystem, type SwissEph, type Positi
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { SE_BODY_MAP } from './seBodyMap.ts';
+import { utcHourDecimal } from './utc.ts';
 import { sha256Hex } from './util.ts';
 
 export { SE_BODY_MAP } from './seBodyMap.ts';
@@ -112,13 +113,6 @@ export async function openSwissEph(): Promise<SwissEphSession> {
     ephemerisFiles: manifest,
     dispose: () => swe.dispose()
   };
-}
-
-function utcHourDecimal(date: Date): number {
-  return date.getUTCHours()
-    + date.getUTCMinutes() / 60
-    + date.getUTCSeconds() / 3600
-    + date.getUTCMilliseconds() / 3_600_000;
 }
 
 const SPEED_FLAG = Flag.Speed;

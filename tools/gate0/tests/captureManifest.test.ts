@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   auditCohort,
   renderCohortAudit,
@@ -9,13 +9,54 @@ import {
 } from '../audit-cohort.ts';
 import {
   assertCohortManifestComplete,
-  validateCaptureArtifact,
+  COHORT_JD_UT_TOLERANCE_DAYS,
+  validateCaptureArtifact as validateCaptureArtifactImpl,
+  type CaptureArtifactValidationOptions,
+  type CohortCaptureTimeMath,
   type CaptureManifest
 } from '../lib/captureManifest.ts';
 import { SE_BODY_MAP } from '../lib/seBodyMap.ts';
+import { openSwissEph, type SwissEphSession } from '../lib/se.ts';
 import { sha256Hex } from '../lib/util.ts';
+import { utcHourDecimal } from '../lib/utc.ts';
 
 const tempDirs: string[] = [];
+let swissEphSession: SwissEphSession;
+
+beforeAll(async () => {
+  swissEphSession = await openSwissEph();
+});
+
+afterAll(() => {
+  swissEphSession?.dispose();
+});
+
+function validateCaptureArtifact<T extends { captureId?: unknown; capture?: unknown }>(
+  options: CaptureArtifactValidationOptions
+) {
+  return validateCaptureArtifactImpl<T>({
+    ...options,
+    timeMath: options.timeMath ?? swissEphSession.swe
+  });
+}
+
+function julianDayFor(utcInstant: string): number {
+  const date = new Date(utcInstant);
+  return swissEphSession.swe.julianDay(
+    date.getUTCFullYear(),
+    date.getUTCMonth() + 1,
+    date.getUTCDate(),
+    utcHourDecimal(date)
+  );
+}
+
+function timeMathWithDeltaT(deltaTDays: number): CohortCaptureTimeMath {
+  return {
+    julianDay: (year, month, day, hour) =>
+      swissEphSession.swe.julianDay(year, month, day, hour),
+    deltaT: () => deltaTDays
+  };
+}
 
 function writeArtifact(value: unknown): { artifactPath: string; manifest: CaptureManifest } {
   const dir = mkdtempSync(join(tmpdir(), 'gate0-capture-'));
@@ -44,75 +85,80 @@ afterEach(() => {
 });
 
 describe('validateCaptureArtifact', () => {
-  const validArtifact = {
-    schemaVersion: 1,
-    captureId: 'CAPTURE-CASE-001',
-    caseId: 'CASE-001',
-    site: {
-      latitude: 0,
-      longitude: 0,
-      instant: {
-        utcInstant: '2000-01-01T00:00:00Z',
-        localRepresentation: '2000-01-01T00:00:00+00:00',
-        ianaTimeZone: 'UTC'
-      }
-    },
-    capture: {
-      julianDayUt: 2451545,
-      deltaTDays: 0.0008,
-      ayanamsaSweMode: 1,
-      ayanamsaDegrees: 24,
-      ascendantTropicalDeg: null,
-      ascendantSiderealDeg: null,
-      bodies: {
-        SUN: {
-          body: 'SUN',
-          sweBody: 0,
-          tropical: {
-            longitude: 10,
-            latitude: 0,
-            distance: 1,
-            longitudeSpeed: 1,
-            latitudeSpeed: 0,
-            distanceSpeed: 0
+  function validArtifact() {
+    const utcInstant = '2000-01-01T00:00:00Z';
+    const julianDayUt = julianDayFor(utcInstant);
+    return {
+      schemaVersion: 1,
+      captureId: 'CAPTURE-CASE-001',
+      caseId: 'CASE-001',
+      site: {
+        latitude: 0,
+        longitude: 0,
+        instant: {
+          utcInstant,
+          localRepresentation: '2000-01-01T00:00:00+00:00',
+          ianaTimeZone: 'UTC'
+        }
+      },
+      capture: {
+        julianDayUt,
+        deltaTDays: swissEphSession.swe.deltaT(julianDayUt),
+        ayanamsaSweMode: 1,
+        ayanamsaDegrees: 24,
+        ascendantTropicalDeg: null,
+        ascendantSiderealDeg: null,
+        bodies: {
+          SUN: {
+            body: 'SUN',
+            sweBody: 0,
+            tropical: {
+              longitude: 10,
+              latitude: 0,
+              distance: 1,
+              longitudeSpeed: 1,
+              latitudeSpeed: 0,
+              distanceSpeed: 0
+            },
+            sidereal: {
+              longitude: 346,
+              latitude: 0,
+              distance: 1,
+              longitudeSpeed: 1,
+              latitudeSpeed: 0,
+              distanceSpeed: 0
+            },
+            ayanamsaResidualDeg: 0
           },
-          sidereal: {
-            longitude: 346,
-            latitude: 0,
-            distance: 1,
-            longitudeSpeed: 1,
-            latitudeSpeed: 0,
-            distanceSpeed: 0
-          },
-          ayanamsaResidualDeg: 0
-        },
-        MOON: {
-          body: 'MOON',
-          sweBody: 1,
-          tropical: {
-            longitude: 20,
-            latitude: 0,
-            distance: 1,
-            longitudeSpeed: 13,
-            latitudeSpeed: 0,
-            distanceSpeed: 0
-          },
-          sidereal: {
-            longitude: 356,
-            latitude: 0,
-            distance: 1,
-            longitudeSpeed: 13,
-            latitudeSpeed: 0,
-            distanceSpeed: 0
-          },
-          ayanamsaResidualDeg: 0
+          MOON: {
+            body: 'MOON',
+            sweBody: 1,
+            tropical: {
+              longitude: 20,
+              latitude: 0,
+              distance: 1,
+              longitudeSpeed: 13,
+              latitudeSpeed: 0,
+              distanceSpeed: 0
+            },
+            sidereal: {
+              longitude: 356,
+              latitude: 0,
+              distance: 1,
+              longitudeSpeed: 13,
+              latitudeSpeed: 0,
+              distanceSpeed: 0
+            },
+            ayanamsaResidualDeg: 0
+          }
         }
       }
-    }
-  };
+    };
+  }
 
-  it('accepts a captured artifact whose manifest hash, id, and expected body set match', () => {
-    const { artifactPath, manifest } = writeArtifact(validArtifact);
+  it('accepts a captured artifact with an exact timestamp/JD pair', () => {
+    const artifact = validArtifact();
+    const { artifactPath, manifest } = writeArtifact(artifact);
     const validated = validateCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
@@ -122,7 +168,7 @@ describe('validateCaptureArtifact', () => {
       expectedBodies: ['SUN', 'MOON']
     });
 
-    expect(validated.artifact).toEqual(validArtifact);
+    expect(validated.artifact).toEqual(artifact);
   });
 
   it.each([
@@ -130,7 +176,7 @@ describe('validateCaptureArtifact', () => {
     ['negative', -1],
     ['non-integer', 1.5]
   ])('rejects %s manifest bytes', (_label, bytes) => {
-    const { artifactPath, manifest } = writeArtifact(validArtifact);
+    const { artifactPath, manifest } = writeArtifact(validArtifact());
     const invalidManifest: CaptureManifest = {
       ...manifest,
       files: {
@@ -154,7 +200,7 @@ describe('validateCaptureArtifact', () => {
     ['malformed SHA-256', { sha256: 'g'.repeat(64) }, /sha256/],
     ['empty capture ID', { captureId: '  ' }, /captureId/]
   ])('rejects %s manifest metadata', (_label, entryOverrides, fieldPattern) => {
-    const { artifactPath, manifest } = writeArtifact(validArtifact);
+    const { artifactPath, manifest } = writeArtifact(validArtifact());
     const invalidManifest: CaptureManifest = {
       ...manifest,
       files: {
@@ -175,7 +221,8 @@ describe('validateCaptureArtifact', () => {
   });
 
   it('rejects unsupported manifest and artifact schema versions', () => {
-    const { artifactPath, manifest } = writeArtifact(validArtifact);
+    const artifact = validArtifact();
+    const { artifactPath, manifest } = writeArtifact(artifact);
     expect(() => validateCaptureArtifact({
       manifest: { ...manifest, schemaVersion: 2 },
       relativePath: 'cohort/CASE-001.json',
@@ -183,7 +230,7 @@ describe('validateCaptureArtifact', () => {
       caseId: 'CASE-001'
     })).toThrow(/CASE-001.*manifest\.schemaVersion/);
 
-    const wrongArtifact = writeArtifact({ ...validArtifact, schemaVersion: 2 });
+    const wrongArtifact = writeArtifact({ ...validArtifact(), schemaVersion: 2 });
     expect(() => validateCaptureArtifact({
       manifest: wrongArtifact.manifest,
       relativePath: 'cohort/CASE-001.json',
@@ -193,7 +240,7 @@ describe('validateCaptureArtifact', () => {
   });
 
   it('rejects a stale hash and a BLOCKED manifest entry', () => {
-    const { artifactPath, manifest } = writeArtifact(validArtifact);
+    const { artifactPath, manifest } = writeArtifact(validArtifact());
     const staleManifest: CaptureManifest = {
       ...manifest,
       files: {
@@ -228,7 +275,7 @@ describe('validateCaptureArtifact', () => {
   });
 
   it('rejects artifacts with missing expected bodies', () => {
-    const { artifactPath, manifest } = writeArtifact(validArtifact);
+    const { artifactPath, manifest } = writeArtifact(validArtifact());
     expect(() => validateCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
@@ -271,37 +318,90 @@ describe('validateCaptureArtifact', () => {
   });
 
   it.each([
-    ['lower ΔT bound', { deltaTDays: -0.001 }],
-    ['upper ΔT bound', { deltaTDays: 0.01 }],
-    ['positive Julian day', { julianDayUt: Number.MIN_VALUE }],
-    ['positive distance', { tropicalDistance: Number.MIN_VALUE }],
-    ['residual within frame tolerance', { ayanamsaResidualDeg: 0.009 }]
-  ])('accepts %s', (_label, overrides) => {
+    ['lower ΔT bound', { deltaTDays: -0.001 }, -0.001],
+    ['upper ΔT bound', { deltaTDays: 0.01 }, 0.01],
+    ['positive distance', { tropicalDistance: Number.MIN_VALUE }, undefined],
+    ['residual within frame tolerance', { ayanamsaResidualDeg: 0.009 }, undefined]
+  ])('accepts %s', (_label, overrides, deltaTExpected) => {
     const artifact = numericArtifact(overrides);
     const { artifactPath, manifest } = writeArtifact(artifact);
+    expect(() => validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001',
+      expectedBodies: ['SUN'],
+      ...(typeof deltaTExpected === 'number'
+        ? { timeMath: timeMathWithDeltaT(deltaTExpected) }
+        : {})
+    })).not.toThrow();
+  });
 
-    const validated = validateCaptureArtifact<CohortCapture['artifact']>({
+  it('accepts a JD rounding difference within tolerance', () => {
+    const utcInstant = '2000-01-01T00:00:00Z';
+    const exactJulianDay = julianDayFor(utcInstant);
+    const artifact = numericArtifact({
+      julianDayUt: exactJulianDay + COHORT_JD_UT_TOLERANCE_DAYS / 2
+    });
+    const { artifactPath, manifest } = writeArtifact(artifact);
+
+    expect(() => validateCaptureArtifact({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
       caseId: 'CASE-001',
       expectedBodies: ['SUN']
-    });
-    const audit = auditCohort([{
-      definition: {
-        id: 'CASE-001',
-        latitude: 0,
-        longitude: 0,
-        ianaTimeZone: 'UTC',
-        utcInstant: '2000-01-01T00:00:00Z',
-        dasha: false
-      },
-      artifact: validated.artifact,
-      sha256: validated.sha256
-    }]);
+    })).not.toThrow();
+  });
 
-    expect(audit.ascendantUnavailableCount).toBe(1);
-    expect(renderCohortAudit(audit)).toContain('Ascendant unavailable: 1');
+  it('rejects a JD shifted by one day', () => {
+    const utcInstant = '2000-01-01T00:00:00Z';
+    const artifact = numericArtifact({
+      utcInstant,
+      julianDayUt: julianDayFor(utcInstant) + 1
+    });
+    const { artifactPath, manifest } = writeArtifact(artifact);
+
+    expect(() => validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001',
+      expectedBodies: ['SUN']
+    })).toThrow(/CASE-001.*julianDayUt does not match.*recorded=.*expected=/);
+  });
+
+  it('rejects a local wall-time JD for a UTC-offset instant', () => {
+    const utcInstant = '2000-01-01T02:00:00+02:00';
+    const artifact = numericArtifact({
+      utcInstant,
+      julianDayUt: swissEphSession.swe.julianDay(2000, 1, 1, 2)
+    });
+    const { artifactPath, manifest } = writeArtifact(artifact);
+
+    expect(() => validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001',
+      expectedBodies: ['SUN']
+    })).toThrow(/CASE-001.*julianDayUt does not match.*recorded=.*expected=/);
+  });
+
+  it('rejects ΔT inconsistent with the recorded Julian day', () => {
+    const julianDayUt = julianDayFor('2000-01-01T00:00:00Z');
+    const artifact = numericArtifact({
+      deltaTDays: swissEphSession.swe.deltaT(julianDayUt) + 2e-6
+    });
+    const { artifactPath, manifest } = writeArtifact(artifact);
+
+    expect(() => validateCaptureArtifact({
+      manifest,
+      relativePath: 'cohort/CASE-001.json',
+      artifactPath,
+      caseId: 'CASE-001',
+      expectedBodies: ['SUN']
+    })).toThrow(/CASE-001.*deltaTDays does not match Swiss Ephemeris/);
   });
 
   it.each([
@@ -356,13 +456,28 @@ describe('validateCaptureArtifact', () => {
     });
     const { artifactPath, manifest } = writeArtifact(artifact);
 
-    expect(() => validateCaptureArtifact({
+    const validated = validateCaptureArtifact<CohortCapture['artifact']>({
       manifest,
       relativePath: 'cohort/CASE-001.json',
       artifactPath,
       caseId: 'CASE-001',
       expectedBodies: ['SUN']
-    })).not.toThrow();
+    });
+    const audit = auditCohort([{
+      definition: {
+        id: 'CASE-001',
+        latitude: 0,
+        longitude: 0,
+        ianaTimeZone: 'UTC',
+        utcInstant: '2000-01-01T00:00:00Z',
+        dasha: false
+      },
+      artifact: validated.artifact,
+      sha256: validated.sha256
+    }]);
+
+    expect(audit.ascendantUnavailableCount).toBe(1);
+    expect(renderCohortAudit(audit)).toContain('Ascendant unavailable: 1');
   });
 
   it('rejects non-finite sidereal values and both speed frames must be numeric', () => {
@@ -415,7 +530,7 @@ describe('validateCaptureArtifact', () => {
     readonly utcInstant?: string;
   } = {}) {
     return {
-      ...validArtifact,
+      ...validArtifact(),
       caseId: overrides.caseId ?? cohortDefinition.id,
       site: {
         latitude: overrides.latitude ?? cohortDefinition.latitude,
@@ -456,6 +571,19 @@ describe('validateCaptureArtifact', () => {
   } = {}) {
     const choose = (value: unknown, fallback: unknown): unknown =>
       value === undefined ? fallback : value;
+    const defaultUtcInstant = '2000-01-01T00:00:00Z';
+    const utcInstant = choose(overrides.utcInstant, defaultUtcInstant);
+    const usableUtcInstant = typeof utcInstant === 'string'
+      && Number.isFinite(Date.parse(utcInstant))
+      ? utcInstant
+      : defaultUtcInstant;
+    const defaultJulianDayUt = julianDayFor(usableUtcInstant);
+    const julianDayUt = choose(overrides.julianDayUt, defaultJulianDayUt);
+    const deltaTDefault = typeof julianDayUt === 'number'
+      && Number.isFinite(julianDayUt)
+      && julianDayUt > 0
+      ? swissEphSession.swe.deltaT(julianDayUt)
+      : swissEphSession.swe.deltaT(defaultJulianDayUt);
     const makeBody = (frame: 'tropical' | 'sidereal') => ({
       [frame]: frame === 'tropical'
         ? {
@@ -483,14 +611,14 @@ describe('validateCaptureArtifact', () => {
         latitude: choose(overrides.latitude, 0),
         longitude: choose(overrides.siteLongitude, 0),
         instant: {
-          utcInstant: choose(overrides.utcInstant, '2000-01-01T00:00:00Z'),
+          utcInstant,
           localRepresentation: '2000-01-01T00:00:00+00:00',
           ianaTimeZone: 'UTC'
         }
       },
       capture: {
-        julianDayUt: choose(overrides.julianDayUt, 2451545),
-        deltaTDays: choose(overrides.deltaTDays, 0.0008),
+        julianDayUt,
+        deltaTDays: choose(overrides.deltaTDays, deltaTDefault),
         ayanamsaSweMode: choose(overrides.ayanamsaSweMode, 1),
         ...(overrides.omitAyanamsa
           ? {}

@@ -18,7 +18,12 @@ import {
   type SignName
 } from './lib/grid.ts';
 import { canonicalJson, gitCommitSha, readJsonFile, repoRoot, sha256Hex, writeJsonFile, GATE0_ROOT } from './lib/util.ts';
-import { validateCaptureArtifact, type CaptureManifest } from './lib/captureManifest.ts';
+import {
+  validateCaptureArtifact,
+  type CaptureManifest,
+  type CohortCaptureTimeMath
+} from './lib/captureManifest.ts';
+import { openSwissEph } from './lib/se.ts';
 
 /** Must match boundaryTripletLongitudes' internal normalize exactly. */
 const norm360 = (d: number) => ((d % 360) + 360) % 360;
@@ -202,7 +207,10 @@ interface CohortArtifact {
   capture: { ayanamsaDegrees: number; bodies: Record<string, { sidereal: { longitude: number; longitudeSpeed: number } }> };
 }
 
-function buildDashaAnchors(manifest: CaptureManifest): unknown[] {
+function buildDashaAnchors(
+  manifest: CaptureManifest,
+  timeMath: CohortCaptureTimeMath
+): unknown[] {
   const cohortDir = join(GATE0_ROOT, 'captures/cohort');
   const cases = readJsonFile<{ cases: { id: string; dasha: boolean; utcInstant: string }[] }>(
     join(GATE0_ROOT, 'cohort/cases.v1.json')
@@ -216,7 +224,8 @@ function buildDashaAnchors(manifest: CaptureManifest): unknown[] {
       artifactPath: path,
       caseId: c.id,
       expectedCaptureId: `CAPTURE-${c.id}-${c.utcInstant.slice(0, 10)}`,
-      expectedBodies: ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU']
+      expectedBodies: ['SUN', 'MOON', 'MARS', 'MERCURY', 'JUPITER', 'VENUS', 'SATURN', 'RAHU', 'KETU'],
+      timeMath
     });
     const moonLon = artifact.capture.bodies.MOON.sidereal.longitude;
     const birthMs = new Date(c.utcInstant).getTime();
@@ -260,7 +269,13 @@ async function main() {
   const vectors = buildBoundaryVectors();
   const vargaVectors = buildVargaVectors();
   const houseVectors = buildHouseVectors();
-  const dashaAnchors = buildDashaAnchors(manifest);
+  const session = await openSwissEph();
+  let dashaAnchors: unknown[];
+  try {
+    dashaAnchors = buildDashaAnchors(manifest, session.swe);
+  } finally {
+    session.dispose();
+  }
 
   const artifact = {
     schemaVersion: 1,
