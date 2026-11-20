@@ -96,7 +96,7 @@ describe('RG-09 calculation reference validation', () => {
   });
 
   for (const fixture of CALCULATION_REFERENCE_FIXTURES) {
-    it(`validates approved reference ${fixture.id} through ${fixture.entryPoint}`, () => {
+    it(`validates captured reference ${fixture.id} through ${fixture.entryPoint}`, () => {
       const invocationId = process.env.PR9_FIXTURE_INVOCATION_ID;
       if (!invocationId) throw new Error('PR9_FIXTURE_INVOCATION_ID must be set by the release runner.');
       const fixtureResult = {
@@ -234,18 +234,24 @@ describe('RG-09 calculation reference validation', () => {
     });
   }
 
-  it('marks RG-09 ready only when fixtures and required coverage are complete', () => {
-    const expectedStatus =
-      CALCULATION_REFERENCE_FIXTURES.length > 0
-      && RG_09_CALCULATION_REFERENCE_GATE.coverageComplete
-        ? 'READY'
-        : 'BLOCKED';
+  it('marks RG-09 ready only when coverage is complete and the current set is approved', () => {
     expect(RG_09_CALCULATION_REFERENCE_GATE.fixtureCount)
       .toBe(CALCULATION_REFERENCE_FIXTURES.length);
-    expect(RG_09_CALCULATION_REFERENCE_GATE.status).toBe(expectedStatus);
-    expect(RG_09_CALCULATION_REFERENCE_GATE.status === 'READY').toBe(
+    expect(RG_09_CALCULATION_REFERENCE_GATE.coverageStatus).toBe(
       RG_09_CALCULATION_REFERENCE_GATE.fixtureCount > 0
-      && RG_09_CALCULATION_REFERENCE_GATE.coverageComplete
+      && RG_09_CALCULATION_REFERENCE_GATE.coverageComplete ? 'READY' : 'BLOCKED'
     );
+    expect(RG_09_CALCULATION_REFERENCE_GATE.status)
+      .toBe(RG_09_CALCULATION_REFERENCE_GATE.overallStatus);
+    if (RG_09_CALCULATION_REFERENCE_GATE.overallStatus === 'READY') {
+      expect(RG_09_CALCULATION_REFERENCE_GATE.coverageStatus).toBe('READY');
+      expect(RG_09_CALCULATION_REFERENCE_GATE.approvalStatus).toBe('APPROVED');
+    }
+    if (RG_09_CALCULATION_REFERENCE_GATE.approvalStatus !== 'APPROVED') {
+      expect(RG_09_CALCULATION_REFERENCE_GATE.overallStatus).not.toBe('READY');
+    }
+    if (['MISSING', 'PENDING_REVIEW'].includes(RG_09_CALCULATION_REFERENCE_GATE.approvalStatus)) {
+      expect(RG_09_CALCULATION_REFERENCE_GATE.reason).toContain('human approval is outstanding');
+    }
   });
 });

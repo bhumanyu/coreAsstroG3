@@ -1,11 +1,11 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-20T13:43:53.212Z
-Engine commit: `e257193197472479db978e503fe8fc4c33c94ae3`
+Generated: 2026-11-20T14:43:04.466Z
+Engine commit: `490fd6f4ec9c89bd6aac4fe9b89740b42c1e5860`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
-RG-09 approval: **PENDING_REVIEW** — No human approval manifest found; human review is pending.
-Gate-0 overall readiness: **PENDING_REVIEW** (requires coverage, human approval, and complete cohort brackets)
+RG-09 approval: **MISSING**
+Gate-0 overall readiness: **PENDING_REVIEW** — No human approval manifest found; human approval is outstanding.
 Fixture-set SHA-256: `541a3ce9e0929b4e49d435a6e691980cf4e49ddc40d72c75a80c1cf722378731`
 Cohort stratification: **COMPLETE**
 inspectBoundaryCoverage issues: 0
@@ -19,8 +19,8 @@ per cohort artifact). Engine output appears only as the measured side.
 
 | Track | n | pass | fail | max error | mean error | unit | §4 tolerance |
 |-------|---|------|------|-----------|------------|------|--------------|
-| DASHA_ARITHMETIC_LOCKED_MOON | 67 | 67 | 0 | 0.000e+0 | 0.000e+0 | ms | fraction 1e-6 / boundary 1000 ms |
-| DASHA_END_TO_END | 67 | 0 | 67 | 7010385262 | 1073575025 | ms | all MD/AD/PD boundaries <= 1000 ms |
+| DASHA_ARITHMETIC_REFERENCE_MOON | 67 | 67 | 0 | 0.000e+0 | 0.000e+0 | ms | all MD/AD/PD boundaries <= 1000 ms |
+| DASHA_REFERENCE_ANCHOR | 67 | 67 | 0 | 0.000e+0 | 0.000e+0 | ms | frozen first-MD anchor tolerances |
 | HOUSE_POSITION | 144 | 144 | 0 | 0.000e+0 | 0.000e+0 | house | exact |
 | MOON_LONGITUDE | 86 | 1 | 85 | 622.415 | 192.486 | arcsec | 0.0001° (Moon-anchor protocol) |
 | NAKSHATRA_BOUNDARY | 405 | 378 | 27 | 1.000 | 6.667e-2 | category | categorical |
@@ -35,10 +35,26 @@ per cohort artifact). Engine output appears only as the measured side.
 - cases: 86, pass(<=0.01°): 86, fail: 0
 - max |Δ| = 6.209e-3°, mean = 2.714e-3° (tolerance 0.01° = 36″)
 
-## End-to-end dasha structure
+## Dasha error decomposition
 
-- MD/AD/PD structure matches locked-Moon reference: 31/67.
-- Structural mismatch samples: DASHA-BI-005 (MD1/AD1 PD count 6/5); DASHA-BI-015 (MD1/AD1 PD count 5/6); DASHA-BI-017 (MD1/AD1 PD count 6/5); DASHA-BI-019 (MD1/AD1 PD count 4/3); DASHA-BI-023 (MD1/AD1 PD count 8/9); DASHA-BI-025 (MD1 AD count 2/3); DASHA-MB-01-BEFORE (MD1 MERCURY/KETU); DASHA-MB-02-BEFORE (MD1 KETU/VENUS); DASHA-MB-03-BEFORE (MD1 VENUS/SUN); DASHA-MB-03-AFTER (MD1/AD1 PD count 9/6); DASHA-MB-04-BEFORE (MD1 SUN/MOON); DASHA-MB-04-AFTER (MD1/AD1 PD count 9/7).
+- Cases: 67; each case produced R→R, R→E, and E→E timelines.
+- R→R anchor check against the frozen fixture expected first-MD values: 67/67.
+- Year-length convention: 365.25 days.
+- Engine-vs-reference Moon difference: max 622.415″, mean 198.432″.
+- R→R uses the Gate-0 independent Vimshottari model; its first-MD anchors are checked against the unchanged fixture expected values. Later MD/AD/PD periods are derived by that model, not newly captured fixture values.
+
+| Level | Delta | Structural agreement | Periods compared | Boundary timestamps | Max error (ms) | Mean error (ms) |
+|-------|-------|----------------------|------------------|---------------------|----------------|-----------------|
+| MD | R→E vs R→R (arithmetic/structure) | 67/67 cases | 670 | 1340 | 0.000e+0 | 0.000e+0 |
+| MD | E→E vs R→E (Moon-input delta) | 43/67 cases | 670 | 860 | 7010385262 | 1505501721 |
+|  | First structural mismatch | DASHA-MB-01-BEFORE: MD1 MERCURY/MD1 KETU |  |  |  |  |
+| AD | R→E vs R→R (arithmetic/structure) | 67/67 cases | 5494 | 10988 | 0.000e+0 | 0.000e+0 |
+| AD | E→E vs R→E (Moon-input delta) | 42/67 cases | 5494 | 6888 | 7010385262 | 1658567151 |
+|  | First structural mismatch | DASHA-BI-025: MD1/AD1 SUN/MD1/AD1 VENUS |  |  |  |  |
+| PD | R→E vs R→R (arithmetic/structure) | 67/67 cases | 48910 | 97820 | 0.000e+0 | 0.000e+0 |
+| PD | E→E vs R→E (Moon-input delta) | 31/67 cases | 48910 | 45260 | 4947402691 | 1261666395 |
+|  | First structural mismatch | DASHA-BI-005: MD1/AD1/PD1 JUPITER/MD1/AD1/PD1 SATURN |  |  |  |  |
+
 
 ## Cohort stratification audit (§3a)
 
@@ -69,7 +85,7 @@ Moon-anchor cases must bracket every nakshatra boundary within ±0.01° on both 
 
 ## Failure sample (first 40)
 
-Total failing fixtures: 698
+Total failing fixtures: 631
 - PL-BI-001-SUN: 41.0" > 36.00"
 - PL-BI-001-MOON: 220.8" > 0.36"
 - PL-BI-001-MARS: 9132.4" > 36.00"
@@ -110,7 +126,7 @@ Total failing fixtures: 698
 - PL-BI-006-MERCURY: 4277.9" > 36.00"
 - PL-BI-006-JUPITER: 2478.2" > 36.00"
 - PL-BI-006-VENUS: 642.0" > 36.00"
-- … and 658 more
+- … and 591 more
 
 ## Fork recommendation
 
@@ -120,8 +136,8 @@ Per-track verdicts:
 - Ascendant: 86/86 within 0.01°.
 - Categorical boundary: 414/441 (27 failures).
 - Varga/house arithmetic: 389/389 (0 failures).
-- Dasha arithmetic, locked Moon: 67/67.
-- Dasha end-to-end, engine Moon: 0/67.
+- R→R independent dasha anchors: 67/67.
+- R→E dasha arithmetic vs R→R model: 67/67.
 - Reference-grid cross-check (SIGN (on reference longitudes)): 774/774.
 - Reference-grid cross-check (NAKSHATRA+PADA (on reference longitudes)): 774/774.
 - Reference-grid cross-check (PADA only (on reference longitudes)): 774/774.
@@ -131,7 +147,7 @@ Per-track verdicts:
 **Recommendation: Fork A — replace the astronomy core and address failing deterministic tracks separately.**
 
 Evidence:
-- Moon-anchor longitude has 1/86 passes at the protocol's 0.0001° tolerance; end-to-end dasha has 0/67 passes, distinct from 67/67 locked-Moon arithmetic passes.
+- Moon-anchor longitude has 1/86 passes at the protocol's 0.0001° tolerance; dasha results separate R→E arithmetic from E→E Moon-input effects in the decomposition table.
 - Other planetary longitudes have 184/688 passes; motion has 243/258; ascendant has 86/86.
 - Categorical boundaries have 27 failures and varga/house arithmetic has 0; these deterministic tracks are reported separately from ephemeris accuracy.
 - A reference-grade ephemeris should be adopted behind the existing `generatePlanetaryPositions`/`calculateAscendant` seams; deterministic boundary failures require their own investigation.

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { GENERATED_CALCULATION_REFERENCE_FIXTURES } from './calculationReferenceFixtures.generated.ts';
@@ -6,6 +7,10 @@ import type {
   CalculationReferenceFixture,
   CalculationReferenceGate
 } from './calculationReferenceTypes.ts';
+import {
+  deriveCalculationReferenceGateStatus,
+  evaluateFixtureApproval
+} from './fixtureApproval.ts';
 // Keep this module executable under Node's built-in TypeScript strip-only loader.
 // Runtime enum parity is asserted in calculationValidation.test.ts under Vitest.
 
@@ -339,13 +344,39 @@ const missingCoverage = [
 ];
 const coverageComplete = missingCoverage.length === 0;
 const fixtureCount = CALCULATION_REFERENCE_FIXTURES.length;
+const fixtureSetPath = resolve(
+  process.cwd(),
+  'src/engine/validation/calculationReferenceFixtures.generated.ts'
+);
+const fixtureSetSha256 = createHash('sha256')
+  .update(readFileSync(fixtureSetPath))
+  .digest('hex');
+const approval = evaluateFixtureApproval(
+  resolve(process.cwd(), 'tools/gate0/approvals.json'),
+  fixtureSetSha256
+);
+const coverageStatus = fixtureCount > 0 && coverageComplete ? 'READY' : 'BLOCKED';
+const overallStatus = deriveCalculationReferenceGateStatus(
+  coverageStatus === 'READY',
+  approval.verdict
+);
+const reason = overallStatus === 'READY'
+  ? 'Independent calculation reference coverage is complete and the current fixture set has human approval.'
+  : [
+      ...(coverageStatus === 'BLOCKED'
+        ? [`Calculation reference coverage is incomplete: ${missingCoverage.join(', ')}.`]
+        : []),
+      ...(approval.verdict === 'APPROVED' ? [] : [approval.detail])
+    ].join(' ');
 
 export const RG_09_CALCULATION_REFERENCE_GATE: CalculationReferenceGate = Object.freeze({
   id: 'RG-09',
-  status: fixtureCount > 0 && coverageComplete ? 'READY' : 'BLOCKED',
+  status: overallStatus,
+  coverageStatus,
+  approvalStatus: approval.verdict,
+  overallStatus,
   fixtureCount,
   coverageComplete,
-  reason: coverageComplete
-    ? 'Approved independent calculation references cover all required kinds and motion cases.'
-    : `Missing approved independent calculation references for: ${missingCoverage.join(', ')}.`
+  fixtureSetSha256,
+  reason
 });

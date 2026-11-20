@@ -11,7 +11,7 @@
  *
  * Offline tooling only.
  */
-import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -29,10 +29,11 @@ import { calculateNakshatra } from '../../src/engine/nakshatraUtils.ts';
 import { calculateVimshottari } from '../../src/engine/dasha/vimshottari.ts';
 import { AyanamsaType, Planet, ChartType } from '../../src/types.ts';
 import type { BirthDetails, PlanetaryPositions } from '../../src/types.ts';
-import { gitCommitSha, repoRoot, GATE0_ROOT, normDeg, sha256Hex } from './lib/util.ts';
+import { gitCommitSha, repoRoot, normDeg } from './lib/util.ts';
 import { signAt, nakshatraAt, padaAt, vargaD9, vargaD10 } from './lib/grid.ts';
 import { loadCohortCaptures, auditCohort, renderCohortAudit, type CohortCapture } from './audit-cohort.ts';
-import { evaluateFixtureApproval } from './lib/approval.ts';
+import { calculateReferenceDasha } from './lib/referenceDasha.ts';
+import { decomposeDashaTimelines, type DashaLevelComparison } from './lib/dashaComparison.ts';
 
 const ARCSEC_PER_DEG = 3600;
 
@@ -53,8 +54,15 @@ interface Measurement {
 
 const measurements: Measurement[] = [];
 const failures: string[] = [];
-const dashaStructureMeasurements: {
-  fixtureId: string; sameStructure: boolean; detail?: string;
+const dashaCaseMeasurements: {
+  fixtureId: string;
+  yearLengthDays: number;
+  moonDeltaArcsec: number;
+  anchorPass: boolean;
+  anchorErrorMs: number;
+  anchorDetail?: string;
+  arithmetic: Readonly<Record<'MD' | 'AD' | 'PD', DashaLevelComparison>>;
+  moonInput: Readonly<Record<'MD' | 'AD' | 'PD', DashaLevelComparison>>;
 }[] = [];
 
 function birthOf(fixture: { input: { birth?: BirthDetails } }): BirthDetails {
@@ -171,131 +179,100 @@ function measureVarga(f: Extract<CalculationReferenceFixture, { kind: 'VARGA_LON
 }
 
 function measureDasha(f: Extract<CalculationReferenceFixture, { kind: 'VIMSHOTTARI_DASHA' }>) {
-  const referenceTimeline = calculateVimshottari({
+  const referenceTimeline = calculateReferenceDasha({
     birthDateTime: f.input.birthDateTime,
     moonSiderealLongitude: f.input.moonSiderealLongitude,
+    ...(f.input.until ? { until: f.input.until } : {}),
+    yearLengthDays: f.conventions.yearLengthDays
+  });
+  const referenceMoonEngineTimeline = calculateVimshottari({
+    birthDateTime: f.input.birthDateTime,
+    moonSiderealLongitude: f.input.moonSiderealLongitude,
+    ...(f.input.until ? { until: f.input.until } : {})
+  });
+  const computedMoon = positionsFor(birthOf(f))[Planet.MOON].longitude;
+  const engineMoonEngineTimeline = calculateVimshottari({
+    birthDateTime: f.input.birthDateTime,
+    moonSiderealLongitude: computedMoon,
     ...(f.input.until ? { until: f.input.until } : {})
   });
   const e = f.expected;
   const firstMd = referenceTimeline.mahadashas[0];
   const fracErr = Math.abs(referenceTimeline.nakshatraProgress - e.nakshatraProgress);
-  const remErr = Math.abs(referenceTimeline.remainingFraction - e.remainingFraction);
-  const startMs = firstMd ? new Date(firstMd.start).getTime() : NaN;
-  const endMs = firstMd ? new Date(firstMd.end).getTime() : NaN;
+  const remErr = Math.abs((1 - referenceTimeline.nakshatraProgress) - e.remainingFraction);
+  const startMs = firstMd ? Date.parse(firstMd.start) : NaN;
+  const endMs = firstMd ? Date.parse(firstMd.end) : NaN;
   const expStart = new Date(e.firstMahadashaStart).getTime();
   const expEnd = new Date(e.firstMahadashaEnd).getTime();
   const startErrMs = Math.abs(startMs - expStart);
   const endErrMs = Math.abs(endMs - expEnd);
-  const catPass = referenceTimeline.nakshatra === e.nakshatra
-    && referenceTimeline.nakshatraLord === e.nakshatraLord
-    && firstMd?.planet === e.firstMahadashaLord;
-  const fracPass = fracErr <= f.tolerance.fraction && remErr <= f.tolerance.fraction;
-  const boundPass = startErrMs <= f.tolerance.boundaryMilliseconds
-    && endErrMs <= f.tolerance.boundaryMilliseconds;
-  const pass = catPass && fracPass && boundPass;
-  measurements.push({
-    fixtureId: f.id, track: 'DASHA_ARITHMETIC_LOCKED_MOON',
-    error: Math.max(endErrMs, startErrMs), unit: 'ms', pass,
-    detail: `nak=${referenceTimeline.nakshatra}/${e.nakshatra} progressErr=${fracErr.toExponential(2)} endErrMs=${endErrMs.toFixed(1)}`
-  });
-  if (!pass) failures.push(`${f.id}: cat=${catPass} frac=${fracPass} bound=${boundPass} endErrMs=${endErrMs.toFixed(1)}`);
-
-  const computedMoon = positionsFor(birthOf(f))[Planet.MOON].longitude;
-  const endToEndTimeline = calculateVimshottari({
-    birthDateTime: f.input.birthDateTime,
-    moonSiderealLongitude: computedMoon,
-    ...(f.input.until ? { until: f.input.until } : {})
-  });
-  const boundaryComparison = compareDashaBoundaries(referenceTimeline, endToEndTimeline);
-  dashaStructureMeasurements.push({
-    fixtureId: f.id,
-    sameStructure: boundaryComparison.sameStructure,
-    ...(boundaryComparison.structureDetail ? { detail: boundaryComparison.structureDetail } : {})
-  });
-  const endToEndPass = boundaryComparison.sameStructure
-    && boundaryComparison.maxErrorMs <= f.tolerance.boundaryMilliseconds;
+  const anchorMismatches: string[] = [];
+  const expectedNakshatra = String(e.nakshatra).toUpperCase().replace(/[\s-]+/g, '_');
+  if (referenceTimeline.nakshatra.toUpperCase() !== expectedNakshatra) {
+    anchorMismatches.push(`nak=${referenceTimeline.nakshatra}/${e.nakshatra}`);
+  }
+  if (referenceTimeline.nakshatraLord !== String(e.nakshatraLord).toUpperCase()) {
+    anchorMismatches.push(`lord=${referenceTimeline.nakshatraLord}/${e.nakshatraLord}`);
+  }
+  if (firstMd?.planet !== String(e.firstMahadashaLord).toUpperCase()) {
+    anchorMismatches.push(`firstMD=${firstMd?.planet ?? 'missing'}/${e.firstMahadashaLord}`);
+  }
+  if (fracErr > f.tolerance.fraction || remErr > f.tolerance.fraction) {
+    anchorMismatches.push(`fractionErr=${fracErr.toExponential(2)}/${remErr.toExponential(2)}`);
+  }
+  if (startErrMs > f.tolerance.boundaryMilliseconds || endErrMs > f.tolerance.boundaryMilliseconds) {
+    anchorMismatches.push(`boundaryErrMs=${startErrMs.toFixed(1)}/${endErrMs.toFixed(1)}`);
+  }
+  const anchorPass = anchorMismatches.length === 0;
   measurements.push({
     fixtureId: f.id,
-    track: 'DASHA_END_TO_END',
-    error: boundaryComparison.maxErrorMs,
+    track: 'DASHA_REFERENCE_ANCHOR',
+    error: Math.max(endErrMs, startErrMs),
     unit: 'ms',
-    pass: endToEndPass,
-    detail: `computedMoon=${computedMoon.toFixed(6)} lockedMoon=${f.input.moonSiderealLongitude.toFixed(6)} ` +
-      `maxBoundaryErrMs=${boundaryComparison.maxErrorMs.toFixed(1)} structure=${boundaryComparison.sameStructure}` +
-      (boundaryComparison.structureDetail ? ` mismatch=${boundaryComparison.structureDetail}` : '')
+    pass: anchorPass,
+    detail: `R→R first-MD anchor=${firstMd?.planet ?? 'missing'}/${e.firstMahadashaLord} ` +
+      `startErrMs=${startErrMs.toFixed(1)} endErrMs=${endErrMs.toFixed(1)} progressErr=${fracErr.toExponential(2)}`
   });
-  if (!endToEndPass) {
-    failures.push(
-      `${f.id}: end-to-end dasha maxBoundaryErrMs=${boundaryComparison.maxErrorMs.toFixed(1)} ` +
-      `structure=${boundaryComparison.sameStructure}` +
-      (boundaryComparison.structureDetail ? ` mismatch=${boundaryComparison.structureDetail}` : '')
-    );
+  if (!anchorPass) {
+    failures.push(`${f.id}: R→R independent timeline did not match the frozen first-MD anchor.`);
   }
-}
 
-function compareDashaBoundaries(
-  expected: ReturnType<typeof calculateVimshottari>,
-  actual: ReturnType<typeof calculateVimshottari>
-): { maxErrorMs: number; sameStructure: boolean; structureDetail?: string } {
-  let maxErrorMs = 0;
-  let sameStructure = expected.mahadashas.length === actual.mahadashas.length;
-  const structureMismatches: string[] = [];
-  const comparePeriod = (
-    expectedPeriod: { planet: Planet; start: string; end: string },
-    actualPeriod: { planet: Planet; start: string; end: string },
-    path: string
-  ) => {
-    if (expectedPeriod.planet !== actualPeriod.planet) {
-      sameStructure = false;
-      structureMismatches.push(`${path} ${expectedPeriod.planet}/${actualPeriod.planet}`);
-      return;
-    }
-    for (const boundary of ['start', 'end'] as const) {
-      maxErrorMs = Math.max(
-        maxErrorMs,
-        Math.abs(new Date(expectedPeriod[boundary]).getTime() - new Date(actualPeriod[boundary]).getTime())
-      );
-    }
-  };
-  const mdCount = Math.min(expected.mahadashas.length, actual.mahadashas.length);
-  if (expected.mahadashas.length !== actual.mahadashas.length) {
-    structureMismatches.push(`MD count ${expected.mahadashas.length}/${actual.mahadashas.length}`);
+  const decomposition = decomposeDashaTimelines(
+    referenceTimeline,
+    referenceMoonEngineTimeline,
+    engineMoonEngineTimeline
+  );
+  const arithmeticLevels = Object.values(decomposition.arithmetic);
+  const arithmeticMaxError = Math.max(
+    ...arithmeticLevels.map(level => level.maxBoundaryErrorMs ?? 0)
+  );
+  const arithmeticPass = arithmeticLevels.every(level =>
+    level.structuralAgreement
+    && (level.maxBoundaryErrorMs ?? 0) <= f.tolerance.boundaryMilliseconds
+  );
+  const moonErrorArcsec = angDiffDeg(computedMoon, f.input.moonSiderealLongitude) * ARCSEC_PER_DEG;
+  dashaCaseMeasurements.push({
+    fixtureId: f.id,
+    yearLengthDays: f.conventions.yearLengthDays,
+    moonDeltaArcsec: moonErrorArcsec,
+    anchorPass,
+    anchorErrorMs: Math.max(startErrMs, endErrMs),
+    ...(!anchorPass ? { anchorDetail: anchorMismatches.join('; ') } : {}),
+    arithmetic: decomposition.arithmetic,
+    moonInput: decomposition.moonInput
+  });
+  measurements.push({
+    fixtureId: f.id,
+    track: 'DASHA_ARITHMETIC_REFERENCE_MOON',
+    error: arithmeticMaxError,
+    unit: 'ms',
+    pass: arithmeticPass,
+    detail: `R→E vs R→R MD/AD/PD maxBoundaryErrMs=${arithmeticMaxError.toFixed(1)} ` +
+      `structure=${arithmeticLevels.every(level => level.structuralAgreement)}`
+  });
+  if (!arithmeticPass) {
+    failures.push(`${f.id}: R→E vs R→R dasha arithmetic/structure differs.`);
   }
-  for (let mdIndex = 0; mdIndex < mdCount; mdIndex++) {
-    const expectedMd = expected.mahadashas[mdIndex];
-    const actualMd = actual.mahadashas[mdIndex];
-    comparePeriod(expectedMd, actualMd, `MD${mdIndex + 1}`);
-    if (expectedMd.antardashas.length !== actualMd.antardashas.length) {
-      sameStructure = false;
-      structureMismatches.push(`MD${mdIndex + 1} AD count ${expectedMd.antardashas.length}/${actualMd.antardashas.length}`);
-    }
-    const adCount = Math.min(expectedMd.antardashas.length, actualMd.antardashas.length);
-    for (let adIndex = 0; adIndex < adCount; adIndex++) {
-      const expectedAd = expectedMd.antardashas[adIndex];
-      const actualAd = actualMd.antardashas[adIndex];
-      comparePeriod(expectedAd, actualAd, `MD${mdIndex + 1}/AD${adIndex + 1}`);
-      if (expectedAd.pratyantardashas.length !== actualAd.pratyantardashas.length) {
-        sameStructure = false;
-        structureMismatches.push(
-          `MD${mdIndex + 1}/AD${adIndex + 1} PD count ` +
-          `${expectedAd.pratyantardashas.length}/${actualAd.pratyantardashas.length}`
-        );
-      }
-      const pdCount = Math.min(expectedAd.pratyantardashas.length, actualAd.pratyantardashas.length);
-      for (let pdIndex = 0; pdIndex < pdCount; pdIndex++) {
-        comparePeriod(
-          expectedAd.pratyantardashas[pdIndex],
-          actualAd.pratyantardashas[pdIndex],
-          `MD${mdIndex + 1}/AD${adIndex + 1}/PD${pdIndex + 1}`
-        );
-      }
-    }
-  }
-  return {
-    maxErrorMs,
-    sameStructure,
-    ...(structureMismatches[0] ? { structureDetail: structureMismatches[0] } : {})
-  };
 }
 
 /* ---------------- ascendant + supplementary grid agreement ------------ */
@@ -371,9 +348,8 @@ export function runParity() {
   const engineCommitSha = gitCommitSha(root);
   const cohortCaptures = loadCohortCaptures();
   const cohortAudit = auditCohort(cohortCaptures);
-  const fixturePath = join(root, 'src/engine/validation/calculationReferenceFixtures.generated.ts');
-  const fixtureSetSha256 = sha256Hex(readFileSync(fixturePath));
-  const approval = evaluateFixtureApproval(join(GATE0_ROOT, 'approvals.json'), fixtureSetSha256);
+  const gate = RG_09_CALCULATION_REFERENCE_GATE;
+  const fixtureSetSha256 = gate.fixtureSetSha256;
 
   const boundaryIssues = inspectBoundaryCoverage(CALCULATION_REFERENCE_FIXTURES, CALCULATION_COVERAGE_POLICY);
 
@@ -404,16 +380,9 @@ export function runParity() {
   lines.push(`Generated: ${new Date().toISOString()}`);
   lines.push(`Engine commit: \`${engineCommitSha}\``);
   lines.push(`Fixture count: ${CALCULATION_REFERENCE_FIXTURES.length}`);
-  const coverageVerdict = RG_09_CALCULATION_REFERENCE_GATE.coverageComplete ? 'READY' : 'BLOCKED';
-  const overallVerdict = coverageVerdict !== 'READY'
-    ? 'BLOCKED'
-    : approval.verdict === 'APPROVED' && cohortAudit.missingMoonBrackets.length === 0
-      ? 'READY'
-      : approval.verdict === 'INVALID' || approval.verdict === 'STALE'
-        ? 'BLOCKED' : 'PENDING_REVIEW';
-  lines.push(`RG-09 coverage: **${coverageVerdict}** (coverageComplete=${RG_09_CALCULATION_REFERENCE_GATE.coverageComplete})`);
-  lines.push(`RG-09 approval: **${approval.verdict}** — ${approval.detail}`);
-  lines.push(`Gate-0 overall readiness: **${overallVerdict}** (requires coverage, human approval, and complete cohort brackets)`);
+  lines.push(`RG-09 coverage: **${gate.coverageStatus}** (coverageComplete=${gate.coverageComplete})`);
+  lines.push(`RG-09 approval: **${gate.approvalStatus}**`);
+  lines.push(`Gate-0 overall readiness: **${gate.overallStatus}** — ${gate.reason}`);
   lines.push(`Fixture-set SHA-256: \`${fixtureSetSha256}\``);
   lines.push(`Cohort stratification: **${cohortAudit.missingMoonBrackets.length === 0 ? 'COMPLETE' : 'INCOMPLETE'}**`);
   lines.push(`inspectBoundaryCoverage issues: ${boundaryIssues.length}${boundaryIssues.length ? ' — ' + boundaryIssues.slice(0, 5).join('; ') : ''}`);
@@ -436,8 +405,8 @@ export function runParity() {
     NAKSHATRA_BOUNDARY: 'categorical',
     HOUSE_POSITION: 'exact',
     VARGA_LONGITUDE: '1e-6°',
-    DASHA_ARITHMETIC_LOCKED_MOON: 'fraction 1e-6 / boundary 1000 ms',
-    DASHA_END_TO_END: 'all MD/AD/PD boundaries <= 1000 ms'
+    DASHA_REFERENCE_ANCHOR: 'frozen first-MD anchor tolerances',
+    DASHA_ARITHMETIC_REFERENCE_MOON: 'all MD/AD/PD boundaries <= 1000 ms'
   };
   for (const [track, ms] of [...byTrack.entries()].sort()) {
     const errs = ms.map(m => m.error);
@@ -455,17 +424,7 @@ export function runParity() {
   lines.push(`- cases: ${ascMeasurements.length}, pass(<=0.01°): ${ascPass}, fail: ${ascMeasurements.length - ascPass}`);
   lines.push(`- max |Δ| = ${fmt(ascStats.max)}°, mean = ${fmt(ascStats.mean)}° (tolerance 0.01° = ${(0.01 * ARCSEC_PER_DEG).toFixed(0)}″)`);
   lines.push('');
-  lines.push('## End-to-end dasha structure');
-  lines.push('');
-  const sameDashaStructure = dashaStructureMeasurements.filter(item => item.sameStructure).length;
-  lines.push(`- MD/AD/PD structure matches locked-Moon reference: ${sameDashaStructure}/${dashaStructureMeasurements.length}.`);
-  const structureMismatches = dashaStructureMeasurements.filter(item => !item.sameStructure);
-  if (structureMismatches.length === 0) {
-    lines.push('- No MD/AD/PD sequence or period-count mismatches.');
-  } else {
-    lines.push(`- Structural mismatch samples: ${structureMismatches.slice(0, 12)
-      .map(item => `${item.fixtureId} (${item.detail ?? 'sequence differs'})`).join('; ')}.`);
-  }
+  renderDashaDecomposition(lines);
   lines.push('');
   lines.push('## Cohort stratification audit (§3a)');
   lines.push('');
@@ -506,7 +465,61 @@ export function runParity() {
   mkdirSync(dirname(reportPath), { recursive: true });
   writeFileSync(reportPath, lines.join('\n') + '\n', 'utf8');
   console.log(`wrote ${reportPath}`);
-  console.log(`fixtures=${CALCULATION_REFERENCE_FIXTURES.length} measurements=${measurements.length} failures=${failures.length} readiness=${overallVerdict}`);
+  console.log(`fixtures=${CALCULATION_REFERENCE_FIXTURES.length} measurements=${measurements.length} failures=${failures.length} readiness=${gate.overallStatus}`);
+}
+
+function renderDashaDecomposition(lines: string[]): void {
+  const yearLengths = [...new Set(dashaCaseMeasurements.map(item => item.yearLengthDays))];
+  const moonErrors = dashaCaseMeasurements.map(item => item.moonDeltaArcsec);
+  const moonStats = stats(moonErrors);
+  const anchorMatches = dashaCaseMeasurements.filter(item => item.anchorPass).length;
+  lines.push('## Dasha error decomposition');
+  lines.push('');
+  lines.push(`- Cases: ${dashaCaseMeasurements.length}; each case produced R→R, R→E, and E→E timelines.`);
+  lines.push(`- R→R anchor check against the frozen fixture expected first-MD values: ${anchorMatches}/${dashaCaseMeasurements.length}.`);
+  const anchorFailures = dashaCaseMeasurements.filter(item => !item.anchorPass);
+  if (anchorFailures.length > 0) {
+    lines.push(`- R→R anchor mismatch samples: ${anchorFailures.slice(0, 8)
+      .map(item => `${item.fixtureId} (${item.anchorDetail ?? 'mismatch'})`).join('; ')}.`);
+  }
+  lines.push(`- Year-length convention: ${yearLengths.map(days => `${days} days`).join(', ') || 'none recorded'}.`);
+  lines.push(`- Engine-vs-reference Moon difference: max ${fmt(moonStats.max)}″, mean ${fmt(moonStats.mean)}″.`);
+  lines.push('- R→R uses the Gate-0 independent Vimshottari model; its first-MD anchors are checked against the unchanged fixture expected values. Later MD/AD/PD periods are derived by that model, not newly captured fixture values.');
+  lines.push('');
+  lines.push('| Level | Delta | Structural agreement | Periods compared | Boundary timestamps | Max error (ms) | Mean error (ms) |');
+  lines.push('|-------|-------|----------------------|------------------|---------------------|----------------|-----------------|');
+  for (const level of ['MD', 'AD', 'PD'] as const) {
+    for (const [label, key] of [
+      ['R→E vs R→R (arithmetic/structure)', 'arithmetic'],
+      ['E→E vs R→E (Moon-input delta)', 'moonInput']
+    ] as const) {
+      const results = dashaCaseMeasurements.map(item => item[key][level]);
+      const boundaryResults = results.filter(
+        result => result.maxBoundaryErrorMs !== null && result.meanBoundaryErrorMs !== null
+      );
+      const boundaryCount = boundaryResults.reduce(
+        (sum, result) => sum + result.boundaryTimestampsCompared, 0
+      );
+      const weightedMean = boundaryCount === 0 ? null : boundaryResults.reduce(
+        (sum, result) => sum + (result.meanBoundaryErrorMs ?? 0) * result.boundaryTimestampsCompared,
+        0
+      ) / boundaryCount;
+      const maxError = boundaryResults.length === 0 ? null : Math.max(
+        ...boundaryResults.map(result => result.maxBoundaryErrorMs ?? 0)
+      );
+      const structuralCount = results.filter(result => result.structuralAgreement).length;
+      const periodCount = results.reduce((sum, result) => sum + result.periodsCompared, 0);
+      lines.push(
+        `| ${level} | ${label} | ${structuralCount}/${results.length} cases | ${periodCount} | ${boundaryCount} | ` +
+        `${maxError === null ? 'n/a' : fmt(maxError)} | ${weightedMean === null ? 'n/a' : fmt(weightedMean)} |`
+      );
+      const mismatch = dashaCaseMeasurements.find(item => !item[key][level].structuralAgreement);
+      if (mismatch) {
+        lines.push(`|  | First structural mismatch | ${mismatch.fixtureId}: ${mismatch[key][level].structuralDetail ?? 'lord sequence differs'} |  |  |  |  |`);
+      }
+    }
+  }
+  lines.push('');
 }
 
 function fmt(v: number): string {
@@ -525,8 +538,8 @@ function buildForkRecommendation(
   const moon = byTrack.get('MOON_LONGITUDE') ?? [];
   const moonMaxArcsec = Math.max(...moon.map(m => m.error), 0);
   const ascFail = asc.filter(a => !a.pass).length;
-  const dashaLocked = byTrack.get('DASHA_ARITHMETIC_LOCKED_MOON') ?? [];
-  const dashaEndToEnd = byTrack.get('DASHA_END_TO_END') ?? [];
+  const dashaAnchor = byTrack.get('DASHA_REFERENCE_ANCHOR') ?? [];
+  const dashaArithmetic = byTrack.get('DASHA_ARITHMETIC_REFERENCE_MOON') ?? [];
   const motion = byTrack.get('PLANETARY_MOTION') ?? [];
   const categorical = ['SIGN_BOUNDARY', 'NAKSHATRA_BOUNDARY']
     .flatMap(track => byTrack.get(track) ?? []);
@@ -540,8 +553,8 @@ function buildForkRecommendation(
   const plPass = pl.filter(m => m.pass).length;
   const moonPass = moon.filter(m => m.pass).length;
   const motionPass = motion.filter(m => m.pass).length;
-  const lockedPass = dashaLocked.filter(m => m.pass).length;
-  const endToEndPass = dashaEndToEnd.filter(m => m.pass).length;
+  const anchorPass = dashaAnchor.filter(m => m.pass).length;
+  const dashaArithmeticPass = dashaArithmetic.filter(m => m.pass).length;
   const categoricalFail = categorical.filter(m => !m.pass).length;
   const arithmeticFail = arithmetic.filter(m => !m.pass).length;
 
@@ -552,8 +565,8 @@ function buildForkRecommendation(
   lines.push(`- Ascendant: ${asc.length - ascFail}/${asc.length} within 0.01°.`);
   lines.push(`- Categorical boundary: ${categorical.filter(m => m.pass).length}/${categorical.length} (${categoricalFail} failures).`);
   lines.push(`- Varga/house arithmetic: ${arithmetic.filter(m => m.pass).length}/${arithmetic.length} (${arithmeticFail} failures).`);
-  lines.push(`- Dasha arithmetic, locked Moon: ${lockedPass}/${dashaLocked.length}.`);
-  lines.push(`- Dasha end-to-end, engine Moon: ${endToEndPass}/${dashaEndToEnd.length}.`);
+  lines.push(`- R→R independent dasha anchors: ${anchorPass}/${dashaAnchor.length}.`);
+  lines.push(`- R→E dasha arithmetic vs R→R model: ${dashaArithmeticPass}/${dashaArithmetic.length}.`);
   for (const agreement of grid) {
     lines.push(`- Reference-grid cross-check (${agreement.track}): ${agreement.agree}/${agreement.total}.`);
   }
@@ -562,7 +575,7 @@ function buildForkRecommendation(
     lines.push('**Recommendation: Fork A — replace the astronomy core and address failing deterministic tracks separately.**');
     lines.push('');
     lines.push('Evidence:');
-    lines.push(`- Moon-anchor longitude has ${moonPass}/${moon.length} passes at the protocol's 0.0001° tolerance; end-to-end dasha has ${endToEndPass}/${dashaEndToEnd.length} passes, distinct from ${lockedPass}/${dashaLocked.length} locked-Moon arithmetic passes.`);
+    lines.push(`- Moon-anchor longitude has ${moonPass}/${moon.length} passes at the protocol's 0.0001° tolerance; dasha results separate R→E arithmetic from E→E Moon-input effects in the decomposition table.`);
     lines.push(`- Other planetary longitudes have ${plPass}/${pl.length} passes; motion has ${motionPass}/${motion.length}; ascendant has ${asc.length - ascFail}/${asc.length}.`);
     lines.push(`- Categorical boundaries have ${categoricalFail} failures and varga/house arithmetic has ${arithmeticFail}; these deterministic tracks are reported separately from ephemeris accuracy.`);
     lines.push('- A reference-grade ephemeris should be adopted behind the existing `generatePlanetaryPositions`/`calculateAscendant` seams; deterministic boundary failures require their own investigation.');

@@ -245,12 +245,24 @@ export type CalculationReferenceFixture =
   | VargaLongitudeReference
   | VimshottariDashaReference;
 
-export type CalculationReferenceGateStatus = 'BLOCKED' | 'READY';
+export type CalculationReferenceApprovalStatus =
+  | 'APPROVED'
+  | 'PENDING_REVIEW'
+  | 'INVALID'
+  | 'STALE'
+  | 'MISSING';
+
+export type CalculationReferenceGateStatus = 'BLOCKED' | 'PENDING_REVIEW' | 'READY';
 
 export interface CalculationReferenceGate {
   readonly id: 'RG-09';
+  /** Backward-compatible overall status; READY requires approval and complete coverage. */
   readonly status: CalculationReferenceGateStatus;
+  readonly coverageStatus: 'READY' | 'BLOCKED';
+  readonly approvalStatus: CalculationReferenceApprovalStatus;
+  readonly overallStatus: CalculationReferenceGateStatus;
   readonly fixtureCount: number;
   readonly coverageComplete: boolean;
+  readonly fixtureSetSha256: string;
   readonly reason: string;
 }

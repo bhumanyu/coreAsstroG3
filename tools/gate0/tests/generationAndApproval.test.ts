@@ -49,7 +49,7 @@ describe('Gate-0 generation and approval', () => {
   it('keeps approval pending until a reviewer records the current fixture hash', () => {
     const path = tempPath();
     const fixtureSetSha256 = 'a'.repeat(64);
-    expect(evaluateFixtureApproval(path, fixtureSetSha256).verdict).toBe('PENDING_REVIEW');
+    expect(evaluateFixtureApproval(path, fixtureSetSha256).verdict).toBe('MISSING');
 
     writeFileSync(path, JSON.stringify({
       schemaVersion: 1,
@@ -59,5 +59,12 @@ describe('Gate-0 generation and approval', () => {
     }));
     expect(evaluateFixtureApproval(path, fixtureSetSha256).verdict).toBe('APPROVED');
     expect(evaluateFixtureApproval(path, 'b'.repeat(64)).verdict).toBe('STALE');
+  });
+
+  it('rejects malformed approval manifests', () => {
+    const path = tempPath();
+    writeFileSync(path, '{bad json');
+
+    expect(evaluateFixtureApproval(path, 'a'.repeat(64)).verdict).toBe('INVALID');
   });
 });
