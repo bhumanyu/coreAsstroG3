@@ -206,6 +206,7 @@ export interface QualificationEvidence {
   readonly sourceId: string;
   readonly relationshipIds: readonly string[];
   readonly explanation: string;
+  readonly disposition?: 'ADVERSE' | 'SUPPORTIVE';
 }
 
 /**

@@ -82,7 +82,8 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
             'STRUCTURAL_RELATIONSHIP',
             pattern.patternId,
             establishingIds,
-            'Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Neither found.'
+            'Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Neither found.',
+            'ADVERSE'
           )
         );
       } else if (has6to10 === 'ABSENT' || has10to11 === 'ABSENT') {
@@ -96,7 +97,8 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
             'STRUCTURAL_RELATIONSHIP',
             pattern.patternId,
             establishingIds,
-            `Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Missing: ${missing}.`
+            `Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Missing: ${missing}.`,
+            'ADVERSE'
           )
         );
       } else {
@@ -108,7 +110,8 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
             'STRUCTURAL_RELATIONSHIP',
             pattern.patternId,
             establishingIds,
-            'Service-to-Profession-to-Gains has both required establishing relationships: 6→10 and 10→11.'
+            'Service-to-Profession-to-Gains has both required establishing relationships: 6→10 and 10→11.',
+            'SUPPORTIVE'
           )
         );
       }

@@ -69,7 +69,8 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
           'STRUCTURAL_RELATIONSHIP',
           pattern.patternId,
           establishingIds,
-          'Career House Network has no establishing relationships. Disqualified.'
+          'Career House Network has no establishing relationships. Disqualified.',
+          'ADVERSE'
         )
       );
     } else {
@@ -81,7 +82,8 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
           'STRUCTURAL_RELATIONSHIP',
           pattern.patternId,
           establishingIds,
-          `Career House Network has ${establishingIds.length} establishing relationship(s).`
+          `Career House Network has ${establishingIds.length} establishing relationship(s).`,
+          'SUPPORTIVE'
         )
       );
     }

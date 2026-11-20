@@ -1505,6 +1505,7 @@ describe('Career Pattern Qualification', () => {
         expect(result.qualifiedPatterns[0].policyEvidence[0].explanation).toContain(
           'has both required establishing relationships'
         );
+        expect(result.qualifiedPatterns[0].policyEvidence[0].disposition).toBe('SUPPORTIVE');
         expect(result.diagnostics).toEqual([]);
       });
 
@@ -1533,6 +1534,7 @@ describe('Career Pattern Qualification', () => {
         expect(result.qualifiedPatterns[0].policyEvidence[0].explanation).toContain(
           'Neither found.'
         );
+        expect(result.qualifiedPatterns[0].policyEvidence[0].disposition).toBe('ADVERSE');
       });
 
       it('does not interpret legacy relationship IDs when canonical network context is omitted', () => {
@@ -1649,6 +1651,7 @@ describe('Career Pattern Qualification', () => {
 
         expect(qualified.status).toBe('UNQUALIFIED');
         expect(qualified.policyEvidence[0].explanation).toContain('Missing: 10→11');
+        expect(qualified.policyEvidence[0].disposition).toBe('ADVERSE');
       });
 
       it('returns INSUFFICIENT_DATA when structural strength is NOT_ASSESSED', () => {
@@ -1916,6 +1919,7 @@ describe('Career Pattern Qualification', () => {
 
         expect(qualified.status).toBe('UNQUALIFIED');
         expect(qualified.policyEvidence[0].explanation).toContain('no establishing relationships');
+        expect(qualified.policyEvidence[0].disposition).toBe('ADVERSE');
       });
 
       it('returns INSUFFICIENT_DATA when establishing relationships exist (legacy rules apply)', () => {
@@ -1942,6 +1946,7 @@ describe('Career Pattern Qualification', () => {
 
         // Legacy rules determine status based on NOT_ASSESSED dimensions
         expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        expect(qualified.policyEvidence[0].disposition).toBe('SUPPORTIVE');
         expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
         // Verify structured decision blocking reasons
         expect(qualified.decisionBlockingReasons.length).toBeGreaterThan(0);

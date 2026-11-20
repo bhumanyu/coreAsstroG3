@@ -1033,7 +1033,8 @@ function mapCareer(
               sourceType: evidence.sourceType,
               dimension: evidence.dimension,
               relationshipIds: [...evidence.relationshipIds],
-              explanation: evidence.explanation
+              explanation: evidence.explanation,
+              ...(evidence.disposition ? { disposition: evidence.disposition } : {})
             })),
             decisionBlockingReasons: qualifiedPattern.decisionBlockingReasons,
             deferredDimensions: qualifiedPattern.deferredDimensions,

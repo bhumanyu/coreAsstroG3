@@ -658,6 +658,7 @@ export interface ProductCareerPatternQualification {
     readonly dimension: string;
     readonly relationshipIds: readonly string[];
     readonly explanation: string;
+    readonly disposition?: 'ADVERSE' | 'SUPPORTIVE';
   }[];
   readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];

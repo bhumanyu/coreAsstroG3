@@ -35,7 +35,7 @@ export function selectPatternQualificationReasons(
     }
 
     for (const evidence of pattern.policyEvidence ?? []) {
-      if (evidence.dimension === 'structuralStrength') {
+      if (evidence.dimension === 'structuralStrength' && evidence.disposition === 'ADVERSE') {
         reasons.push({ category: 'STRUCTURAL_EVIDENCE', explanation: evidence.explanation });
       }
     }

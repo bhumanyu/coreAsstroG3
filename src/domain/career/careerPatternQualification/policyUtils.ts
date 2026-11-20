@@ -48,7 +48,8 @@ export function createQualificationEvidence(
   sourceType: QualificationEvidenceSourceType,
   sourceId: string,
   relationshipIds: readonly string[],
-  explanation: string
+  explanation: string,
+  disposition?: QualificationEvidence['disposition']
 ): QualificationEvidence {
   return Object.freeze({
     evidenceId,
@@ -56,7 +57,8 @@ export function createQualificationEvidence(
     sourceType,
     sourceId,
     relationshipIds: Object.freeze([...relationshipIds].sort()),
-    explanation
+    explanation,
+    ...(disposition ? { disposition } : {})
   });
 }
 

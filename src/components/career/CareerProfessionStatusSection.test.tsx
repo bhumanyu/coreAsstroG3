@@ -552,7 +552,8 @@ describe('CareerProfessionStatusSection', () => {
           sourceType: 'STRUCTURAL_RELATIONSHIP',
           dimension: 'structuralStrength',
           relationshipIds: ['establishing-relationship-1'],
-          explanation: 'Missing: 10→11'
+          explanation: 'Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Neither found.',
+          disposition: 'ADVERSE' as const
         }]
       }]
     };
@@ -562,7 +563,7 @@ describe('CareerProfessionStatusSection', () => {
     expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition');
     expect(reasons).toHaveTextContent('Mars has a fully assessed afflicted condition');
     expect(reasons).toHaveTextContent('Career relevance is neutral.');
-    expect(reasons).toHaveTextContent('Structural evidence: Missing: 10→11');
+    expect(reasons).toHaveTextContent('Structural evidence: Service-to-Profession-to-Gains requires both 6→10 and 10→11 establishing relationships. Neither found.');
     expect(reasons).not.toHaveTextContent('No establishing structural relationships were identified.');
     expect(reasons).not.toHaveTextContent('Saturn');
     expect(screen.getByRole('list', { name: 'Pattern participant evidence' })).toHaveTextContent('Saturn');
@@ -575,6 +576,13 @@ describe('CareerProfessionStatusSection', () => {
         ...unqualifiedPattern,
         status: 'INSUFFICIENT_DATA' as const,
         dimensions: { careerRelevance: 'NEUTRAL' as const },
+        policyEvidence: [{
+          sourceType: 'STRUCTURAL_RELATIONSHIP',
+          dimension: 'structuralStrength',
+          relationshipIds: [],
+          explanation: 'No establishing relationships.',
+          disposition: 'ADVERSE' as const
+        }],
         decisionBlockingReasons: [{ kind: 'MISSING_INPUT' as const, reason: 'Missing condition data.' }]
       }]
     };
@@ -582,6 +590,53 @@ describe('CareerProfessionStatusSection', () => {
     const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
     expect(reasons).toHaveTextContent('Inputs are insufficient to complete this pattern assessment.');
     expect(reasons).not.toHaveTextContent('Career relevance is neutral.');
+    expect(reasons).not.toHaveTextContent('fully assessed weak condition');
+    expect(reasons).not.toHaveTextContent('No establishing relationships.');
+    expect(reasons.children).toHaveLength(1);
+  });
+
+  it('does not show structural evidence as adverse alongside a fully assessed weak participant', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        participants: [{
+          ...unqualifiedPattern.participants[0]!,
+          condition: 'WEAK' as const,
+          conditionAssessment: 'FULL' as const
+        }],
+        policyEvidence: [{
+          sourceType: 'STRUCTURAL_RELATIONSHIP',
+          dimension: 'structuralStrength',
+          relationshipIds: ['relationship-1'],
+          explanation: 'A required structural relationship is present.',
+          disposition: 'SUPPORTIVE' as const
+        }]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+    const reasons = screen.getByRole('list', { name: 'Pattern qualification reasons' });
+    expect(reasons).toHaveTextContent('Jupiter has a fully assessed weak condition');
+    expect(reasons).not.toHaveTextContent('Structural evidence:');
+    expect(reasons.children).toHaveLength(1);
+  });
+
+  it('does not infer structural disposition for legacy evidence without a disposition', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      patternQualifications: [{
+        ...unqualifiedPattern,
+        participants: [],
+        policyEvidence: [{
+          sourceType: 'STRUCTURAL_RELATIONSHIP',
+          dimension: 'structuralStrength',
+          relationshipIds: [],
+          explanation: 'No establishing relationships.'
+        }]
+      }]
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+    expect(screen.queryByRole('list', { name: 'Pattern qualification reasons' })).not.toBeInTheDocument();
   });
 
   it('lists only fully assessed weak participants for an unqualified pattern', () => {
@@ -644,7 +699,8 @@ describe('CareerProfessionStatusSection', () => {
           sourceType: 'STRUCTURAL_RELATIONSHIP',
           dimension: 'structuralStrength',
           relationshipIds: ['establishing-relationship-1'],
-          explanation: 'Missing: 10→11'
+          explanation: 'Missing: 10→11',
+          disposition: 'ADVERSE' as const
         }]
       }]
     };

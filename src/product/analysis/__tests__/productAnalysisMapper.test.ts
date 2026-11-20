@@ -127,11 +127,12 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       status: sourcePattern.status,
       explanation: sourcePattern.explanation,
       dimensions: { careerRelevance: sourcePattern.dimensions.careerRelevance },
-      policyEvidence: sourcePattern.policyEvidence.map(({ sourceType, dimension, relationshipIds, explanation }) => ({
+      policyEvidence: sourcePattern.policyEvidence.map(({ sourceType, dimension, relationshipIds, explanation, disposition }) => ({
         sourceType,
         dimension,
         relationshipIds,
-        explanation
+        explanation,
+        ...(disposition ? { disposition } : {})
       })),
       decisionBlockingReasons: sourcePattern.decisionBlockingReasons,
       deferredDimensions: sourcePattern.deferredDimensions
