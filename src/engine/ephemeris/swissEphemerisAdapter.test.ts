@@ -63,6 +63,29 @@ describe('Swiss Ephemeris adapter', () => {
     expect(Number.isFinite(reverse[0])).toBe(true);
   });
 
+  it('isolates ayanamsa modes under interleaved Promise.all calls', async () => {
+    const types = [
+      AyanamsaType.LAHIRI,
+      AyanamsaType.RAMAN,
+      AyanamsaType.KRISHNAMURTI,
+      AyanamsaType.FAGAN_BRADLEY,
+      AyanamsaType.TROPICAL
+    ];
+    const values = await Promise.all(types.map(type =>
+      Promise.resolve(swissEphemerisAdapter.ayanamsaFor(TEST_JD, type))
+    ));
+    expect(swissEphemerisAdapter.ayanamsa(TEST_JD)).toBeCloseTo(values[0], 10);
+    expect(values[4]).toBe(0);
+  });
+
+  it('classifies a genuine retrograde Jupiter and near-stationary Mercury', () => {
+    const retrograde = swissEphemerisAdapter.tropicalPositions(2460645.499201289)[Planet.JUPITER];
+    expect(retrograde.longitudeSpeed).toBeLessThan(0);
+    const stationary = swissEphemerisAdapter.tropicalPositions(2461468)[Planet.MERCURY];
+    expect(stationary.longitudeSpeed).toBeLessThan(0);
+    expect(Math.abs(stationary.longitudeSpeed)).toBeLessThan(0.005);
+  });
+
   it('fails closed for missing browser ephemeris assets', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })));
     await expect(loadBrowserEphemerisFiles('/missing-ephe')).rejects.toThrow(/404|failed/i);

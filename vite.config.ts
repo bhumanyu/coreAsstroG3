@@ -7,6 +7,9 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   cacheDir: 'node_modules/.vite',
+  build: {
+    target: 'es2022',
+  },
   server: {
     host: '0.0.0.0',
     port: 3000,

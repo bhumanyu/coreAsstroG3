@@ -72,6 +72,12 @@ const dashaCaseMeasurements: {
   fixtureId: string;
   yearLengthDays: number;
   moonDeltaArcsec: number;
+  referenceMoonLongitude: number;
+  engineMoonLongitude: number;
+  referenceNakshatra: string;
+  engineNakshatra: string;
+  referenceProgressFraction: number;
+  engineProgressFraction: number;
   sameStartingNakshatra: boolean;
   anchorPass: boolean;
   anchorErrorMs: number;
@@ -283,6 +289,14 @@ function measureDasha(f: Extract<CalculationReferenceFixture, { kind: 'VIMSHOTTA
     fixtureId: f.id,
     yearLengthDays: f.conventions.yearLengthDays,
     moonDeltaArcsec: moonErrorArcsec,
+    referenceMoonLongitude: f.input.moonSiderealLongitude,
+    engineMoonLongitude: computedMoon,
+    referenceNakshatra: calculateNakshatra(f.input.moonSiderealLongitude).nakshatra,
+    engineNakshatra: calculateNakshatra(computedMoon).nakshatra,
+    referenceProgressFraction:
+      (f.input.moonSiderealLongitude - Math.floor((f.input.moonSiderealLongitude + 1e-12) / (40 / 3)) * (40 / 3)) / (40 / 3),
+    engineProgressFraction:
+      (computedMoon - Math.floor((computedMoon + 1e-12) / (40 / 3)) * (40 / 3)) / (40 / 3),
     sameStartingNakshatra,
     anchorPass,
     anchorErrorMs: Math.max(startErrMs, endErrMs),
@@ -510,10 +524,58 @@ export async function runParity(): Promise<void> {
   const reportPath = join(root, 'docs/career/audit/GATE-0-PARITY-REPORT.md');
   mkdirSync(dirname(reportPath), { recursive: true });
   writeFileSync(reportPath, lines.join('\n') + '\n', 'utf8');
+  writeDashaVerificationArtifact(root, engineCommitSha, fixtureSetSha256);
   writeNakshatraBoundaryDefectReport(root, failingBoundaryGroups);
   console.log(`wrote ${reportPath}`);
   console.log(`fixtures=${CALCULATION_REFERENCE_FIXTURES.length} measurements=${measurements.length} failures=${failures.length} ` +
     `rg09=${gate.overallStatus} gate0=${gate0OverallStatus}`);
+}
+
+function writeDashaVerificationArtifact(root: string, engineCommitSha: string, fixtureSetSha256: string): void {
+  const tolerance = {
+    rToERestructuralAgreementMinimumCases: 67,
+    rToEBoundaryErrorMillisecondsMaximum: 1000,
+    eeResidualBudget: {
+      MD: 1000,
+      AD: 1000,
+      PD: 1000
+    },
+    partition: ['sameStartingNakshatra', 'flippedStartingNakshatra']
+  };
+  const artifact = {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    harness: 'tools/gate0/run-parity.ts',
+    engineCommitSha,
+    fixtureSetSha256,
+    vimshottariSource: 'src/engine/dasha/vimshottari.ts',
+    acceptanceTolerances: tolerance,
+    cases: dashaCaseMeasurements.map(item => ({
+      fixtureId: item.fixtureId,
+      moonReference: {
+        siderealLongitude: item.referenceMoonLongitude,
+        nakshatra: item.referenceNakshatra,
+        progressFraction: item.referenceProgressFraction
+      },
+      moonEngine: {
+        siderealLongitude: item.engineMoonLongitude,
+        nakshatra: item.engineNakshatra,
+        progressFraction: item.engineProgressFraction
+      },
+      moonDeltaArcsec: item.moonDeltaArcsec,
+      sameStartingNakshatra: item.sameStartingNakshatra,
+      rToRAnchor: {
+        pass: item.anchorPass,
+        boundaryErrorMs: item.anchorErrorMs,
+        detail: item.anchorDetail ?? null
+      },
+      rToRVsRToE: item.arithmetic,
+      rToEVsEToE: item.moonInput
+    }))
+  };
+  const reportDir = join(root, 'tools/gate0/reports');
+  mkdirSync(reportDir, { recursive: true });
+  writeFileSync(join(reportDir, 'dasha-verification.v1.json'), JSON.stringify(artifact, null, 2) + '\n', 'utf8');
 }
 
 function renderNakshatraBoundaryDiagnosis(lines: string[]): readonly NakshatraBoundaryObservation[][] {

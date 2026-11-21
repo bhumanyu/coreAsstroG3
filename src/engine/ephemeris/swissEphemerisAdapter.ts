@@ -38,6 +38,19 @@ const bodyMap: Readonly<Record<Exclude<Planet, Planet.RAHU | Planet.KETU>, numbe
 
 export async function loadBrowserEphemerisFiles(assetBaseUrl = '/ephe'): Promise<Record<string, Uint8Array>> {
   const names = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1', 'sefstars.txt', 'seorbel.txt'];
+  const manifestResponse = await fetch(`${assetBaseUrl.replace(/\/$/, '')}/manifest.json`);
+  if (!manifestResponse.ok) {
+    throw new Error(`Failed to load Swiss Ephemeris asset manifest: HTTP ${manifestResponse.status}`);
+  }
+  const manifest = await manifestResponse.json() as {
+    version?: string;
+    swissEphemerisVersion?: string;
+    files: { file: string; bytes: number; sha256: string }[];
+  };
+  if (manifest.version !== '0.2.2' || manifest.swissEphemerisVersion !== '2.10.03') {
+    throw new Error('Unsupported or mismatched Swiss Ephemeris asset manifest.');
+  }
+  const manifestByFile = new Map(manifest.files.map(entry => [entry.file, entry]));
   const files: Record<string, Uint8Array> = {};
   for (const name of names) {
     const response = await fetch(`${assetBaseUrl.replace(/\/$/, '')}/${name}`);
@@ -46,6 +59,18 @@ export async function loadBrowserEphemerisFiles(assetBaseUrl = '/ephe'): Promise
     }
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (bytes.length === 0) throw new Error(`Required Swiss Ephemeris asset is empty: ${name}`);
+    const entry = manifestByFile.get(name);
+    if (!entry || bytes.length !== entry.bytes) {
+      throw new Error(`Swiss Ephemeris asset size mismatch: ${name}`);
+    }
+    if (!globalThis.crypto?.subtle) {
+      throw new Error('Web Crypto is unavailable; cannot verify Swiss Ephemeris asset integrity.');
+    }
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+    const sha256 = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+    if (sha256 !== entry.sha256) {
+      throw new Error(`Swiss Ephemeris asset SHA-256 mismatch: ${name}`);
+    }
     files[name] = bytes;
   }
   return files;
@@ -55,9 +80,20 @@ async function loadDataFiles(): Promise<Record<string, Uint8Array>> {
   if (typeof process !== 'undefined' && process.versions?.node) {
     const { readFile } = await import('node:fs/promises');
     const { createRequire } = await import('node:module');
+    const { createHash } = await import('node:crypto');
     const requireFromAdapter = createRequire(import.meta.url);
     const names = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1', 'sefstars.txt', 'seorbel.txt'];
     const files: Record<string, Uint8Array> = {};
+    let manifest: { version?: string; swissEphemerisVersion?: string; files: { file: string; bytes: number; sha256: string }[] };
+    try {
+      manifest = JSON.parse(await readFile(requireFromAdapter.resolve('@kuntay/swisseph-data/manifest.json'), 'utf8'));
+    } catch (error) {
+      throw new Error('Failed to load the Swiss Ephemeris data package manifest.', { cause: error });
+    }
+    if (manifest.version !== '0.2.2' || manifest.swissEphemerisVersion !== '2.10.03') {
+      throw new Error('Unsupported or mismatched Swiss Ephemeris package manifest.');
+    }
+    const manifestByFile = new Map(manifest.files.map(entry => [entry.file, entry]));
     for (const name of names) {
       let resolved: string;
       try {
@@ -73,6 +109,14 @@ async function loadDataFiles(): Promise<Record<string, Uint8Array>> {
       }
       if (bytes.length === 0) {
         throw new Error(`Required Swiss Ephemeris data file is empty: ${resolved}`);
+      }
+      const entry = manifestByFile.get(name);
+      if (!entry || bytes.length !== entry.bytes) {
+        throw new Error(`Swiss Ephemeris data size mismatch: ${name}`);
+      }
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      if (sha256 !== entry.sha256) {
+        throw new Error(`Swiss Ephemeris data SHA-256 mismatch: ${name}`);
       }
       files[name] = bytes;
     }
