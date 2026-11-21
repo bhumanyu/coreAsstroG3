@@ -1,5 +1,6 @@
 import { normalizeDegree } from './nakshatraUtils';
 import { AyanamsaType } from '../types';
+import { swissEphemerisAdapter } from './ephemeris/swissEphemerisAdapter';
 
 /**
  * Normalizes an angle in degrees into [-180, 180).
@@ -16,7 +17,10 @@ export function calculateJulianDay(date: Date): number {
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth() + 1;
   const day = date.getUTCDate();
-  const hours = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+  const hours = date.getUTCHours()
+    + date.getUTCMinutes() / 60
+    + date.getUTCSeconds() / 3600
+    + date.getUTCMilliseconds() / 3600000;
 
   const a = Math.floor((14 - month) / 12);
   const y = year + 4800 - a;
@@ -70,21 +74,14 @@ export function parseUtcDate(dateTimeStr: string): Date {
  * Gets ayanamsa offset in degrees relative to Lahiri baseline.
  */
 export function getAyanamsaOffset(ayanamsa: AyanamsaType, date?: Date): number {
-  let lahiri = 23.85305; // J2000 baseline
-  if (date) {
-    const jd = calculateJulianDay(date);
-    const t = (jd - 2451545.0) / 36525.0; // Julian centuries from J2000
-    lahiri = 23.85305 + 1.396967 * t;
+  if (!date) {
+    return ayanamsa === AyanamsaType.TROPICAL ? 0 : swissEphemerisAdapter.ayanamsaFor(
+      calculateJulianDay(new Date()),
+      ayanamsa
+    );
   }
-
-  switch (ayanamsa) {
-    case AyanamsaType.LAHIRI: return lahiri;
-    case AyanamsaType.RAMAN: return lahiri - 1.25;
-    case AyanamsaType.KRISHNAMURTI: return lahiri + 0.10;
-    case AyanamsaType.FAGAN_BRADLEY: return lahiri + 0.90;
-    case AyanamsaType.TROPICAL: return 0.0;
-    default: return lahiri;
-  }
+  const jd = calculateJulianDay(date);
+  return swissEphemerisAdapter.ayanamsaFor(jd, ayanamsa);
 }
 
 /**

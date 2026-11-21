@@ -70,17 +70,17 @@ export const VARUN_BIRTH_DETAILS: BirthDetails = Object.freeze({
  * Repository engine golden baseline snapshot — current engine output, NOT an externally validated ephemeris benchmark.
  */
 export const CANONICAL_GOLDEN_EXPECTED = Object.freeze({
-  ascendantLongitude: 87.34353537163112,
+  ascendantLongitude: 87.34017801661204,
   planets: Object.freeze({
-    [Planet.SUN]: 24.097297373240824,
-    [Planet.MOON]: 282.2994051952583,
-    [Planet.MARS]: 296.8230673370204,
-    [Planet.MERCURY]: 43.102466092295685,
-    [Planet.JUPITER]: 20.491907577081673,
-    [Planet.VENUS]: 63.11954483807847,
-    [Planet.SATURN]: 248.5711990593497,
-    [Planet.RAHU]: 326.6901719257589,
-    [Planet.KETU]: 146.6901719257588
+    [Planet.SUN]: 24.086298557614363,
+    [Planet.MOON]: 282.38713965414956,
+    [Planet.MARS]: 297.12820527745873,
+    [Planet.MERCURY]: 42.20224342414437,
+    [Planet.JUPITER]: 20.224710896481362,
+    [Planet.VENUS]: 63.11210932326671,
+    [Planet.SATURN]: 248.27432628617592,
+    [Planet.RAHU]: 326.68612334130216,
+    [Planet.KETU]: 146.68612334130208
   })
 } as const);
 

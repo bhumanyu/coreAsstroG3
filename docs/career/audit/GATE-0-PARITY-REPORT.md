@@ -1,7 +1,7 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-21T04:59:04.853Z
-Engine commit: `0b7e37c97b7318e2711c7e359477b5a62823c91f`
+Generated: 2026-11-21T06:19:00.953Z
+Engine commit: `a28d81f682214fbf1b5c4863b6ed6b0e0a6c7062`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
 RG-09 approval: **APPROVED**
@@ -23,11 +23,11 @@ per cohort artifact). Engine output appears only as the measured side.
 | DASHA_ARITHMETIC_REFERENCE_MOON | 67 | 67 | 0 | 0.000e+0 | 0.000e+0 | ms | all MD/AD/PD boundaries <= 1000 ms |
 | DASHA_REFERENCE_ANCHOR | 67 | 67 | 0 | 0.000e+0 | 0.000e+0 | ms | frozen first-MD anchor tolerances |
 | HOUSE_POSITION | 144 | 144 | 0 | 0.000e+0 | 0.000e+0 | house | exact |
-| MOON_LONGITUDE | 86 | 1 | 85 | 622.415 | 192.486 | arcsec | 0.0001° (Moon-anchor protocol) |
+| MOON_LONGITUDE | 86 | 86 | 0 | 4.093e-10 | 4.915e-11 | arcsec | 0.0001° (Moon-anchor protocol) |
 | NAKSHATRA_BOUNDARY | 405 | 378 | 27 | 1.000 | 6.667e-2 | category | categorical |
-| PLANETARY_LONGITUDE | 688 | 184 | 504 | 10178 | 919.758 | arcsec | 0.01° (nodes 0.005°) |
-| PLANETARY_MOTION | 258 | 243 | 15 | 1.635e-1 | 1.218e-2 | deg/day | speed ±0.05°/day + exact flags |
-| RAHU_KETU_OPPOSITION | 86 | 86 | 0 | 8.527e-14 | 2.941e-14 | deg | 0.01° |
+| PLANETARY_LONGITUDE | 688 | 688 | 0 | 4.093e-10 | 7.299e-11 | arcsec | 0.01° (nodes 0.005°) |
+| PLANETARY_MOTION | 258 | 258 | 0 | 1.048e-4 | 4.740e-5 | deg/day | speed ±0.05°/day + exact flags |
+| RAHU_KETU_OPPOSITION | 86 | 86 | 0 | 8.527e-14 | 2.644e-14 | deg | 0.01° |
 | SIGN_BOUNDARY | 36 | 36 | 0 | 0.000e+0 | 0.000e+0 | category | categorical |
 | VARGA_LONGITUDE | 245 | 245 | 0 | 0.000e+0 | 0.000e+0 | arcsec | 1e-6° |
 
@@ -35,14 +35,14 @@ per cohort artifact). Engine output appears only as the measured side.
 
 - cases: 86, pass(<=0.01°): 86, fail: 0
 - ascendant unavailable in cohort captures: 0 (excluded from measurement coverage)
-- max |Δ| = 6.209e-3°, mean = 2.714e-3° (tolerance 0.01° = 36″)
+- max |Δ| = 5.684e-14°, mean = 2.012e-14° (tolerance 0.01° = 36″)
 
 ## Dasha error decomposition
 
 - Cases: 67; each case produced R→R, R→E, and E→E timelines.
 - R→R anchor check against the frozen fixture expected first-MD values: 67/67.
 - Year-length convention: 365.25 days.
-- Engine-vs-reference Moon difference: max 622.415″, mean 198.432″.
+- Engine-vs-reference Moon difference: max 3.070e-10″, mean 4.553e-11″.
 - Reference-model independence boundary: the Gate-0 reference implementation is independent of production `vimshottari.ts`, but shares Gate-0 convention definitions (`DASHA_SEQUENCE`, `DASHA_YEARS`, and `vimshottariAnchor` from `lib/grid.ts`).
 - The 67 R→R first-MD anchors are checked against unchanged fixture expected values. Later MD/AD/PD periods are derived by the Gate-0 model and are NOT independently captured expected values.
 - Dasha known-answer conformance is hand-computed from the published Vimshottari sequence, durations, 365.25-day year, and proportional subdivisions ([Dasha overview](https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha)); see `tests/dashaDecomposition.test.ts`.
@@ -51,25 +51,17 @@ per cohort artifact). Engine output appears only as the measured side.
 | Level | Comparison | Cases structurally agreeing | Structurally matched periods | Boundary timestamps compared | Unmatched periods excluded | Sequence-difference score | Max matched-boundary error (ms) | Mean matched-boundary error (ms) |
 |-------|------------|-----------------------------|-----------------------------|-------------------------------|-----------------------------|---------------------------|-------------------------------|----------------------------------|
 | MD | R→R vs R→E (arithmetic/structure) | 67/67 | 670 | 1340 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
-| MD | R→E vs E→E (Moon-input delta) | 43/67 | 646 | 1292 | 48 (E 24, A 24) | 240 | 3786730295787 | 134409826909 |
-|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10 (MERCURY); unmatched actual MD10 (KETU) |  |  |  |  |  |
-| MD | R→E vs E→E — same starting nakshatra | 43/43 | 430 | 860 | 0 (E 0, A 0) | 0 | 7010385262 | 1505501721 |
-| MD | R→E vs E→E — flipped nakshatra | 0/24 | 216 | 432 | 48 (E 24, A 24) | 240 | 3786730295787 | 398987881681 |
-|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10 (MERCURY); unmatched actual MD10 (KETU) |  |  |  |  |  |
+| MD | R→E vs E→E (Moon-input delta) | 67/67 | 670 | 1340 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
+| MD | R→E vs E→E — same starting nakshatra | 67/67 | 670 | 1340 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
+| MD | R→E vs E→E — flipped nakshatra | 0/0 | 0 | 0 | 0 (E 0, A 0) | 0 | n/a | n/a |
 | AD | R→R vs R→E (arithmetic/structure) | 67/67 | 5494 | 10988 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
-| AD | R→E vs E→E (Moon-input delta) | 42/67 | 5469 | 10938 | 50 (E 25, A 25) | 2050 | 3786730295787 | 18831433346 |
-|  | First structural mismatch | DASHA-BI-025: unmatched expected MD10/AD8 (MARS/SUN); unmatched actual MD10/AD7 (MARS/VENUS) |  |  |  |  |  |
-| AD | R→E vs E→E — same starting nakshatra | 42/43 | 3525 | 7050 | 2 (E 1, A 1) | 82 | 3785502291454 | 2721009242 |
-|  | First structural mismatch | DASHA-BI-025: unmatched expected MD10/AD8 (MARS/SUN); unmatched actual MD10/AD7 (MARS/VENUS) |  |  |  |  |  |
-| AD | R→E vs E→E — flipped nakshatra | 0/24 | 1944 | 3888 | 48 (E 24, A 24) | 1968 | 3786730295787 | 48044007916 |
-|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10/AD9 (MERCURY/SATURN); unmatched actual MD10/AD1 (KETU/KETU) |  |  |  |  |  |
+| AD | R→E vs E→E (Moon-input delta) | 67/67 | 5494 | 10988 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
+| AD | R→E vs E→E — same starting nakshatra | 67/67 | 5494 | 10988 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
+| AD | R→E vs E→E — flipped nakshatra | 0/0 | 0 | 0 | 0 (E 0, A 0) | 0 | n/a | n/a |
 | PD | R→R vs R→E (arithmetic/structure) | 67/67 | 48910 | 97820 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
-| PD | R→E vs E→E (Moon-input delta) | 31/67 | 48874 | 97748 | 72 (E 36, A 36) | 26280 | 3786730295787 | 5440266057 |
-|  | First structural mismatch | DASHA-BI-005: unmatched expected MD10/AD3/PD4 (VENUS/MOON/JUPITER); unmatched actual MD10/AD3/PD5 (VENUS/MOON/SATURN) |  |  |  |  |  |
-| PD | R→E vs E→E — same starting nakshatra | 31/43 | 31378 | 62756 | 24 (E 12, A 12) | 8760 | 3786616153249 | 3719366467 |
-|  | First structural mismatch | DASHA-BI-005: unmatched expected MD10/AD3/PD4 (VENUS/MOON/JUPITER); unmatched actual MD10/AD3/PD5 (VENUS/MOON/SATURN) |  |  |  |  |  |
-| PD | R→E vs E→E — flipped nakshatra | 0/24 | 17496 | 34992 | 48 (E 24, A 24) | 17520 | 3786730295787 | 8526593636 |
-|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10/AD9/PD9 (MERCURY/SATURN/JUPITER); unmatched actual MD10/AD1/PD1 (KETU/KETU/KETU) |  |  |  |  |  |
+| PD | R→E vs E→E (Moon-input delta) | 67/67 | 48910 | 97820 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
+| PD | R→E vs E→E — same starting nakshatra | 67/67 | 48910 | 97820 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
+| PD | R→E vs E→E — flipped nakshatra | 0/0 | 0 | 0 | 0 (E 0, A 0) | 0 | n/a | n/a |
 - Interpretation: the flipped-nakshatra partition carries all structural mismatches and the dominant cycle-scale (~1e12 ms, decades) boundary shifts — an anchor-nakshatra flip changes the starting MD lord and re-anchors the entire timeline, the mathematically expected consequence of the measured Moon longitude delta near a nakshatra boundary, not a dasha-arithmetic defect. The same-nakshatra partition isolates the residual pure Moon-input timing effect.
 - Sequence-difference score is `|expected count − actual count| + positional lord-path mismatches`; it is a severity heuristic, not a count of unique failed periods. Unmatched expected/actual totals above are the precise exclusion counts.
 
@@ -111,54 +103,40 @@ Moon-anchor cases must bracket every nakshatra boundary within ±0.01° on both 
 
 ## Failure sample (first 40)
 
-Total failing fixtures: 631
-- PL-BI-001-SUN: 41.0" > 36.00"
-- PL-BI-001-MOON: 220.8" > 0.36"
-- PL-BI-001-MARS: 9132.4" > 36.00"
-- PL-BI-001-MERCURY: 2341.3" > 36.00"
-- PL-BI-001-JUPITER: 3661.6" > 36.00"
-- PL-BI-001-VENUS: 8802.2" > 36.00"
-- PL-BI-001-SATURN: 6220.0" > 36.00"
-- PM-BI-001-MERCURY: speedErr=0.0871 retro=true stat=true
-- PM-BI-001-VENUS: speedErr=0.0853 retro=true stat=true
-- PL-BI-002-MOON: 322.7" > 0.36"
-- PL-BI-002-MARS: 10178.0" > 36.00"
-- PL-BI-002-MERCURY: 2446.1" > 36.00"
-- PL-BI-002-JUPITER: 3514.1" > 36.00"
-- PL-BI-002-VENUS: 1529.2" > 36.00"
-- PL-BI-002-SATURN: 7450.6" > 36.00"
-- PL-BI-003-MOON: 17.6" > 0.36"
-- PL-BI-003-MARS: 4768.2" > 36.00"
-- PL-BI-003-MERCURY: 3926.6" > 36.00"
-- PL-BI-003-JUPITER: 3303.8" > 36.00"
-- PL-BI-003-VENUS: 1422.2" > 36.00"
-- PL-BI-003-SATURN: 6124.7" > 36.00"
-- PL-BI-004-SUN: 42.1" > 36.00"
-- PL-BI-004-MOON: 71.1" > 0.36"
-- PL-BI-004-MARS: 1917.9" > 36.00"
-- PL-BI-004-JUPITER: 3174.8" > 36.00"
-- PL-BI-004-VENUS: 9632.7" > 36.00"
-- PL-BI-004-SATURN: 5166.1" > 36.00"
-- PL-BI-005-SUN: 36.8" > 36.00"
-- PL-BI-005-MOON: 533.1" > 0.36"
-- PL-BI-005-MARS: 1715.3" > 36.00"
-- PL-BI-005-MERCURY: 2100.6" > 36.00"
-- PL-BI-005-JUPITER: 2547.9" > 36.00"
-- PL-BI-005-VENUS: 1401.7" > 36.00"
-- PL-BI-005-SATURN: 4509.2" > 36.00"
-- PL-BI-006-SUN: 42.5" > 36.00"
-- PL-BI-006-MOON: 156.5" > 0.36"
-- PL-BI-006-MARS: 2779.9" > 36.00"
-- PL-BI-006-MERCURY: 4277.9" > 36.00"
-- PL-BI-006-JUPITER: 2478.2" > 36.00"
-- PL-BI-006-VENUS: 642.0" > 36.00"
-- … and 591 more
+Total failing fixtures: 27
+- PADA-BOUNDARY-10:EXACT: engine=KRITTIKA/1 expected=KRITTIKA/2
+- PADA-BOUNDARY-11:EXACT: engine=KRITTIKA/2 expected=KRITTIKA/3
+- PADA-BOUNDARY-12:EXACT: engine=KRITTIKA/3 expected=KRITTIKA/4
+- PADA-BOUNDARY-22:EXACT: engine=ARDRA/1 expected=ARDRA/2
+- PADA-BOUNDARY-23:EXACT: engine=ARDRA/2 expected=ARDRA/3
+- PADA-BOUNDARY-24:EXACT: engine=ARDRA/3 expected=ARDRA/4
+- PADA-BOUNDARY-34:EXACT: engine=ASHLESHA/1 expected=ASHLESHA/2
+- PADA-BOUNDARY-35:EXACT: engine=ASHLESHA/2 expected=ASHLESHA/3
+- PADA-BOUNDARY-36:EXACT: engine=ASHLESHA/3 expected=ASHLESHA/4
+- PADA-BOUNDARY-46:EXACT: engine=UTTARA_PHALGUNI/1 expected=UTTARA_PHALGUNI/2
+- PADA-BOUNDARY-47:EXACT: engine=UTTARA_PHALGUNI/2 expected=UTTARA_PHALGUNI/3
+- PADA-BOUNDARY-48:EXACT: engine=UTTARA_PHALGUNI/3 expected=UTTARA_PHALGUNI/4
+- PADA-BOUNDARY-58:EXACT: engine=SWATI/1 expected=SWATI/2
+- PADA-BOUNDARY-59:EXACT: engine=SWATI/2 expected=SWATI/3
+- PADA-BOUNDARY-60:EXACT: engine=SWATI/3 expected=SWATI/4
+- PADA-BOUNDARY-70:EXACT: engine=JYESHTHA/1 expected=JYESHTHA/2
+- PADA-BOUNDARY-71:EXACT: engine=JYESHTHA/2 expected=JYESHTHA/3
+- PADA-BOUNDARY-72:EXACT: engine=JYESHTHA/3 expected=JYESHTHA/4
+- PADA-BOUNDARY-82:EXACT: engine=UTTARA_ASHADHA/1 expected=UTTARA_ASHADHA/2
+- PADA-BOUNDARY-83:EXACT: engine=UTTARA_ASHADHA/2 expected=UTTARA_ASHADHA/3
+- PADA-BOUNDARY-84:EXACT: engine=UTTARA_ASHADHA/3 expected=UTTARA_ASHADHA/4
+- PADA-BOUNDARY-94:EXACT: engine=SHATABHISHA/1 expected=SHATABHISHA/2
+- PADA-BOUNDARY-95:EXACT: engine=SHATABHISHA/2 expected=SHATABHISHA/3
+- PADA-BOUNDARY-96:EXACT: engine=SHATABHISHA/3 expected=SHATABHISHA/4
+- PADA-BOUNDARY-106:EXACT: engine=REVATI/1 expected=REVATI/2
+- PADA-BOUNDARY-107:EXACT: engine=REVATI/2 expected=REVATI/3
+- PADA-BOUNDARY-108:EXACT: engine=REVATI/3 expected=REVATI/4
 
 ## Fork recommendation
 
 Per-track verdicts:
-- Astronomical position: other planets 184/688; Moon anchors 1/86 at 0.0001° (max 622.4″); Rahu/Ketu opposition 86/86.
-- Motion: 243/258.
+- Astronomical position: other planets 688/688; Moon anchors 86/86 at 0.0001° (max 0.0″); Rahu/Ketu opposition 86/86.
+- Motion: 258/258.
 - Ascendant: 86/86 within 0.01°.
 - Categorical boundary: 414/441 (27 failures).
 - Varga/house arithmetic: 389/389 (0 failures).
@@ -173,18 +151,29 @@ Per-track verdicts:
 **Recommendation: Fork A — replace the astronomy core and address failing deterministic tracks separately.**
 
 Evidence:
-- Moon-anchor longitude has 1/86 passes at the protocol's 0.0001° tolerance; dasha results separate R→E arithmetic from E→E Moon-input effects in the decomposition table.
-- Other planetary longitudes have 184/688 passes; motion has 243/258; ascendant has 86/86.
+- Moon-anchor longitude has 86/86 passes at the protocol's 0.0001° tolerance; dasha results separate R→E arithmetic from E→E Moon-input effects in the decomposition table.
+- Other planetary longitudes have 688/688 passes; motion has 258/258; ascendant has 86/86.
 - Categorical boundaries have 27 failures and varga/house arithmetic has 0; these deterministic tracks are reported separately from ephemeris accuracy.
 - A reference-grade ephemeris should be adopted behind the existing `generatePlanetaryPositions`/`calculateAscendant` seams; deterministic boundary failures require their own investigation.
 
 ## Approval scope & sign-off
 
 - Fixture-set SHA-256 `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` is approved by **bhuma** on **2026-11-21** (RG-09 approval verdict: APPROVED) as **independent reference evidence**. This approval attests to fixture provenance and integrity only; it does NOT certify engine correctness.
-- The 631 measured engine failures — including the 27 categorical nakshatra/pada boundary defects documented above — are **accepted as documented defects** tracked for Fork A / G0-08 remediation. They are neither waived nor approved as correct engine behavior.
-- Reproducibility: engine commit `0b7e37c97b7318e2711c7e359477b5a62823c91f`; fixture-set SHA-256 recomputed locally from `CALCULATION_REFERENCE_FIXTURES` = `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` (matches the approved manifest). Verified command sequence: `npm run audit:cohort`, `npm run generate:fixtures`, `npm run parity`, `npm test`, `npm run check:imports` (tools/gate0) and `npm test` (repository root). Caveat: `generate:fixtures` stamps the current HEAD into each fixture's `provenance.capture.engineCommitSha`, which is covered by the fixture-set SHA-256 — regenerating at a different commit produces a new SHA and requires fresh human approval; the approved module is the committed generated file.
+- The 27 measured engine failures — including the 27 categorical nakshatra/pada boundary defects documented above — are **accepted as documented defects** tracked for Fork A / G0-08 remediation. They are neither waived nor approved as correct engine behavior.
+- Reproducibility: engine commit `a28d81f682214fbf1b5c4863b6ed6b0e0a6c7062`; fixture-set SHA-256 recomputed locally from `CALCULATION_REFERENCE_FIXTURES` = `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` (matches the approved manifest). Verified command sequence: `npm run audit:cohort`, `npm run generate:fixtures`, `npm run parity`, `npm test`, `npm run check:imports` (tools/gate0) and `npm test` (repository root). Caveat: `generate:fixtures` stamps the current HEAD into each fixture's `provenance.capture.engineCommitSha`, which is covered by the fixture-set SHA-256 — regenerating at a different commit produces a new SHA and requires fresh human approval; the approved module is the committed generated file.
 
 ## Provenance & reproducibility
+
+## Runtime adapter configuration
+
+- Adapter: `src/engine/ephemeris/swissEphemerisAdapter.ts`
+- Binding: `@kuntay/swisseph@0.2.2`, Swiss Ephemeris core `2.10.03`
+- Data: `@kuntay/swisseph-data@0.2.2`, DE441-derived .se1 files
+- Position frame: geocentric apparent, tropical mean equinox of date
+- Calculation flags: `SEFLG_SWIEPH|SEFLG_SPEED`; ascendant via Equal Whole Sign houses
+- Ayanamsa: Lahiri via `Ayanamsa.Lahiri` / `swe.setSiderealMode`
+- Time contract: UT Julian day passed unchanged to `calc_ut`/houses/ayanamsa; Delta-T internal
+- Nodes: mean node for RAHU, KETU = RAHU + 180 degrees
 
 - Captures: `tools/gate0/captures/` (cohort/*.json + boundary-vectors.v1.json + manifest.json with SHA-256 per artifact).
 - Fixture module: `src/engine/validation/calculationReferenceFixtures.generated.ts` (auto-generated; builders enforce provenance).

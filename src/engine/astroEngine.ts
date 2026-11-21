@@ -84,6 +84,7 @@ export {
 
 import { calculateDignity } from './planetaryDignity';
 export { calculateDignity };
+import { swissEphemerisAdapter } from './ephemeris/swissEphemerisAdapter';
 
 /**
  * Calculates combustion (Asta) condition relative to the Sun.
@@ -145,86 +146,12 @@ export function calculateCombustion(
  * Calculates Tropical Ecliptic Longitudes for planets given Julian Day.
  */
 function computeTropicalPositions(jd: number): Record<Planet, { long: number; radius: number }> {
-  const t = (jd - 2451545.0) / 36525.0; // Julian centuries from J2000.0
-
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const toDeg = (rad: number) => (rad * 180) / Math.PI;
-
-  // Sun
-  const mSun = normalizeDegree(357.5291 + 35999.0503 * t);
-  const sunLong = getSunTropicalLongitude(jd);
-  const rSun = 1.00014 - 0.01671 * Math.cos(toRad(mSun)) - 0.00014 * Math.cos(toRad(2 * mSun));
-
-  // Moon
-  const lMoon = normalizeDegree(218.3165 + 481267.8813 * t);
-  const mMoon = normalizeDegree(134.9634 + 477198.8675 * t);
-  const fMoon = normalizeDegree(93.2721 + 483202.0175 * t);
-  const dMoon = normalizeDegree(297.8502 + 445267.2217 * t);
-  const cMoon = 6.2886 * Math.sin(toRad(mMoon))
-    + 1.2740 * Math.sin(toRad(2 * dMoon - mMoon))
-    + 0.6583 * Math.sin(toRad(2 * dMoon))
-    + 0.2136 * Math.sin(toRad(2 * mMoon))
-    - 0.1851 * Math.sin(toRad(mSun))
-    - 0.1143 * Math.sin(toRad(2 * fMoon));
-  const moonLong = normalizeDegree(lMoon + cMoon);
-
-  // Helper for planet heliocentric -> geocentric
-  const geoLong = (lHelio: number, rHelio: number): number => {
-    const x = rHelio * Math.cos(toRad(lHelio)) + rSun * Math.cos(toRad(sunLong));
-    const y = rHelio * Math.sin(toRad(lHelio)) + rSun * Math.sin(toRad(sunLong));
-    return normalizeDegree(toDeg(Math.atan2(y, x)));
-  };
-
-  // Mercury
-  const lMer = normalizeDegree(252.2509 + 149472.6741 * t);
-  const mMer = normalizeDegree(174.7948 + 149472.5153 * t);
-  const cMer = 23.4400 * Math.sin(toRad(mMer)) + 2.9818 * Math.sin(toRad(2 * mMer)) + 0.5255 * Math.sin(toRad(3 * mMer));
-  const rMer = 0.3871 / (1 + 0.2056 * Math.cos(toRad(mMer + cMer)));
-  const mercuryLong = geoLong(lMer + cMer, rMer);
-
-  // Venus
-  const lVen = normalizeDegree(181.9798 + 58517.8156 * t);
-  const mVen = normalizeDegree(50.115 + 58517.80387 * t);
-  const cVen = 0.7758 * Math.sin(toRad(mVen)) + 0.0033 * Math.sin(toRad(2 * mVen));
-  const rVen = 0.7233 / (1 + 0.0067 * Math.cos(toRad(mVen + cVen)));
-  const venusLong = geoLong(lVen + cVen, rVen);
-
-  // Mars
-  const lMar = normalizeDegree(355.45332 + 19140.2993 * t);
-  const mMar = normalizeDegree(19.3730 + 19139.9712 * t);
-  const cMar = 10.6912 * Math.sin(toRad(mMar)) + 0.6228 * Math.sin(toRad(2 * mMar)) + 0.0503 * Math.sin(toRad(3 * mMar));
-  const rMar = 1.5237 / (1 + 0.0934 * Math.cos(toRad(mMar + cMar)));
-  const marsLong = geoLong(lMar + cMar, rMar);
-
-  // Jupiter
-  const lJup = normalizeDegree(34.40438 + 3034.79256 * t);
-  const mJup = normalizeDegree(20.0202 + 3034.6920 * t);
-  const cJup = 5.5549 * Math.sin(toRad(mJup)) + 0.1683 * Math.sin(toRad(2 * mJup)) + 0.0071 * Math.sin(toRad(3 * mJup));
-  const rJup = 5.20336 / (1 + 0.04849 * Math.cos(toRad(mJup + cJup)));
-  const jupiterLong = geoLong(lJup + cJup, rJup);
-
-  // Saturn
-  const lSat = normalizeDegree(50.07744 + 1222.11379 * t);
-  const mSat = normalizeDegree(317.0207 + 1221.5515 * t);
-  const cSat = 6.3585 * Math.sin(toRad(mSat)) + 0.2204 * Math.sin(toRad(2 * mSat)) + 0.0106 * Math.sin(toRad(3 * mSat));
-  const rSat = 9.53707 / (1 + 0.05551 * Math.cos(toRad(mSat + cSat)));
-  const saturnLong = geoLong(lSat + cSat, rSat);
-
-  // Rahu (Mean Lunar Node)
-  const rahuLong = normalizeDegree(125.04452 - 1934.13626 * t + 0.002076 * t * t);
-  const ketuLong = normalizeDegree(rahuLong + 180);
-
-  return {
-    [Planet.SUN]: { long: sunLong, radius: rSun },
-    [Planet.MOON]: { long: moonLong, radius: 0.00257 },
-    [Planet.MARS]: { long: marsLong, radius: rMar },
-    [Planet.MERCURY]: { long: mercuryLong, radius: rMer },
-    [Planet.JUPITER]: { long: jupiterLong, radius: rJup },
-    [Planet.VENUS]: { long: venusLong, radius: rVen },
-    [Planet.SATURN]: { long: saturnLong, radius: rSat },
-    [Planet.RAHU]: { long: rahuLong, radius: 1 },
-    [Planet.KETU]: { long: ketuLong, radius: 1 }
-  };
+  const positions = swissEphemerisAdapter.tropicalPositions(jd);
+  const result = {} as Record<Planet, { long: number; radius: number }>;
+  for (const planet of Object.values(Planet)) {
+    result[planet] = { long: positions[planet].longitude, radius: 1 };
+  }
+  return result;
 }
 
 export function calculateSiderealLuminaries(
@@ -247,22 +174,14 @@ export function generatePlanetaryPositions(birthDetails: BirthDetails): Record<P
   const date = parseUtcDate(birthDetails.dateTimeStr);
   const jd = calculateJulianDay(date);
   const ayanamsaShift = getAyanamsaOffset(birthDetails.ayanamsa, date);
-
-  const pos1 = computeTropicalPositions(jd);
-  const pos2 = computeTropicalPositions(jd + 0.01); // 0.01 days later to determine speed
+  const pos = computeTropicalPositions(jd);
+  const speeds = swissEphemerisAdapter.tropicalPositions(jd);
 
   const result: Partial<Record<Planet, PlanetPosition>> = {};
 
   Object.values(Planet).forEach((planet) => {
-    const p1 = pos1[planet];
-    const p2 = pos2[planet];
-
-    const siderealLong = normalizeDegree(p1.long - ayanamsaShift);
-
-    let diff = p2.long - p1.long;
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
-    const speed = diff / 0.01; // degrees / day
+    const siderealLong = normalizeDegree(pos[planet].long - ayanamsaShift);
+    const speed = speeds[planet].longitudeSpeed;
 
     const isNode = planet === Planet.RAHU || planet === Planet.KETU;
     const retrograde = isNode ? true : speed < 0;
@@ -277,7 +196,7 @@ export function generatePlanetaryPositions(birthDetails: BirthDetails): Record<P
       sign,
       house: 1,
       signLongitude,
-      eclipticLatitude: 0,
+      eclipticLatitude: speeds[planet].latitude,
       motion: {
         speed,
         retrograde,
@@ -295,29 +214,11 @@ export function generatePlanetaryPositions(birthDetails: BirthDetails): Record<P
 export function calculateAscendant(birthDetails: BirthDetails): number {
   const date = parseUtcDate(birthDetails.dateTimeStr);
   const jd = calculateJulianDay(date);
-  const t = (jd - 2451545.0) / 36525.0;
-
-  // Greenwich Mean Sidereal Time (GMST) in degrees
-  let gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * t * t;
-  gmst = normalizeDegree(gmst);
-
-  // Local Sidereal Time (LST)
-  const lstDeg = normalizeDegree(gmst + birthDetails.longitude);
-  const lstRad = (lstDeg * Math.PI) / 180;
-
-  // Obliquity of Ecliptic
-  const epsDeg = 23.4392911 - 0.0130042 * t;
-  const epsRad = (epsDeg * Math.PI) / 180;
-
-  // Geographic Latitude
-  const latRad = (birthDetails.latitude * Math.PI) / 180;
-
-  // Ascendant formula (Tropical)
-  const y = Math.cos(lstRad);
-  const x = -(Math.sin(lstRad) * Math.cos(epsRad) + Math.tan(latRad) * Math.sin(epsRad));
-  let ascTropicalDeg = (Math.atan2(y, x) * 180) / Math.PI;
-  ascTropicalDeg = normalizeDegree(ascTropicalDeg);
-
+  const ascTropicalDeg = swissEphemerisAdapter.ascendantTropical(
+    jd,
+    birthDetails.latitude,
+    birthDetails.longitude
+  );
   const ayanamsaShift = getAyanamsaOffset(birthDetails.ayanamsa, date);
   return normalizeDegree(ascTropicalDeg - ayanamsaShift);
 }

@@ -33,6 +33,8 @@
   "dependencies": {
     "@capacitor/android": "^7.6.10",
     "@capacitor/core": "^7.6.10",
+    "@kuntay/swisseph": "^0.2.2",
+    "@kuntay/swisseph-data": "^0.2.2",
     "clsx": "^2.1.1",
     "i18next": "^25.6.0",
     "lucide-react": "^0.475.0",
