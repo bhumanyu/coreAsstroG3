@@ -1,0 +1,2 @@
+tools/gate0/captures/** -text
+tools/gate0/captures/**/*.json -text
