@@ -129,9 +129,11 @@ async function loadDataFiles(): Promise<Record<string, Uint8Array>> {
   return loadBrowserEphemerisFiles(assetBaseUrl);
 }
 
-// Startup contract: importing this module blocks until createAdapter completes.
-// Ephemeris/asset initialization failures propagate as module-load errors.
-// This intentionally provides no ready/not-ready fallback or silent Moshier degradation.
+// Startup contract: ephemeris/asset initialization is lazy. Call
+// ensureSwissEphemerisAdapter() (async) before relying on the engine; the
+// synchronous swissEphemerisAdapter facade delegates to the resolved instance
+// and throws a descriptive error while initialization is pending or after it
+// has failed, so consumers never observe a partially initialized adapter.
 async function createAdapter(): Promise<SwissEphemerisAdapter> {
   const files = await loadDataFiles();
   const dataSource = typeof process !== 'undefined' && process.versions?.node
@@ -252,4 +254,75 @@ async function createAdapter(): Promise<SwissEphemerisAdapter> {
   };
 }
 
-export const swissEphemerisAdapter: SwissEphemerisAdapter = await createAdapter();
+let adapterPromise: Promise<SwissEphemerisAdapter> | undefined;
+let resolvedAdapter: SwissEphemerisAdapter | undefined;
+let initializationFailed = false;
+let initializationError: unknown;
+
+/**
+ * Starts (or joins) ephemeris initialization and resolves with the ready
+ * adapter. Rejects with the underlying load/verification error on failure;
+ * the same rejection is rethrown by the synchronous facade afterwards.
+ */
+export function ensureSwissEphemerisAdapter(): Promise<SwissEphemerisAdapter> {
+  if (!adapterPromise) {
+    adapterPromise = createAdapter().then(
+      (adapter) => {
+        resolvedAdapter = adapter;
+        return adapter;
+      },
+      (error: unknown) => {
+        initializationFailed = true;
+        initializationError = error;
+        throw error;
+      }
+    );
+  }
+  return adapterPromise;
+}
+
+/** Returns true once initialization has resolved and the adapter is usable. */
+export function isSwissEphemerisAdapterReady(): boolean {
+  return resolvedAdapter !== undefined;
+}
+
+function requireSwissEphemerisAdapter(): SwissEphemerisAdapter {
+  if (resolvedAdapter) return resolvedAdapter;
+  if (initializationFailed) {
+    throw initializationError instanceof Error
+      ? initializationError
+      : new Error(`Swiss Ephemeris initialization failed: ${String(initializationError)}`);
+  }
+  throw new Error('Swiss Ephemeris has not finished initializing. Await ensureSwissEphemerisAdapter() first.');
+}
+
+/**
+ * Synchronous facade over the lazily initialized adapter. Safe to import
+ * anywhere; methods throw until ensureSwissEphemerisAdapter() has resolved.
+ */
+export const swissEphemerisAdapter: SwissEphemerisAdapter = {
+  get version() {
+    return requireSwissEphemerisAdapter().version;
+  },
+  get dataSource() {
+    return requireSwissEphemerisAdapter().dataSource;
+  },
+  get ephemerisVersion() {
+    return requireSwissEphemerisAdapter().ephemerisVersion;
+  },
+  tropicalPositions(jdUt: number) {
+    return requireSwissEphemerisAdapter().tropicalPositions(jdUt);
+  },
+  sunTropical(jdUt: number) {
+    return requireSwissEphemerisAdapter().sunTropical(jdUt);
+  },
+  ascendantTropical(jdUt: number, lat: number, lon: number) {
+    return requireSwissEphemerisAdapter().ascendantTropical(jdUt, lat, lon);
+  },
+  ayanamsa(jdUt: number) {
+    return requireSwissEphemerisAdapter().ayanamsa(jdUt);
+  },
+  ayanamsaFor(jdUt: number, ayanamsa: AyanamsaType) {
+    return requireSwissEphemerisAdapter().ayanamsaFor(jdUt, ayanamsa);
+  }
+};

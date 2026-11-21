@@ -1,4 +1,5 @@
 import { calculateHoroscope } from '../src/engine/astroEngine';
+import { ensureSwissEphemerisAdapter } from '../src/engine/ephemeris/swissEphemerisAdapter';
 import { interpretCareerV2 } from '../src/domain/career/CareerDomainInterpreterV2';
 import { CANONICAL_BIRTH_DETAILS } from '../src/test/fixtures/canonicalChart';
 import { createAnalysisContext } from '../src/core/analysis/analysisContextFactory';
@@ -15,6 +16,7 @@ const testMethodology = {
 };
 
 async function main() {
+  await ensureSwissEphemerisAdapter();
   const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
   const context = createAnalysisContext({ asOf: '2024-01-01T00:00:00Z', methodology: testMethodology });
   const temporalState = resolveAnalysisTemporalState(horoscope, context);

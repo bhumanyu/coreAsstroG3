@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ArrowRight,
   CalendarDays,
@@ -12,7 +12,8 @@ import { useTranslation } from 'react-i18next';
 import type { BirthContext } from '../../app/birthContext';
 import type { AppPage } from '../../app/navigation/navigationTypes';
 import { RESEARCH_NAVIGATION } from '../../app/navigation/navigation';
-import { computePanchang } from '../../engine/panchang';
+import { computePanchang, type Panchang } from '../../engine/panchang';
+import { ensureSwissEphemerisAdapter } from '../../engine/ephemeris/swissEphemerisAdapter';
 import type { ProductAnalysisState } from '../../app/AppState';
 import { FEATURE_TILES } from './featureTiles';
 import { FestivalsCard } from './FestivalsCard';
@@ -77,7 +78,43 @@ const BirthDetailsEmptyState: React.FC<{ onOpenBirthForm: () => void }> = ({ onO
 const PanchangCard: React.FC = () => {
   const { t } = useTranslation('home');
   const { t: tCommon } = useTranslation('common');
-  const panchang = useMemo(() => computePanchang(new Date()), []);
+  const [panchang, setPanchang] = useState<Panchang | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    ensureSwissEphemerisAdapter()
+      .then(() => {
+        if (!cancelled) setPanchang(computePanchang(new Date()));
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (failed) {
+    return (
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-300">{t('panchang.eyebrow')}</p>
+        <h2 className="mt-1 font-serif-astro text-lg font-semibold text-slate-100">{t('panchang.title')}</h2>
+        <p className="mt-3 text-xs text-rose-300" role="alert">{tCommon('error')}</p>
+      </section>
+    );
+  }
+
+  if (!panchang) {
+    return (
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5" role="status" aria-live="polite">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-300">{t('panchang.eyebrow')}</p>
+        <h2 className="mt-1 font-serif-astro text-lg font-semibold text-slate-100">{t('panchang.title')}</h2>
+        <p className="mt-3 text-xs text-slate-400">{tCommon('loading')}</p>
+      </section>
+    );
+  }
+
   const entries = [
     { label: t('panchang.tithi'), value: `${panchang.tithi.name} · ${t(`panchang.paksha.${panchang.tithi.paksha.toLowerCase()}`)}` },
     { label: t('panchang.nakshatra'), value: `${panchang.nakshatra.name} · ${t('panchang.pada', { number: panchang.nakshatra.pada })}` },

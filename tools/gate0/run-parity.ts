@@ -25,6 +25,7 @@ import type { CalculationReferenceFixture } from '../../src/engine/validation/ca
 import {
   generatePlanetaryPositions, calculateAscendant
 } from '../../src/engine/astroEngine.ts';
+import { ensureSwissEphemerisAdapter } from '../../src/engine/ephemeris/swissEphemerisAdapter.ts';
 import { calculateSign, getDivisionalLongitude, calculateWholeSignHouse } from '../../src/engine/chartMath.ts';
 import { calculateNakshatra } from '../../src/engine/nakshatraUtils.ts';
 import { calculateVimshottari } from '../../src/engine/dasha/vimshottari.ts';
@@ -391,6 +392,7 @@ function stats(values: number[]) {
 export async function runParity(): Promise<void> {
   const root = repoRoot();
   const engineCommitSha = gitCommitSha(root);
+  await ensureSwissEphemerisAdapter();
   const session = await openSwissEph();
   let cohortCaptures: readonly CohortCapture[];
   try {

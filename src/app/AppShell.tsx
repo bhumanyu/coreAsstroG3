@@ -6,6 +6,8 @@ import { ProductPageRouter } from './ProductPageRouter';
 import { AppFooter } from './AppFooter';
 import { AppState, INITIAL_APP_STATE, BirthDetails } from './AppState';
 import { createAppController, type AppController } from './AppController';
+import { AppErrorBoundary } from './AppErrorBoundary';
+import { ensureSwissEphemerisAdapter } from '../engine/ephemeris/swissEphemerisAdapter';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ChartExportControl } from '../features/chart-export/ChartExportControl';
 import { ChartShareControls } from '../features/chart-sharing/ChartShareControls';
@@ -24,6 +26,13 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
   const [state, setState] = useState<AppState>(INITIAL_APP_STATE);
 
   const controller = useMemo(() => controllerFactory(setState), [controllerFactory]);
+
+  // Warm the lazily initialized ephemeris so the first analysis does not pay
+  // the WASM/asset load cost. Failures are cached by the adapter and surface
+  // as an analysis error state when the user runs an analysis.
+  useEffect(() => {
+    void ensureSwissEphemerisAdapter().catch(() => undefined);
+  }, []);
 
   const runAnalysisSafely = useCallback(async (birthDetails: BirthDetails) => {
     try {
@@ -127,7 +136,9 @@ export const AppShell: React.FC = () => {
   return (
     <ThemeProvider>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-400" role="status" aria-live="polite">{t('loadingLanguageResources')}</div>}>
-        <AppShellContent />
+        <AppErrorBoundary>
+          <AppShellContent />
+        </AppErrorBoundary>
       </Suspense>
     </ThemeProvider>
   );

@@ -13,6 +13,7 @@
 
 import type { BirthDetails, Horoscope } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
+import { ensureSwissEphemerisAdapter, isSwissEphemerisAdapterReady } from '../../engine/ephemeris/swissEphemerisAdapter';
 import { runLifeAnalysisProduct } from '../life-analysis/lifeAnalysisProductService';
 import type { LifeAnalysisProductState } from '../life-analysis/lifeAnalysisTypes';
 import { isCareerDomainInterpretation, isWealthDomainInterpretation } from '../life-analysis/lifeAnalysisTypes';
@@ -176,6 +177,13 @@ export class ProductAnalysisService {
         }
       }
 
+      // Ephemeris assets/WASM initialize lazily; await readiness so a load
+      // failure surfaces here as a failed analysis instead of a thrown
+      // engine error or an uninitialized-adapter crash. Skip the await when
+      // already resolved so synchronous engine call ordering is preserved.
+      if (!isSwissEphemerisAdapterReady()) {
+        await ensureSwissEphemerisAdapter();
+      }
       horoscope = this.deps.calculateHoroscope(birthDetails, undefined, context.asOf);
       pipelineState = await this.deps.runPipeline({
         horoscope,
