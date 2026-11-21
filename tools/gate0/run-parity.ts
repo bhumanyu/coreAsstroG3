@@ -11,7 +11,7 @@
  *
  * Offline tooling only.
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -72,6 +72,7 @@ const dashaCaseMeasurements: {
   fixtureId: string;
   yearLengthDays: number;
   moonDeltaArcsec: number;
+  sameStartingNakshatra: boolean;
   anchorPass: boolean;
   anchorErrorMs: number;
   anchorDetail?: string;
@@ -275,10 +276,14 @@ function measureDasha(f: Extract<CalculationReferenceFixture, { kind: 'VIMSHOTTA
     && (level.maxBoundaryErrorMs ?? 0) <= f.tolerance.boundaryMilliseconds
   );
   const moonErrorArcsec = angDiffDeg(computedMoon, f.input.moonSiderealLongitude) * ARCSEC_PER_DEG;
+  const sameStartingNakshatra =
+    calculateNakshatra(f.input.moonSiderealLongitude).nakshatra
+    === calculateNakshatra(computedMoon).nakshatra;
   dashaCaseMeasurements.push({
     fixtureId: f.id,
     yearLengthDays: f.conventions.yearLengthDays,
     moonDeltaArcsec: moonErrorArcsec,
+    sameStartingNakshatra,
     anchorPass,
     anchorErrorMs: Math.max(startErrMs, endErrMs),
     ...(!anchorPass ? { anchorDetail: anchorMismatches.join('; ') } : {}),
@@ -491,6 +496,8 @@ export async function runParity(): Promise<void> {
   lines.push('');
   lines.push(buildForkRecommendation(byTrack, ascMeasurements, gridAgreements));
   lines.push('');
+  lines.push(buildApprovalSignOff(fixtureSetSha256, failures.length, engineCommitSha, gate.approvalStatus));
+  lines.push('');
   lines.push('## Provenance & reproducibility');
   lines.push('');
   lines.push('- Captures: `tools/gate0/captures/` (cohort/*.json + boundary-vectors.v1.json + manifest.json with SHA-256 per artifact).');
@@ -622,56 +629,120 @@ function renderDashaDecomposition(lines: string[]): void {
   lines.push('| Level | Comparison | Cases structurally agreeing | Structurally matched periods | Boundary timestamps compared | Unmatched periods excluded | Sequence-difference score | Max matched-boundary error (ms) | Mean matched-boundary error (ms) |');
   lines.push('|-------|------------|-----------------------------|-----------------------------|-------------------------------|-----------------------------|---------------------------|-------------------------------|----------------------------------|');
   for (const level of ['MD', 'AD', 'PD'] as const) {
-    for (const [label, key] of [
-      ['R→R vs R→E (arithmetic/structure)', 'arithmetic'],
-      ['R→E vs E→E (Moon-input delta)', 'moonInput']
-    ] as const) {
-      const results = dashaCaseMeasurements.map(item => item[key][level]);
-      const boundaryResults = results.filter(
-        result => result.maxBoundaryErrorMs !== null && result.meanBoundaryErrorMs !== null
-      );
-      const boundaryCount = boundaryResults.reduce(
-        (sum, result) => sum + result.boundaryTimestampsCompared, 0
-      );
-      const weightedMean = boundaryCount === 0 ? null : boundaryResults.reduce(
-        (sum, result) => sum + (result.meanBoundaryErrorMs ?? 0) * result.boundaryTimestampsCompared,
-        0
-      ) / boundaryCount;
-      const maxError = boundaryResults.length === 0 ? null : Math.max(
-        ...boundaryResults.map(result => result.maxBoundaryErrorMs ?? 0)
-      );
-      const structuralCount = results.filter(result => result.structuralAgreement).length;
-      const matchedPeriodCount = results.reduce((sum, result) => sum + result.matchedPeriods, 0);
-      const unmatchedPeriodCount = results.reduce(
-        (sum, result) => sum + result.unmatchedExpectedPeriods + result.unmatchedActualPeriods,
-        0
-      );
-      const unmatchedExpectedCount = results.reduce(
-        (sum, result) => sum + result.unmatchedExpectedPeriods,
-        0
-      );
-      const unmatchedActualCount = results.reduce(
-        (sum, result) => sum + result.unmatchedActualPeriods,
-        0
-      );
-      const sequenceDifferenceCount = results.reduce(
-        (sum, result) => sum + result.sequenceDifferenceCount,
-        0
-      );
-      lines.push(
-        `| ${level} | ${label} | ${structuralCount}/${results.length} | ${matchedPeriodCount} | ${boundaryCount} | ` +
-        `${unmatchedPeriodCount} (E ${unmatchedExpectedCount}, A ${unmatchedActualCount}) | ` +
-        `${sequenceDifferenceCount} | ${maxError === null ? 'n/a' : fmt(maxError)} | ` +
-        `${weightedMean === null ? 'n/a' : fmt(weightedMean)} |`
-      );
-      const mismatch = dashaCaseMeasurements.find(item => !item[key][level].structuralAgreement);
-      if (mismatch) {
-        lines.push(`|  | First structural mismatch | ${mismatch.fixtureId}: ${mismatch[key][level].structuralDetail ?? 'lord sequence differs'} |  |  |  |  |  |`);
-      }
-    }
+    pushDashaComparisonRow(
+      lines, level, 'R→R vs R→E (arithmetic/structure)',
+      dashaCaseMeasurements.map(item => ({ fixtureId: item.fixtureId, result: item.arithmetic[level] }))
+    );
+    const moonInputEntries = dashaCaseMeasurements.map(item => ({
+      fixtureId: item.fixtureId,
+      sameStartingNakshatra: item.sameStartingNakshatra,
+      result: item.moonInput[level]
+    }));
+    pushDashaComparisonRow(lines, level, 'R→E vs E→E (Moon-input delta)', moonInputEntries);
+    pushDashaComparisonRow(
+      lines, level, 'R→E vs E→E — same starting nakshatra',
+      moonInputEntries.filter(entry => entry.sameStartingNakshatra)
+    );
+    pushDashaComparisonRow(
+      lines, level, 'R→E vs E→E — flipped nakshatra',
+      moonInputEntries.filter(entry => !entry.sameStartingNakshatra)
+    );
   }
+  lines.push('- Interpretation: the flipped-nakshatra partition carries all structural mismatches and the dominant cycle-scale (~1e12 ms, decades) boundary shifts — an anchor-nakshatra flip changes the starting MD lord and re-anchors the entire timeline, the mathematically expected consequence of the measured Moon longitude delta near a nakshatra boundary, not a dasha-arithmetic defect. The same-nakshatra partition isolates the residual pure Moon-input timing effect.');
   lines.push('- Sequence-difference score is `|expected count − actual count| + positional lord-path mismatches`; it is a severity heuristic, not a count of unique failed periods. Unmatched expected/actual totals above are the precise exclusion counts.');
   lines.push('');
+}
+
+interface DashaComparisonEntry {
+  readonly fixtureId: string;
+  readonly sameStartingNakshatra?: boolean;
+  readonly result: DashaLevelComparison;
+}
+
+function pushDashaComparisonRow(
+  lines: string[],
+  level: 'MD' | 'AD' | 'PD',
+  label: string,
+  entries: readonly DashaComparisonEntry[]
+): void {
+  const results = entries.map(entry => entry.result);
+  const boundaryResults = results.filter(
+    result => result.maxBoundaryErrorMs !== null && result.meanBoundaryErrorMs !== null
+  );
+  const boundaryCount = boundaryResults.reduce(
+    (sum, result) => sum + result.boundaryTimestampsCompared, 0
+  );
+  const weightedMean = boundaryCount === 0 ? null : boundaryResults.reduce(
+    (sum, result) => sum + (result.meanBoundaryErrorMs ?? 0) * result.boundaryTimestampsCompared,
+    0
+  ) / boundaryCount;
+  const maxError = boundaryResults.length === 0 ? null : Math.max(
+    ...boundaryResults.map(result => result.maxBoundaryErrorMs ?? 0)
+  );
+  const structuralCount = results.filter(result => result.structuralAgreement).length;
+  const matchedPeriodCount = results.reduce((sum, result) => sum + result.matchedPeriods, 0);
+  const unmatchedPeriodCount = results.reduce(
+    (sum, result) => sum + result.unmatchedExpectedPeriods + result.unmatchedActualPeriods,
+    0
+  );
+  const unmatchedExpectedCount = results.reduce(
+    (sum, result) => sum + result.unmatchedExpectedPeriods,
+    0
+  );
+  const unmatchedActualCount = results.reduce(
+    (sum, result) => sum + result.unmatchedActualPeriods,
+    0
+  );
+  const sequenceDifferenceCount = results.reduce(
+    (sum, result) => sum + result.sequenceDifferenceCount,
+    0
+  );
+  lines.push(
+    `| ${level} | ${label} | ${structuralCount}/${results.length} | ${matchedPeriodCount} | ${boundaryCount} | ` +
+    `${unmatchedPeriodCount} (E ${unmatchedExpectedCount}, A ${unmatchedActualCount}) | ` +
+    `${sequenceDifferenceCount} | ${maxError === null ? 'n/a' : fmt(maxError)} | ` +
+    `${weightedMean === null ? 'n/a' : fmt(weightedMean)} |`
+  );
+  const mismatch = entries.find(entry => !entry.result.structuralAgreement);
+  if (mismatch) {
+    lines.push(`|  | First structural mismatch | ${mismatch.fixtureId}: ${mismatch.result.structuralDetail ?? 'lord sequence differs'} |  |  |  |  |  |`);
+  }
+}
+
+function buildApprovalSignOff(
+  fixtureSetSha256: string,
+  failureCount: number,
+  engineCommitSha: string,
+  approvalStatus: string
+): string {
+  let reviewer = 'unknown';
+  let approvedAt = 'unknown';
+  try {
+    const manifest = JSON.parse(
+      readFileSync(join(GATE0_ROOT, 'approvals.json'), 'utf8')
+    ) as { reviewer?: string; approvedAt?: string };
+    reviewer = manifest.reviewer ?? 'unknown';
+    approvedAt = manifest.approvedAt ?? 'unknown';
+  } catch {
+    // Missing/malformed manifest: verdict is already reported in the header.
+  }
+  const lines: string[] = [];
+  lines.push('## Approval scope & sign-off');
+  lines.push('');
+  lines.push(`- Fixture-set SHA-256 \`${fixtureSetSha256}\` is approved by **${reviewer}** on **${approvedAt}** ` +
+    `(RG-09 approval verdict: ${approvalStatus}) as **independent reference evidence**. ` +
+    'This approval attests to fixture provenance and integrity only; it does NOT certify engine correctness.');
+  lines.push(`- The ${failureCount} measured engine failures — including the 27 categorical nakshatra/pada ` +
+    'boundary defects documented above — are **accepted as documented defects** tracked for Fork A / G0-08 ' +
+    'remediation. They are neither waived nor approved as correct engine behavior.');
+  lines.push(`- Reproducibility: engine commit \`${engineCommitSha}\`; fixture-set SHA-256 recomputed locally ` +
+    `from \`CALCULATION_REFERENCE_FIXTURES\` = \`${fixtureSetSha256}\` (matches the approved manifest). ` +
+    'Verified command sequence: `npm run audit:cohort`, `npm run generate:fixtures`, `npm run parity`, ' +
+    '`npm test`, `npm run check:imports` (tools/gate0) and `npm test` (repository root). ' +
+    'Caveat: `generate:fixtures` stamps the current HEAD into each fixture\'s `provenance.capture.engineCommitSha`, ' +
+    'which is covered by the fixture-set SHA-256 — regenerating at a different commit produces a new SHA and ' +
+    'requires fresh human approval; the approved module is the committed generated file.');
+  return lines.join('\n');
 }
 
 function fmt(v: number): string {

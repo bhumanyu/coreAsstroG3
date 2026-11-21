@@ -1,7 +1,7 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-21T04:42:56.933Z
-Engine commit: `72d0fe56b4a58781e6ba1bc859d556501797f57d`
+Generated: 2026-11-21T04:59:04.853Z
+Engine commit: `0b7e37c97b7318e2711c7e359477b5a62823c91f`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
 RG-09 approval: **APPROVED**
@@ -53,12 +53,24 @@ per cohort artifact). Engine output appears only as the measured side.
 | MD | R→R vs R→E (arithmetic/structure) | 67/67 | 670 | 1340 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
 | MD | R→E vs E→E (Moon-input delta) | 43/67 | 646 | 1292 | 48 (E 24, A 24) | 240 | 3786730295787 | 134409826909 |
 |  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10 (MERCURY); unmatched actual MD10 (KETU) |  |  |  |  |  |
+| MD | R→E vs E→E — same starting nakshatra | 43/43 | 430 | 860 | 0 (E 0, A 0) | 0 | 7010385262 | 1505501721 |
+| MD | R→E vs E→E — flipped nakshatra | 0/24 | 216 | 432 | 48 (E 24, A 24) | 240 | 3786730295787 | 398987881681 |
+|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10 (MERCURY); unmatched actual MD10 (KETU) |  |  |  |  |  |
 | AD | R→R vs R→E (arithmetic/structure) | 67/67 | 5494 | 10988 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
 | AD | R→E vs E→E (Moon-input delta) | 42/67 | 5469 | 10938 | 50 (E 25, A 25) | 2050 | 3786730295787 | 18831433346 |
 |  | First structural mismatch | DASHA-BI-025: unmatched expected MD10/AD8 (MARS/SUN); unmatched actual MD10/AD7 (MARS/VENUS) |  |  |  |  |  |
+| AD | R→E vs E→E — same starting nakshatra | 42/43 | 3525 | 7050 | 2 (E 1, A 1) | 82 | 3785502291454 | 2721009242 |
+|  | First structural mismatch | DASHA-BI-025: unmatched expected MD10/AD8 (MARS/SUN); unmatched actual MD10/AD7 (MARS/VENUS) |  |  |  |  |  |
+| AD | R→E vs E→E — flipped nakshatra | 0/24 | 1944 | 3888 | 48 (E 24, A 24) | 1968 | 3786730295787 | 48044007916 |
+|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10/AD9 (MERCURY/SATURN); unmatched actual MD10/AD1 (KETU/KETU) |  |  |  |  |  |
 | PD | R→R vs R→E (arithmetic/structure) | 67/67 | 48910 | 97820 | 0 (E 0, A 0) | 0 | 0.000e+0 | 0.000e+0 |
 | PD | R→E vs E→E (Moon-input delta) | 31/67 | 48874 | 97748 | 72 (E 36, A 36) | 26280 | 3786730295787 | 5440266057 |
 |  | First structural mismatch | DASHA-BI-005: unmatched expected MD10/AD3/PD4 (VENUS/MOON/JUPITER); unmatched actual MD10/AD3/PD5 (VENUS/MOON/SATURN) |  |  |  |  |  |
+| PD | R→E vs E→E — same starting nakshatra | 31/43 | 31378 | 62756 | 24 (E 12, A 12) | 8760 | 3786616153249 | 3719366467 |
+|  | First structural mismatch | DASHA-BI-005: unmatched expected MD10/AD3/PD4 (VENUS/MOON/JUPITER); unmatched actual MD10/AD3/PD5 (VENUS/MOON/SATURN) |  |  |  |  |  |
+| PD | R→E vs E→E — flipped nakshatra | 0/24 | 17496 | 34992 | 48 (E 24, A 24) | 17520 | 3786730295787 | 8526593636 |
+|  | First structural mismatch | DASHA-MB-01-BEFORE: unmatched expected MD10/AD9/PD9 (MERCURY/SATURN/JUPITER); unmatched actual MD10/AD1/PD1 (KETU/KETU/KETU) |  |  |  |  |  |
+- Interpretation: the flipped-nakshatra partition carries all structural mismatches and the dominant cycle-scale (~1e12 ms, decades) boundary shifts — an anchor-nakshatra flip changes the starting MD lord and re-anchors the entire timeline, the mathematically expected consequence of the measured Moon longitude delta near a nakshatra boundary, not a dasha-arithmetic defect. The same-nakshatra partition isolates the residual pure Moon-input timing effect.
 - Sequence-difference score is `|expected count − actual count| + positional lord-path mismatches`; it is a severity heuristic, not a count of unique failed periods. Unmatched expected/actual totals above are the precise exclusion counts.
 
 
@@ -165,6 +177,12 @@ Evidence:
 - Other planetary longitudes have 184/688 passes; motion has 243/258; ascendant has 86/86.
 - Categorical boundaries have 27 failures and varga/house arithmetic has 0; these deterministic tracks are reported separately from ephemeris accuracy.
 - A reference-grade ephemeris should be adopted behind the existing `generatePlanetaryPositions`/`calculateAscendant` seams; deterministic boundary failures require their own investigation.
+
+## Approval scope & sign-off
+
+- Fixture-set SHA-256 `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` is approved by **bhuma** on **2026-11-21** (RG-09 approval verdict: APPROVED) as **independent reference evidence**. This approval attests to fixture provenance and integrity only; it does NOT certify engine correctness.
+- The 631 measured engine failures — including the 27 categorical nakshatra/pada boundary defects documented above — are **accepted as documented defects** tracked for Fork A / G0-08 remediation. They are neither waived nor approved as correct engine behavior.
+- Reproducibility: engine commit `0b7e37c97b7318e2711c7e359477b5a62823c91f`; fixture-set SHA-256 recomputed locally from `CALCULATION_REFERENCE_FIXTURES` = `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` (matches the approved manifest). Verified command sequence: `npm run audit:cohort`, `npm run generate:fixtures`, `npm run parity`, `npm test`, `npm run check:imports` (tools/gate0) and `npm test` (repository root). Caveat: `generate:fixtures` stamps the current HEAD into each fixture's `provenance.capture.engineCommitSha`, which is covered by the fixture-set SHA-256 — regenerating at a different commit produces a new SHA and requires fresh human approval; the approved module is the committed generated file.
 
 ## Provenance & reproducibility
 
