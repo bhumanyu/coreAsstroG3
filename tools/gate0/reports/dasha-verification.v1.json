@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-21T07:40:11.819Z",
+  "generatedAt": "2026-11-21T07:42:30.960Z",
   "harness": "tools/gate0/run-parity.ts",
-  "engineCommitSha": "953cd218d5f5c52a32068ac1512ad2cac13c6a7f",
+  "engineCommitSha": "27615a1b08e9b64608e0f5f6fb62df60de05ad7d",
   "fixtureSetSha256": "6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f",
   "vimshottariSource": "src/engine/dasha/vimshottari.ts",
   "acceptanceTolerances": {
