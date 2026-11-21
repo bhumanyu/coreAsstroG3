@@ -13,8 +13,16 @@ import {
   findPreviousSolarIngress
 } from './solarTime';
 import { AyanamsaType } from '../types';
+import { swissEphemerisAdapter } from './ephemeris/swissEphemerisAdapter';
 
 describe('solarTime module', () => {
+  it('routes tropical Sun longitude through Swiss Ephemeris', () => {
+    const jd = calculateJulianDay(new Date('2000-01-01T12:00:00Z'));
+    expect(getSunTropicalLongitude(jd)).toBeCloseTo(
+      swissEphemerisAdapter.sunTropical(jd),
+      10
+    );
+  });
   it('shouldCalculateJulianDayCorrectly', () => {
     // 2000-01-01 12:00 UTC = JD 2451545.0
     const jd = calculateJulianDay(new Date('2000-01-01T12:00:00Z'));

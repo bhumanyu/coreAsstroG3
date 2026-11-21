@@ -88,12 +88,7 @@ export function getAyanamsaOffset(ayanamsa: AyanamsaType, date?: Date): number {
  * Calculates Sun's tropical ecliptic longitude for a given Julian Day.
  */
 export function getSunTropicalLongitude(jd: number): number {
-  const t = (jd - 2451545.0) / 36525.0; // Julian centuries from J2000.0
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  const mSun = normalizeDegree(357.5291 + 35999.0503 * t);
-  const cSun = (1.9146 - 0.0048 * t) * Math.sin(toRad(mSun)) + (0.01999 - 0.0001 * t) * Math.sin(toRad(2 * mSun)) + 0.00029 * Math.sin(toRad(3 * mSun));
-  return normalizeDegree(280.46646 + 36000.76983 * t + cSun);
+  return swissEphemerisAdapter.sunTropical(jd);
 }
 
 /**

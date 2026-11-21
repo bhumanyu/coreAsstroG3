@@ -2,7 +2,6 @@ import {
   Ayanamsa,
   Body,
   createSwissEph,
-  FetchEphemeris,
   Flag,
   HouseSystem,
   type SwissEph
@@ -18,10 +17,13 @@ export interface SwissTropicalPosition {
 
 export interface SwissEphemerisAdapter {
   tropicalPositions(jdUt: number): Record<Planet, SwissTropicalPosition>;
+  sunTropical(jdUt: number): number;
   ascendantTropical(jdUt: number, lat: number, lon: number): number;
   ayanamsa(jdUt: number): number;
   ayanamsaFor(jdUt: number, ayanamsa: AyanamsaType): number;
   readonly version: string;
+  readonly dataSource: string;
+  readonly ephemerisVersion: string;
 }
 
 const bodyMap: Readonly<Record<Exclude<Planet, Planet.RAHU | Planet.KETU>, number>> = {
@@ -34,35 +36,70 @@ const bodyMap: Readonly<Record<Exclude<Planet, Planet.RAHU | Planet.KETU>, numbe
   [Planet.SATURN]: Body.Saturn
 };
 
+export async function loadBrowserEphemerisFiles(assetBaseUrl = '/ephe'): Promise<Record<string, Uint8Array>> {
+  const names = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1', 'sefstars.txt', 'seorbel.txt'];
+  const files: Record<string, Uint8Array> = {};
+  for (const name of names) {
+    const response = await fetch(`${assetBaseUrl.replace(/\/$/, '')}/${name}`);
+    if (!response.ok) {
+      throw new Error(`Failed to load required Swiss Ephemeris asset ${name}: HTTP ${response.status}`);
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length === 0) throw new Error(`Required Swiss Ephemeris asset is empty: ${name}`);
+    files[name] = bytes;
+  }
+  return files;
+}
+
 async function loadDataFiles(): Promise<Record<string, Uint8Array>> {
   if (typeof process !== 'undefined' && process.versions?.node) {
     const { readFile } = await import('node:fs/promises');
-    const { join } = await import('node:path');
-    const dir = join(process.cwd(), 'node_modules', '@kuntay', 'swisseph-data', 'ephe');
+    const { createRequire } = await import('node:module');
+    const requireFromAdapter = createRequire(import.meta.url);
     const names = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1', 'sefstars.txt', 'seorbel.txt'];
     const files: Record<string, Uint8Array> = {};
     for (const name of names) {
-      files[name] = new Uint8Array(await readFile(join(dir, name)));
+      let resolved: string;
+      try {
+        resolved = requireFromAdapter.resolve(`@kuntay/swisseph-data/${name}`);
+      } catch (error) {
+        throw new Error(`Required Swiss Ephemeris data package file missing: ${name}`, { cause: error });
+      }
+      let bytes: Uint8Array;
+      try {
+        bytes = new Uint8Array(await readFile(resolved));
+      } catch (error) {
+        throw new Error(`Failed to read required Swiss Ephemeris data file: ${resolved}`, { cause: error });
+      }
+      if (bytes.length === 0) {
+        throw new Error(`Required Swiss Ephemeris data file is empty: ${resolved}`);
+      }
+      files[name] = bytes;
     }
     return files;
   }
-  return {};
+  const assetConfig = (globalThis as {
+    __COREASTRO_SWISS_EPHEMERIS_CONFIG__?: { assetBaseUrl?: string };
+  }).__COREASTRO_SWISS_EPHEMERIS_CONFIG__;
+  const assetBaseUrl = assetConfig?.assetBaseUrl ?? '/ephe';
+  return loadBrowserEphemerisFiles(assetBaseUrl);
 }
 
 async function createAdapter(): Promise<SwissEphemerisAdapter> {
   const files = await loadDataFiles();
+  const dataSource = typeof process !== 'undefined' && process.versions?.node
+    ? '@kuntay/swisseph-data@0.2.2 package'
+    : `browser-assets:${(globalThis as { __COREASTRO_SWISS_EPHEMERIS_CONFIG__?: { assetBaseUrl?: string } }).__COREASTRO_SWISS_EPHEMERIS_CONFIG__?.assetBaseUrl ?? '/ephe'}`;
   let swe: SwissEph;
-  if (Object.keys(files).length > 0) {
-    swe = await createSwissEph({ files });
-  } else {
-    swe = await createSwissEph();
-    await swe.loadEphemeris(new FetchEphemeris(), {
-      fromYear: 1800,
-      toYear: 2399,
-      fixedStars: true
-    });
-  }
+  swe = await createSwissEph({ files });
   swe.setSiderealMode(Ayanamsa.Lahiri);
+
+  function assertSupportedDate(jdUt: number): void {
+    if (!Number.isFinite(jdUt)) throw new Error('Julian day must be finite.');
+    if (jdUt < 2378496 || jdUt > 2597642) {
+      throw new Error(`Julian day ${jdUt} is outside the deterministic ephemeris data coverage 1800-2399 CE.`);
+    }
+  }
 
   function setAyanamsaMode(type: AyanamsaType): void {
     switch (type) {
@@ -85,7 +122,18 @@ async function createAdapter(): Promise<SwissEphemerisAdapter> {
 
   return {
     version: swe.version,
+    dataSource,
+    ephemerisVersion: '2.10.03',
+    sunTropical(jdUt: number): number {
+      assertSupportedDate(jdUt);
+      const position = swe.calc(jdUt, Body.Sun, { flags: Flag.Speed });
+      if (position.ephemeris !== 'swiss') {
+        throw new Error(`Swiss Ephemeris data unavailable for SUN: ${position.ephemeris}`);
+      }
+      return normalizeDegree(position.longitude);
+    },
     tropicalPositions(jdUt: number): Record<Planet, SwissTropicalPosition> {
+      assertSupportedDate(jdUt);
       setAyanamsaMode(AyanamsaType.LAHIRI);
       const result = {} as Record<Planet, SwissTropicalPosition>;
       for (const [planet, body] of Object.entries(bodyMap) as [Planet, number][]) {
@@ -117,18 +165,34 @@ async function createAdapter(): Promise<SwissEphemerisAdapter> {
       return result;
     },
     ascendantTropical(jdUt: number, lat: number, lon: number): number {
+      assertSupportedDate(jdUt);
+      if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+        throw new Error(`Latitude out of range: ${lat}`);
+      }
+      if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+        throw new Error(`Longitude out of range: ${lon}`);
+      }
       const houses = swe.houses(jdUt, lat, lon, HouseSystem.EqualWholeSign);
       if (houses.warning) throw new Error(`Swiss Ephemeris houses failed: ${houses.warning}`);
       return normalizeDegree(houses.ascendant);
     },
     ayanamsa(jdUt: number): number {
+      assertSupportedDate(jdUt);
       setAyanamsaMode(AyanamsaType.LAHIRI);
-      return swe.ayanamsa(jdUt);
+      const value = swe.ayanamsa(jdUt);
+      setAyanamsaMode(AyanamsaType.LAHIRI);
+      return value;
     },
     ayanamsaFor(jdUt: number, ayanamsaType: AyanamsaType): number {
-      if (ayanamsaType === AyanamsaType.TROPICAL) return 0;
+      assertSupportedDate(jdUt);
+      if (ayanamsaType === AyanamsaType.TROPICAL) {
+        setAyanamsaMode(AyanamsaType.LAHIRI);
+        return 0;
+      }
       setAyanamsaMode(ayanamsaType);
-      return swe.ayanamsa(jdUt);
+      const value = swe.ayanamsa(jdUt);
+      setAyanamsaMode(AyanamsaType.LAHIRI);
+      return value;
     }
   };
 }

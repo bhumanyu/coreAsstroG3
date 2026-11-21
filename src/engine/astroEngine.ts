@@ -145,11 +145,11 @@ export function calculateCombustion(
 /**
  * Calculates Tropical Ecliptic Longitudes for planets given Julian Day.
  */
-function computeTropicalPositions(jd: number): Record<Planet, { long: number; radius: number }> {
+function computeTropicalPositions(jd: number): Record<Planet, { long: number }> {
   const positions = swissEphemerisAdapter.tropicalPositions(jd);
-  const result = {} as Record<Planet, { long: number; radius: number }>;
+  const result = {} as Record<Planet, { long: number }>;
   for (const planet of Object.values(Planet)) {
-    result[planet] = { long: positions[planet].longitude, radius: 1 };
+    result[planet] = { long: positions[planet].longitude };
   }
   return result;
 }

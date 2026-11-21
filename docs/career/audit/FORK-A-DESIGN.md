@@ -21,6 +21,19 @@ Runtime dependencies:
 
 - Data: `sepl_18.se1`, `semo_18.se1`, `seas_18.se1`, `sefstars.txt`, and
   `seorbel.txt`, DE441-derived .se1 data, 1800-2399 CE.
+- Runtime data loading:
+  - Node resolves each required file through
+    `createRequire(import.meta.url).resolve('@kuntay/swisseph-data/<file>')`,
+    independent of the process working directory. Missing, unreadable, or empty
+    files throw; the Node path never falls back to Moshier or a network source.
+  - Browser and Capacitor load the versioned files from `public/ephe/` on the
+    same origin by default. This is a deterministic local app asset source:
+    `/ephe/sepl_18.se1`, `/ephe/semo_18.se1`, `/ephe/seas_18.se1`,
+    `/ephe/sefstars.txt`, and `/ephe/seorbel.txt`. The asset base can be
+    overridden only through the explicit
+    `globalThis.__COREASTRO_SWISS_EPHEMERIS_CONFIG__.assetBaseUrl` config.
+    Missing or unreadable assets throw and are never fetched from an external
+    CDN.
 - Position authority: single Swiss Ephemeris authority; the legacy
   astronomy-engine implementation is not hybridized.
 - Coordinate frame: geocentric, apparent/ecliptic-of-date.
