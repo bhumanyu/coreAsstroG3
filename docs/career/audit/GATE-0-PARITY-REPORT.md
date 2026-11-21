@@ -1,7 +1,10 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-21T07:42:30.954Z
-Engine commit: `27615a1b08e9b64608e0f5f6fb62df60de05ad7d`
+reportGeneratedAt: 2026-11-21T08:29:59.166Z
+testedEngineSha: `eb649c03ed909c598d866488324340bd76ea5601`
+reportCommitSha: `eb649c03ed909c598d866488324340bd76ea5601`
+dashaArtifactSha: `7de2bb069db2b06f869b7f3cdc40dd4d23e29a62a1199ed8b7b807f0c7a96796`
+- Report and artifact may lag the tested implementation by documentation-only commits; that is expected and does not invalidate the measured testedEngineSha.
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
 RG-09 approval: **APPROVED**
@@ -19,16 +22,14 @@ per cohort artifact). Engine output appears only as the measured side.
 ## 1. Fixture approval
 
 - Fixture-set SHA-256: `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f`
-- Approval status: VALID / APPROVED
+- Approval status: `APPROVED`
 - Reviewer: `bhuma`
 - Approval date: `2026-11-21`
-- Expected values were not regenerated or altered for engine accommodation.
+- Expected fixture values were not regenerated or altered to accommodate engine output.
 
 ## 2. Engine integration parity
 
-This section measures the production engine against the approved fixture set.
-
-### Per-track results
+## Per-track results
 
 | Track | n | pass | fail | max error | mean error | unit | §4 tolerance |
 |-------|---|------|------|-----------|------------|------|--------------|
@@ -43,13 +44,15 @@ This section measures the production engine against the approved fixture set.
 | SIGN_BOUNDARY | 36 | 36 | 0 | 0.000e+0 | 0.000e+0 | category | categorical |
 | VARGA_LONGITUDE | 245 | 245 | 0 | 0.000e+0 | 0.000e+0 | arcsec | 1e-6° |
 
-### Ascendant (parity measurement, not a fixture kind)
+## Ascendant (parity measurement, not a fixture kind)
 
 - cases: 86, pass(<=0.01°): 86, fail: 0
 - ascendant unavailable in cohort captures: 0 (excluded from measurement coverage)
 - max |Δ| = 5.684e-14°, mean = 2.012e-14° (tolerance 0.01° = 36″)
 
 ## Dasha error decomposition
+
+> **Evidence limitation:** these 67 cases provide consistency evidence between the production engine and the Gate-0 reference model, not full independent MD/AD/PD ground truth. The reference implementation shares convention definitions with the engine, and later periods are derived rather than independently captured.
 
 - Cases: 67; each case produced R→R, R→E, and E→E timelines.
 - R→R anchor check against the frozen fixture expected first-MD values: 67/67.
@@ -76,14 +79,12 @@ This section measures the production engine against the approved fixture set.
 | PD | R→E vs E→E — flipped nakshatra | 0/0 | 0 | 0 | 0 (E 0, A 0) | 0 | n/a | n/a |
 - Interpretation: the flipped-nakshatra partition carries all structural mismatches and the dominant cycle-scale (~1e12 ms, decades) boundary shifts — an anchor-nakshatra flip changes the starting MD lord and re-anchors the entire timeline, the mathematically expected consequence of the measured Moon longitude delta near a nakshatra boundary, not a dasha-arithmetic defect. The same-nakshatra partition isolates the residual pure Moon-input timing effect.
 - Sequence-difference score is `|expected count − actual count| + positional lord-path mismatches`; it is a severity heuristic, not a count of unique failed periods. Unmatched expected/actual totals above are the precise exclusion counts.
+- The flipped-nakshatra partition has 0 cases: all 67 post-Swiss Dasha cases share the starting nakshatra, so this partition currently exercises no independent cases.
 
 
 ## 3. Independent accuracy
 
-Engine integration now shares the Swiss Ephemeris authority with the reference
-captures. Independence is preserved through the offline cohort/conformance
-vectors, astronomy-engine 2.1.19 MIT cross-check, independent grid semantics,
-and separated R→R/R→E/E→E Dasha comparisons.
+Engine and reference captures now share the Swiss Ephemeris authority. Independence is retained through offline conformance vectors, the astronomy-engine 2.1.19 MIT cross-check, independent grid semantics, and the separated R→R/R→E/E→E Dasha comparisons.
 
 ### Cohort stratification audit (§3a)
 
@@ -114,13 +115,12 @@ Moon-anchor cases must bracket every nakshatra boundary within ±0.01° on both 
 | D9 varga (on reference longitudes) | 774/774 |
 | D10 varga (on reference longitudes) | 774/774 |
 
+
 ## 4. Outstanding defects
 
-G0-08 is resolved in commit `953cd218d5f5c52a32068ac1512ad2cac13c6a7f`;
-the 27 exact pada/nakshatra boundary vectors now pass without positional or
-Dasha changes.
+G0-08 is resolved in commit `953cd218`; the 27 exact pada-boundary defects now pass. Licensing and the shared-ephemeris independent-accuracy caveat remain open where stated below.
 
-### Nakshatra/pada boundary defect diagnosis
+## Nakshatra/pada boundary defect diagnosis
 
 - 0 categorical failures across 0 boundary triplets; 0 occur outside EXACT. The exact-only finding is confirmed.
 - These constructed vectors pass reference longitudes directly to `calculateNakshatra`; no ephemeris result participates. A failed category with the same input longitude is a categorical assignment discrepancy, not an upstream longitude error.
@@ -146,29 +146,24 @@ Per-track verdicts:
 - Reference-grid cross-check (D9 varga (on reference longitudes)): 774/774.
 - Reference-grid cross-check (D10 varga (on reference longitudes)): 774/774.
 
-**Recommendation: Fork B — restrict the cohort.**
-A meaningful subset of fixtures passes §4 tolerances; scope RG-09/RG-10 claims to the certified subset and document the engine as approximate elsewhere.
+**Engine conforms to approved fixtures — no fork action required.**
+All measured fixture tracks, ascendant measurements, and grid agreement checks pass their stated tolerances.
 
 ## Approval scope & sign-off
 
 - Fixture-set SHA-256 `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` is approved by **bhuma** on **2026-11-21** (RG-09 approval verdict: APPROVED) as **independent reference evidence**. This approval attests to fixture provenance and integrity only; it does NOT certify engine correctness.
-- The 0 measured engine failures — including the 27 categorical nakshatra/pada boundary defects documented above — are **accepted as documented defects** tracked for Fork A / G0-08 remediation. They are neither waived nor approved as correct engine behavior.
-- Reproducibility: engine commit `27615a1b08e9b64608e0f5f6fb62df60de05ad7d`; fixture-set SHA-256 recomputed locally from `CALCULATION_REFERENCE_FIXTURES` = `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` (matches the approved manifest). Verified command sequence: `npm run audit:cohort`, `npm run generate:fixtures`, `npm run parity`, `npm test`, `npm run check:imports` (tools/gate0) and `npm test` (repository root). Caveat: `generate:fixtures` stamps the current HEAD into each fixture's `provenance.capture.engineCommitSha`, which is covered by the fixture-set SHA-256 — regenerating at a different commit produces a new SHA and requires fresh human approval; the approved module is the committed generated file.
+- G0-08 resolved the 27 exact pada-boundary defects. Commit `953cd218` changed the half-open classification in `nakshatraUtils.ts`; the 405/405 boundary-vector track now passes.
+- **Approved:** fixture integrity and measured engine integration parity.
+- **Open:** Swiss Ephemeris licensing/distribution remains BLOCKED pending license resolution; independent-accuracy caveats remain because the engine and reference share the Swiss ephemeris authority.
+- Reproducibility: engine commit `eb649c03ed909c598d866488324340bd76ea5601`; fixture-set SHA-256 recomputed locally from `CALCULATION_REFERENCE_FIXTURES` = `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` (matches the approved manifest). Verified command sequence: `npm run audit:cohort`, `npm run generate:fixtures`, `npm run parity`, `npm test`, `npm run check:imports` (tools/gate0) and `npm test` (repository root). Caveat: `generate:fixtures` stamps the current HEAD into each fixture's `provenance.capture.engineCommitSha`, which is covered by the fixture-set SHA-256 — regenerating at a different commit produces a new SHA and requires fresh human approval; the approved module is the committed generated file.
 
 ## Provenance & reproducibility
 
-### Production adapter configuration
+## Open-item status
 
-- Adapter: `src/engine/ephemeris/swissEphemerisAdapter.ts`
-- Binding: `@kuntay/swisseph@0.2.2`
-- Ephemeris core: Swiss Ephemeris `2.10.03`
-- Data package: `@kuntay/swisseph-data@0.2.2`
-- Calculation flags: geocentric apparent, `SEFLG_SWIEPH|SEFLG_SPEED`
-- Ascendant: Equal Whole Sign
-- Ayanamsa: Lahiri via `Ayanamsa.Lahiri`
-- Time: UT Julian day; Delta-T internal
-- Nodes: mean Rahu, Ketu = Rahu + 180°
-- Data loading: package/Node resolution and same-origin browser/Capacitor assets
+- Solar ingress: **PASS** for adapter-delegated ingress and equation-of-time-adjacent solar-time tests backed by the existing solarTime suite.
+- Ayanamsa isolation: **PASS** — exception-safe `try/finally` restoration is implemented; binding calls are synchronous and shared state is restored to Lahiri after each call.
+- License/distribution: **BLOCKED** — Swiss Ephemeris AGPL-3.0-or-later or an Astrodienst Professional License is required before production distribution.
 
 - Captures: `tools/gate0/captures/` (cohort/*.json + boundary-vectors.v1.json + manifest.json with SHA-256 per artifact).
 - Fixture module: `src/engine/validation/calculationReferenceFixtures.generated.ts` (auto-generated; builders enforce provenance).
