@@ -39,6 +39,21 @@ describe('astroEngine', () => {
     expect(res.pada).toBe(Pada.FIRST);
   });
 
+  it('assigns exact nakshatra/pada boundaries to the next interval', () => {
+    expect(calculateNakshatra(30)).toMatchObject({
+      nakshatra: Nakshatra.KRITTIKA,
+      padaNumber: 2
+    });
+    expect(calculateNakshatra(33.333333333333314)).toMatchObject({
+      nakshatra: Nakshatra.KRITTIKA,
+      padaNumber: 3
+    });
+    expect(calculateNakshatra(40)).toMatchObject({
+      nakshatra: Nakshatra.ROHINI,
+      padaNumber: 1
+    });
+  });
+
   it('calculates Julian Day for May 8, 1988 04:00 UTC', () => {
     const date = new Date('1988-05-08T04:00:00Z');
     const jd = calculateJulianDay(date);

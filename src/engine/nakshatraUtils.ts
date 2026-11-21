@@ -25,19 +25,14 @@ export function calculateNakshatra(longitude: number): NakshatraResult {
   const norm = normalizeDegree(longitude);
   const span = 40 / 3; // 13.333333333333334 degrees per nakshatra
 
-  // The 1e-12° epsilon is a floating-point boundary-representation tolerance, not astronomical uncertainty.
-  // Values within epsilon immediately below a boundary are intentionally assigned to the next Nakshatra.
-  let nakshatraIndex = Math.floor((norm + 1e-12) / span);
-  if (nakshatraIndex >= 27) nakshatraIndex = 26;
+  // Both classifications use the same global half-open grid. Exact boundary
+  // values belong to the next interval; epsilon only absorbs floating-point
+  // representation noise at the boundary, not 0.00001-degree fixture offsets.
+  const nakshatraIndex = Math.min(26, Math.floor((norm + 1e-12) / span));
 
   const nakshatraMeta = NAKSHATRAS_METADATA[nakshatraIndex] as any;
-  const startDegree = nakshatraMeta?.startDegree ?? (nakshatraIndex * span);
-  const offset = norm - startDegree;
   const padaLength = span / 4;
-
-  let padaIndex = Math.floor((offset + 1e-12) / padaLength);
-  if (padaIndex < 0) padaIndex = 0;
-  if (padaIndex >= 4) padaIndex = 3;
+  const padaIndex = (Math.floor((norm + 1e-12) / padaLength) % 4 + 4) % 4;
 
   const padas = [Pada.FIRST, Pada.SECOND, Pada.THIRD, Pada.FOURTH];
   return {
