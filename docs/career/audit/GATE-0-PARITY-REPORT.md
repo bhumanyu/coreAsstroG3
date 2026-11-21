@@ -1,7 +1,7 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-21T06:19:00.953Z
-Engine commit: `a28d81f682214fbf1b5c4863b6ed6b0e0a6c7062`
+Generated: 2026-11-21T07:11:22.989Z
+Engine commit: `10854ac14484d67d9541bd0395a52734a98c3271`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
 RG-09 approval: **APPROVED**
@@ -160,20 +160,23 @@ Evidence:
 
 - Fixture-set SHA-256 `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` is approved by **bhuma** on **2026-11-21** (RG-09 approval verdict: APPROVED) as **independent reference evidence**. This approval attests to fixture provenance and integrity only; it does NOT certify engine correctness.
 - The 27 measured engine failures — including the 27 categorical nakshatra/pada boundary defects documented above — are **accepted as documented defects** tracked for Fork A / G0-08 remediation. They are neither waived nor approved as correct engine behavior.
-- Reproducibility: engine commit `a28d81f682214fbf1b5c4863b6ed6b0e0a6c7062`; fixture-set SHA-256 recomputed locally from `CALCULATION_REFERENCE_FIXTURES` = `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` (matches the approved manifest). Verified command sequence: `npm run audit:cohort`, `npm run generate:fixtures`, `npm run parity`, `npm test`, `npm run check:imports` (tools/gate0) and `npm test` (repository root). Caveat: `generate:fixtures` stamps the current HEAD into each fixture's `provenance.capture.engineCommitSha`, which is covered by the fixture-set SHA-256 — regenerating at a different commit produces a new SHA and requires fresh human approval; the approved module is the committed generated file.
+- Reproducibility: engine commit `10854ac14484d67d9541bd0395a52734a98c3271`; fixture-set SHA-256 recomputed locally from `CALCULATION_REFERENCE_FIXTURES` = `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f` (matches the approved manifest). Verified command sequence: `npm run audit:cohort`, `npm run generate:fixtures`, `npm run parity`, `npm test`, `npm run check:imports` (tools/gate0) and `npm test` (repository root). Caveat: `generate:fixtures` stamps the current HEAD into each fixture's `provenance.capture.engineCommitSha`, which is covered by the fixture-set SHA-256 — regenerating at a different commit produces a new SHA and requires fresh human approval; the approved module is the committed generated file.
 
 ## Provenance & reproducibility
 
-## Runtime adapter configuration
+### Production adapter configuration
 
 - Adapter: `src/engine/ephemeris/swissEphemerisAdapter.ts`
-- Binding: `@kuntay/swisseph@0.2.2`, Swiss Ephemeris core `2.10.03`
-- Data: `@kuntay/swisseph-data@0.2.2`, DE441-derived .se1 files
-- Position frame: geocentric apparent, tropical mean equinox of date
-- Calculation flags: `SEFLG_SWIEPH|SEFLG_SPEED`; ascendant via Equal Whole Sign houses
-- Ayanamsa: Lahiri via `Ayanamsa.Lahiri` / `swe.setSiderealMode`
-- Time contract: UT Julian day passed unchanged to `calc_ut`/houses/ayanamsa; Delta-T internal
-- Nodes: mean node for RAHU, KETU = RAHU + 180 degrees
+- Binding: `@kuntay/swisseph@0.2.2`
+- Ephemeris core: Swiss Ephemeris `2.10.03`
+- Data package: `@kuntay/swisseph-data@0.2.2`
+- Data source (Node): package-resolved `@kuntay/swisseph-data` files
+- Data source (Browser/Capacitor): versioned same-origin app assets under `public/ephe/`
+- Position flags: geocentric apparent, `SEFLG_SWIEPH|SEFLG_SPEED`
+- Ascendant house system: Equal Whole Sign (`W`)
+- Ayanamsa: Lahiri via `Ayanamsa.Lahiri`
+- Time contract: UT Julian day unchanged; Swiss Ephemeris applies Delta-T internally
+- Nodes: mean node for RAHU; KETU = RAHU + 180°
 
 - Captures: `tools/gate0/captures/` (cohort/*.json + boundary-vectors.v1.json + manifest.json with SHA-256 per artifact).
 - Fixture module: `src/engine/validation/calculationReferenceFixtures.generated.ts` (auto-generated; builders enforce provenance).
