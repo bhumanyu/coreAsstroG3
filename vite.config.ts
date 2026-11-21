@@ -8,6 +8,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   cacheDir: 'node_modules/.vite',
   build: {
+    // ES2022 is intentional: module top-level await is required for fail-closed
+    // ephemeris startup and is the minimum supported browser/WebView target.
     target: 'es2022',
   },
   server: {

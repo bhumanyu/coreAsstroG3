@@ -63,7 +63,7 @@ describe('Swiss Ephemeris adapter', () => {
     expect(Number.isFinite(reverse[0])).toBe(true);
   });
 
-  it('isolates ayanamsa modes under interleaved Promise.all calls', async () => {
+  it('verifies sequential interleaving and Lahiri restoration', () => {
     const types = [
       AyanamsaType.LAHIRI,
       AyanamsaType.RAMAN,
@@ -71,11 +71,14 @@ describe('Swiss Ephemeris adapter', () => {
       AyanamsaType.FAGAN_BRADLEY,
       AyanamsaType.TROPICAL
     ];
-    const values = await Promise.all(types.map(type =>
-      Promise.resolve(swissEphemerisAdapter.ayanamsaFor(TEST_JD, type))
-    ));
-    expect(swissEphemerisAdapter.ayanamsa(TEST_JD)).toBeCloseTo(values[0], 10);
-    expect(values[4]).toBe(0);
+    let last = 0;
+    for (const type of [...types, ...types].reverse()) {
+      const value = swissEphemerisAdapter.ayanamsaFor(TEST_JD, type);
+      if (type !== AyanamsaType.TROPICAL) expect(Number.isFinite(value)).toBe(true);
+      if (type === AyanamsaType.TROPICAL) expect(value).toBe(0);
+      last = swissEphemerisAdapter.ayanamsa(TEST_JD);
+      expect(last).toBeCloseTo(swissEphemerisAdapter.ayanamsaFor(TEST_JD, AyanamsaType.LAHIRI), 10);
+    }
   });
 
   it('classifies a genuine retrograde Jupiter and near-stationary Mercury', () => {

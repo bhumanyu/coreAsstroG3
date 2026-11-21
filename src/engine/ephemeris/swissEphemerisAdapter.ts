@@ -129,6 +129,9 @@ async function loadDataFiles(): Promise<Record<string, Uint8Array>> {
   return loadBrowserEphemerisFiles(assetBaseUrl);
 }
 
+// Startup contract: importing this module blocks until createAdapter completes.
+// Ephemeris/asset initialization failures propagate as module-load errors.
+// This intentionally provides no ready/not-ready fallback or silent Moshier degradation.
 async function createAdapter(): Promise<SwissEphemerisAdapter> {
   const files = await loadDataFiles();
   const dataSource = typeof process !== 'undefined' && process.versions?.node
@@ -223,20 +226,28 @@ async function createAdapter(): Promise<SwissEphemerisAdapter> {
     ayanamsa(jdUt: number): number {
       assertSupportedDate(jdUt);
       setAyanamsaMode(AyanamsaType.LAHIRI);
-      const value = swe.ayanamsa(jdUt);
-      setAyanamsaMode(AyanamsaType.LAHIRI);
-      return value;
+      try {
+        return swe.ayanamsa(jdUt);
+      } finally {
+        setAyanamsaMode(AyanamsaType.LAHIRI);
+      }
     },
     ayanamsaFor(jdUt: number, ayanamsaType: AyanamsaType): number {
       assertSupportedDate(jdUt);
       if (ayanamsaType === AyanamsaType.TROPICAL) {
         setAyanamsaMode(AyanamsaType.LAHIRI);
-        return 0;
+        try {
+          return 0;
+        } finally {
+          setAyanamsaMode(AyanamsaType.LAHIRI);
+        }
       }
       setAyanamsaMode(ayanamsaType);
-      const value = swe.ayanamsa(jdUt);
-      setAyanamsaMode(AyanamsaType.LAHIRI);
-      return value;
+      try {
+        return swe.ayanamsa(jdUt);
+      } finally {
+        setAyanamsaMode(AyanamsaType.LAHIRI);
+      }
     }
   };
 }
