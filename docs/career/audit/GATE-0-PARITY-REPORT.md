@@ -1,12 +1,12 @@
 # G0-A Parity Report — RG-09 Calculation Reference Fixtures
 
-Generated: 2026-11-21T04:39:36.776Z
-Engine commit: `80ad48e025601b4680520e0d6b01b53773067035`
+Generated: 2026-11-21T04:42:56.933Z
+Engine commit: `72d0fe56b4a58781e6ba1bc859d556501797f57d`
 Fixture count: 2015
 RG-09 coverage: **READY** (coverageComplete=true)
-RG-09 approval: **MISSING**
-RG-09 overall: **PENDING_REVIEW** — No human approval manifest found; human approval is outstanding.
-Gate-0 overall readiness (includes cohort brackets): **PENDING_REVIEW** (missingMoonBrackets=0)
+RG-09 approval: **APPROVED**
+RG-09 overall: **READY** — Independent calculation reference coverage is complete and the current fixture set has human approval.
+Gate-0 overall readiness (includes cohort brackets): **READY** (missingMoonBrackets=0)
 Fixture-set SHA-256: `6b9b935e1850b790db4f0be8d442e17778bde967b8a49d4fd6ccc16c287b130f`
 Cohort stratification: **COMPLETE**
 inspectBoundaryCoverage issues: 0
